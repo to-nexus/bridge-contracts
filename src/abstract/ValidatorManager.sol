@@ -40,6 +40,18 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
         return _threshold;
     }
 
+    function allValidators() external view returns (address[] memory) {
+        return _validators.values();
+    }
+
+    function validatorLength() external view returns (uint) {
+        return _validators.length();
+    }
+
+    function validatorByIndex(uint index) external view returns (address) {
+        return _validators.at(index);
+    }
+
     // ----- Set Functions -----
     function changeThreshold(uint8 threshold_) external onlyOwner {
         _threshold = threshold_;

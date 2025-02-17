@@ -20,6 +20,10 @@ contract BridgeCross is BridgeStandard {
     address public xcross;
     ICrossMintableERC20Code private _crossMintableERC20Code;
 
+    receive() external payable {
+        assert(msg.value > 0);
+    }
+
     function initialize(address crossMintableERC20Code, address rewardWallet_, address BridgeFeeManager)
         external
         initializer

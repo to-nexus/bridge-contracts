@@ -10,9 +10,9 @@ import {Test, console} from "forge-std/Test.sol";
 // import {BridgeStandard} from "../src/BridgeStandard.sol";
 // import {BridgeFeeManager, IBridgeFeeManager} from "../src/BridgeFeeManager.sol";
 // import {CrossMintableERC20} from "../src/CrossMintableERC20.sol";
-import {BridgeStandardTest} from "./BridgeStandard.t.sol";
+import {BridgeTest} from "./Bridge.t.sol";
 
-contract BridgeExceptionTest is Test, BridgeStandardTest {
+contract BridgeExceptionTest is Test, BridgeTest {
     function test_deposit_with_insufficient_balance() public {
         uint amount = 1000;
 

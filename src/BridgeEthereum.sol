@@ -16,22 +16,21 @@ contract BridgeEthereum is BridgeStandard {
         cross = IERC20(_cross);
     }
 
-    function bridgeCross(address account, uint value, uint deadline, bytes memory permitSig, bytes[] calldata extraData)
+    function bridgeCross(address account, uint value, PermitArguments memory permitArgs, bytes[] calldata extraData)
         public
         returns (bool)
     {
-        return bridgeToCross(account, account, value, deadline, permitSig, extraData);
+        return bridgeToCross(account, account, value, permitArgs, extraData);
     }
 
     function bridgeToCross(
         address from,
         address to,
         uint value,
-        uint deadline,
-        bytes memory permitSig,
+        PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) public returns (bool) {
-        return permitBridgeTo(cross, from, to, value, 0, 0, deadline, permitSig, extraData);
+        return permitBridgeTo(cross, from, to, value, 0, 0, permitArgs, extraData);
     }
 
     function _initiateBridge(IERC20 token, address from, uint value, uint fee) internal override {

@@ -5,6 +5,7 @@ import "./IIndexer.sol";
 import "./ITokenManager.sol";
 import "./IValidatorManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
 interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
     struct FinalizeArguments {
@@ -15,6 +16,16 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
         bytes[] extraData;
     }
 
+    struct PermitArguments {
+        IERC20Permit token;
+        address account;
+        uint value;
+        uint deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     function bridge(IERC20 token, uint value, uint gas, uint service, bytes[] calldata extraData)
         external
         payable
@@ -23,6 +34,25 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
         external
         payable
         returns (bool);
+    function permitBridge(
+        IERC20 token,
+        address account,
+        uint value,
+        uint gas,
+        uint service,
+        PermitArguments memory permitArgs,
+        bytes[] calldata extraData
+    ) external payable returns (bool);
+    function permitBridgeTo(
+        IERC20 token,
+        address from,
+        address to,
+        uint value,
+        uint gas,
+        uint service,
+        PermitArguments memory permitArgs,
+        bytes[] calldata extraData
+    ) external payable returns (bool);
     function finalize(
         uint index,
         IERC20 token,

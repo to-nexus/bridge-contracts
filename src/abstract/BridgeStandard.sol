@@ -30,10 +30,12 @@ abstract contract BridgeStandard is
 
     error BridgeStandardInvalidIndex(uint expected, uint actual);
     error BridgeStandardInvalidFee(uint expectedGas, uint expectedService, uint actualGas, uint actualService);
-    error BridgeStandardInvalidSignature(uint index);
+    error BridgeStandardInvalidSignatures(uint index);
+    error BridgeStandardInvalidPermitValue(address token, uint value);
     error BridgeStandardDuplicateIndex(uint index);
     error BridgeStandardNotExistingIndex(uint index);
     error BridgeStandardCanNotZeroAddress(string name);
+    error BridgeStandardFailedPermit(address token);
 
     event BridgeInitiated(
         uint indexed index,
@@ -42,17 +44,19 @@ abstract contract BridgeStandard is
         address indexed from,
         address to,
         uint value,
-        uint gasFee,
-        uint serviceFee,
         uint time,
+        bool permit,
         bytes[] extraData
     );
     event BridgeFinalized(uint indexed index, IERC20 indexed token, address indexed to, uint value, uint time);
     event BridgeFinalizeReverted(uint indexed index);
+    event BridgeFeeCharged(
+        uint indexed index, IERC20 indexed token, address indexed account, uint gasFee, uint serviceFee
+    );
 
     uint internal constant _exrate = 100; // cross : xcross, 1 : 100
     bytes32 private constant FINALIZE_TYPEHASH =
-        keccak256("Finalize(uint256 index,address token,address to,uint256 value)");
+        keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes[] extraData)");
 
     IBridgeFeeManager public BridgeFeeManager;
     uint private _initializedAt;
@@ -78,7 +82,7 @@ abstract contract BridgeStandard is
         require(address(rewardWallet_) != address(0), BridgeStandardCanNotZeroAddress("rewardWallet"));
         // require(address(_BridgeFeeManager) != address(0), CanNotZeroAddress("BridgeFeeManager")); // allow zero address
 
-        _initializedAt = block.timestamp;
+        _initializedAt = block.number;
         BridgeFeeManager = IBridgeFeeManager(_BridgeFeeManager);
         _rewardWallet = payable(rewardWallet_);
     }
@@ -118,7 +122,7 @@ abstract contract BridgeStandard is
     {
         (uint _gas, uint _service, bool ok) = _checkFee(token, value, gas, service);
         require(ok, BridgeStandardInvalidFee(_gas, _service, gas, service));
-        _bridge(token, _msgSender(), to, value, _gas, _service, extraData);
+        _bridge(token, _msgSender(), to, value, _gas, _service, false, extraData);
         return true;
     }
 
@@ -128,11 +132,10 @@ abstract contract BridgeStandard is
         uint value,
         uint gas,
         uint service,
-        uint deadline,
-        bytes memory permitSig,
+        PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) public payable returns (bool) {
-        return permitBridgeTo(token, account, account, value, gas, service, deadline, permitSig, extraData);
+        return permitBridgeTo(token, account, account, value, gas, service, permitArgs, extraData);
     }
 
     function permitBridgeTo(
@@ -142,13 +145,12 @@ abstract contract BridgeStandard is
         uint value,
         uint gas,
         uint service,
-        uint deadline,
-        bytes memory permitSig,
+        PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) public payable whenNotPaused checkValidToken(address(token)) nonReentrant returns (bool) {
         (uint _gas, uint _service, bool ok) = _checkFee(token, value, gas, service);
         require(ok, BridgeStandardInvalidFee(_gas, _service, gas, service));
-        _permitBridge(token, from, to, value, _gas, _service, deadline, permitSig, extraData);
+        _permitBridge(token, from, to, value, _gas, _service, permitArgs, extraData);
         return true;
     }
 
@@ -166,15 +168,14 @@ abstract contract BridgeStandard is
         payable
         whenNotPaused
         checkValidToken(address(token))
-        onlyValidator
         nonReentrant
         returns (bool)
     {
         uint nextIndex = nextFinalizeIndex();
         require(index == nextIndex, BridgeStandardInvalidIndex(nextIndex, index));
 
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, token, to, value, extraData));
-        require(_validate(h, sigs), BridgeStandardInvalidSignature(index));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, address(token), to, value, extraData));
+        require(_validate(h, sigs), BridgeStandardInvalidSignatures(index));
 
         _incrementFinalizeIndex();
         (bool ok, bytes memory reason) = _finalizeBridge(token, to, value);
@@ -226,21 +227,12 @@ abstract contract BridgeStandard is
         uint value,
         uint gas,
         uint service,
-        uint deadline,
-        bytes memory permitSig,
+        PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) private {
-        require(permitSig.length == 65, "invalid permit signature");
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        assembly ("memory-safe") {
-            r := mload(add(permitSig, 0x20))
-            s := mload(add(permitSig, 0x40))
-            v := byte(0, mload(add(permitSig, 0x60)))
-        }
-        IERC20Permit(address(token)).permit(from, address(this), value + gas + service, deadline, v, r, s);
-        _bridge(token, from, to, value, gas, service, extraData);
+        require(permitArgs.value >= value + gas + service, BridgeStandardInvalidPermitValue(address(token), value));
+        _permitCall(permitArgs);
+        _bridge(token, from, to, value, gas, service, true, extraData);
     }
 
     function _bridge(
@@ -250,10 +242,11 @@ abstract contract BridgeStandard is
         uint value,
         uint gas,
         uint service,
+        bool permit,
         bytes[] calldata extraData
     ) private {
         _initiateBridge(token, from, value, gas + service);
-        _emitInitiate(nextInitiateIndex(), token, from, to, value, gas, service, extraData);
+        _emitInitiate(nextInitiateIndex(), token, from, to, value, gas, service, permit, extraData);
         _incrementInitiateIndex();
     }
 
@@ -265,33 +258,57 @@ abstract contract BridgeStandard is
         uint value,
         uint gas,
         uint service,
+        bool permit,
         bytes[] calldata extraData
     ) internal {
         emit BridgeInitiated(
-            index,
-            token,
-            IERC20(getPairToken(address(token))),
-            from,
-            to,
-            value,
-            gas,
-            service,
-            block.timestamp,
-            extraData
+            index, token, IERC20(getPairToken(address(token))), from, to, value, block.timestamp, permit, extraData
         );
+
+        emit BridgeFeeCharged(index, token, from, gas, service);
     }
 
     function _checkFee(IERC20 token, uint value, uint gas, uint service)
         private
         view
-        returns (uint gas_, uint service_, bool ok)
+        returns (uint _gas, uint _service, bool ok)
     {
         if (address(BridgeFeeManager) == address(0)) return (0, 0, true);
+        (_gas, _service) = BridgeFeeManager.calculateFee(address(token), value);
+        if (!(gas < _gas) && !(service < _service)) ok = true;
+    }
 
-        (uint _gas, uint _service) = BridgeFeeManager.calculateFee(address(token), value);
-        if (gas < _gas) return (_gas, _service, false);
-        else if (service < _service) return (_gas, _service, false);
-        return (_gas, _service, true);
+    function _permitCall(PermitArguments memory permitArgs) private {
+        bytes memory data = abi.encodeCall(
+            permitArgs.token.permit,
+            (
+                permitArgs.account,
+                address(this),
+                permitArgs.value,
+                permitArgs.deadline,
+                permitArgs.v,
+                permitArgs.r,
+                permitArgs.s
+            )
+        );
+
+        IERC20Permit token = permitArgs.token;
+        uint returnSize;
+        uint returnValue;
+        assembly ("memory-safe") {
+            let success := call(gas(), token, 0, add(data, 0x20), mload(data), 0, 0x20)
+            if iszero(success) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0, returndatasize())
+                revert(ptr, returndatasize())
+            }
+            returnSize := returndatasize()
+            returnValue := mload(0)
+        }
+
+        if (returnSize == 0 ? address(permitArgs.token).code.length == 0 : returnValue != 1) {
+            revert BridgeStandardFailedPermit(address(permitArgs.token));
+        }
     }
 
     function _initiateBridge(IERC20 token, address from, uint value, uint fee) internal virtual;

@@ -21,3 +21,14 @@ type IBridgeStandardFinalizeArguments struct {
 	Value     *big.Int
 	ExtraData [][]byte
 }
+
+// IBridgeStandardPermitArguments is an auto generated low-level Go binding around an user-defined struct.
+type IBridgeStandardPermitArguments struct {
+	Token    common.Address
+	Account  common.Address
+	Value    *big.Int
+	Deadline *big.Int
+	V        uint8
+	R        [32]byte
+	S        [32]byte
+}
