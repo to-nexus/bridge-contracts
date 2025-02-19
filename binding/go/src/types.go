@@ -6,13 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// IBridgeFeeManagerFeeInfo is an auto generated low-level Go binding around an user-defined struct.
-type IBridgeFeeManagerFeeInfo struct {
-	Token      common.Address
-	GasFee     *big.Int
-	ServiceFee *big.Int
-}
-
 // IBridgeStandardFinalizeArguments is an auto generated low-level Go binding around an user-defined struct.
 type IBridgeStandardFinalizeArguments struct {
 	Index     *big.Int
@@ -31,4 +24,12 @@ type IBridgeStandardPermitArguments struct {
 	V        uint8
 	R        [32]byte
 	S        [32]byte
+}
+
+// IBridgeTokenInfoTokenInfo is an auto generated low-level Go binding around an user-defined struct.
+type IBridgeTokenInfoTokenInfo struct {
+	Token        common.Address
+	MinimumValue *big.Int
+	GasFee       *big.Int
+	ServiceFee   *big.Int
 }

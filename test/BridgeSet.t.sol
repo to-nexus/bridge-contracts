@@ -2,64 +2,68 @@
 pragma solidity ^0.8.13;
 
 import {BridgeTest} from "./Bridge.t.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Test, console} from "forge-std/Test.sol";
 
-contract BridgeSetTest is Test, BridgeTest {
+contract BridgeSetTest is BridgeTest {
     function test_set_validator() public {
         vm.startPrank(OWNER);
 
-        bridgeEthereum.b.removeValidator(VALIDATOR5);
-        bridgeCross.b.removeValidator(VALIDATOR5);
-
-        bool ok = bridgeEthereum.b.isValidator(VALIDATOR5);
+        vm.selectFork(ethereumChainID);
+        bridgeEthereum.removeValidator(VALIDATOR5);
+        bool ok = bridgeEthereum.isValidator(VALIDATOR5);
         vm.assertFalse(ok);
-        ok = bridgeCross.b.isValidator(VALIDATOR5);
-        vm.assertFalse(ok);
-
-        bridgeEthereum.b.setValidator(VALIDATOR5);
-        bridgeCross.b.setValidator(VALIDATOR5);
-
-        ok = bridgeEthereum.b.isValidator(VALIDATOR5);
+        bridgeEthereum.setValidator(VALIDATOR5);
+        ok = bridgeEthereum.isValidator(VALIDATOR5);
         vm.assertTrue(ok);
-        ok = bridgeCross.b.isValidator(VALIDATOR5);
+
+        vm.selectFork(crossChainID);
+        bridgeCross.removeValidator(VALIDATOR5);
+        ok = bridgeCross.isValidator(VALIDATOR5);
+        vm.assertFalse(ok);
+        bridgeCross.setValidator(VALIDATOR5);
+        ok = bridgeCross.isValidator(VALIDATOR5);
         vm.assertTrue(ok);
 
         vm.stopPrank();
     }
 
     function test_set_pause() public {
-        uint amount = 1000;
+        uint amount = 1000 ether;
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
         deposit(false, amount, 5);
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
-        bridgeEthereum.b.pause();
+        bridgeEthereum.pause();
+        vm.selectFork(crossChainID);
         vm.prank(OWNER);
-        bridgeCross.b.pause();
+        bridgeCross.pause();
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
-        bridgeRevert = true;
+        bridgeRevertEthereum = true;
         vm.prank(USER);
         deposit(true, amount, 5);
 
-        bridgeRevert = true;
+        bridgeRevertCross = true;
         vm.prank(USER);
         withdraw(true, amount, 5);
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
-        bridgeEthereum.b.unpause();
+        bridgeEthereum.unpause();
+        vm.selectFork(crossChainID);
         vm.prank(OWNER);
-        bridgeCross.b.unpause();
+        bridgeCross.unpause();
 
         vm.prank(USER);
         deposit(false, amount, 5);
@@ -70,38 +74,47 @@ contract BridgeSetTest is Test, BridgeTest {
     function test_set_threshold() public {
         uint amount = 1000;
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
         vm.prank(USER);
         deposit(false, amount, 3);
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
-        bridgeEthereum.b.changeThreshold(4);
+        bridgeEthereum.changeThreshold(4);
+        vm.selectFork(crossChainID);
         vm.prank(OWNER);
-        bridgeCross.b.changeThreshold(4);
+        bridgeCross.changeThreshold(4);
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
-        finalizeRevert = true;
+        finalizeRevertCross = true;
         vm.prank(USER);
         uint index = deposit(true, amount, 3);
-        finalize(bridgeEthereum.otherBridge, index, address(xcross), amount, 4);
 
-        vm.prank(OWNER);
-        bridgeEthereum.b.changeThreshold(1);
-        vm.prank(OWNER);
-        bridgeCross.b.changeThreshold(1);
+        vm.selectFork(crossChainID);
+        crossFinalize(index, address(xcross), amount, 4);
 
+        vm.selectFork(ethereumChainID);
+        vm.prank(OWNER);
+        bridgeEthereum.changeThreshold(1);
+        vm.selectFork(crossChainID);
+        vm.prank(OWNER);
+        bridgeCross.changeThreshold(1);
+
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
         vm.prank(USER);
         deposit(false, amount, 1);

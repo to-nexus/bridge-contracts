@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "./IIndexer.sol";
-import "./ITokenManager.sol";
-import "./IValidatorManager.sol";
+import {IBridgeTokenInfo} from "./IBridgeTokenInfo.sol";
+import {IIndexer} from "./IIndexer.sol";
+import {ITokenManager} from "./ITokenManager.sol";
+import {IValidatorManager} from "./IValidatorManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
@@ -61,10 +62,26 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
         bytes[] calldata extraData,
         bytes[] calldata sigs
     ) external payable returns (bool);
+    function retryFinalize(uint index) external returns (bool);
+    function retryFinalizeBatch(uint[] memory indexes) external returns (bool);
     function finalizeBatch(FinalizeArguments[] calldata args, bytes[][] memory sigs) external payable returns (bool);
+    function initializedAt() external view returns (uint);
+    function domainSeparator() external view returns (bytes32);
+    function rewardWallet() external view returns (address payable);
+    function denominator() external view returns (uint);
+    function calculate(IERC20 token, uint value) external view returns (uint minimum, uint gas, uint service);
+    function getTokenInfo(IERC20 token) external view returns (IBridgeTokenInfo.TokenInfo memory);
+    function tokenInfoLength() external view returns (uint);
+    function tokenInfoByIndex(uint index) external view returns (IBridgeTokenInfo.TokenInfo memory);
+    function allTokenInfo() external view returns (IBridgeTokenInfo.TokenInfo[] memory);
+    function revertedArguments(uint index) external view returns (FinalizeArguments memory);
+    function revertedReason(uint index) external view returns (bytes memory);
     function addToken(IERC20 token, IERC20 pair) external;
     function removeToken(IERC20 token) external;
     function pauseToken(IERC20 token) external;
     function unpauseToken(IERC20 token) external;
-    function calculateFee(IERC20 token, uint value) external view returns (uint gas, uint service);
+    function pause() external;
+    function unpause() external;
+    function setTokenInfo(IBridgeTokenInfo _bridgeTokenInfo) external;
+    function removeTokenInfo() external;
 }

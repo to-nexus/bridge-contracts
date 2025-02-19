@@ -8,6 +8,8 @@ abstract contract Indexer is IIndexer {
     uint internal _initiateIndex;
     uint internal _finalizeIndex;
 
+    uint[48] private __gap;
+
     function nextInitiateIndex() public view returns (uint) {
         return _initiateIndex + 1;
     }
@@ -27,6 +29,4 @@ abstract contract Indexer is IIndexer {
             ++_finalizeIndex;
         }
     }
-
-    uint[48] private __gap;
 }

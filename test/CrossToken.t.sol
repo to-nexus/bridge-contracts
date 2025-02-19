@@ -3,10 +3,8 @@ pragma solidity ^0.8.13;
 
 import {CrossToken} from "./token/CrossToken.sol";
 import {TestToken} from "./token/TestToken.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract CrossTokenTest is Test {
     bytes32 public constant PERMIT_TYPEHASH =
@@ -30,7 +28,7 @@ contract CrossTokenTest is Test {
         ttoken.mint(OWNER, 1_000_000_000 * 1e18);
     }
 
-    function test_permitTransfer() public {
+    function test_permit_transfer() public {
         // create permit data
         address from = OWNER;
         address to = USER;
@@ -58,7 +56,7 @@ contract CrossTokenTest is Test {
         }
     }
 
-    function test_permitTransfer2() public {
+    function test_permit_transfer2() public {
         // create permit data
         address from = OWNER;
         address to = USER;

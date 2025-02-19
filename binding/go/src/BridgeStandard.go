@@ -31,29 +31,27 @@ var (
 
 // BridgeStandardMetaData contains all meta data concerning the BridgeStandard contract.
 var BridgeStandardMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"BridgeFeeManager\",\"outputs\":[{\"internalType\":\"contractIBridgeFeeManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"BridgeFeeManagerLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"pair\",\"type\":\"address\"}],\"name\":\"addToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allFeeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeFeeManager.FeeInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allPairs\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allTokens\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"bridge\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"bridgeTo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"calculateFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"threshold_\",\"type\":\"uint8\"}],\"name\":\"changeThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"contains\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"denominator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"domainSeparator\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"eip712Domain\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"fields\",\"type\":\"bytes1\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"verifyingContract\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"extensions\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"feeInfoByIndex\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeFeeManager.FeeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes[]\",\"name\":\"sigs\",\"type\":\"bytes[]\"}],\"name\":\"finalize\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"internalType\":\"structIBridgeStandard.FinalizeArguments[]\",\"name\":\"args\",\"type\":\"tuple[]\"},{\"internalType\":\"bytes[][]\",\"name\":\"sigs\",\"type\":\"bytes[][]\"}],\"name\":\"finalizeBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getPairToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getTokenFee\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeFeeManager.FeeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initializedAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"isValidToken\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"isValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextFinalizeIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextInitiateIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"pauseToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"permitSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"permitBridge\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"permitSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"permitBridgeTo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"removeToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"removeValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"validators\",\"type\":\"address[]\"}],\"name\":\"removeValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"retryFinalize\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"revertedArguments\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"internalType\":\"structIBridgeStandard.FinalizeArguments\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"revertedReason\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardWallet\",\"outputs\":[{\"internalType\":\"addresspayable\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"setValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"validators\",\"type\":\"address[]\"}],\"name\":\"setValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"threshold\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"i\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokensLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"unpauseToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"validatorByIndex\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeCharged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeFinalizeReverted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"}],\"name\":\"BridgeFinalized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"pairToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"permit\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"BridgeInitiated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"EIP712DomainChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"pair\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"registered\",\"type\":\"bool\"}],\"name\":\"PairUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"threshold\",\"type\":\"uint8\"}],\"name\":\"ThresholdChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenPaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenUnpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"validators\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"ValidatorSet\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"BridgeStandardCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardDuplicateIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expectedGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expectedService\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actualGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actualService\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidFee\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidPermitSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidSignatures\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardNotExistingIndex\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ECDSAInvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"ECDSAInvalidSignatureLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"ECDSAInvalidSignatureS\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"EnforcedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ExpectedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenManagerInvalidToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenStorageAleadyExistToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"TokenStorageCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenStorageNotExistToken\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"ValidatorManagerAlreadyExistValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"ValidatorManagerNotExistValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"ValidatorManagerNotValidator\",\"type\":\"error\"}]",
+	ABI: "[{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"pair\",\"type\":\"address\"}],\"name\":\"addToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allPairs\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allTokenInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"minimumValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeTokenInfo.TokenInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allTokens\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"bridge\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"bridgeTo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bridgeTokenInfo\",\"outputs\":[{\"internalType\":\"contractIBridgeTokenInfo\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"calculate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"minimum\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"threshold_\",\"type\":\"uint8\"}],\"name\":\"changeThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"contains\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"denominator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"domainSeparator\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"eip712Domain\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"fields\",\"type\":\"bytes1\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"verifyingContract\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"extensions\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes[]\",\"name\":\"sigs\",\"type\":\"bytes[]\"}],\"name\":\"finalize\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"internalType\":\"structIBridgeStandard.FinalizeArguments[]\",\"name\":\"args\",\"type\":\"tuple[]\"},{\"internalType\":\"bytes[][]\",\"name\":\"sigs\",\"type\":\"bytes[][]\"}],\"name\":\"finalizeBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getPairToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getTokenInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"minimumValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeTokenInfo.TokenInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initializedAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"isValidToken\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"isValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextFinalizeIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextInitiateIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"pauseToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"contractIERC20Permit\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"internalType\":\"structIBridgeStandard.PermitArguments\",\"name\":\"permitArgs\",\"type\":\"tuple\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"permitBridge\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"service\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"contractIERC20Permit\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"internalType\":\"structIBridgeStandard.PermitArguments\",\"name\":\"permitArgs\",\"type\":\"tuple\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"permitBridgeTo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"removeToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"removeTokenInfo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"removeValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"validators\",\"type\":\"address[]\"}],\"name\":\"removeValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"retryFinalize\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"revertedArguments\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"internalType\":\"structIBridgeStandard.FinalizeArguments\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"revertedReason\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardWallet\",\"outputs\":[{\"internalType\":\"addresspayable\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIBridgeTokenInfo\",\"name\":\"_bridgeTokenInfo\",\"type\":\"address\"}],\"name\":\"setTokenInfo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"validator\",\"type\":\"address\"}],\"name\":\"setValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"validators\",\"type\":\"address[]\"}],\"name\":\"setValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"threshold\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"i\",\"type\":\"uint256\"}],\"name\":\"tokenByIndex\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"tokenInfoByIndex\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"minimumValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeTokenInfo.TokenInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokenInfoLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tokensLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unpause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"unpauseToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"validatorByIndex\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"validatorLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"serviceFee\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeCharged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeFinalizeReverted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"}],\"name\":\"BridgeFinalized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"pairToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"permit\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"bytes[]\",\"name\":\"extraData\",\"type\":\"bytes[]\"}],\"name\":\"BridgeInitiated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"EIP712DomainChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"pair\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"registered\",\"type\":\"bool\"}],\"name\":\"PairUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"threshold\",\"type\":\"uint8\"}],\"name\":\"ThresholdChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenPaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenRemoved\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenUnpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"validators\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"ValidatorSet\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"BridgeStandardCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardDuplicateIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"BridgeStandardFailedPermit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"minimumValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expectedGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expectedService\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actualValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actualGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actualService\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidAmount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidPermitValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardInvalidSignatures\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeStandardNotExistingIndex\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ECDSAInvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"ECDSAInvalidSignatureLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"ECDSAInvalidSignatureS\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"EnforcedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ExpectedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenManagerInvalidToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenStorageAleadyExistToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"TokenStorageCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"TokenStorageNotExistToken\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"ValidatorManagerAlreadyExistValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"ValidatorManagerNotExistValidator\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"ValidatorManagerNotValidator\",\"type\":\"error\"}]",
 	Sigs: map[string]string{
-		"e3a446eb": "BridgeFeeManager()",
-		"114ee544": "BridgeFeeManagerLength()",
 		"ad3cb1cc": "UPGRADE_INTERFACE_VERSION()",
 		"5476bd72": "addToken(address,address)",
-		"9d0dc76e": "allFeeInfo()",
 		"c97682f8": "allPairs()",
+		"9fdf1c6a": "allTokenInfo()",
 		"6ff97f1d": "allTokens()",
 		"f30589c3": "allValidators()",
 		"37d10075": "bridge(address,uint256,uint256,uint256,bytes[])",
 		"3f5d3b5d": "bridgeTo(address,address,uint256,uint256,uint256,bytes[])",
-		"8b28ab1e": "calculateFee(address,uint256)",
+		"9c1b65a9": "bridgeTokenInfo()",
+		"6e908ca3": "calculate(address,uint256)",
 		"b7f3358d": "changeThreshold(uint8)",
 		"5dbe47e8": "contains(address)",
 		"96ce0795": "denominator()",
 		"f698da25": "domainSeparator()",
 		"84b0196e": "eip712Domain()",
-		"751b4c9c": "feeInfoByIndex(uint256)",
 		"f120c400": "finalize(uint256,address,address,uint256,bytes[],bytes[])",
 		"008bd028": "finalizeBatch((uint256,address,address,uint256,bytes[])[],bytes[][])",
 		"71c59d7b": "getPairToken(address)",
-		"252154fa": "getTokenFee(address)",
+		"1f69565f": "getTokenInfo(address)",
 		"91cf6d3e": "initializedAt()",
 		"c1876453": "isValidToken(address)",
 		"facd743b": "isValidator(address)",
@@ -63,10 +61,11 @@ var BridgeStandardMetaData = &bind.MetaData{
 		"8456cb59": "pause()",
 		"7c41ad2c": "pauseToken(address)",
 		"5c975abb": "paused()",
-		"69a3318b": "permitBridge(address,address,uint256,uint256,uint256,uint256,bytes,bytes[])",
-		"50d6fb48": "permitBridgeTo(address,address,address,uint256,uint256,uint256,uint256,bytes,bytes[])",
+		"51c45579": "permitBridge(address,address,uint256,uint256,uint256,(address,address,uint256,uint256,uint8,bytes32,bytes32),bytes[])",
+		"174991ab": "permitBridgeTo(address,address,address,uint256,uint256,uint256,(address,address,uint256,uint256,uint8,bytes32,bytes32),bytes[])",
 		"52d1902d": "proxiableUUID()",
 		"5fa7b584": "removeToken(address)",
+		"85547884": "removeTokenInfo()",
 		"40a141ff": "removeValidator(address)",
 		"1d40f0d8": "removeValidators(address[])",
 		"715018a6": "renounceOwnership()",
@@ -74,10 +73,13 @@ var BridgeStandardMetaData = &bind.MetaData{
 		"7021fd0e": "revertedArguments(uint256)",
 		"fe2b8da6": "revertedReason(uint256)",
 		"fb75b2c7": "rewardWallet()",
+		"2f9b59d1": "setTokenInfo(address)",
 		"1327d3d8": "setValidator(address)",
 		"9300c926": "setValidators(address[])",
 		"42cde4e8": "threshold()",
 		"4f6ccce7": "tokenByIndex(uint256)",
+		"e70a1b26": "tokenInfoByIndex(uint256)",
+		"7cfed602": "tokenInfoLength()",
 		"d92fc67b": "tokensLength()",
 		"f2fde38b": "transferOwnership(address)",
 		"3f4ba83a": "unpause()",
@@ -238,68 +240,6 @@ func (_BridgeStandard *BridgeStandardTransactorRaw) Transact(opts *bind.Transact
 	return _BridgeStandard.Contract.contract.Transact(opts, method, params...)
 }
 
-// BridgeFeeManager is a free data retrieval call binding the contract method 0xe3a446eb.
-//
-// Solidity: function BridgeFeeManager() view returns(address)
-func (_BridgeStandard *BridgeStandardCaller) BridgeFeeManager(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _BridgeStandard.contract.Call(opts, &out, "BridgeFeeManager")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// BridgeFeeManager is a free data retrieval call binding the contract method 0xe3a446eb.
-//
-// Solidity: function BridgeFeeManager() view returns(address)
-func (_BridgeStandard *BridgeStandardSession) BridgeFeeManager() (common.Address, error) {
-	return _BridgeStandard.Contract.BridgeFeeManager(&_BridgeStandard.CallOpts)
-}
-
-// BridgeFeeManager is a free data retrieval call binding the contract method 0xe3a446eb.
-//
-// Solidity: function BridgeFeeManager() view returns(address)
-func (_BridgeStandard *BridgeStandardCallerSession) BridgeFeeManager() (common.Address, error) {
-	return _BridgeStandard.Contract.BridgeFeeManager(&_BridgeStandard.CallOpts)
-}
-
-// BridgeFeeManagerLength is a free data retrieval call binding the contract method 0x114ee544.
-//
-// Solidity: function BridgeFeeManagerLength() view returns(uint256)
-func (_BridgeStandard *BridgeStandardCaller) BridgeFeeManagerLength(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _BridgeStandard.contract.Call(opts, &out, "BridgeFeeManagerLength")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// BridgeFeeManagerLength is a free data retrieval call binding the contract method 0x114ee544.
-//
-// Solidity: function BridgeFeeManagerLength() view returns(uint256)
-func (_BridgeStandard *BridgeStandardSession) BridgeFeeManagerLength() (*big.Int, error) {
-	return _BridgeStandard.Contract.BridgeFeeManagerLength(&_BridgeStandard.CallOpts)
-}
-
-// BridgeFeeManagerLength is a free data retrieval call binding the contract method 0x114ee544.
-//
-// Solidity: function BridgeFeeManagerLength() view returns(uint256)
-func (_BridgeStandard *BridgeStandardCallerSession) BridgeFeeManagerLength() (*big.Int, error) {
-	return _BridgeStandard.Contract.BridgeFeeManagerLength(&_BridgeStandard.CallOpts)
-}
-
 // UPGRADEINTERFACEVERSION is a free data retrieval call binding the contract method 0xad3cb1cc.
 //
 // Solidity: function UPGRADE_INTERFACE_VERSION() view returns(string)
@@ -331,37 +271,6 @@ func (_BridgeStandard *BridgeStandardCallerSession) UPGRADEINTERFACEVERSION() (s
 	return _BridgeStandard.Contract.UPGRADEINTERFACEVERSION(&_BridgeStandard.CallOpts)
 }
 
-// AllFeeInfo is a free data retrieval call binding the contract method 0x9d0dc76e.
-//
-// Solidity: function allFeeInfo() view returns((address,uint256,uint256)[])
-func (_BridgeStandard *BridgeStandardCaller) AllFeeInfo(opts *bind.CallOpts) ([]IBridgeFeeManagerFeeInfo, error) {
-	var out []interface{}
-	err := _BridgeStandard.contract.Call(opts, &out, "allFeeInfo")
-
-	if err != nil {
-		return *new([]IBridgeFeeManagerFeeInfo), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([]IBridgeFeeManagerFeeInfo)).(*[]IBridgeFeeManagerFeeInfo)
-
-	return out0, err
-
-}
-
-// AllFeeInfo is a free data retrieval call binding the contract method 0x9d0dc76e.
-//
-// Solidity: function allFeeInfo() view returns((address,uint256,uint256)[])
-func (_BridgeStandard *BridgeStandardSession) AllFeeInfo() ([]IBridgeFeeManagerFeeInfo, error) {
-	return _BridgeStandard.Contract.AllFeeInfo(&_BridgeStandard.CallOpts)
-}
-
-// AllFeeInfo is a free data retrieval call binding the contract method 0x9d0dc76e.
-//
-// Solidity: function allFeeInfo() view returns((address,uint256,uint256)[])
-func (_BridgeStandard *BridgeStandardCallerSession) AllFeeInfo() ([]IBridgeFeeManagerFeeInfo, error) {
-	return _BridgeStandard.Contract.AllFeeInfo(&_BridgeStandard.CallOpts)
-}
-
 // AllPairs is a free data retrieval call binding the contract method 0xc97682f8.
 //
 // Solidity: function allPairs() view returns(address[])
@@ -391,6 +300,37 @@ func (_BridgeStandard *BridgeStandardSession) AllPairs() ([]common.Address, erro
 // Solidity: function allPairs() view returns(address[])
 func (_BridgeStandard *BridgeStandardCallerSession) AllPairs() ([]common.Address, error) {
 	return _BridgeStandard.Contract.AllPairs(&_BridgeStandard.CallOpts)
+}
+
+// AllTokenInfo is a free data retrieval call binding the contract method 0x9fdf1c6a.
+//
+// Solidity: function allTokenInfo() view returns((address,uint256,uint256,uint256)[])
+func (_BridgeStandard *BridgeStandardCaller) AllTokenInfo(opts *bind.CallOpts) ([]IBridgeTokenInfoTokenInfo, error) {
+	var out []interface{}
+	err := _BridgeStandard.contract.Call(opts, &out, "allTokenInfo")
+
+	if err != nil {
+		return *new([]IBridgeTokenInfoTokenInfo), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]IBridgeTokenInfoTokenInfo)).(*[]IBridgeTokenInfoTokenInfo)
+
+	return out0, err
+
+}
+
+// AllTokenInfo is a free data retrieval call binding the contract method 0x9fdf1c6a.
+//
+// Solidity: function allTokenInfo() view returns((address,uint256,uint256,uint256)[])
+func (_BridgeStandard *BridgeStandardSession) AllTokenInfo() ([]IBridgeTokenInfoTokenInfo, error) {
+	return _BridgeStandard.Contract.AllTokenInfo(&_BridgeStandard.CallOpts)
+}
+
+// AllTokenInfo is a free data retrieval call binding the contract method 0x9fdf1c6a.
+//
+// Solidity: function allTokenInfo() view returns((address,uint256,uint256,uint256)[])
+func (_BridgeStandard *BridgeStandardCallerSession) AllTokenInfo() ([]IBridgeTokenInfoTokenInfo, error) {
+	return _BridgeStandard.Contract.AllTokenInfo(&_BridgeStandard.CallOpts)
 }
 
 // AllTokens is a free data retrieval call binding the contract method 0x6ff97f1d.
@@ -455,17 +395,50 @@ func (_BridgeStandard *BridgeStandardCallerSession) AllValidators() ([]common.Ad
 	return _BridgeStandard.Contract.AllValidators(&_BridgeStandard.CallOpts)
 }
 
-// CalculateFee is a free data retrieval call binding the contract method 0x8b28ab1e.
+// BridgeTokenInfo is a free data retrieval call binding the contract method 0x9c1b65a9.
 //
-// Solidity: function calculateFee(address token, uint256 value) view returns(uint256 gas, uint256 service)
-func (_BridgeStandard *BridgeStandardCaller) CalculateFee(opts *bind.CallOpts, token common.Address, value *big.Int) (struct {
+// Solidity: function bridgeTokenInfo() view returns(address)
+func (_BridgeStandard *BridgeStandardCaller) BridgeTokenInfo(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _BridgeStandard.contract.Call(opts, &out, "bridgeTokenInfo")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// BridgeTokenInfo is a free data retrieval call binding the contract method 0x9c1b65a9.
+//
+// Solidity: function bridgeTokenInfo() view returns(address)
+func (_BridgeStandard *BridgeStandardSession) BridgeTokenInfo() (common.Address, error) {
+	return _BridgeStandard.Contract.BridgeTokenInfo(&_BridgeStandard.CallOpts)
+}
+
+// BridgeTokenInfo is a free data retrieval call binding the contract method 0x9c1b65a9.
+//
+// Solidity: function bridgeTokenInfo() view returns(address)
+func (_BridgeStandard *BridgeStandardCallerSession) BridgeTokenInfo() (common.Address, error) {
+	return _BridgeStandard.Contract.BridgeTokenInfo(&_BridgeStandard.CallOpts)
+}
+
+// Calculate is a free data retrieval call binding the contract method 0x6e908ca3.
+//
+// Solidity: function calculate(address token, uint256 value) view returns(uint256 minimum, uint256 gas, uint256 service)
+func (_BridgeStandard *BridgeStandardCaller) Calculate(opts *bind.CallOpts, token common.Address, value *big.Int) (struct {
+	Minimum *big.Int
 	Gas     *big.Int
 	Service *big.Int
 }, error) {
 	var out []interface{}
-	err := _BridgeStandard.contract.Call(opts, &out, "calculateFee", token, value)
+	err := _BridgeStandard.contract.Call(opts, &out, "calculate", token, value)
 
 	outstruct := new(struct {
+		Minimum *big.Int
 		Gas     *big.Int
 		Service *big.Int
 	})
@@ -473,31 +446,34 @@ func (_BridgeStandard *BridgeStandardCaller) CalculateFee(opts *bind.CallOpts, t
 		return *outstruct, err
 	}
 
-	outstruct.Gas = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.Service = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.Minimum = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.Gas = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.Service = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
 }
 
-// CalculateFee is a free data retrieval call binding the contract method 0x8b28ab1e.
+// Calculate is a free data retrieval call binding the contract method 0x6e908ca3.
 //
-// Solidity: function calculateFee(address token, uint256 value) view returns(uint256 gas, uint256 service)
-func (_BridgeStandard *BridgeStandardSession) CalculateFee(token common.Address, value *big.Int) (struct {
+// Solidity: function calculate(address token, uint256 value) view returns(uint256 minimum, uint256 gas, uint256 service)
+func (_BridgeStandard *BridgeStandardSession) Calculate(token common.Address, value *big.Int) (struct {
+	Minimum *big.Int
 	Gas     *big.Int
 	Service *big.Int
 }, error) {
-	return _BridgeStandard.Contract.CalculateFee(&_BridgeStandard.CallOpts, token, value)
+	return _BridgeStandard.Contract.Calculate(&_BridgeStandard.CallOpts, token, value)
 }
 
-// CalculateFee is a free data retrieval call binding the contract method 0x8b28ab1e.
+// Calculate is a free data retrieval call binding the contract method 0x6e908ca3.
 //
-// Solidity: function calculateFee(address token, uint256 value) view returns(uint256 gas, uint256 service)
-func (_BridgeStandard *BridgeStandardCallerSession) CalculateFee(token common.Address, value *big.Int) (struct {
+// Solidity: function calculate(address token, uint256 value) view returns(uint256 minimum, uint256 gas, uint256 service)
+func (_BridgeStandard *BridgeStandardCallerSession) Calculate(token common.Address, value *big.Int) (struct {
+	Minimum *big.Int
 	Gas     *big.Int
 	Service *big.Int
 }, error) {
-	return _BridgeStandard.Contract.CalculateFee(&_BridgeStandard.CallOpts, token, value)
+	return _BridgeStandard.Contract.Calculate(&_BridgeStandard.CallOpts, token, value)
 }
 
 // Contains is a free data retrieval call binding the contract method 0x5dbe47e8.
@@ -663,37 +639,6 @@ func (_BridgeStandard *BridgeStandardCallerSession) Eip712Domain() (struct {
 	return _BridgeStandard.Contract.Eip712Domain(&_BridgeStandard.CallOpts)
 }
 
-// FeeInfoByIndex is a free data retrieval call binding the contract method 0x751b4c9c.
-//
-// Solidity: function feeInfoByIndex(uint256 index) view returns((address,uint256,uint256))
-func (_BridgeStandard *BridgeStandardCaller) FeeInfoByIndex(opts *bind.CallOpts, index *big.Int) (IBridgeFeeManagerFeeInfo, error) {
-	var out []interface{}
-	err := _BridgeStandard.contract.Call(opts, &out, "feeInfoByIndex", index)
-
-	if err != nil {
-		return *new(IBridgeFeeManagerFeeInfo), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(IBridgeFeeManagerFeeInfo)).(*IBridgeFeeManagerFeeInfo)
-
-	return out0, err
-
-}
-
-// FeeInfoByIndex is a free data retrieval call binding the contract method 0x751b4c9c.
-//
-// Solidity: function feeInfoByIndex(uint256 index) view returns((address,uint256,uint256))
-func (_BridgeStandard *BridgeStandardSession) FeeInfoByIndex(index *big.Int) (IBridgeFeeManagerFeeInfo, error) {
-	return _BridgeStandard.Contract.FeeInfoByIndex(&_BridgeStandard.CallOpts, index)
-}
-
-// FeeInfoByIndex is a free data retrieval call binding the contract method 0x751b4c9c.
-//
-// Solidity: function feeInfoByIndex(uint256 index) view returns((address,uint256,uint256))
-func (_BridgeStandard *BridgeStandardCallerSession) FeeInfoByIndex(index *big.Int) (IBridgeFeeManagerFeeInfo, error) {
-	return _BridgeStandard.Contract.FeeInfoByIndex(&_BridgeStandard.CallOpts, index)
-}
-
 // GetPairToken is a free data retrieval call binding the contract method 0x71c59d7b.
 //
 // Solidity: function getPairToken(address token) view returns(address)
@@ -725,35 +670,35 @@ func (_BridgeStandard *BridgeStandardCallerSession) GetPairToken(token common.Ad
 	return _BridgeStandard.Contract.GetPairToken(&_BridgeStandard.CallOpts, token)
 }
 
-// GetTokenFee is a free data retrieval call binding the contract method 0x252154fa.
+// GetTokenInfo is a free data retrieval call binding the contract method 0x1f69565f.
 //
-// Solidity: function getTokenFee(address token) view returns((address,uint256,uint256))
-func (_BridgeStandard *BridgeStandardCaller) GetTokenFee(opts *bind.CallOpts, token common.Address) (IBridgeFeeManagerFeeInfo, error) {
+// Solidity: function getTokenInfo(address token) view returns((address,uint256,uint256,uint256))
+func (_BridgeStandard *BridgeStandardCaller) GetTokenInfo(opts *bind.CallOpts, token common.Address) (IBridgeTokenInfoTokenInfo, error) {
 	var out []interface{}
-	err := _BridgeStandard.contract.Call(opts, &out, "getTokenFee", token)
+	err := _BridgeStandard.contract.Call(opts, &out, "getTokenInfo", token)
 
 	if err != nil {
-		return *new(IBridgeFeeManagerFeeInfo), err
+		return *new(IBridgeTokenInfoTokenInfo), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(IBridgeFeeManagerFeeInfo)).(*IBridgeFeeManagerFeeInfo)
+	out0 := *abi.ConvertType(out[0], new(IBridgeTokenInfoTokenInfo)).(*IBridgeTokenInfoTokenInfo)
 
 	return out0, err
 
 }
 
-// GetTokenFee is a free data retrieval call binding the contract method 0x252154fa.
+// GetTokenInfo is a free data retrieval call binding the contract method 0x1f69565f.
 //
-// Solidity: function getTokenFee(address token) view returns((address,uint256,uint256))
-func (_BridgeStandard *BridgeStandardSession) GetTokenFee(token common.Address) (IBridgeFeeManagerFeeInfo, error) {
-	return _BridgeStandard.Contract.GetTokenFee(&_BridgeStandard.CallOpts, token)
+// Solidity: function getTokenInfo(address token) view returns((address,uint256,uint256,uint256))
+func (_BridgeStandard *BridgeStandardSession) GetTokenInfo(token common.Address) (IBridgeTokenInfoTokenInfo, error) {
+	return _BridgeStandard.Contract.GetTokenInfo(&_BridgeStandard.CallOpts, token)
 }
 
-// GetTokenFee is a free data retrieval call binding the contract method 0x252154fa.
+// GetTokenInfo is a free data retrieval call binding the contract method 0x1f69565f.
 //
-// Solidity: function getTokenFee(address token) view returns((address,uint256,uint256))
-func (_BridgeStandard *BridgeStandardCallerSession) GetTokenFee(token common.Address) (IBridgeFeeManagerFeeInfo, error) {
-	return _BridgeStandard.Contract.GetTokenFee(&_BridgeStandard.CallOpts, token)
+// Solidity: function getTokenInfo(address token) view returns((address,uint256,uint256,uint256))
+func (_BridgeStandard *BridgeStandardCallerSession) GetTokenInfo(token common.Address) (IBridgeTokenInfoTokenInfo, error) {
+	return _BridgeStandard.Contract.GetTokenInfo(&_BridgeStandard.CallOpts, token)
 }
 
 // InitializedAt is a free data retrieval call binding the contract method 0x91cf6d3e.
@@ -1159,6 +1104,68 @@ func (_BridgeStandard *BridgeStandardCallerSession) TokenByIndex(i *big.Int) (co
 	return _BridgeStandard.Contract.TokenByIndex(&_BridgeStandard.CallOpts, i)
 }
 
+// TokenInfoByIndex is a free data retrieval call binding the contract method 0xe70a1b26.
+//
+// Solidity: function tokenInfoByIndex(uint256 index) view returns((address,uint256,uint256,uint256))
+func (_BridgeStandard *BridgeStandardCaller) TokenInfoByIndex(opts *bind.CallOpts, index *big.Int) (IBridgeTokenInfoTokenInfo, error) {
+	var out []interface{}
+	err := _BridgeStandard.contract.Call(opts, &out, "tokenInfoByIndex", index)
+
+	if err != nil {
+		return *new(IBridgeTokenInfoTokenInfo), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(IBridgeTokenInfoTokenInfo)).(*IBridgeTokenInfoTokenInfo)
+
+	return out0, err
+
+}
+
+// TokenInfoByIndex is a free data retrieval call binding the contract method 0xe70a1b26.
+//
+// Solidity: function tokenInfoByIndex(uint256 index) view returns((address,uint256,uint256,uint256))
+func (_BridgeStandard *BridgeStandardSession) TokenInfoByIndex(index *big.Int) (IBridgeTokenInfoTokenInfo, error) {
+	return _BridgeStandard.Contract.TokenInfoByIndex(&_BridgeStandard.CallOpts, index)
+}
+
+// TokenInfoByIndex is a free data retrieval call binding the contract method 0xe70a1b26.
+//
+// Solidity: function tokenInfoByIndex(uint256 index) view returns((address,uint256,uint256,uint256))
+func (_BridgeStandard *BridgeStandardCallerSession) TokenInfoByIndex(index *big.Int) (IBridgeTokenInfoTokenInfo, error) {
+	return _BridgeStandard.Contract.TokenInfoByIndex(&_BridgeStandard.CallOpts, index)
+}
+
+// TokenInfoLength is a free data retrieval call binding the contract method 0x7cfed602.
+//
+// Solidity: function tokenInfoLength() view returns(uint256)
+func (_BridgeStandard *BridgeStandardCaller) TokenInfoLength(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _BridgeStandard.contract.Call(opts, &out, "tokenInfoLength")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// TokenInfoLength is a free data retrieval call binding the contract method 0x7cfed602.
+//
+// Solidity: function tokenInfoLength() view returns(uint256)
+func (_BridgeStandard *BridgeStandardSession) TokenInfoLength() (*big.Int, error) {
+	return _BridgeStandard.Contract.TokenInfoLength(&_BridgeStandard.CallOpts)
+}
+
+// TokenInfoLength is a free data retrieval call binding the contract method 0x7cfed602.
+//
+// Solidity: function tokenInfoLength() view returns(uint256)
+func (_BridgeStandard *BridgeStandardCallerSession) TokenInfoLength() (*big.Int, error) {
+	return _BridgeStandard.Contract.TokenInfoLength(&_BridgeStandard.CallOpts)
+}
+
 // TokensLength is a free data retrieval call binding the contract method 0xd92fc67b.
 //
 // Solidity: function tokensLength() view returns(uint256)
@@ -1420,46 +1427,46 @@ func (_BridgeStandard *BridgeStandardTransactorSession) PauseToken(token common.
 	return _BridgeStandard.Contract.PauseToken(&_BridgeStandard.TransactOpts, token)
 }
 
-// PermitBridge is a paid mutator transaction binding the contract method 0x69a3318b.
+// PermitBridge is a paid mutator transaction binding the contract method 0x51c45579.
 //
-// Solidity: function permitBridge(address token, address account, uint256 value, uint256 gas, uint256 service, uint256 deadline, bytes permitSig, bytes[] extraData) payable returns(bool)
-func (_BridgeStandard *BridgeStandardTransactor) PermitBridge(opts *bind.TransactOpts, token common.Address, account common.Address, value *big.Int, gas *big.Int, service *big.Int, deadline *big.Int, permitSig []byte, extraData [][]byte) (*types.Transaction, error) {
-	return _BridgeStandard.contract.Transact(opts, "permitBridge", token, account, value, gas, service, deadline, permitSig, extraData)
+// Solidity: function permitBridge(address token, address account, uint256 value, uint256 gas, uint256 service, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs, bytes[] extraData) payable returns(bool)
+func (_BridgeStandard *BridgeStandardTransactor) PermitBridge(opts *bind.TransactOpts, token common.Address, account common.Address, value *big.Int, gas *big.Int, service *big.Int, permitArgs IBridgeStandardPermitArguments, extraData [][]byte) (*types.Transaction, error) {
+	return _BridgeStandard.contract.Transact(opts, "permitBridge", token, account, value, gas, service, permitArgs, extraData)
 }
 
-// PermitBridge is a paid mutator transaction binding the contract method 0x69a3318b.
+// PermitBridge is a paid mutator transaction binding the contract method 0x51c45579.
 //
-// Solidity: function permitBridge(address token, address account, uint256 value, uint256 gas, uint256 service, uint256 deadline, bytes permitSig, bytes[] extraData) payable returns(bool)
-func (_BridgeStandard *BridgeStandardSession) PermitBridge(token common.Address, account common.Address, value *big.Int, gas *big.Int, service *big.Int, deadline *big.Int, permitSig []byte, extraData [][]byte) (*types.Transaction, error) {
-	return _BridgeStandard.Contract.PermitBridge(&_BridgeStandard.TransactOpts, token, account, value, gas, service, deadline, permitSig, extraData)
+// Solidity: function permitBridge(address token, address account, uint256 value, uint256 gas, uint256 service, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs, bytes[] extraData) payable returns(bool)
+func (_BridgeStandard *BridgeStandardSession) PermitBridge(token common.Address, account common.Address, value *big.Int, gas *big.Int, service *big.Int, permitArgs IBridgeStandardPermitArguments, extraData [][]byte) (*types.Transaction, error) {
+	return _BridgeStandard.Contract.PermitBridge(&_BridgeStandard.TransactOpts, token, account, value, gas, service, permitArgs, extraData)
 }
 
-// PermitBridge is a paid mutator transaction binding the contract method 0x69a3318b.
+// PermitBridge is a paid mutator transaction binding the contract method 0x51c45579.
 //
-// Solidity: function permitBridge(address token, address account, uint256 value, uint256 gas, uint256 service, uint256 deadline, bytes permitSig, bytes[] extraData) payable returns(bool)
-func (_BridgeStandard *BridgeStandardTransactorSession) PermitBridge(token common.Address, account common.Address, value *big.Int, gas *big.Int, service *big.Int, deadline *big.Int, permitSig []byte, extraData [][]byte) (*types.Transaction, error) {
-	return _BridgeStandard.Contract.PermitBridge(&_BridgeStandard.TransactOpts, token, account, value, gas, service, deadline, permitSig, extraData)
+// Solidity: function permitBridge(address token, address account, uint256 value, uint256 gas, uint256 service, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs, bytes[] extraData) payable returns(bool)
+func (_BridgeStandard *BridgeStandardTransactorSession) PermitBridge(token common.Address, account common.Address, value *big.Int, gas *big.Int, service *big.Int, permitArgs IBridgeStandardPermitArguments, extraData [][]byte) (*types.Transaction, error) {
+	return _BridgeStandard.Contract.PermitBridge(&_BridgeStandard.TransactOpts, token, account, value, gas, service, permitArgs, extraData)
 }
 
-// PermitBridgeTo is a paid mutator transaction binding the contract method 0x50d6fb48.
+// PermitBridgeTo is a paid mutator transaction binding the contract method 0x174991ab.
 //
-// Solidity: function permitBridgeTo(address token, address from, address to, uint256 value, uint256 gas, uint256 service, uint256 deadline, bytes permitSig, bytes[] extraData) payable returns(bool)
-func (_BridgeStandard *BridgeStandardTransactor) PermitBridgeTo(opts *bind.TransactOpts, token common.Address, from common.Address, to common.Address, value *big.Int, gas *big.Int, service *big.Int, deadline *big.Int, permitSig []byte, extraData [][]byte) (*types.Transaction, error) {
-	return _BridgeStandard.contract.Transact(opts, "permitBridgeTo", token, from, to, value, gas, service, deadline, permitSig, extraData)
+// Solidity: function permitBridgeTo(address token, address from, address to, uint256 value, uint256 gas, uint256 service, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs, bytes[] extraData) payable returns(bool)
+func (_BridgeStandard *BridgeStandardTransactor) PermitBridgeTo(opts *bind.TransactOpts, token common.Address, from common.Address, to common.Address, value *big.Int, gas *big.Int, service *big.Int, permitArgs IBridgeStandardPermitArguments, extraData [][]byte) (*types.Transaction, error) {
+	return _BridgeStandard.contract.Transact(opts, "permitBridgeTo", token, from, to, value, gas, service, permitArgs, extraData)
 }
 
-// PermitBridgeTo is a paid mutator transaction binding the contract method 0x50d6fb48.
+// PermitBridgeTo is a paid mutator transaction binding the contract method 0x174991ab.
 //
-// Solidity: function permitBridgeTo(address token, address from, address to, uint256 value, uint256 gas, uint256 service, uint256 deadline, bytes permitSig, bytes[] extraData) payable returns(bool)
-func (_BridgeStandard *BridgeStandardSession) PermitBridgeTo(token common.Address, from common.Address, to common.Address, value *big.Int, gas *big.Int, service *big.Int, deadline *big.Int, permitSig []byte, extraData [][]byte) (*types.Transaction, error) {
-	return _BridgeStandard.Contract.PermitBridgeTo(&_BridgeStandard.TransactOpts, token, from, to, value, gas, service, deadline, permitSig, extraData)
+// Solidity: function permitBridgeTo(address token, address from, address to, uint256 value, uint256 gas, uint256 service, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs, bytes[] extraData) payable returns(bool)
+func (_BridgeStandard *BridgeStandardSession) PermitBridgeTo(token common.Address, from common.Address, to common.Address, value *big.Int, gas *big.Int, service *big.Int, permitArgs IBridgeStandardPermitArguments, extraData [][]byte) (*types.Transaction, error) {
+	return _BridgeStandard.Contract.PermitBridgeTo(&_BridgeStandard.TransactOpts, token, from, to, value, gas, service, permitArgs, extraData)
 }
 
-// PermitBridgeTo is a paid mutator transaction binding the contract method 0x50d6fb48.
+// PermitBridgeTo is a paid mutator transaction binding the contract method 0x174991ab.
 //
-// Solidity: function permitBridgeTo(address token, address from, address to, uint256 value, uint256 gas, uint256 service, uint256 deadline, bytes permitSig, bytes[] extraData) payable returns(bool)
-func (_BridgeStandard *BridgeStandardTransactorSession) PermitBridgeTo(token common.Address, from common.Address, to common.Address, value *big.Int, gas *big.Int, service *big.Int, deadline *big.Int, permitSig []byte, extraData [][]byte) (*types.Transaction, error) {
-	return _BridgeStandard.Contract.PermitBridgeTo(&_BridgeStandard.TransactOpts, token, from, to, value, gas, service, deadline, permitSig, extraData)
+// Solidity: function permitBridgeTo(address token, address from, address to, uint256 value, uint256 gas, uint256 service, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs, bytes[] extraData) payable returns(bool)
+func (_BridgeStandard *BridgeStandardTransactorSession) PermitBridgeTo(token common.Address, from common.Address, to common.Address, value *big.Int, gas *big.Int, service *big.Int, permitArgs IBridgeStandardPermitArguments, extraData [][]byte) (*types.Transaction, error) {
+	return _BridgeStandard.Contract.PermitBridgeTo(&_BridgeStandard.TransactOpts, token, from, to, value, gas, service, permitArgs, extraData)
 }
 
 // RemoveToken is a paid mutator transaction binding the contract method 0x5fa7b584.
@@ -1481,6 +1488,27 @@ func (_BridgeStandard *BridgeStandardSession) RemoveToken(token common.Address) 
 // Solidity: function removeToken(address token) returns()
 func (_BridgeStandard *BridgeStandardTransactorSession) RemoveToken(token common.Address) (*types.Transaction, error) {
 	return _BridgeStandard.Contract.RemoveToken(&_BridgeStandard.TransactOpts, token)
+}
+
+// RemoveTokenInfo is a paid mutator transaction binding the contract method 0x85547884.
+//
+// Solidity: function removeTokenInfo() returns()
+func (_BridgeStandard *BridgeStandardTransactor) RemoveTokenInfo(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _BridgeStandard.contract.Transact(opts, "removeTokenInfo")
+}
+
+// RemoveTokenInfo is a paid mutator transaction binding the contract method 0x85547884.
+//
+// Solidity: function removeTokenInfo() returns()
+func (_BridgeStandard *BridgeStandardSession) RemoveTokenInfo() (*types.Transaction, error) {
+	return _BridgeStandard.Contract.RemoveTokenInfo(&_BridgeStandard.TransactOpts)
+}
+
+// RemoveTokenInfo is a paid mutator transaction binding the contract method 0x85547884.
+//
+// Solidity: function removeTokenInfo() returns()
+func (_BridgeStandard *BridgeStandardTransactorSession) RemoveTokenInfo() (*types.Transaction, error) {
+	return _BridgeStandard.Contract.RemoveTokenInfo(&_BridgeStandard.TransactOpts)
 }
 
 // RemoveValidator is a paid mutator transaction binding the contract method 0x40a141ff.
@@ -1565,6 +1593,27 @@ func (_BridgeStandard *BridgeStandardSession) RetryFinalize(index *big.Int) (*ty
 // Solidity: function retryFinalize(uint256 index) returns(bool)
 func (_BridgeStandard *BridgeStandardTransactorSession) RetryFinalize(index *big.Int) (*types.Transaction, error) {
 	return _BridgeStandard.Contract.RetryFinalize(&_BridgeStandard.TransactOpts, index)
+}
+
+// SetTokenInfo is a paid mutator transaction binding the contract method 0x2f9b59d1.
+//
+// Solidity: function setTokenInfo(address _bridgeTokenInfo) returns()
+func (_BridgeStandard *BridgeStandardTransactor) SetTokenInfo(opts *bind.TransactOpts, _bridgeTokenInfo common.Address) (*types.Transaction, error) {
+	return _BridgeStandard.contract.Transact(opts, "setTokenInfo", _bridgeTokenInfo)
+}
+
+// SetTokenInfo is a paid mutator transaction binding the contract method 0x2f9b59d1.
+//
+// Solidity: function setTokenInfo(address _bridgeTokenInfo) returns()
+func (_BridgeStandard *BridgeStandardSession) SetTokenInfo(_bridgeTokenInfo common.Address) (*types.Transaction, error) {
+	return _BridgeStandard.Contract.SetTokenInfo(&_BridgeStandard.TransactOpts, _bridgeTokenInfo)
+}
+
+// SetTokenInfo is a paid mutator transaction binding the contract method 0x2f9b59d1.
+//
+// Solidity: function setTokenInfo(address _bridgeTokenInfo) returns()
+func (_BridgeStandard *BridgeStandardTransactorSession) SetTokenInfo(_bridgeTokenInfo common.Address) (*types.Transaction, error) {
+	return _BridgeStandard.Contract.SetTokenInfo(&_BridgeStandard.TransactOpts, _bridgeTokenInfo)
 }
 
 // SetValidator is a paid mutator transaction binding the contract method 0x1327d3d8.

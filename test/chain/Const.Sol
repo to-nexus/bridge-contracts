@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+
+import {TestToken} from "../token/TestToken.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Test, console} from "forge-std/Test.sol";
+
+contract ConstTest is Test {
+    uint public exrate = 100;
+    bytes32 public constant FINALIZE_TYPEHASH =
+        keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes[] extraData)");
+
+    uint internal constant OWNER_PK = uint(bytes32("owner"));
+    uint internal constant USER_PK = uint(bytes32("user"));
+    uint internal constant REWARD_PK = uint(bytes32("reward"));
+    uint internal constant VALIDATOR_PK1 = uint(bytes32("validator1"));
+    uint internal constant VALIDATOR_PK2 = uint(bytes32("validator2"));
+    uint internal constant VALIDATOR_PK3 = uint(bytes32("validator3"));
+    uint internal constant VALIDATOR_PK4 = uint(bytes32("validator4"));
+    uint internal constant VALIDATOR_PK5 = uint(bytes32("validator5"));
+
+    uint public ethereumChainID;
+    uint public crossChainID;
+    IERC20 public cross;
+    IERC20 internal testTokenEthereum;
+    IERC20 internal testTokenCross;
+
+    address public OWNER;
+    address public USER;
+    address public REWARD;
+    address public VALIDATOR1;
+    address public VALIDATOR2;
+    address public VALIDATOR3;
+    address public VALIDATOR4;
+    address public VALIDATOR5;
+
+    address[5] public VALIDATORS;
+    uint[5] public VALIDATOR_PKs = [VALIDATOR_PK1, VALIDATOR_PK2, VALIDATOR_PK3, VALIDATOR_PK4, VALIDATOR_PK5];
+
+    IERC20 public xcross = IERC20(address(1));
+
+    bytes[] NULLDATA;
+
+    function setUp() public virtual {
+        ethereumChainID = vm.createFork("http://sepolia.crossops.in:8546");
+        crossChainID = vm.createFork("http://testnet.crossops.in:22001");
+
+        OWNER = vm.addr(OWNER_PK);
+        USER = vm.addr(USER_PK);
+        REWARD = vm.addr(REWARD_PK);
+
+        VALIDATOR1 = vm.addr(VALIDATOR_PK1);
+        VALIDATOR2 = vm.addr(VALIDATOR_PK2);
+        VALIDATOR3 = vm.addr(VALIDATOR_PK3);
+        VALIDATOR4 = vm.addr(VALIDATOR_PK4);
+        VALIDATOR5 = vm.addr(VALIDATOR_PK5);
+
+        VALIDATORS = [VALIDATOR1, VALIDATOR2, VALIDATOR3, VALIDATOR4, VALIDATOR5];
+
+        vm.label(OWNER, "owner");
+        vm.label(USER, "user");
+        vm.label(REWARD, "reward");
+        vm.label(VALIDATOR1, "validator1");
+        vm.label(VALIDATOR2, "validator2");
+        vm.label(VALIDATOR3, "validator3");
+        vm.label(VALIDATOR4, "validator4");
+        vm.label(VALIDATOR5, "validator5");
+
+        address[] memory validators = new address[](5);
+        for (uint i = 0; i < 5; i++) {
+            validators[i] = VALIDATORS[i];
+        }
+
+        vm.selectFork(ethereumChainID);
+        vm.startPrank(OWNER);
+        cross = IERC20(new TestToken("Cross", "CROSS", 18));
+        testTokenEthereum = IERC20(new TestToken("Test Token", "TT", 18));
+        vm.stopPrank();
+    }
+}

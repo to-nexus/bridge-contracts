@@ -9,6 +9,12 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {BridgeStandard} from "./abstract/BridgeStandard.sol";
 import {ICrossMintableERC20, ICrossMintableERC20Code} from "./interface/ICrossMintableERC20.sol";
 
+/**
+ * @title BridgeCross
+ * @notice This contract implements the BridgeStandard for a specific cross-chain bridge.
+ * It handles the initiation and finalization of cross-chain transfers, including minting and burning of wrapped tokens.
+ * It uses Create2 for deploying new wrapped tokens.
+ */
 contract BridgeCross is BridgeStandard {
     using Address for address payable;
     using SafeERC20 for IERC20;
@@ -17,48 +23,78 @@ contract BridgeCross is BridgeStandard {
     error BridgeCrossInsufficientValue(uint expected, uint actual);
     error BridgeCrossBurnFailed(address token, address from, uint value);
 
-    address public xcross;
-    ICrossMintableERC20Code private _crossMintableERC20Code;
+    address public xcross; // Address representing the native token on the source chain (e.g., ETH, BNB)
+    ICrossMintableERC20Code private _crossMintableERC20Code; // Bytecode for deploying new cross-mintable ERC20 tokens
 
     receive() external payable {
-        assert(msg.value > 0);
+        assert(msg.value > 0); // Ensure the receive function only accepts non-zero value
     }
 
+    /**
+     * @notice Initializes the BridgeCross contract.
+     * @param crossMintableERC20Code The address of the contract containing the bytecode for cross-mintable ERC20 tokens.
+     * @param rewardWallet_ The address of the reward wallet.
+     * @param BridgeFeeManager The address of the BridgeFeeManager contract.
+     */
     function initialize(address crossMintableERC20Code, address rewardWallet_, address BridgeFeeManager)
         external
         initializer
     {
         __BridgeStandard_init(rewardWallet_, BridgeFeeManager);
-        xcross = address(1);
+        xcross = address(1); // Placeholder address.  Should be updated with actual native token representation
         _crossMintableERC20Code = ICrossMintableERC20Code(crossMintableERC20Code);
     }
 
+    /**
+     * @notice Deploys a new wrapped token using Create2.
+     * @param pair The address of the corresponding token on the destination chain.
+     * @param symbol The symbol of the new wrapped token.
+     * @param decimals The number of decimals for the new wrapped token.
+     * @return tokenAddress The address of the newly deployed wrapped token.
+     */
     function addTokenDeploy(IERC20 pair, string memory symbol, uint8 decimals)
         public
         onlyOwner
         returns (address tokenAddress)
     {
         string memory name = string(abi.encodePacked("Cross Bridge ", symbol));
-        bytes32 salt = keccak256(abi.encodePacked(pair));
-        bytes memory bytecode = abi.encodePacked(_crossMintableERC20Code.code(), abi.encode(name, symbol, decimals));
-        tokenAddress = Create2.deploy(0, salt, bytecode);
-        addToken(IERC20(tokenAddress), pair);
+        bytes32 salt = keccak256(abi.encodePacked(pair)); // Create a deterministic salt based on the paired token
+        bytes memory bytecode = abi.encodePacked(_crossMintableERC20Code.code(), abi.encode(name, symbol, decimals)); // Combine creation code and constructor arguments
+        tokenAddress = Create2.deploy(0, salt, bytecode); // Deploy the wrapped token using Create2
+        addToken(IERC20(tokenAddress), pair); // Register the new token with the bridge
     }
 
+    /**
+     * @notice Handles the initiation of a bridge transaction on the source chain.
+     * @param token The address of the token being bridged.
+     * @param from The address of the user initiating the bridge.
+     * @param value The amount of tokens being bridged.
+     * @param fee The total fees (gas + service) for the bridge transaction.
+     */
     function _initiateBridge(IERC20 token, address from, uint value, uint fee) internal override {
         if (address(token) == xcross) {
-            require((msg.value / _exrate) * _exrate == msg.value, BridgeCrossInvalidValueUnit(msg.value));
-            require(msg.value == value + fee, BridgeCrossInsufficientValue(value + fee, msg.value));
-            if (fee > 0) rewardWallet().sendValue(fee);
+            // Handling native token transfers (e.g., ETH, BNB)
+            require((value / _exrate) * _exrate == value, BridgeCrossInvalidValueUnit(msg.value)); // Check for divisibility
+            require(msg.value == value + fee, BridgeCrossInsufficientValue(value + fee, msg.value)); // Verify correct amount received
+            if (fee > 0) rewardWallet().sendValue(fee); // Send fees to the reward wallet
         } else {
-            if (fee > 0) token.safeTransferFrom(from, rewardWallet(), fee);
+            // Handling ERC20 token transfers
+            if (fee > 0) token.safeTransferFrom(from, rewardWallet(), fee); // Transfer fees to the reward wallet
             require(
-                ICrossMintableERC20(address(token)).burn(from, value),
+                ICrossMintableERC20(address(token)).burn(from, value), // Burn the wrapped tokens on the source chain
                 BridgeCrossBurnFailed(address(token), from, value)
             );
         }
     }
 
+    /**
+     * @notice Handles the finalization of a bridge transaction on the destination chain.
+     * @param token The address of the token being bridged.
+     * @param to The address of the recipient on the destination chain.
+     * @param value The amount of tokens being bridged.
+     * @return ok True if the finalization was successful, false otherwise.
+     * @return reason The reason for failure if the finalization was unsuccessful.
+     */
     function _finalizeBridge(IERC20 token, address to, uint value)
         internal
         override
@@ -66,9 +102,14 @@ contract BridgeCross is BridgeStandard {
     {
         if (value > 0) {
             if (address(token) == xcross) {
-                payable(to).sendValue(value * _exrate);
+                // Handling native token transfers
+                payable(to).sendValue(value * _exrate); // Send native tokens to the recipient
+                ok = true;
+                reason = "";
             } else {
+                // Handling ERC20 token transfers
                 try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
+                    // Mint wrapped tokens on the destination chain
                     if (success) {
                         ok = true;
                         reason = "";
@@ -76,6 +117,7 @@ contract BridgeCross is BridgeStandard {
                         ok = false;
                         reason = "BridgeCross: mint failed";
                     }
+                    // Catch potential errors during minting and provide revert reasons
                 } catch Error(string memory _reason) {
                     ok = false;
                     reason = bytes(_reason);

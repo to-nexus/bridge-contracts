@@ -1,117 +1,118 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Test, console} from "forge-std/Test.sol";
-// import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-// import {TestToken} from "./TestToken.sol";
-// import {BridgeEthereum} from "../src/BridgeEthereum.sol";
-// import {BridgeCross} from "../src/BridgeCross.sol";
-// import {BridgeStandard} from "../src/BridgeStandard.sol";
-// import {BridgeFeeManager, IBridgeFeeManager} from "../src/BridgeFeeManager.sol";
-// import {CrossMintableERC20} from "../src/CrossMintableERC20.sol";
 import {BridgeTest} from "./Bridge.t.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract BridgeExceptionTest is Test, BridgeTest {
+contract BridgeExceptionTest is BridgeTest {
     function test_deposit_with_insufficient_balance() public {
-        uint amount = 1000;
+        uint amount = 1000 ether;
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
-        bridgeRevert = true;
+        bridgeRevertEthereum = true;
         deposit(true, amount + 1000, 5);
     }
 
     function test_deposit_with_insufficient_validator_signature() public {
-        uint amount = 1000;
+        uint amount = 1000 ether;
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
-        finalizeRevert = true;
+        finalizeRevertCross = true;
         deposit(true, amount, 1);
     }
 
     function test_withdraw_with_insufficient_balance() public {
-        uint amount = 1000;
+        uint amount = 1000 ether;
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
         deposit(false, amount, 5);
 
         vm.prank(USER);
 
-        bridgeRevert = true;
+        bridgeRevertCross = true;
         withdraw(true, USER.balance + 1000, 5);
     }
 
     function test_withdraw_with_insufficient_validator_signature() public {
-        uint amount = 1000;
+        uint amount = 1000 ether;
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
         deposit(false, amount, 5);
 
         vm.prank(USER);
 
-        finalizeRevert = true;
+        finalizeRevertEthereum = true;
         withdraw(true, amount, 1);
     }
 
     function test_deposit_with_insufficient_allowance() public {
-        uint amount = 1000;
+        uint amount = 1000 ether;
 
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount / 2);
+        cross.approve(address(bridgeEthereum), amount / 2);
 
-        bridgeRevert = true;
+        bridgeRevertEthereum = true;
         deposit(true, amount, 5);
     }
 
     function test_deposit_withdraw_at_token_paused() public {
         // token pause
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
-        bridgeEthereum.b.pauseToken(IERC20(address(cross)));
+        bridgeEthereum.pauseToken(IERC20(address(cross)));
 
-        uint amount = 1000;
+        uint amount = 1000 ether;
 
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum.b), amount);
+        cross.approve(address(bridgeEthereum), amount);
 
-        bridgeRevert = true;
+        bridgeRevertEthereum = true;
         deposit(true, amount, 5);
 
         // token unpause
+        vm.selectFork(ethereumChainID);
         vm.prank(OWNER);
-        bridgeEthereum.b.unpauseToken(IERC20(address(cross)));
+        bridgeEthereum.unpauseToken(IERC20(address(cross)));
 
         deposit(false, amount, 5);
 
         // token pause
+        vm.selectFork(crossChainID);
         vm.prank(OWNER);
-        bridgeCross.b.pauseToken(xcross);
+        bridgeCross.pauseToken(xcross);
 
-        bridgeRevert = true;
+        bridgeRevertCross = true;
         withdraw(true, amount, 5);
 
         // token unpause
+        vm.selectFork(crossChainID);
         vm.prank(OWNER);
-        bridgeCross.b.unpauseToken(xcross);
+        bridgeCross.unpauseToken(xcross);
 
         withdraw(false, amount * 10, 5);
     }

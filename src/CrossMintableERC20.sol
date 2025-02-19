@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // import {ERC20, IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20.sol";
 
-import {IBridgeStandard} from "./interface/IBridgeStandard.sol";
 import {ICrossMintableERC20, ICrossMintableERC20Code} from "./interface/ICrossMintableERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20, ERC20Permit, IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
