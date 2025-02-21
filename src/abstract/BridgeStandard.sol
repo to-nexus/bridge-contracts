@@ -12,6 +12,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IBridgeStandard} from "../interface/IBridgeStandard.sol";
+
 import {IBridgeTokenInfo} from "../interface/IBridgeTokenInfo.sol";
 import {Indexer} from "./Indexer.sol";
 import {TokenManager} from "./TokenManager.sol";
@@ -36,7 +37,7 @@ abstract contract BridgeStandard is
 
     error BridgeStandardInvalidIndex(uint expected, uint actual);
     error BridgeStandardInvalidAmount(
-        uint minimumValue, uint expectedGas, uint expectedService, uint actualValue, uint actualGas, uint actualService
+        uint minimumValue, uint expectedGas, uint expectedEx, uint actualValue, uint actualGas, uint actualEx
     );
     error BridgeStandardInvalidSignatures(uint index);
     error BridgeStandardInvalidPermitValue(address token, uint value);
@@ -58,23 +59,22 @@ abstract contract BridgeStandard is
     );
     event BridgeFinalized(uint indexed index, IERC20 indexed token, address indexed to, uint value, uint time);
     event BridgeFinalizeReverted(uint indexed index);
-    event BridgeFeeCharged(
-        uint indexed index, IERC20 indexed token, address indexed account, uint gasFee, uint serviceFee
-    );
+    event BridgeFeeCharged(uint indexed index, IERC20 indexed token, address indexed account, uint gasFee, uint exFee);
 
-    uint internal constant _exrate = 100; // cross : xcross, 1 : 100
+    uint internal constant EX_RATE = 100; // cross : xcross, 1 : 100
     bytes32 private constant FINALIZE_TYPEHASH =
         keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes[] extraData)");
 
     IBridgeTokenInfo public bridgeTokenInfo;
-    uint private _initializedAt;
+    address internal coin; // Address representing the native coin on the source chain (e.g., XCROSS, ETH, BNB)
     address payable private _rewardWallet;
+    uint private _initializedAt;
 
     mapping(uint => FinalizeArguments) private _revertedArguments;
     mapping(uint => bytes) private _revertedReason;
     EnumerableSet.UintSet private _revertedIndex;
 
-    uint[44] private __gap;
+    uint[43] private __gap;
 
     constructor() {
         _disableInitializers();
@@ -86,15 +86,15 @@ abstract contract BridgeStandard is
      * @param _bridgeTokenInfo The address of the BridgeTokenInfo contract.
      */
     function __BridgeStandard_init(address rewardWallet_, address _bridgeTokenInfo) internal onlyInitializing {
-        __Ownable_init(_msgSender());
+        __Validator_init(_msgSender());
         __UUPSUpgradeable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
-        __Validator_init();
 
         require(address(rewardWallet_) != address(0), BridgeStandardCanNotZeroAddress("rewardWallet"));
         // require(address(_bridgeTokenInfo) != address(0), CanNotZeroAddress("_bridgeTokenInfo")); // allow zero address
 
+        coin = address(1);
         _initializedAt = block.number;
         bridgeTokenInfo = IBridgeTokenInfo(_bridgeTokenInfo);
         _rewardWallet = payable(rewardWallet_);
@@ -105,16 +105,16 @@ abstract contract BridgeStandard is
      * @param token The address of the token to bridge.
      * @param value The amount of tokens to bridge.
      * @param gas The gas fee for the transaction.
-     * @param service The service fee for the transaction.
+     * @param ex The ex fee for the transaction.
      * @param extraData Additional data for the bridge transaction.
      * @return True if the bridge transaction was initiated successfully.
      */
-    function bridge(IERC20 token, uint value, uint gas, uint service, bytes[] calldata extraData)
+    function bridge(IERC20 token, uint value, uint gas, uint ex, bytes[] calldata extraData)
         public
         payable
         returns (bool)
     {
-        return bridgeTo(token, _msgSender(), value, gas, service, extraData);
+        return bridgeTo(token, _msgSender(), value, gas, ex, extraData);
     }
 
     /**
@@ -123,11 +123,11 @@ abstract contract BridgeStandard is
      * @param to The address of the recipient.
      * @param value The amount of tokens to bridge.
      * @param gas The gas fee for the transaction.
-     * @param service The service fee for the transaction.
+     * @param ex The ex fee for the transaction.
      * @param extraData Additional data for the bridge transaction.
      * @return True if the bridge transaction was initiated successfully.
      */
-    function bridgeTo(IERC20 token, address to, uint value, uint gas, uint service, bytes[] calldata extraData)
+    function bridgeTo(IERC20 token, address to, uint value, uint gas, uint ex, bytes[] calldata extraData)
         public
         payable
         whenNotPaused
@@ -135,9 +135,8 @@ abstract contract BridgeStandard is
         nonReentrant
         returns (bool)
     {
-        (uint minimum, uint _gas, uint _service, bool ok) = _checkAmount(token, value, gas, service);
-        require(ok, BridgeStandardInvalidAmount(minimum, _gas, _service, value, gas, service));
-        _bridge(token, _msgSender(), to, value, _gas, _service, false, extraData);
+        (uint _gas, uint _ex) = _checkAmount(token, value, gas, ex);
+        _bridge(token, _msgSender(), to, value, _gas, _ex, false, extraData);
         return true;
     }
 
@@ -147,7 +146,7 @@ abstract contract BridgeStandard is
      * @param account The address of the account initiating the transaction.
      * @param value The amount of tokens to bridge.
      * @param gas The gas fee for the transaction.
-     * @param service The service fee for the transaction.
+     * @param ex The ex fee for the transaction.
      * @param permitArgs The permit arguments.
      * @param extraData Additional data for the bridge transaction.
      * @return True if the bridge transaction was initiated successfully.
@@ -157,11 +156,11 @@ abstract contract BridgeStandard is
         address account,
         uint value,
         uint gas,
-        uint service,
+        uint ex,
         PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) public payable returns (bool) {
-        return permitBridgeTo(token, account, account, value, gas, service, permitArgs, extraData);
+        return permitBridgeTo(token, account, account, value, gas, ex, permitArgs, extraData);
     }
 
     /**
@@ -171,7 +170,7 @@ abstract contract BridgeStandard is
      * @param to The address of the recipient.
      * @param value The amount of tokens to bridge.
      * @param gas The gas fee for the transaction.
-     * @param service The service fee for the transaction.
+     * @param ex The ex fee for the transaction.
      * @param permitArgs The permit arguments.
      * @param extraData Additional data for the bridge transaction.
      * @return True if the bridge transaction was initiated successfully.
@@ -182,13 +181,13 @@ abstract contract BridgeStandard is
         address to,
         uint value,
         uint gas,
-        uint service,
+        uint ex,
         PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) public payable whenNotPaused checkValidToken(address(token)) nonReentrant returns (bool) {
-        (uint minimum, uint _gas, uint _service, bool ok) = _checkAmount(token, value, gas, service);
-        require(ok, BridgeStandardInvalidAmount(minimum, _gas, _service, value, gas, service));
-        _permitBridge(token, from, to, value, _gas, _service, permitArgs, extraData);
+        (uint _gas, uint _ex) = _checkAmount(token, value, gas, ex);
+
+        _permitBridge(token, from, to, value, _gas, _ex, permitArgs, extraData);
         return true;
     }
 
@@ -236,7 +235,7 @@ abstract contract BridgeStandard is
      * @return True if all bridge transactions were finalized successfully.
      */
     function finalizeBatch(FinalizeArguments[] calldata args, bytes[][] memory sigs) external payable returns (bool) {
-        for (uint i = 0; i < args.length; i++) {
+        for (uint i = 0; i < args.length; ++i) {
             finalize(args[i].index, args[i].token, args[i].to, args[i].value, args[i].extraData, sigs[i]);
         }
         return true;
@@ -268,7 +267,7 @@ abstract contract BridgeStandard is
      * @return True if all retries were successful.
      */
     function retryFinalizeBatch(uint[] memory indexes) external returns (bool) {
-        for (uint i = 0; i < indexes.length; i++) {
+        for (uint i = 0; i < indexes.length; ++i) {
             retryFinalize(indexes[i]);
         }
         return true;
@@ -281,7 +280,7 @@ abstract contract BridgeStandard is
      * @param to The address of the recipient.
      * @param value The amount of tokens to bridge.
      * @param gas The gas fee for the transaction.
-     * @param service The service fee for the transaction.
+     * @param ex The ex fee for the transaction.
      * @param permitArgs The permit arguments.
      * @param extraData Additional data for the bridge transaction.
      */
@@ -291,13 +290,13 @@ abstract contract BridgeStandard is
         address to,
         uint value,
         uint gas,
-        uint service,
+        uint ex,
         PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) private {
-        require(permitArgs.value >= value + gas + service, BridgeStandardInvalidPermitValue(address(token), value));
+        require(permitArgs.value >= value + gas + ex, BridgeStandardInvalidPermitValue(address(token), value));
         _permitCall(permitArgs);
-        _bridge(token, from, to, value, gas, service, true, extraData);
+        _bridge(token, from, to, value, gas, ex, true, extraData);
     }
 
     /**
@@ -307,7 +306,7 @@ abstract contract BridgeStandard is
      * @param to The address of the recipient.
      * @param value The amount of tokens to bridge.
      * @param gas The gas fee for the transaction.
-     * @param service The service fee for the transaction.
+     * @param ex The ex fee for the transaction.
      * @param permit Whether the transaction uses a permit.
      * @param extraData Additional data for the bridge transaction.
      */
@@ -317,12 +316,12 @@ abstract contract BridgeStandard is
         address to,
         uint value,
         uint gas,
-        uint service,
+        uint ex,
         bool permit,
         bytes[] calldata extraData
     ) private {
-        _initiateBridge(token, from, value, gas + service);
-        _emitInitiate(nextInitiateIndex(), token, from, to, value, gas, service, permit, extraData);
+        _initiateBridge(token, from, value, gas + ex);
+        _emitInitiate(nextInitiateIndex(), token, from, to, value, gas, ex, permit, extraData);
         _incrementInitiateIndex();
     }
 
@@ -334,7 +333,7 @@ abstract contract BridgeStandard is
      * @param to The address of the recipient.
      * @param value The amount of tokens to bridge.
      * @param gas The gas fee for the transaction.
-     * @param service The service fee for the transaction.
+     * @param ex The ex fee for the transaction.
      * @param permit Whether the transaction uses a permit.
      * @param extraData Additional data for the bridge transaction.
      */
@@ -345,7 +344,7 @@ abstract contract BridgeStandard is
         address to,
         uint value,
         uint gas,
-        uint service,
+        uint ex,
         bool permit,
         bytes[] calldata extraData
     ) internal {
@@ -353,7 +352,7 @@ abstract contract BridgeStandard is
             index, token, IERC20(getPairToken(address(token))), from, to, value, block.timestamp, permit, extraData
         );
 
-        emit BridgeFeeCharged(index, token, from, gas, service);
+        emit BridgeFeeCharged(index, token, from, gas, ex);
     }
 
     /**
@@ -361,20 +360,19 @@ abstract contract BridgeStandard is
      * @param token The address of the token.
      * @param value The amount of tokens.
      * @param gas The gas fee.
-     * @param service The service fee.
-     * @return minimum The minimum amount of tokens required.
+     * @param ex The ex fee.
      * @return _gas The calculated gas fee.
-     * @return _service The calculated service fee.
-     * @return ok True if the amounts are valid.
+     * @return _ex The calculated ex fee.
      */
-    function _checkAmount(IERC20 token, uint value, uint gas, uint service)
-        private
-        view
-        returns (uint minimum, uint _gas, uint _service, bool ok)
-    {
-        if (address(bridgeTokenInfo) == address(0)) return (0, 0, 0, true);
-        (minimum, _gas, _service) = bridgeTokenInfo.calculate(address(token), value);
-        if ((gas >= _gas) && (service >= _service) && (value >= minimum)) ok = true;
+    function _checkAmount(IERC20 token, uint value, uint gas, uint ex) private view returns (uint _gas, uint _ex) {
+        if (address(bridgeTokenInfo) == address(0)) return (0, 0);
+        bool ok;
+        uint minimum;
+        (minimum, _gas, _ex, ok) = bridgeTokenInfo.calculate(token, value);
+        require(
+            (value >= minimum) && (gas >= _gas) && (ex >= _ex) && ok,
+            BridgeStandardInvalidAmount(minimum, _gas, _ex, value, gas, ex)
+        );
     }
 
     /**
@@ -448,29 +446,16 @@ abstract contract BridgeStandard is
         return _revertedReason[index];
     }
 
-    // BridgeTokenInfo
-    function calculate(IERC20 token, uint value) external view returns (uint minimum, uint gas, uint service) {
-        (minimum, gas, service) = bridgeTokenInfo.calculate(address(token), value);
+    function calculate(IERC20 token, uint value)
+        external
+        view
+        returns (uint minimum, uint gas, uint ex, bool isValid)
+    {
+        (minimum, gas, ex, isValid) = bridgeTokenInfo.calculate(token, value);
     }
 
     function denominator() external view returns (uint) {
         return bridgeTokenInfo.denominator();
-    }
-
-    function getTokenInfo(IERC20 token) public view returns (IBridgeTokenInfo.TokenInfo memory) {
-        return bridgeTokenInfo.getTokenInfo(address(token));
-    }
-
-    function tokenInfoLength() public view returns (uint) {
-        return bridgeTokenInfo.tokensLength();
-    }
-
-    function tokenInfoByIndex(uint index) external view returns (IBridgeTokenInfo.TokenInfo memory) {
-        return bridgeTokenInfo.tokenInfoByIndex(index);
-    }
-
-    function allTokenInfo() external view returns (IBridgeTokenInfo.TokenInfo[] memory) {
-        return bridgeTokenInfo.allTokenInfo();
     }
 
     /**
@@ -510,7 +495,7 @@ abstract contract BridgeStandard is
     }
 
     function setTokenInfo(IBridgeTokenInfo _bridgeTokenInfo) external onlyOwner {
-        require(address(_bridgeTokenInfo) != address(0), BridgeStandardCanNotZeroAddress("bridgeTokenInfo"));
+        require(address(_bridgeTokenInfo) != address(0), BridgeStandardCanNotZeroAddress("_bridgeTokenInfo"));
         bridgeTokenInfo = _bridgeTokenInfo;
     }
 

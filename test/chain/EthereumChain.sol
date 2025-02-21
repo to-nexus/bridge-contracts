@@ -38,7 +38,7 @@ contract EthereumChainTest is CrossChainTest {
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.addToken(IERC20(address(cross)), xcross);
+            bridgeEthereum.addToken(coin, weth);
             bridgeEthereum.addToken(testTokenEthereum, IERC20(testTokenCross));
 
             uint initialSupply = 1000000000 * 1e18;
@@ -64,7 +64,12 @@ contract EthereumChainTest is CrossChainTest {
             vm.expectRevert();
         }
 
-        ok = bridgeEthereum.bridge(IERC20(token), value, gas, service, NULLDATA);
+        if (token == address(coin)) {
+            assertTrue(USER.balance >= value + gas + service);
+            ok = bridgeEthereum.bridge{value: value + gas + service}(IERC20(token), value, gas, service, NULLDATA);
+        } else {
+            ok = bridgeEthereum.bridge(IERC20(token), value, gas, service, NULLDATA);
+        }
     }
 
     function ethereumFinalize(uint index, address token, uint value, uint sigCount) public returns (bool ok) {
@@ -90,20 +95,11 @@ contract EthereumChainTest is CrossChainTest {
         ok = bridgeEthereum.finalize(index, IERC20(token), USER, value, NULLDATA, sigs);
     }
 
-    function ethereumCalcFee(IERC20 token, uint value) public returns (uint bridgeValue, uint gas, uint service) {
+    function ethereumCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
         vm.selectFork(ethereumChainID);
         if (address(bridgeTokenInfoEthereum) == address(0)) return (value, 0, 0);
-        BridgeTokenInfo.TokenInfo memory tokenInfo = bridgeTokenInfoEthereum.getTokenInfo(address(token));
-        assertTrue(tokenInfo.gasFee < value);
-
-        gas = tokenInfo.gasFee;
-        uint denom = bridgeTokenInfoEthereum.denominator();
-        uint serviceRate = tokenInfo.serviceFee;
-
-        uint v = value - gas;
-        uint t = denom + serviceRate;
-
-        bridgeValue = (v * denom / t);
-        service = (v * serviceRate / t);
+        bool ok;
+        (value, gas, ex, ok) = bridgeTokenInfoEthereum.calculateMax(token, totalValue);
+        assertTrue(ok);
     }
 }

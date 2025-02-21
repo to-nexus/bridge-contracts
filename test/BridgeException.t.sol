@@ -104,7 +104,7 @@ contract BridgeExceptionTest is BridgeTest {
         // token pause
         vm.selectFork(crossChainID);
         vm.prank(OWNER);
-        bridgeCross.pauseToken(xcross);
+        bridgeCross.pauseToken(coin);
 
         bridgeRevertCross = true;
         withdraw(true, amount, 5);
@@ -112,7 +112,7 @@ contract BridgeExceptionTest is BridgeTest {
         // token unpause
         vm.selectFork(crossChainID);
         vm.prank(OWNER);
-        bridgeCross.unpauseToken(xcross);
+        bridgeCross.unpauseToken(coin);
 
         withdraw(false, amount * 10, 5);
     }

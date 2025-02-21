@@ -27,6 +27,19 @@ contract BridgeStandardTest is BridgeTest {
         withdraw(false, amount * 10, 5);
     }
 
+    function test_depositWithdraw_eth() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(ethereumChainID);
+        vm.deal(USER, amount);
+        vm.selectFork(crossChainID);
+        vm.prank(USER);
+        weth.approve(address(bridgeCross), amount);
+
+        depositETH(false, amount, 5);
+        withdrawETH(false, amount, 5);
+    }
+
     function test_depositWithdrawToken() public {
         uint amount = 1000 * 1e18;
 
@@ -119,7 +132,7 @@ contract BridgeStandardTest is BridgeTest {
         vm.prank(VALIDATOR1);
         assertTrue(bridgeEthereum.bridgeCross(USER, amount, permitArgs, NULLDATA));
 
-        crossFinalize(nextIndexCross, address(xcross), amount, 5);
+        crossFinalize(nextIndexCross, address(coin), amount, 5);
         ethereumIncrementIndex();
 
         vm.selectFork(ethereumChainID);

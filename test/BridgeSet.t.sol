@@ -101,7 +101,7 @@ contract BridgeSetTest is BridgeTest {
         uint index = deposit(true, amount, 3);
 
         vm.selectFork(crossChainID);
-        crossFinalize(index, address(xcross), amount, 4);
+        crossFinalize(index, address(coin), amount, 4);
 
         vm.selectFork(ethereumChainID);
         vm.prank(OWNER);

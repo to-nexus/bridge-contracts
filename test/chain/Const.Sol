@@ -21,7 +21,10 @@ contract ConstTest is Test {
 
     uint public ethereumChainID;
     uint public crossChainID;
+    IERC20 public coin = IERC20(address(1));
     IERC20 public cross;
+    IERC20 public weth;
+
     IERC20 internal testTokenEthereum;
     IERC20 internal testTokenCross;
 
@@ -37,13 +40,12 @@ contract ConstTest is Test {
     address[5] public VALIDATORS;
     uint[5] public VALIDATOR_PKs = [VALIDATOR_PK1, VALIDATOR_PK2, VALIDATOR_PK3, VALIDATOR_PK4, VALIDATOR_PK5];
 
-    IERC20 public xcross = IERC20(address(1));
-
     bytes[] NULLDATA;
 
     function setUp() public virtual {
-        ethereumChainID = vm.createFork("http://sepolia.crossops.in:8546");
-        crossChainID = vm.createFork("http://testnet.crossops.in:22001");
+        ethereumChainID = vm.createFork("http://sepolia.crossops.in:8546"); // ethereum chain sepolia testnet
+        // crossChainID = vm.createFork("https://testnet.cross-nexus.com"); // cross chain testnet
+        crossChainID = vm.createFork("http://testnet.crossops.in:22001"); // cross chain testnet
 
         OWNER = vm.addr(OWNER_PK);
         USER = vm.addr(USER_PK);

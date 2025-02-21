@@ -19,3 +19,7 @@ docs/
 
 # Image file
 *.png
+
+
+# forge script
+script/

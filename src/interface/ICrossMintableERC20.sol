@@ -9,7 +9,6 @@ interface ICrossMintableERC20Code {
 }
 
 interface ICrossMintableERC20 is IERC20Metadata, IERC20Permit {
-    function isBridge(address _account) external view returns (bool);
     function mint(address _account, uint _amount) external returns (bool);
     function burn(address _account, uint _amount) external returns (bool);
 }

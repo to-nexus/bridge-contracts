@@ -3,7 +3,10 @@ pragma solidity ^0.8.13;
 
 import {BridgeCross} from "../../src/BridgeCross.sol";
 import {BridgeTokenInfo, IBridgeTokenInfo} from "../../src/BridgeTokenInfo.sol";
+
 import {CrossMintableERC20, CrossMintableERC20Code} from "../../src/CrossMintableERC20.sol";
+import {IPriceFeed, PriceFeedCross} from "../../src/PriceFeedCross.sol";
+import {TestToken} from "../token/TestToken.sol";
 import {ConstTest} from "./Const.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -18,6 +21,7 @@ contract CrossChainTest is ConstTest {
     uint public nextIndexCross;
     BridgeCross public bridgeCross;
     BridgeTokenInfo public bridgeTokenInfoCross;
+    PriceFeedCross public priceFeed;
     CrossMintableERC20Code public crossMintableERC20Code;
 
     function setUp() public virtual override {
@@ -56,19 +60,26 @@ contract CrossChainTest is ConstTest {
             bridgeCross.addTokenDeploy(IERC20(testTokenEthereum), "TT", 18);
             address ttAddress = Create2.computeAddress(salt, keccak256(bytecode), address(bridgeCross));
             testTokenCross = IERC20(ttAddress);
-            bridgeCross.addToken(xcross, IERC20(address(cross)));
+            bridgeCross.addToken(coin, IERC20(address(cross)));
         }
 
         // fee table
         {
-            bridgeTokenInfoCross = new BridgeTokenInfo();
-            IBridgeTokenInfo.TokenInfo[] memory TokenInfoList = new IBridgeTokenInfo.TokenInfo[](2);
-            TokenInfoList[0] = IBridgeTokenInfo.TokenInfo(address(xcross), 0, 100 * 1e18, 10);
-            TokenInfoList[1] = IBridgeTokenInfo.TokenInfo(address(testTokenCross), 0, 100 * 1e18, 10);
-            bridgeTokenInfoCross.addTokenInfoMany(TokenInfoList);
+            address priceFeedImpl = address(new PriceFeedCross());
+            ERC1967Proxy priceFeedProxy = new ERC1967Proxy(priceFeedImpl, bytes(""));
+            priceFeed = PriceFeedCross(address(priceFeedProxy));
+            priceFeed.initialize();
+
+            weth = IERC20(bridgeCross.weth());
+            priceFeed.changeDeadline(type(uint).max); // for test
+            priceFeed.addToken(address(weth), 1000 * (10 ** 6), type(uint).max);
+            priceFeed.addToken(address(testTokenCross), 3 * (10 ** 6), type(uint).max);
+
+            bridgeTokenInfoCross = new BridgeTokenInfo(address(weth));
+            bridgeTokenInfoCross.setPriceFeed(IPriceFeed(address(priceFeed)));
         }
 
-        bridgeCross.setTokenInfo(bridgeTokenInfoCross);
+        bridgeCross.setTokenInfo(IBridgeTokenInfo(address(bridgeTokenInfoCross)));
 
         vm.deal(address(bridgeCross), 1000000000 * 1e18);
         vm.stopPrank();
@@ -91,7 +102,7 @@ contract CrossChainTest is ConstTest {
             vm.expectRevert();
         }
 
-        if (token == address(xcross)) {
+        if (token == address(coin)) {
             assertTrue(USER.balance >= value + gas + service);
             ok = bridgeCross.bridge{value: value + gas + service}(IERC20(token), value, gas, service, NULLDATA);
         } else {
@@ -122,19 +133,10 @@ contract CrossChainTest is ConstTest {
         ok = bridgeCross.finalize(index, IERC20(token), USER, value, NULLDATA, sigs);
     }
 
-    function crossCalcFee(IERC20 token, uint value) public returns (uint bridgeValue, uint gas, uint service) {
+    function crossCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
         vm.selectFork(crossChainID);
-        BridgeTokenInfo.TokenInfo memory tokenInfo = bridgeTokenInfoCross.getTokenInfo(address(token));
-        assertTrue(tokenInfo.gasFee < value);
-
-        gas = tokenInfo.gasFee;
-        uint denom = bridgeTokenInfoCross.denominator();
-        uint serviceRate = tokenInfo.serviceFee;
-
-        uint v = value - gas;
-
-        bridgeValue = (v * denom / (denom + serviceRate));
-        bridgeValue = (bridgeValue / exrate) * exrate;
-        service = (bridgeValue * serviceRate / denom);
+        bool ok;
+        (value, gas, ex, ok) = bridgeTokenInfoCross.calculateMax(token, totalValue);
+        assertTrue(ok);
     }
 }

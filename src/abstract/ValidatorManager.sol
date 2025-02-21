@@ -27,7 +27,8 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
         _;
     }
 
-    function __Validator_init() internal onlyInitializing {
+    function __Validator_init(address initialOwner) internal onlyInitializing {
+        __Ownable_init(initialOwner);
         __EIP712_init("Validator", "1.0.0");
         _threshold = 3;
     }
@@ -63,7 +64,7 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
     }
 
     function setValidators(address[] memory validators) external {
-        for (uint i = 0; i < validators.length; i++) {
+        for (uint i = 0; i < validators.length; ++i) {
             _setValidator(validators[i], true);
         }
     }
@@ -73,7 +74,7 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
     }
 
     function removeValidators(address[] memory validators) external {
-        for (uint i = 0; i < validators.length; i++) {
+        for (uint i = 0; i < validators.length; ++i) {
             _setValidator(validators[i], false);
         }
     }
@@ -90,7 +91,7 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
 
         uint valid = 0;
         address[] memory _signed = new address[](sigsLength);
-        for (uint i = 0; i < sigs.length; i++) {
+        for (uint i = 0; i < sigs.length; ++i) {
             bytes memory sig = sigs[i];
             if (sig.length < 65) return false;
 

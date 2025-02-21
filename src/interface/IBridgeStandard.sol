@@ -27,11 +27,11 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
         bytes32 s;
     }
 
-    function bridge(IERC20 token, uint value, uint gas, uint service, bytes[] calldata extraData)
+    function bridge(IERC20 token, uint value, uint gas, uint ex, bytes[] calldata extraData)
         external
         payable
         returns (bool);
-    function bridgeTo(IERC20 token, address to, uint value, uint gas, uint service, bytes[] calldata extraData)
+    function bridgeTo(IERC20 token, address to, uint value, uint gas, uint ex, bytes[] calldata extraData)
         external
         payable
         returns (bool);
@@ -40,7 +40,7 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
         address account,
         uint value,
         uint gas,
-        uint service,
+        uint ex,
         PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) external payable returns (bool);
@@ -50,7 +50,7 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
         address to,
         uint value,
         uint gas,
-        uint service,
+        uint ex,
         PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) external payable returns (bool);
@@ -69,11 +69,10 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
     function domainSeparator() external view returns (bytes32);
     function rewardWallet() external view returns (address payable);
     function denominator() external view returns (uint);
-    function calculate(IERC20 token, uint value) external view returns (uint minimum, uint gas, uint service);
-    function getTokenInfo(IERC20 token) external view returns (IBridgeTokenInfo.TokenInfo memory);
-    function tokenInfoLength() external view returns (uint);
-    function tokenInfoByIndex(uint index) external view returns (IBridgeTokenInfo.TokenInfo memory);
-    function allTokenInfo() external view returns (IBridgeTokenInfo.TokenInfo[] memory);
+    function calculate(IERC20 token, uint value)
+        external
+        view
+        returns (uint minimum, uint gas, uint ex, bool isValid);
     function revertedArguments(uint index) external view returns (FinalizeArguments memory);
     function revertedReason(uint index) external view returns (bytes memory);
     function addToken(IERC20 token, IERC20 pair) external;

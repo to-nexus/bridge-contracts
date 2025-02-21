@@ -20,29 +20,31 @@ contract BridgeCross is BridgeStandard {
     using SafeERC20 for IERC20;
 
     error BridgeCrossInvalidValueUnit(uint value);
-    error BridgeCrossInsufficientValue(uint expected, uint actual);
+    error BridgeCrossInvalidValue(uint expected, uint actual);
     error BridgeCrossBurnFailed(address token, address from, uint value);
 
-    address public xcross; // Address representing the native token on the source chain (e.g., ETH, BNB)
+    address public weth;
     ICrossMintableERC20Code private _crossMintableERC20Code; // Bytecode for deploying new cross-mintable ERC20 tokens
 
+    uint[48] private __gap;
+
     receive() external payable {
-        assert(msg.value > 0); // Ensure the receive function only accepts non-zero value
+        assert(msg.value != 0); // Ensure the receive function only accepts non-zero value
     }
 
     /**
      * @notice Initializes the BridgeCross contract.
      * @param crossMintableERC20Code The address of the contract containing the bytecode for cross-mintable ERC20 tokens.
      * @param rewardWallet_ The address of the reward wallet.
-     * @param BridgeFeeManager The address of the BridgeFeeManager contract.
+     * @param _bridgeTokenInfo The address of the BridgeTokenInfo contract.
      */
-    function initialize(address crossMintableERC20Code, address rewardWallet_, address BridgeFeeManager)
+    function initialize(address crossMintableERC20Code, address rewardWallet_, address _bridgeTokenInfo)
         external
         initializer
     {
-        __BridgeStandard_init(rewardWallet_, BridgeFeeManager);
-        xcross = address(1); // Placeholder address.  Should be updated with actual native token representation
+        __BridgeStandard_init(rewardWallet_, _bridgeTokenInfo);
         _crossMintableERC20Code = ICrossMintableERC20Code(crossMintableERC20Code);
+        weth = addTokenDeploy(IERC20(address(1)), "ETH", 18);
     }
 
     /**
@@ -69,17 +71,17 @@ contract BridgeCross is BridgeStandard {
      * @param token The address of the token being bridged.
      * @param from The address of the user initiating the bridge.
      * @param value The amount of tokens being bridged.
-     * @param fee The total fees (gas + service) for the bridge transaction.
+     * @param fee The total fees (gas + ex) for the bridge transaction.
      */
     function _initiateBridge(IERC20 token, address from, uint value, uint fee) internal override {
-        if (address(token) == xcross) {
-            // Handling native token transfers (e.g., ETH, BNB)
-            require((value / _exrate) * _exrate == value, BridgeCrossInvalidValueUnit(msg.value)); // Check for divisibility
-            require(msg.value == value + fee, BridgeCrossInsufficientValue(value + fee, msg.value)); // Verify correct amount received
-            if (fee > 0) rewardWallet().sendValue(fee); // Send fees to the reward wallet
+        if (address(token) == coin) {
+            // Handling native token transfers (e.g., CROSS, ETH, BNB)
+            require(value % EX_RATE == 0, BridgeCrossInvalidValueUnit(msg.value));
+            require(msg.value == value + fee, BridgeCrossInvalidValue(value + fee, msg.value));
+            if (fee != 0) rewardWallet().sendValue(fee); // Send fees to the reward wallet
         } else {
             // Handling ERC20 token transfers
-            if (fee > 0) token.safeTransferFrom(from, rewardWallet(), fee); // Transfer fees to the reward wallet
+            if (fee != 0) token.safeTransferFrom(from, rewardWallet(), fee); // Transfer fees to the reward wallet
             require(
                 ICrossMintableERC20(address(token)).burn(from, value), // Burn the wrapped tokens on the source chain
                 BridgeCrossBurnFailed(address(token), from, value)
@@ -100,34 +102,33 @@ contract BridgeCross is BridgeStandard {
         override
         returns (bool ok, bytes memory reason)
     {
-        if (value > 0) {
-            if (address(token) == xcross) {
-                // Handling native token transfers
-                payable(to).sendValue(value * _exrate); // Send native tokens to the recipient
-                ok = true;
-                reason = "";
-            } else {
-                // Handling ERC20 token transfers
-                try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
-                    // Mint wrapped tokens on the destination chain
-                    if (success) {
-                        ok = true;
-                        reason = "";
-                    } else {
-                        ok = false;
-                        reason = "BridgeCross: mint failed";
-                    }
-                    // Catch potential errors during minting and provide revert reasons
-                } catch Error(string memory _reason) {
+        if (value == 0) return (true, "");
+        if (address(token) == coin) {
+            // Handling native token transfers
+            payable(to).sendValue(value * EX_RATE); // Send native tokens to the recipient
+            ok = true;
+            reason = "";
+        } else {
+            // Handling ERC20 token transfers
+            try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
+                // Mint wrapped tokens on the destination chain
+                if (success) {
+                    ok = true;
+                    reason = "";
+                } else {
                     ok = false;
-                    reason = bytes(_reason);
-                } catch Panic(uint _errorCode) {
-                    ok = false;
-                    reason = abi.encodePacked(_errorCode);
-                } catch (bytes memory _lowLevelData) {
-                    ok = false;
-                    reason = _lowLevelData;
+                    reason = "BridgeCross: mint failed";
                 }
+                // Catch potential errors during minting and provide revert reasons
+            } catch Error(string memory _reason) {
+                ok = false;
+                reason = bytes(_reason);
+            } catch Panic(uint _errorCode) {
+                ok = false;
+                reason = abi.encodePacked(_errorCode);
+            } catch (bytes memory _lowLevelData) {
+                ok = false;
+                reason = _lowLevelData;
             }
         }
     }

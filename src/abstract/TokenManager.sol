@@ -33,7 +33,7 @@ abstract contract TokenManager is TokenStorage, ITokenManager {
     function allPairs() public view returns (address[] memory) {
         address[] memory tokens = allTokens();
         address[] memory pairs = new address[](tokens.length);
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint i = 0; i < tokens.length; ++i) {
             pairs[i] = _pair[tokens[i]];
         }
         return pairs;

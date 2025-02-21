@@ -33,12 +33,8 @@ contract CrossMintableERC20 is Ownable, Pausable, ERC20, ERC20Permit, ICrossMint
     }
 
     modifier onlyBridge() {
-        require(isBridge(_msgSender()), CrossMintableERC20NotMinter(_msgSender()));
+        require(address(bridge) == _msgSender(), CrossMintableERC20NotMinter(_msgSender()));
         _;
-    }
-
-    function isBridge(address _account) public view returns (bool) {
-        return address(bridge) == _account;
     }
 
     function mint(address _account, uint _amount) external onlyBridge returns (bool) {
@@ -48,16 +44,6 @@ contract CrossMintableERC20 is Ownable, Pausable, ERC20, ERC20Permit, ICrossMint
 
     function burn(address _account, uint _amount) external onlyBridge returns (bool) {
         _burn(_account, _amount);
-        return true;
-    }
-
-    function transferFrom(address _sender, address _recipient, uint _amount)
-        public
-        override(ERC20, IERC20)
-        returns (bool)
-    {
-        if (allowance(_sender, _msgSender()) != type(uint).max) super.transferFrom(_sender, _recipient, _amount);
-        else _transfer(_sender, _recipient, _amount);
         return true;
     }
 

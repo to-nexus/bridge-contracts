@@ -33,3 +33,12 @@ type IBridgeTokenInfoTokenInfo struct {
 	GasFee       *big.Int
 	ServiceFee   *big.Int
 }
+
+
+
+// IPriceFeedPriceData is an auto generated low-level Go binding around an user-defined struct.
+type IPriceFeedPriceData struct {
+	Token       common.Address
+	Price       *big.Int
+	LastUpdated *big.Int
+}

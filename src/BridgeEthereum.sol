@@ -2,8 +2,10 @@
 pragma solidity 0.8.28;
 
 import {BridgeStandard} from "./abstract/BridgeStandard.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title BridgeEthereum
@@ -11,19 +13,27 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  * It inherits from BridgeStandard and implements the necessary functions for initiating and finalizing bridges.
  */
 contract BridgeEthereum is BridgeStandard {
+    using Address for address payable;
     using SafeERC20 for IERC20;
 
+    error BridgeEthereumCanNotZeroAddress(string name);
+    error BridgeEthereumInvalidValue(uint expected, uint actual);
+
     IERC20 public cross; // The ERC20 token representing the wrapped native token on the destination chain.
+
+    uint[49] private __gap;
 
     /**
      * @notice Initializes the BridgeEthereum contract.
      * @param _cross The address of the wrapped native token on the destination chain (e.g., WETH).
      * @param rewardWallet_ The address of the reward wallet to receive fees.
-     * @param BridgeFeeManager The address of the BridgeFeeManager contract.
+     * @param _bridgeTokenInfo The address of the BridgeTokenInfo contract.
      */
-    function initialize(IERC20 _cross, address rewardWallet_, address BridgeFeeManager) public initializer {
-        __BridgeStandard_init(rewardWallet_, BridgeFeeManager);
-        cross = IERC20(_cross);
+    function initialize(IERC20 _cross, address rewardWallet_, address _bridgeTokenInfo) public initializer {
+        require(address(_cross) != address(0), BridgeEthereumCanNotZeroAddress("_cross"));
+        __BridgeStandard_init(rewardWallet_, _bridgeTokenInfo);
+        cross = _cross;
+        addToken(_cross, IERC20(address(1)));
     }
 
     /**
@@ -57,7 +67,6 @@ contract BridgeEthereum is BridgeStandard {
         PermitArguments memory permitArgs,
         bytes[] calldata extraData
     ) public returns (bool) {
-        // Calls permitBridgeTo with gas and service fees set to 0.
         return permitBridgeTo(cross, from, to, value, 0, 0, permitArgs, extraData);
     }
 
@@ -66,13 +75,19 @@ contract BridgeEthereum is BridgeStandard {
      * @param token The address of the token being bridged (should be `cross`).
      * @param from The address of the user initiating the bridge.
      * @param value The amount of tokens being bridged.
-     * @param fee The total fees (gas + service) for the bridge transaction.
+     * @param fee The total fees (gas + ex) for the bridge transaction.
      */
     function _initiateBridge(IERC20 token, address from, uint value, uint fee) internal override {
-        // Transfers the tokens and fees from the user to the contract.
-        token.safeTransferFrom(from, address(this), value + fee);
-        // Transfers the fees to the reward wallet.
-        if (fee > 0) token.safeTransfer(rewardWallet(), fee);
+        if (address(token) == coin) {
+            // Handling native token transfers (e.g., CROSS, ETH, BNB)
+            require(msg.value == value + fee, BridgeEthereumInvalidValue(value + fee, msg.value)); // Verify correct amount received
+            if (fee != 0) rewardWallet().sendValue(fee); // Send fees to the reward wallet
+        } else {
+            // Transfers the tokens and fees from the user to the contract.
+            token.safeTransferFrom(from, address(this), value + fee);
+            // Transfers the fees to the reward wallet.
+            if (fee > 0) token.safeTransfer(rewardWallet(), fee);
+        }
     }
 
     /**
@@ -88,10 +103,15 @@ contract BridgeEthereum is BridgeStandard {
         override
         returns (bool ok, bytes memory reason)
     {
-        if (value > 0) {
-            // Adjust the value based on the exchange rate if the token is the wrapped native token.
-            if (address(token) == address(cross)) value = value / _exrate;
-
+        if (value == 0) return (true, "");
+        if (address(token) == coin) {
+            // Handling native token transfers
+            payable(to).sendValue(value); // Send native tokens to the recipient
+            ok = true;
+            reason = "";
+        } else {
+            // Adjust the value based on the exchange rate if the token is the CROSS.
+            if (address(token) == address(cross)) value = value / EX_RATE;
             try IERC20(token).transfer(to, value) returns (bool success) {
                 if (success) {
                     ok = true;

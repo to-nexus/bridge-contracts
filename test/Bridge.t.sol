@@ -23,7 +23,7 @@ contract BridgeTest is EthereumChainTest {
         (index, ok) = ethereumBridge(address(cross), amount, 0, 0);
         if (ok) {
             ethereumIncrementIndex();
-            crossFinalize(index, address(xcross), amount, validatorNum);
+            crossFinalize(index, address(coin), amount, validatorNum);
         }
 
         if (!isRevert) {
@@ -39,8 +39,8 @@ contract BridgeTest is EthereumChainTest {
     // xcross bridge (cross chain -> ethereum chain)
     function withdraw(bool isRevert, uint amount, uint validatorNum) public returns (uint index) {
         assertTrue(amount / exrate > 0);
-        (uint value, uint gas, uint service) = crossCalcFee(xcross, amount);
-        assertTrue(value + gas + service <= amount);
+        (uint value, uint gas, uint ex) = crossCalcFee(coin, amount);
+        assertTrue(value + gas + ex <= amount);
 
         vm.selectFork(ethereumChainID);
         uint userTokenBalance = cross.balanceOf(USER);
@@ -54,7 +54,7 @@ contract BridgeTest is EthereumChainTest {
         assertTrue(value > 0);
 
         bool ok;
-        (index, ok) = crossBridge(address(xcross), value, gas, service);
+        (index, ok) = crossBridge(address(coin), value, gas, ex);
         if (ok) {
             crossIncrementIndex();
             ethereumFinalize(index, address(cross), value, validatorNum);
@@ -65,9 +65,9 @@ contract BridgeTest is EthereumChainTest {
             assertEq(userTokenBalance + (value / exrate), cross.balanceOf(USER));
             assertEq(bridgeTokenBalance - (value / exrate), cross.balanceOf(address(bridgeEthereum)));
             vm.selectFork(crossChainID);
-            assertEq(userCoinBalance - (value + gas + service), USER.balance);
+            assertEq(userCoinBalance - (value + gas + ex), USER.balance);
             assertEq(bridgeCoinBalance + value, address(bridgeCross).balance);
-            assertEq(rewardWalletBalance + gas + service, REWARD.balance);
+            assertEq(rewardWalletBalance + gas + ex, REWARD.balance);
         }
     }
 
@@ -96,9 +96,9 @@ contract BridgeTest is EthereumChainTest {
 
     // erc20 token bridge (cross chain -> ethereum chain)
     function withdrawToken(bool isRevert, uint amount, uint validatorNum) public {
-        (uint value, uint gas, uint service) = crossCalcFee(IERC20(address(testTokenCross)), amount);
-        assertTrue(value + gas + service <= amount);
-        uint total = value + gas + service;
+        (uint value, uint gas, uint ex) = crossCalcFee(IERC20(address(testTokenCross)), amount);
+        assertTrue(value + gas + ex <= amount);
+        uint total = value + gas + ex;
         assertTrue(total <= amount);
 
         vm.selectFork(ethereumChainID);
@@ -108,7 +108,7 @@ contract BridgeTest is EthereumChainTest {
         uint userCrossBalance = testTokenCross.balanceOf(USER);
         uint rewardWalletBalance = testTokenCross.balanceOf(REWARD);
 
-        (uint index, bool ok) = crossBridge(address(testTokenCross), value, gas, service);
+        (uint index, bool ok) = crossBridge(address(testTokenCross), value, gas, ex);
         if (ok) {
             crossIncrementIndex();
             ethereumFinalize(index, address(testTokenEthereum), value, validatorNum);
@@ -120,7 +120,60 @@ contract BridgeTest is EthereumChainTest {
             assertEq(bridgeEthereumBalance - value, testTokenEthereum.balanceOf(address(bridgeEthereum)));
             vm.selectFork(crossChainID);
             assertEq(userCrossBalance - total, testTokenCross.balanceOf(USER));
-            assertEq(rewardWalletBalance + gas + service, testTokenCross.balanceOf(REWARD));
+            assertEq(rewardWalletBalance + gas + ex, testTokenCross.balanceOf(REWARD));
+        }
+    }
+
+    // eth coin bridge (ethereum chain -> cross chain)
+    function depositETH(bool isRevert, uint amount, uint validatorNum) public returns (uint index) {
+        vm.selectFork(crossChainID);
+        uint userTokenBalance = weth.balanceOf(USER);
+        vm.selectFork(ethereumChainID);
+        uint userCoinBalance = USER.balance;
+        uint bridgeCoinBalance = address(bridgeEthereum).balance;
+
+        bool ok;
+        (index, ok) = ethereumBridge(address(coin), amount, 0, 0);
+        if (ok) {
+            ethereumIncrementIndex();
+            crossFinalize(index, address(weth), amount, validatorNum);
+        }
+
+        if (!isRevert) {
+            vm.selectFork(crossChainID);
+            assertEq(userTokenBalance + amount, weth.balanceOf(USER));
+            vm.selectFork(ethereumChainID);
+            assertEq(userCoinBalance - amount, USER.balance);
+            assertEq(bridgeCoinBalance + amount, address(bridgeEthereum).balance);
+        }
+    }
+
+    // eth coin bridge (cross chain -> ethereum chain)
+    function withdrawETH(bool isRevert, uint amount, uint validatorNum) public returns (uint index) {
+        (uint value, uint gas, uint ex) = crossCalcFee(weth, amount);
+        assertTrue(value + gas + ex <= amount);
+
+        vm.selectFork(crossChainID);
+        uint userTokenBalance = weth.balanceOf(USER);
+        uint rewardWalletBalance = weth.balanceOf(REWARD);
+        vm.selectFork(ethereumChainID);
+        uint userCoinBalance = USER.balance;
+        uint bridgeCoinBalance = address(bridgeEthereum).balance;
+
+        bool ok;
+        (index, ok) = crossBridge(address(weth), value, gas, ex);
+        if (ok) {
+            crossIncrementIndex();
+            ethereumFinalize(index, address(coin), value, validatorNum);
+        }
+
+        if (!isRevert) {
+            vm.selectFork(crossChainID);
+            assertEq(userTokenBalance - (value + gas + ex), weth.balanceOf(USER));
+            assertEq(rewardWalletBalance + gas + ex, weth.balanceOf(REWARD));
+            vm.selectFork(ethereumChainID);
+            assertEq(userCoinBalance + value, USER.balance);
+            assertEq(bridgeCoinBalance - value, address(bridgeEthereum).balance);
         }
     }
 }
