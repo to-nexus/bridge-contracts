@@ -28,7 +28,7 @@ contract EthereumChainTest is CrossChainTest {
             BridgeEthereum bridgeEthereumImpl = new BridgeEthereum();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
             bridgeEthereum = BridgeEthereum(payable(address(bridgeEthereumProxy)));
-            bridgeEthereum.initialize(IERC20(address(cross)), REWARD, address(0));
+            bridgeEthereum.initialize(IERC20(address(cross)), threshold, REWARD, address(0));
             address[] memory validators = new address[](VALIDATORS.length);
             for (uint i = 0; i < VALIDATORS.length; i++) {
                 validators[i] = VALIDATORS[i];
@@ -80,10 +80,11 @@ contract EthereumChainTest is CrossChainTest {
         bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, token, USER, value, NULLDATA));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeEthereum.domainSeparator(), h);
 
-        bytes[] memory sigs = new bytes[](sigCount);
+        uint8[] memory v = new uint8[](sigCount);
+        bytes32[] memory r = new bytes32[](sigCount);
+        bytes32[] memory s = new bytes32[](sigCount);
         for (uint i = 0; i < sigCount; i++) {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(VALIDATOR_PKs[i], hash);
-            sigs[i] = abi.encodePacked(r, s, v);
+            (v[i], r[i], s[i]) = vm.sign(VALIDATOR_PKs[i], hash);
         }
 
         // finalize
@@ -92,7 +93,7 @@ contract EthereumChainTest is CrossChainTest {
             finalizeRevertEthereum = false;
             vm.expectRevert();
         }
-        ok = bridgeEthereum.finalize(index, IERC20(token), USER, value, NULLDATA, sigs);
+        ok = bridgeEthereum.finalize(index, IERC20(token), USER, value, NULLDATA, v, r, s);
     }
 
     function ethereumCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {

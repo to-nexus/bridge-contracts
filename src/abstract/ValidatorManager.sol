@@ -13,6 +13,8 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
     error ValidatorManagerNotValidator(address account);
     error ValidatorManagerAlreadyExistValidator(address account);
     error ValidatorManagerNotExistValidator(address account);
+    error ValidatorManagerInsufficientSignature(uint length);
+    error ValidatorManagerInvalidSignatures(uint v, uint r, uint s);
 
     event ValidatorSet(address validators, bool status);
     event ThresholdChanged(uint8 threshold);
@@ -27,10 +29,10 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
         _;
     }
 
-    function __Validator_init(address initialOwner) internal onlyInitializing {
+    function __Validator_init(address initialOwner, uint8 threshold_) internal onlyInitializing {
         __Ownable_init(initialOwner);
         __EIP712_init("Validator", "1.0.0");
-        _threshold = 3;
+        _threshold = threshold_;
     }
 
     function isValidator(address validator) public view returns (bool) {
@@ -63,7 +65,7 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
         _setValidator(validator, true);
     }
 
-    function setValidators(address[] memory validators) external {
+    function setValidators(address[] memory validators) public {
         for (uint i = 0; i < validators.length; ++i) {
             _setValidator(validators[i], true);
         }
@@ -73,10 +75,15 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
         _setValidator(validator, false);
     }
 
-    function removeValidators(address[] memory validators) external {
+    function removeValidators(address[] memory validators) public {
         for (uint i = 0; i < validators.length; ++i) {
             _setValidator(validators[i], false);
         }
+    }
+
+    function resetValidators(address[] memory validators) external {
+        removeValidators(_validators.values());
+        setValidators(validators);
     }
 
     function _setValidator(address account, bool set) internal onlyOwner {
@@ -85,19 +92,21 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
         emit ValidatorSet(account, set);
     }
 
-    function _validate(bytes32 h, bytes[] memory sigs) internal view returns (bool) {
-        uint sigsLength = sigs.length;
-        if (sigsLength < _threshold) return false;
+    function _validate(bytes32 h, uint8[] memory v, bytes32[] memory r, bytes32[] memory s) internal view {
+        uint sigsLength = v.length;
+        require(
+            sigsLength == r.length && sigsLength == s.length,
+            ValidatorManagerInvalidSignatures(sigsLength, r.length, s.length)
+        );
+        require(sigsLength >= _threshold, ValidatorManagerInsufficientSignature(sigsLength));
 
         uint valid = 0;
         address[] memory _signed = new address[](sigsLength);
-        for (uint i = 0; i < sigs.length; ++i) {
-            bytes memory sig = sigs[i];
-            if (sig.length < 65) return false;
+        for (uint i = 0; i < sigsLength; ++i) {
+            address validator = _hashTypedDataV4(h).recover(v[i], r[i], s[i]);
 
-            address validator = _hashTypedDataV4(h).recover(sig);
-
-            if (!isValidator(validator)) return false; // 유효하지 않은 서명이 하나라도 있다면 false
+            // If there is even one invalid signature, false
+            require(isValidator(validator), ValidatorManagerNotValidator(validator));
 
             bool dup = false;
             for (uint j = 0; j < _signed.length; j++) {
@@ -114,6 +123,7 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
             }
         }
 
-        return valid >= _threshold;
+        // Check one more time for duplicate verification
+        require(valid >= _threshold, ValidatorManagerInsufficientSignature(valid));
     }
 }

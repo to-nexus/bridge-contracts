@@ -29,11 +29,14 @@ contract BridgeEthereum is BridgeStandard {
      * @param rewardWallet_ The address of the reward wallet to receive fees.
      * @param _bridgeTokenInfo The address of the BridgeTokenInfo contract.
      */
-    function initialize(IERC20 _cross, address rewardWallet_, address _bridgeTokenInfo) public initializer {
+    function initialize(IERC20 _cross, uint8 _threshold, address rewardWallet_, address _bridgeTokenInfo)
+        public
+        initializer
+    {
         require(address(_cross) != address(0), BridgeEthereumCanNotZeroAddress("_cross"));
-        __BridgeStandard_init(rewardWallet_, _bridgeTokenInfo);
+        __BridgeStandard_init(_threshold, rewardWallet_, _bridgeTokenInfo);
         cross = _cross;
-        addToken(_cross, IERC20(address(1)));
+        addToken(_cross, IERC20(coin));
     }
 
     /**

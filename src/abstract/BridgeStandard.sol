@@ -39,7 +39,6 @@ abstract contract BridgeStandard is
     error BridgeStandardInvalidAmount(
         uint minimumValue, uint expectedGas, uint expectedEx, uint actualValue, uint actualGas, uint actualEx
     );
-    error BridgeStandardInvalidSignatures(uint index);
     error BridgeStandardInvalidPermitValue(address token, uint value);
     error BridgeStandardDuplicateIndex(uint index);
     error BridgeStandardNotExistingIndex(uint index);
@@ -66,7 +65,7 @@ abstract contract BridgeStandard is
         keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes[] extraData)");
 
     IBridgeTokenInfo public bridgeTokenInfo;
-    address internal coin; // Address representing the native coin on the source chain (e.g., XCROSS, ETH, BNB)
+    address internal constant coin = address(1); // Address representing the native coin on the source chain (e.g., XCROSS, ETH, BNB)
     address payable private _rewardWallet;
     uint private _initializedAt;
 
@@ -85,8 +84,11 @@ abstract contract BridgeStandard is
      * @param rewardWallet_ The address of the reward wallet.
      * @param _bridgeTokenInfo The address of the BridgeTokenInfo contract.
      */
-    function __BridgeStandard_init(address rewardWallet_, address _bridgeTokenInfo) internal onlyInitializing {
-        __Validator_init(_msgSender());
+    function __BridgeStandard_init(uint8 _threshold, address rewardWallet_, address _bridgeTokenInfo)
+        internal
+        onlyInitializing
+    {
+        __Validator_init(_msgSender(), _threshold);
         __UUPSUpgradeable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -94,9 +96,8 @@ abstract contract BridgeStandard is
         require(address(rewardWallet_) != address(0), BridgeStandardCanNotZeroAddress("rewardWallet"));
         // require(address(_bridgeTokenInfo) != address(0), CanNotZeroAddress("_bridgeTokenInfo")); // allow zero address
 
-        coin = address(1);
         _initializedAt = block.number;
-        bridgeTokenInfo = IBridgeTokenInfo(_bridgeTokenInfo);
+        if (_bridgeTokenInfo != address(0)) bridgeTokenInfo = IBridgeTokenInfo(_bridgeTokenInfo);
         _rewardWallet = payable(rewardWallet_);
     }
 
@@ -198,23 +199,24 @@ abstract contract BridgeStandard is
      * @param to The address of the recipient.
      * @param value The amount of tokens.
      * @param extraData Additional data for the bridge transaction.
-     * @param sigs The signatures of the validators.
+     * @param v The signature fields `v` of the validators.
+     * @param r The signature fields `r` of the validators.
+     * @param s The signature fields `s` of the validators.
      * @return True if the bridge transaction was finalized successfully.
      */
-    function finalize(uint index, IERC20 token, address to, uint value, bytes[] calldata extraData, bytes[] memory sigs)
-        public
-        payable
-        whenNotPaused
-        checkValidToken(address(token))
-        nonReentrant
-        returns (bool)
-    {
-        uint nextIndex = nextFinalizeIndex();
-        require(index == nextIndex, BridgeStandardInvalidIndex(nextIndex, index));
+    function finalize(
+        uint index,
+        IERC20 token,
+        address to,
+        uint value,
+        bytes[] calldata extraData,
+        uint8[] memory v,
+        bytes32[] memory r,
+        bytes32[] memory s
+    ) public payable whenNotPaused checkValidToken(address(token)) nonReentrant returns (bool) {
+        require(index == nextFinalizeIndex(), BridgeStandardInvalidIndex(nextFinalizeIndex(), index));
 
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, address(token), to, value, extraData));
-        require(_validate(h, sigs), BridgeStandardInvalidSignatures(index));
-
+        _validate(keccak256(abi.encode(FINALIZE_TYPEHASH, index, address(token), to, value, extraData)), v, r, s);
         _incrementFinalizeIndex();
         (bool ok, bytes memory reason) = _finalizeBridge(token, to, value);
         if (ok) {
@@ -231,12 +233,19 @@ abstract contract BridgeStandard is
     /**
      * @notice Finalizes multiple bridge transactions.
      * @param args An array of FinalizeArguments.
-     * @param sigs A 2D array of signatures.
+     * @param v 2D array of signature fields `v`
+     * @param r 2D array of signature fields `r`
+     * @param s 2D array of signature fields `s`
      * @return True if all bridge transactions were finalized successfully.
      */
-    function finalizeBatch(FinalizeArguments[] calldata args, bytes[][] memory sigs) external payable returns (bool) {
+    function finalizeBatch(
+        FinalizeArguments[] calldata args,
+        uint8[][] memory v,
+        bytes32[][] memory r,
+        bytes32[][] memory s
+    ) external payable returns (bool) {
         for (uint i = 0; i < args.length; ++i) {
-            finalize(args[i].index, args[i].token, args[i].to, args[i].value, args[i].extraData, sigs[i]);
+            finalize(args[i].index, args[i].token, args[i].to, args[i].value, args[i].extraData, v[i], r[i], s[i]);
         }
         return true;
     }

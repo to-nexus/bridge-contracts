@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -23,6 +24,8 @@ contract BridgeCross is BridgeStandard {
     error BridgeCrossInvalidValue(uint expected, uint actual);
     error BridgeCrossBurnFailed(address token, address from, uint value);
 
+    address private constant __self = address(0x0956d70000000000000000000000000000000101); // predeployed implementation address
+
     address public weth;
     ICrossMintableERC20Code private _crossMintableERC20Code; // Bytecode for deploying new cross-mintable ERC20 tokens
 
@@ -38,13 +41,15 @@ contract BridgeCross is BridgeStandard {
      * @param rewardWallet_ The address of the reward wallet.
      * @param _bridgeTokenInfo The address of the BridgeTokenInfo contract.
      */
-    function initialize(address crossMintableERC20Code, address rewardWallet_, address _bridgeTokenInfo)
-        external
-        initializer
-    {
-        __BridgeStandard_init(rewardWallet_, _bridgeTokenInfo);
+    function initialize(
+        address crossMintableERC20Code,
+        uint8 _threshold,
+        address rewardWallet_,
+        address _bridgeTokenInfo
+    ) external initializer {
+        __BridgeStandard_init(_threshold, rewardWallet_, _bridgeTokenInfo);
         _crossMintableERC20Code = ICrossMintableERC20Code(crossMintableERC20Code);
-        weth = addTokenDeploy(IERC20(address(1)), "ETH", 18);
+        weth = addTokenDeploy(IERC20(coin), "ETH", 18);
     }
 
     /**
@@ -131,5 +136,15 @@ contract BridgeCross is BridgeStandard {
                 reason = _lowLevelData;
             }
         }
+    }
+
+    /**
+     * @dev Override for predeploy. When upgrading the implementation, remove it.
+     */
+    function _checkProxy() internal view override {
+        if (
+            address(this) == __self // Must be called through delegatecall
+                || ERC1967Utils.getImplementation() != __self // Must be called through an active proxy
+        ) revert UUPSUnauthorizedCallContext();
     }
 }

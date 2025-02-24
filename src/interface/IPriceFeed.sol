@@ -12,7 +12,9 @@ interface IPriceFeed is ITokenStorage, IValidatorManager {
     }
 
     function coin() external view returns (address);
+    function dollarDecimals() external view returns (uint);
+    function deadline() external view returns (uint);
     function getPrice(address token) external view returns (PriceData memory data);
-    function getValidPrice(address token) external view returns (uint price, bool isValid);
+    function getValidPrice(address token) external view returns (uint price);
     function getPrices(address[] memory token) external view returns (PriceData[] memory data);
 }

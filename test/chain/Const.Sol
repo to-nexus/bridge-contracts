@@ -21,6 +21,8 @@ contract ConstTest is Test {
 
     uint public ethereumChainID;
     uint public crossChainID;
+    uint8 public threshold;
+
     IERC20 public coin = IERC20(address(1));
     IERC20 public cross;
     IERC20 public weth;
@@ -46,6 +48,8 @@ contract ConstTest is Test {
         ethereumChainID = vm.createFork("http://sepolia.crossops.in:8546"); // ethereum chain sepolia testnet
         // crossChainID = vm.createFork("https://testnet.cross-nexus.com"); // cross chain testnet
         crossChainID = vm.createFork("http://testnet.crossops.in:22001"); // cross chain testnet
+
+        threshold = uint8(3);
 
         OWNER = vm.addr(OWNER_PK);
         USER = vm.addr(USER_PK);

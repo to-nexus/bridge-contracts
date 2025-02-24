@@ -98,14 +98,14 @@ contract BridgeTokenInfo is Ownable, IBridgeTokenInfo {
         emit BridgeTokenInfoGasPriceUpdated(_finalizeGas);
     }
 
-    function changeEx(uint ex) external onlyOwner {
+    function changeExFee(uint ex) external onlyOwner {
         _exFee = ex;
         emit BridgeTokenInfoExchangeFeeUpdated(ex);
     }
 
     function addTokenInfo(IERC20 token, uint minimum, uint ex) external onlyOwner {
         require(address(token) != address(0), BridgeTokenInfoCanNotZeroAddress("token"));
-        _tokenInfo[token] = Token(token, minimum, ex);
+        _tokenInfo[token] = Token({token: token, minimumAmount: minimum, exchangeFee: ex});
     }
 
     function removeTokenInfo(IERC20 token) external onlyOwner {

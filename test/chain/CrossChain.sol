@@ -41,7 +41,7 @@ contract CrossChainTest is ConstTest {
             BridgeCross bridgeCrossImpl = new BridgeCross();
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = BridgeCross(payable(address(bridgeCrossProxy)));
-            bridgeCross.initialize(address(crossMintableERC20Code), REWARD, address(0));
+            bridgeCross.initialize(address(crossMintableERC20Code), threshold, REWARD, address(0));
 
             address[] memory validators = new address[](VALIDATORS.length);
             for (uint i = 0; i < VALIDATORS.length; i++) {
@@ -68,7 +68,7 @@ contract CrossChainTest is ConstTest {
             address priceFeedImpl = address(new PriceFeedCross());
             ERC1967Proxy priceFeedProxy = new ERC1967Proxy(priceFeedImpl, bytes(""));
             priceFeed = PriceFeedCross(address(priceFeedProxy));
-            priceFeed.initialize();
+            priceFeed.initialize(uint8(1));
 
             weth = IERC20(bridgeCross.weth());
             priceFeed.changeDeadline(type(uint).max); // for test
@@ -118,10 +118,11 @@ contract CrossChainTest is ConstTest {
         bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, token, USER, value, NULLDATA));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), h);
 
-        bytes[] memory sigs = new bytes[](sigCount);
+        uint8[] memory v = new uint8[](sigCount);
+        bytes32[] memory r = new bytes32[](sigCount);
+        bytes32[] memory s = new bytes32[](sigCount);
         for (uint i = 0; i < sigCount; i++) {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(VALIDATOR_PKs[i], hash);
-            sigs[i] = abi.encodePacked(r, s, v);
+            (v[i], r[i], s[i]) = vm.sign(VALIDATOR_PKs[i], hash);
         }
 
         // finalize
@@ -130,7 +131,7 @@ contract CrossChainTest is ConstTest {
             finalizeRevertCross = false;
             vm.expectRevert();
         }
-        ok = bridgeCross.finalize(index, IERC20(token), USER, value, NULLDATA, sigs);
+        ok = bridgeCross.finalize(index, IERC20(token), USER, value, NULLDATA, v, r, s);
     }
 
     function crossCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {

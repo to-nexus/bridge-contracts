@@ -26,16 +26,6 @@ type IBridgeStandardPermitArguments struct {
 	S        [32]byte
 }
 
-// IBridgeTokenInfoTokenInfo is an auto generated low-level Go binding around an user-defined struct.
-type IBridgeTokenInfoTokenInfo struct {
-	Token        common.Address
-	MinimumValue *big.Int
-	GasFee       *big.Int
-	ServiceFee   *big.Int
-}
-
-
-
 // IPriceFeedPriceData is an auto generated low-level Go binding around an user-defined struct.
 type IPriceFeedPriceData struct {
 	Token       common.Address

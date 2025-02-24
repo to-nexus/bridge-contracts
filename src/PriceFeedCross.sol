@@ -4,70 +4,7 @@ pragma solidity 0.8.28;
 import {TokenStorage} from "./abstract/TokenStorage.sol";
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IPriceFeed} from "./interface/IPriceFeed.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-
-library PriceFeedLib {
-    using Math for uint;
-
-    error PriceFeedLibCanNotZeroValue(string name);
-    error PriceFeedLibOverflow();
-
-    /// @notice Retrieves price data for all tracked tokens.
-    /// @param feed The PriceFeed contract instance.
-    /// @return prices An array of PriceData structs containing price information for each token.
-    function allPrices(IPriceFeed feed) external view returns (IPriceFeed.PriceData[] memory prices) {
-        return feed.getPrices(feed.allTokens());
-    }
-
-    /// @notice Converts an amount of token A to an equivalent amount of token B based on their prices.
-    /// @param feed The PriceFeed contract instance.
-    /// @param tokenA The address of token A.
-    /// @param tokenB The address of token B.
-    /// @param amountA The amount of token A to convert.
-    /// @return amountB The equivalent amount of token B.
-    /// @return isValid True if both token prices are valid, false otherwise.
-    function convertAtoB(IPriceFeed feed, address tokenA, address tokenB, uint amountA)
-        external
-        view
-        returns (uint amountB, bool isValid)
-    {
-        if (tokenA == tokenB) return (amountA, true);
-
-        (uint priceA, bool isValidA) = feed.getValidPrice(tokenA);
-        (uint priceB, bool isValidB) = feed.getValidPrice(tokenB);
-        isValid = isValidA && isValidB;
-        (uint8 decimalA, uint8 decimalB) = (_decimals(feed, tokenA), _decimals(feed, tokenB));
-        amountB = convertAtoBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
-    }
-
-    /// @notice Converts an amount of token A to an equivalent amount of token B using provided price data.
-    /// @param amountA The amount of token A to convert.
-    /// @param priceA The price of token A.
-    /// @param priceB The price of token B.
-    /// @param decimalA The number of decimals for token A.
-    /// @param decimalB The number of decimals for token B.
-    /// @return amountB The equivalent amount of token B.
-    function convertAtoBWithPrice(uint amountA, uint priceA, uint priceB, uint8 decimalA, uint8 decimalB)
-        public
-        pure
-        returns (uint amountB)
-    {
-        require(priceA != 0, PriceFeedLibCanNotZeroValue("priceA"));
-        bool ok;
-        (ok, amountB) = decimalB >= decimalA
-            ? amountA.tryMul(priceB.mulDiv(10 ** (decimalB - decimalA), priceA))
-            : amountA.tryMul(priceB / (10 ** (decimalA - decimalB)) / priceA);
-        require(ok, PriceFeedLibOverflow());
-    }
-
-    /// @notice Retrieves the number of decimals for a given token.
-    /// @param token The address of the token.
-    /// @return decimals The number of decimals.
-    function _decimals(IPriceFeed feed, address token) private view returns (uint8 decimals) {
-        decimals = token == feed.coin() ? uint8(18) : IERC20Metadata(token).decimals();
-    }
-}
+import {PriceFeedLib} from "./lib/PriceFeedLib.sol";
 
 contract PriceFeedCross is TokenStorage, ValidatorManager, IPriceFeed {
     error PriceFeedCanNotZeroAddress(string name);
@@ -75,40 +12,28 @@ contract PriceFeedCross is TokenStorage, ValidatorManager, IPriceFeed {
     error PriceFeedNotExistToken(address token);
     error PriceFeedInvalidLength();
     error PriceFeedInvalidPriceAt(uint at, uint blocktime);
+    error PriceFeedNotValidPrice(address token, uint deadline);
 
     event PriceFeedPriceUpdated(address indexed token, uint price, uint timestamp);
     event PriceFeedDeadlineChanged(uint deadline);
 
-    address public coin;
+    address public constant coin = address(1);
+    uint public constant dollarDecimals = 6;
     uint public deadline;
-    uint public dollarDecimals;
     mapping(address => PriceData) private prices;
 
     uint[46] private __gap;
 
     /// @notice Initializes the contract with default values.
-    function initialize() public initializer {
-        __Validator_init(_msgSender());
+    function initialize(uint8 _threshold) public initializer {
+        __Validator_init(_msgSender(), _threshold);
         deadline = 2 hours;
-        dollarDecimals = 6;
-        coin = address(1);
         _addToken(coin);
 
         // The initial price for coin is set.
         // lastUpdated is initialized to the maximum possible value, ensuring the initial price is considered valid before any updates.
         // (1 xcross == 0.001 dollar)
-        prices[coin] = PriceData(coin, (10 ** dollarDecimals) / 1000, type(uint).max);
-    }
-
-    /// @notice Retrieves the valid price for a given token.
-    /// @param token The address of the token.
-    /// @return price The price of the token.
-    /// @return isValid True if the price is valid, false otherwise.
-    function getValidPrice(address token) external view returns (uint price, bool isValid) {
-        require(contains(token), PriceFeedNotExistToken(token));
-        PriceData memory data = prices[token];
-        price = data.price;
-        if (data.lastUpdated == type(uint).max || block.timestamp <= data.lastUpdated + deadline) isValid = true;
+        prices[coin] = PriceData({token: coin, price: (10 ** dollarDecimals) / 1000, lastUpdated: type(uint).max});
     }
 
     /// @notice Retrieves the price data for multiple tokens.
@@ -117,11 +42,24 @@ contract PriceFeedCross is TokenStorage, ValidatorManager, IPriceFeed {
     function getPrices(address[] memory token) external view returns (PriceData[] memory data) {
         data = new PriceData[](token.length);
         for (uint i = 0; i < token.length;) {
-            data[i] = getPrice(token[i]);
+            data[i] = prices[token[i]];
             unchecked {
                 ++i;
             }
         }
+    }
+
+    /// @notice Retrieves the valid price for a given token.
+    /// @param token The address of the token.
+    /// @return price The price of the token.
+    function getValidPrice(address token) external view returns (uint price) {
+        require(contains(token), PriceFeedNotExistToken(token));
+        PriceData memory data = prices[token];
+        require(
+            (data.lastUpdated == type(uint).max || block.timestamp <= data.lastUpdated + deadline),
+            PriceFeedNotValidPrice(token, data.lastUpdated + deadline)
+        );
+        price = data.price;
     }
 
     /// @notice Retrieves the price data for a single token.
@@ -185,7 +123,7 @@ contract PriceFeedCross is TokenStorage, ValidatorManager, IPriceFeed {
         require(
             priceAt == type(uint).max || priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp)
         );
-        prices[token] = PriceData(token, price, priceAt);
+        prices[token] = PriceData({token: token, price: price, lastUpdated: priceAt});
         emit PriceFeedPriceUpdated(token, price, priceAt);
     }
 }

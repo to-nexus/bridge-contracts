@@ -60,11 +60,18 @@ interface IBridgeStandard is ITokenManager, IIndexer, IValidatorManager {
         address to,
         uint value,
         bytes[] calldata extraData,
-        bytes[] calldata sigs
+        uint8[] memory v,
+        bytes32[] memory r,
+        bytes32[] memory s
+    ) external payable returns (bool);
+    function finalizeBatch(
+        FinalizeArguments[] calldata args,
+        uint8[][] memory v,
+        bytes32[][] memory r,
+        bytes32[][] memory s
     ) external payable returns (bool);
     function retryFinalize(uint index) external returns (bool);
     function retryFinalizeBatch(uint[] memory indexes) external returns (bool);
-    function finalizeBatch(FinalizeArguments[] calldata args, bytes[][] memory sigs) external payable returns (bool);
     function initializedAt() external view returns (uint);
     function domainSeparator() external view returns (bytes32);
     function rewardWallet() external view returns (address payable);

@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import {IIndexer} from "../interface/IIndexer.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 abstract contract Indexer is IIndexer {
     uint internal _initiateIndex;
