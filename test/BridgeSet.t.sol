@@ -7,7 +7,7 @@ contract BridgeSetTest is BridgeTest {
     function test_set_validator() public {
         vm.startPrank(OWNER);
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         bridgeEthereum.removeValidator(VALIDATOR5);
         bool ok = bridgeEthereum.isValidator(VALIDATOR5);
         vm.assertFalse(ok);
@@ -15,7 +15,7 @@ contract BridgeSetTest is BridgeTest {
         ok = bridgeEthereum.isValidator(VALIDATOR5);
         vm.assertTrue(ok);
 
-        vm.selectFork(crossChainID);
+        vm.selectFork(crossForkID);
         bridgeCross.removeValidator(VALIDATOR5);
         ok = bridgeCross.isValidator(VALIDATOR5);
         vm.assertFalse(ok);
@@ -29,7 +29,7 @@ contract BridgeSetTest is BridgeTest {
     function test_set_pause() public {
         uint amount = 1000 ether;
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -37,14 +37,14 @@ contract BridgeSetTest is BridgeTest {
 
         deposit(false, amount, 5);
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         bridgeEthereum.pause();
-        vm.selectFork(crossChainID);
+        vm.selectFork(crossForkID);
         vm.prank(OWNER);
         bridgeCross.pause();
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -58,10 +58,10 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(USER);
         withdraw(true, amount, 5);
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         bridgeEthereum.unpause();
-        vm.selectFork(crossChainID);
+        vm.selectFork(crossForkID);
         vm.prank(OWNER);
         bridgeCross.unpause();
 
@@ -74,7 +74,7 @@ contract BridgeSetTest is BridgeTest {
     function test_set_threshold() public {
         uint amount = 1000;
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -83,14 +83,15 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(USER);
         deposit(false, amount, 3);
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
+        threshold = 4;
         vm.prank(OWNER);
-        bridgeEthereum.changeThreshold(4);
-        vm.selectFork(crossChainID);
+        bridgeEthereum.changeThreshold(threshold);
+        vm.selectFork(crossForkID);
         vm.prank(OWNER);
-        bridgeCross.changeThreshold(4);
+        bridgeCross.changeThreshold(threshold);
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -100,17 +101,18 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(USER);
         uint index = deposit(true, amount, 3);
 
-        vm.selectFork(crossChainID);
-        crossFinalize(index, address(coin), amount, 4);
+        vm.selectFork(crossForkID);
+        crossFinalize(index, address(NATIVE_TOKEN), USER, amount, 4);
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
+        threshold = 1;
         vm.prank(OWNER);
-        bridgeEthereum.changeThreshold(1);
-        vm.selectFork(crossChainID);
+        bridgeEthereum.changeThreshold(threshold);
+        vm.selectFork(crossForkID);
         vm.prank(OWNER);
-        bridgeCross.changeThreshold(1);
+        bridgeCross.changeThreshold(threshold);
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);

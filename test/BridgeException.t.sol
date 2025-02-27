@@ -8,7 +8,7 @@ contract BridgeExceptionTest is BridgeTest {
     function test_deposit_with_insufficient_balance() public {
         uint amount = 1000 ether;
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -21,7 +21,7 @@ contract BridgeExceptionTest is BridgeTest {
     function test_deposit_with_insufficient_validator_signature() public {
         uint amount = 1000 ether;
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -34,7 +34,7 @@ contract BridgeExceptionTest is BridgeTest {
     function test_withdraw_with_insufficient_balance() public {
         uint amount = 1000 ether;
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -51,7 +51,7 @@ contract BridgeExceptionTest is BridgeTest {
     function test_withdraw_with_insufficient_validator_signature() public {
         uint amount = 1000 ether;
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -68,7 +68,7 @@ contract BridgeExceptionTest is BridgeTest {
     function test_deposit_with_insufficient_allowance() public {
         uint amount = 1000 ether;
 
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
@@ -80,9 +80,9 @@ contract BridgeExceptionTest is BridgeTest {
 
     function test_deposit_withdraw_at_token_paused() public {
         // token pause
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
-        bridgeEthereum.pauseToken(IERC20(address(cross)));
+        bridgeEthereum.pauseToken(CROSS_CHAIN_ID, address(cross));
 
         uint amount = 1000 ether;
 
@@ -95,24 +95,24 @@ contract BridgeExceptionTest is BridgeTest {
         deposit(true, amount, 5);
 
         // token unpause
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
-        bridgeEthereum.unpauseToken(IERC20(address(cross)));
+        bridgeEthereum.unpauseToken(CROSS_CHAIN_ID, address(cross));
 
         deposit(false, amount, 5);
 
         // token pause
-        vm.selectFork(crossChainID);
+        vm.selectFork(crossForkID);
         vm.prank(OWNER);
-        bridgeCross.pauseToken(coin);
+        bridgeCross.pauseToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
 
         bridgeRevertCross = true;
         withdraw(true, amount, 5);
 
         // token unpause
-        vm.selectFork(crossChainID);
+        vm.selectFork(crossForkID);
         vm.prank(OWNER);
-        bridgeCross.unpauseToken(coin);
+        bridgeCross.unpauseToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
 
         withdraw(false, amount * 10, 5);
     }

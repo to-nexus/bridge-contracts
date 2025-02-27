@@ -3,37 +3,29 @@ pragma solidity 0.8.28;
 
 // import {ERC20, IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20.sol";
 
-import {ICrossMintableERC20, ICrossMintableERC20Code} from "./interface/ICrossMintableERC20.sol";
+import {ICrossMintableERC20} from "./ICrossMintableERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20, ERC20Permit, IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract CrossMintableERC20Code is ICrossMintableERC20Code {
-    function code() external pure returns (bytes memory) {
-        return type(CrossMintableERC20).creationCode;
-    }
-}
-
 contract CrossMintableERC20 is Ownable, Pausable, ERC20, ERC20Permit, ICrossMintableERC20 {
-    error CrossMintableERC20NotMinter(address account);
+    error errCrossMintableERC20NotBridge(address account);
 
     uint8 private immutable _decimals;
     address public bridge;
 
-    constructor(string memory name_, string memory symbol_, uint8 decimals_)
+    constructor(address _bridge, string memory name_, string memory symbol_, uint8 decimals_)
         Ownable(_msgSender())
         ERC20(name_, symbol_)
         ERC20Permit(name_)
     {
-        bridge = _msgSender();
-        transferOwnership(Ownable(bridge).owner());
-
+        bridge = _bridge;
         _decimals = decimals_;
     }
 
     modifier onlyBridge() {
-        require(address(bridge) == _msgSender(), CrossMintableERC20NotMinter(_msgSender()));
+        require(address(bridge) == _msgSender(), errCrossMintableERC20NotBridge(_msgSender()));
         _;
     }
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeEthereum} from "../../src/BridgeEthereum.sol";
-import {BridgeTokenInfo, IBridgeTokenInfo} from "../../src/BridgeTokenInfo.sol";
+import {BridgeFeeStation, IBridgeFeeStation} from "../../src/BridgeFeeStation.sol";
+import {EthereumBridge} from "../../src/EthereumBridge.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {CrossChainTest} from "./CrossChain.sol";
 
@@ -11,39 +11,36 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract EthereumChainTest is CrossChainTest {
-    bool public bridgeRevertEthereum = false;
-    bool public finalizeRevertEthereum = false;
+    bool internal bridgeRevertEthereum = false;
+    bool internal finalizeRevertEthereum = false;
 
-    uint public nextIndexEthereum;
-    BridgeEthereum public bridgeEthereum;
-    BridgeTokenInfo public bridgeTokenInfoEthereum;
+    uint internal nextIndexEthereum;
+    EthereumBridge internal bridgeEthereum;
+    IBridgeFeeStation internal bridgeFeeStationEthereum;
 
     function setUp() public virtual override {
         super.setUp();
         nextIndexEthereum = 1;
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.startPrank(OWNER);
+
         // bridge setup
         {
-            BridgeEthereum bridgeEthereumImpl = new BridgeEthereum();
+            EthereumBridge bridgeEthereumImpl = new EthereumBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
-            bridgeEthereum = BridgeEthereum(payable(address(bridgeEthereumProxy)));
-            bridgeEthereum.initialize(IERC20(address(cross)), threshold, REWARD, address(0));
-            address[] memory validators = new address[](VALIDATORS.length);
-            for (uint i = 0; i < VALIDATORS.length; i++) {
-                validators[i] = VALIDATORS[i];
-            }
-            bridgeEthereum.setValidators(validators);
+            bridgeEthereum = EthereumBridge(payable(address(bridgeEthereumProxy)));
+            bridgeEthereum.initialize(CROSS_CHAIN_ID, cross, threshold, REWARD, address(0), address(0));
+
+            bridgeEthereum.setValidators(VALIDATORS);
         }
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.addToken(coin, weth);
-            bridgeEthereum.addToken(testTokenEthereum, IERC20(testTokenCross));
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(NATIVE_TOKEN), address(weth));
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross));
 
-            uint initialSupply = 1000000000 * 1e18;
-            TestToken(address(cross)).mint(OWNER, initialSupply);
-            TestToken(address(testTokenEthereum)).mint(OWNER, initialSupply);
+            TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY);
+            TestToken(address(testTokenEthereum)).mint(OWNER, INITIAL_SUPPLY);
         }
         vm.stopPrank();
     }
@@ -53,31 +50,39 @@ contract EthereumChainTest is CrossChainTest {
     }
 
     // ----- Functions -----
-    function ethereumBridge(address token, uint value, uint gas, uint service) public returns (uint index, bool ok) {
-        vm.selectFork(ethereumChainID);
+    function ethereumBridge(address token, address from, address to, uint value, uint gas, uint service)
+        public
+        returns (uint index, bool ok)
+    {
+        vm.selectFork(ethereumForkID);
         // bridge
         index = nextIndexEthereum;
-        vm.prank(USER);
+        vm.prank(from);
 
         if (bridgeRevertEthereum) {
             bridgeRevertEthereum = false;
             vm.expectRevert();
         }
 
-        if (token == address(coin)) {
-            assertTrue(USER.balance >= value + gas + service);
-            ok = bridgeEthereum.bridge{value: value + gas + service}(IERC20(token), value, gas, service, NULLDATA);
+        if (token == address(NATIVE_TOKEN)) {
+            assertTrue(from.balance >= value + gas + service);
+            ok = bridgeEthereum.bridgeToken{value: value + gas + service}(
+                CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+            );
         } else {
-            ok = bridgeEthereum.bridge(IERC20(token), value, gas, service, NULLDATA);
+            ok = bridgeEthereum.bridgeToken(CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA);
         }
     }
 
-    function ethereumFinalize(uint index, address token, uint value, uint sigCount) public returns (bool ok) {
-        vm.selectFork(ethereumChainID);
-        if (sigCount > 5) sigCount = 5;
+    function ethereumFinalize(uint index, address token, address to, uint value, uint sigCount)
+        public
+        returns (bool ok)
+    {
+        vm.selectFork(ethereumForkID);
+        if (sigCount > threshold) sigCount = threshold;
 
         // create finalize validator signature
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, token, USER, value, NULLDATA));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, token, to, value, NULLDATA));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeEthereum.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -93,14 +98,15 @@ contract EthereumChainTest is CrossChainTest {
             finalizeRevertEthereum = false;
             vm.expectRevert();
         }
-        ok = bridgeEthereum.finalize(index, IERC20(token), USER, value, NULLDATA, v, r, s);
+        ok = bridgeEthereum.finalizeBridge(CROSS_CHAIN_ID, index, IERC20(token), to, value, NULLDATA, v, r, s);
     }
 
-    function ethereumCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
-        vm.selectFork(ethereumChainID);
-        if (address(bridgeTokenInfoEthereum) == address(0)) return (value, 0, 0);
-        bool ok;
-        (value, gas, ex, ok) = bridgeTokenInfoEthereum.calculateMax(token, totalValue);
-        assertTrue(ok);
+    function ethereumCalcFee(IERC20, uint) public pure returns (uint value, uint gas, uint ex) {
+        return (value, 0, 0); // no fee
+            // vm.selectFork(ethereumForkID);
+            // if (address(bridgeFeeStationEthereum) == address(0)) return (value, 0, 0);
+            // bool ok;
+            // (value, gas, ex, ok) = bridgeFeeStationEthereum.calculateMax(token, totalValue);
+            // assertTrue(ok);
     }
 }

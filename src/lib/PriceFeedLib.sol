@@ -11,49 +11,45 @@ library PriceFeedLib {
     error PriceFeedLibCanNotZeroValue(string name);
     error PriceFeedLibOverflow();
 
-    /// @notice Retrieves price data for all tracked tokens.
-    /// @param feed The PriceFeed contract instance.
-    /// @return prices An array of PriceData structs containing price information for each token.
-    function allPrices(IPriceFeed feed) external view returns (IPriceFeed.PriceData[] memory prices) {
-        return feed.getPrices(feed.allTokens());
-    }
-
-    /// @notice Converts an amount of token A to an equivalent amount of token B based on their prices.
-    /// @param feed The PriceFeed contract instance.
-    /// @param tokenA The address of token A.
-    /// @param tokenB The address of token B.
-    /// @param amountA The amount of token A to convert.
-    /// @return amountB The equivalent amount of token B.
-    /// @return isValid True if both token prices are valid, false otherwise.
-    function convertAtoB(IPriceFeed feed, address tokenA, address tokenB, uint amountA)
+    /**
+     * @notice Calculates an amount of token A to an equivalent amount of token B based on their prices.
+     * @param feed The IPriceFeed contract instance.
+     * @param tokenA The address of token A.
+     * @param tokenB The address of token B.
+     * @param amountA The amount of token A to calculate.
+     * @return ok True if both token prices are valid, false otherwise.
+     * @return amountB The equivalent amount of token B.
+     * @return updatedAt The updated time.
+     */
+    function calculateAmountB(IPriceFeed feed, address tokenA, address tokenB, uint amountA)
         external
         view
-        returns (uint amountB, bool isValid)
+        returns (bool ok, uint amountB, uint updatedAt)
     {
-        if (tokenA == tokenB) return (amountA, true);
-
-        uint deadline = feed.deadline();
+        if (tokenA == tokenB) return (true, amountA, block.timestamp);
 
         address[] memory tokens = new address[](2);
         tokens[0] = tokenA;
         tokens[1] = tokenB;
-        IPriceFeed.PriceData[] memory data = feed.getPrices(tokens);
-        require(data[0].token == tokenA && data[1].token == tokenB);
 
-        isValid = (data[0].lastUpdated == type(uint).max || data[0].lastUpdated + deadline >= block.timestamp)
-            && (data[1].lastUpdated == type(uint).max || data[1].lastUpdated + deadline > block.timestamp);
+        bool[] memory exist;
+        uint[] memory prices;
+        (exist, prices, updatedAt) = feed.getPrices(tokens);
+        ok = exist[0] && exist[1];
+        if (!ok) return (false, 0, 0);
+
         (uint8 decimalA, uint8 decimalB) = (_decimals(feed, tokenA), _decimals(feed, tokenB));
-        amountB = convertAtoBWithPrice(amountA, data[0].price, data[1].price, decimalA, decimalB);
+        amountB = calculateAmountBWithPrice(amountA, prices[0], prices[1], decimalA, decimalB);
     }
 
-    /// @notice Converts an amount of token A to an equivalent amount of token B using provided price data.
-    /// @param amountA The amount of token A to convert.
+    /// @notice Calculates an amount of token A to an equivalent amount of token B using provided price data.
+    /// @param amountA The amount of token A to calculate.
     /// @param priceA The price of token A.
     /// @param priceB The price of token B.
     /// @param decimalA The number of decimals for token A.
     /// @param decimalB The number of decimals for token B.
     /// @return amountB The equivalent amount of token B.
-    function convertAtoBWithPrice(uint amountA, uint priceA, uint priceB, uint8 decimalA, uint8 decimalB)
+    function calculateAmountBWithPrice(uint amountA, uint priceA, uint priceB, uint8 decimalA, uint8 decimalB)
         public
         pure
         returns (uint amountB)
@@ -70,6 +66,6 @@ library PriceFeedLib {
     /// @param token The address of the token.
     /// @return decimals The number of decimals.
     function _decimals(IPriceFeed feed, address token) private view returns (uint8 decimals) {
-        decimals = token == feed.coin() ? uint8(18) : IERC20Metadata(token).decimals();
+        decimals = token == feed.nativeCoin() ? uint8(18) : IERC20Metadata(token).decimals();
     }
 }

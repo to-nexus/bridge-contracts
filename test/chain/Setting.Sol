@@ -5,11 +5,11 @@ import {TestToken} from "../token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Test, console} from "forge-std/Test.sol";
 
-contract ConstTest is Test {
-    uint public exrate = 100;
+contract SettingTest is Test {
     bytes32 public constant FINALIZE_TYPEHASH =
-        keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes[] extraData)");
+        keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes extraData)");
 
+    uint internal constant EX_RATE = 100;
     uint internal constant OWNER_PK = uint(bytes32("owner"));
     uint internal constant USER_PK = uint(bytes32("user"));
     uint internal constant REWARD_PK = uint(bytes32("reward"));
@@ -18,36 +18,42 @@ contract ConstTest is Test {
     uint internal constant VALIDATOR_PK3 = uint(bytes32("validator3"));
     uint internal constant VALIDATOR_PK4 = uint(bytes32("validator4"));
     uint internal constant VALIDATOR_PK5 = uint(bytes32("validator5"));
+    uint internal constant ETHEREUM_CHAIN_ID = 1;
+    uint internal constant CROSS_CHAIN_ID = 612055;
+    IERC20 internal constant NATIVE_TOKEN = IERC20(address(1));
+    uint internal constant INITIAL_SUPPLY = 1000000000 * 1e18;
 
-    uint public ethereumChainID;
-    uint public crossChainID;
-    uint8 public threshold;
+    uint internal ethereumForkID;
+    uint internal crossForkID;
+    uint8 internal threshold;
 
-    IERC20 public coin = IERC20(address(1));
-    IERC20 public cross;
-    IERC20 public weth;
+    IERC20 internal cross;
+    IERC20 internal weth;
 
-    IERC20 internal testTokenEthereum;
-    IERC20 internal testTokenCross;
+    IERC20 internal testTokenEthereum; // TT origin
+    IERC20 internal testTokenCross; // TT wrapped
 
-    address public OWNER;
-    address public USER;
-    address public REWARD;
-    address public VALIDATOR1;
-    address public VALIDATOR2;
-    address public VALIDATOR3;
-    address public VALIDATOR4;
-    address public VALIDATOR5;
+    IERC20 internal testTokenEthereum2; // TT2 origin
+    IERC20 internal testTokenCross2; // TT2 wrapped
 
-    address[5] public VALIDATORS;
-    uint[5] public VALIDATOR_PKs = [VALIDATOR_PK1, VALIDATOR_PK2, VALIDATOR_PK3, VALIDATOR_PK4, VALIDATOR_PK5];
+    address internal OWNER;
+    address internal USER;
+    address internal REWARD;
+    address internal VALIDATOR1;
+    address internal VALIDATOR2;
+    address internal VALIDATOR3;
+    address internal VALIDATOR4;
+    address internal VALIDATOR5;
 
-    bytes[] NULLDATA;
+    address[] internal VALIDATORS;
+    uint[] internal VALIDATOR_PKs = [VALIDATOR_PK1, VALIDATOR_PK2, VALIDATOR_PK3, VALIDATOR_PK4, VALIDATOR_PK5];
+
+    bytes NULLDATA;
 
     function setUp() public virtual {
-        ethereumChainID = vm.createFork("http://sepolia.crossops.in:8546"); // ethereum chain sepolia testnet
-        // crossChainID = vm.createFork("https://testnet.cross-nexus.com"); // cross chain testnet
-        crossChainID = vm.createFork("http://testnet.crossops.in:22001"); // cross chain testnet
+        ethereumForkID = vm.createFork("https://sepolia.cross-nexus.com"); // ethereum chain sepolia testnet
+        // crossForkID = vm.createFork("https://testnet.cross-nexus.com"); // cross chain testnet
+        crossForkID = vm.createFork("http://testnet.crossops.in:22001"); // cross chain testnet
 
         threshold = uint8(3);
 
@@ -72,12 +78,7 @@ contract ConstTest is Test {
         vm.label(VALIDATOR4, "validator4");
         vm.label(VALIDATOR5, "validator5");
 
-        address[] memory validators = new address[](5);
-        for (uint i = 0; i < 5; i++) {
-            validators[i] = VALIDATORS[i];
-        }
-
-        vm.selectFork(ethereumChainID);
+        vm.selectFork(ethereumForkID);
         vm.startPrank(OWNER);
         cross = IERC20(new TestToken("Cross", "CROSS", 18));
         testTokenEthereum = IERC20(new TestToken("Test Token", "TT", 18));
