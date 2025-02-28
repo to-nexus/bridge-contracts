@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IPriceFeed} from "../interface/IPriceFeed.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+import {IPriceFeed} from "../interface/IPriceFeed.sol";
 
 library PriceFeedLib {
     using Math for uint;

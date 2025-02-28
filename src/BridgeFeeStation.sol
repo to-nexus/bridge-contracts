@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IPriceFeed, PriceFeedLib} from "./PriceFeed.sol";
-import {IBridgeFeeStation} from "./interface/IBridgeFeeStation.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
-import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
+import {IPriceFeed} from "./PriceFeed.sol";
+import {PriceFeedLib} from "./lib/PriceFeedLib.sol";
+
+import {IBridgeFeeStation} from "./interface/IBridgeFeeStation.sol";
 
 contract BridgeFeeStation is Ownable, IBridgeFeeStation {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -25,26 +26,14 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
     event BridgeFeeStationExchangeFeeUpdated(uint exFee);
     event BridgeFeeStationPriceFeedUpdated(IPriceFeed priceFeed);
 
-    struct TokenFee {
-        IERC20 token;
-        uint minimumAmount;
-        uint exFeeRate;
-    }
-
-    struct Chain {
-        uint chainID;
-        uint gasPrice;
-        IERC20 gasToken;
-    }
-
-    uint public constant DENOMINATOR = 1000;
+    uint private constant DENOMINATOR = 1000;
 
     IPriceFeed private _priceFeed;
     uint private _exFeeRate;
     uint private _finalizeBridgeGas;
 
     mapping(IERC20 => TokenFee) private _tokensFee;
-    mapping(uint => Chain) private _chainInfo;
+    mapping(uint => GasInfo) private _gasInfo;
 
     constructor(uint exFeeRate, uint finalizeBridgeGas) Ownable(_msgSender()) {
         require(finalizeBridgeGas != 0, BridgeFeeStationCanNotZeroValue("finalizeBridgeGas"));
@@ -56,36 +45,13 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
         return DENOMINATOR;
     }
 
-    function estimateFee(uint remoteChainID, IERC20 token, uint value)
-        external
-        view
-        returns (uint minimumAmount, uint gasFee, uint exFee)
-    {
-        uint exFeeRate;
-        (minimumAmount, gasFee, exFeeRate) = _getTokenFee(remoteChainID, token);
-
-        exFee = value.mulDiv(exFeeRate, DENOMINATOR);
-    }
-
-    function estimateMaxValue(uint remoteChainID, IERC20 token, uint totalValue)
-        external
-        view
-        returns (bool ok, uint value, uint gasFee, uint exFee)
-    {
-        uint minimumAmount;
-        uint exFeeRate;
-        (minimumAmount, gasFee, exFeeRate) = _getTokenFee(remoteChainID, token);
-        if (totalValue <= gasFee) return (false, 0, 0, 0);
-
-        uint v = totalValue - gasFee;
-        value = v.mulDiv(DENOMINATOR, (DENOMINATOR + exFeeRate));
-        exFee = value.mulDiv(exFeeRate, DENOMINATOR);
-        ok = value > minimumAmount;
+    function getGasInfo(uint remoteChainID) external view returns (GasInfo memory) {
+        return _gasInfo[remoteChainID];
     }
 
     // priceFeed 가 없거나, token 시세가 존재하지 않으면 gas 수수료 0
-    function _getTokenFee(uint remoteChainID, IERC20 token)
-        private
+    function getTokenFee(uint remoteChainID, IERC20 token)
+        public
         view
         returns (uint minimumAmount, uint gasFee, uint exFeeRate)
     {
@@ -97,24 +63,36 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
         if (exFeeRate == type(uint).max) exFeeRate = 0;
     }
 
+    function estimateFee(uint remoteChainID, IERC20 token, uint value)
+        external
+        view
+        returns (uint minimumAmount, uint gasFee, uint exFee)
+    {
+        uint exFeeRate;
+        (minimumAmount, gasFee, exFeeRate) = getTokenFee(remoteChainID, token);
+
+        exFee = value.mulDiv(exFeeRate, DENOMINATOR);
+    }
+
     function _estimateGasToToken(uint remoteChainID, IERC20 toToken)
         private
         view
         returns (uint gasFee, uint updatedAt)
     {
-        Chain memory chain = _chainInfo[remoteChainID];
-        if (address(_priceFeed) == address(0) || chain.chainID != remoteChainID) return (0, 0);
+        GasInfo memory gasInfo = _gasInfo[remoteChainID];
+        if (address(_priceFeed) == address(0) || gasInfo.chainID != remoteChainID) return (0, 0);
 
         bool ok;
-        (ok, gasFee, updatedAt) =
-            _priceFeed.calculateAmountB(address(chain.gasToken), address(toToken), chain.gasPrice * _finalizeBridgeGas);
+        (ok, gasFee, updatedAt) = _priceFeed.calculateAmountB(
+            address(gasInfo.gasToken), address(toToken), gasInfo.gasPrice * _finalizeBridgeGas
+        );
         if (!ok) return (0, 0);
     }
 
-    function setChainInfo(uint remoteChainID, IERC20 gasToken, uint gasPrice) external onlyOwner {
-        require(_chainInfo[remoteChainID].chainID == 0, BridgeFeeStationChainAleadyExist(remoteChainID));
+    function setGasInfo(uint remoteChainID, IERC20 gasToken, uint gasPrice) external onlyOwner {
+        require(_gasInfo[remoteChainID].chainID == 0, BridgeFeeStationChainAleadyExist(remoteChainID));
         require(address(gasToken) != address(0), BridgeFeeStationCanNotZeroValue("gasToken"));
-        _chainInfo[remoteChainID] = Chain({chainID: remoteChainID, gasToken: gasToken, gasPrice: gasPrice});
+        _gasInfo[remoteChainID] = GasInfo({chainID: remoteChainID, gasToken: gasToken, gasPrice: gasPrice});
     }
 
     function setTokenFee(IERC20 token, uint minimumAmount, uint exFeeRate) public onlyOwner {
@@ -142,7 +120,7 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
 
     function updateGasPrice(uint remoteChainID, uint gasPrice) external onlyOwner {
         // require(gasPrice != 0, BridgeFeeStationCanNotZeroValue("gasPrice"));
-        _chainInfo[remoteChainID].gasPrice = gasPrice;
+        _gasInfo[remoteChainID].gasPrice = gasPrice;
         emit BridgeFeeStationGasPriceUpdated(remoteChainID, gasPrice);
     }
 

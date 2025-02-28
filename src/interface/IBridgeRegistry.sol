@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-interface IChainManager {
+interface IBridgeRegistry {
     struct FinalizeArguments {
+        uint remoteChainID;
         uint index;
         IERC20 token;
         address to;
@@ -40,10 +41,11 @@ interface IChainManager {
         mapping(address => TokenPair) tokenPairs; // localToken : TokenPair
     }
 
+    function allChainIDs() external view returns (uint[] memory);
+    function allTokenPairs(uint remoteChainID) external view returns (TokenPair[] memory);
+    function getTokenPair(uint remoteChainID, address token) external view returns (TokenPair memory);
     function getNextInitiateIndex(uint remoteChainID) external view returns (uint);
     function getNextFinalizeIndex(uint remoteChainID) external view returns (uint);
     function revertedArguments(uint remoteChainID, uint index) external view returns (FinalizeArguments memory);
     function revertedReason(uint remoteChainID, uint index) external view returns (string memory);
-    function getTokenPair(uint remoteChainID, address token) external view returns (TokenPair memory);
-    function allTokenPairs(uint remoteChainID) external view returns (TokenPair[] memory);
 }

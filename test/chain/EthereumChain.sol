@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import {BridgeFeeStation, IBridgeFeeStation} from "../../src/BridgeFeeStation.sol";
 import {EthereumBridge} from "../../src/EthereumBridge.sol";
+
+import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {CrossChainTest} from "./CrossChain.sol";
 
@@ -98,7 +100,19 @@ contract EthereumChainTest is CrossChainTest {
             finalizeRevertEthereum = false;
             vm.expectRevert();
         }
-        ok = bridgeEthereum.finalizeBridge(CROSS_CHAIN_ID, index, IERC20(token), to, value, NULLDATA, v, r, s);
+        ok = bridgeEthereum.finalizeBridge(
+            IBridgeRegistry.FinalizeArguments({
+                remoteChainID: CROSS_CHAIN_ID,
+                index: index,
+                token: IERC20(token),
+                to: to,
+                value: value,
+                extraData: NULLDATA
+            }),
+            v,
+            r,
+            s
+        );
     }
 
     function ethereumCalcFee(IERC20, uint) public pure returns (uint value, uint gas, uint ex) {

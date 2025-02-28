@@ -29,28 +29,35 @@ var (
 	_ = abi.ConvertType
 )
 
+// IBridgeFeeStationGasInfo is an auto generated low-level Go binding around an user-defined struct.
+type IBridgeFeeStationGasInfo struct {
+	ChainID  *big.Int
+	GasPrice *big.Int
+	GasToken common.Address
+}
+
 // BridgeFeeStationMetaData contains all meta data concerning the BridgeFeeStation contract.
 var BridgeFeeStationMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"exFeeRate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"finalizeBridgeGas\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"denominator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"estimateFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"minimumAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"totalValue\",\"type\":\"uint256\"}],\"name\":\"estimateMaxValue\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"removePriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"removeTokenFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"gasToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"}],\"name\":\"setChainInfo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"exFeeRate\",\"type\":\"uint256\"}],\"name\":\"setExFeeRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"finalizeBridgeGas\",\"type\":\"uint256\"}],\"name\":\"setFinalizeBridgeGas\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIPriceFeed\",\"name\":\"priceFeed\",\"type\":\"address\"}],\"name\":\"setPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"minimumAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFeeRate\",\"type\":\"uint256\"}],\"name\":\"setTokenFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20[]\",\"name\":\"tokenList\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"minimumAmountList\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"exFeeRateList\",\"type\":\"uint256[]\"}],\"name\":\"setTokenFeeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"}],\"name\":\"updateGasPrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationExchangeFeeUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"finalizeBridgeGas\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationFinalizeBridgeGasSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationGasPriceUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"contractIPriceFeed\",\"name\":\"priceFeed\",\"type\":\"address\"}],\"name\":\"BridgeFeeStationPriceFeedUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"BridgeFeeStationCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"BridgeFeeStationCanNotZeroValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationChainAleadyExist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BridgeFeeStationInvalidLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"exFeeRate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"finalizeBridgeGas\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"denominator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"estimateFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"minimumAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"getGasInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"gasToken\",\"type\":\"address\"}],\"internalType\":\"structIBridgeFeeStation.GasInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getTokenFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"minimumAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFeeRate\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"removePriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"removeTokenFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"exFeeRate\",\"type\":\"uint256\"}],\"name\":\"setExFeeRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"finalizeBridgeGas\",\"type\":\"uint256\"}],\"name\":\"setFinalizeBridgeGas\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"gasToken\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"}],\"name\":\"setGasInfo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIPriceFeed\",\"name\":\"priceFeed\",\"type\":\"address\"}],\"name\":\"setPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"minimumAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFeeRate\",\"type\":\"uint256\"}],\"name\":\"setTokenFee\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIERC20[]\",\"name\":\"tokenList\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"minimumAmountList\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"exFeeRateList\",\"type\":\"uint256[]\"}],\"name\":\"setTokenFeeBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"}],\"name\":\"updateGasPrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationExchangeFeeUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"finalizeBridgeGas\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationFinalizeBridgeGasSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPrice\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationGasPriceUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"contractIPriceFeed\",\"name\":\"priceFeed\",\"type\":\"address\"}],\"name\":\"BridgeFeeStationPriceFeedUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"BridgeFeeStationCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"BridgeFeeStationCanNotZeroValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeStationChainAleadyExist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BridgeFeeStationInvalidLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"}]",
 	Sigs: map[string]string{
-		"918f8674": "DENOMINATOR()",
 		"96ce0795": "denominator()",
 		"ae766389": "estimateFee(uint256,address,uint256)",
-		"288587e8": "estimateMaxValue(uint256,address,uint256)",
+		"a3fc93b3": "getGasInfo(uint256)",
+		"09585b1c": "getTokenFee(uint256,address)",
 		"8da5cb5b": "owner()",
 		"ce2e5c66": "removePriceFeed()",
 		"1b034c1c": "removeTokenFee(address)",
 		"715018a6": "renounceOwnership()",
-		"a9f72c18": "setChainInfo(uint256,address,uint256)",
 		"005d0f10": "setExFeeRate(uint256)",
 		"f289d3ba": "setFinalizeBridgeGas(uint256)",
+		"3f0cf10d": "setGasInfo(uint256,address,uint256)",
 		"724e78da": "setPriceFeed(address)",
 		"dffa229e": "setTokenFee(address,uint256,uint256)",
 		"6731d860": "setTokenFeeBatch(address[],uint256[],uint256[])",
 		"f2fde38b": "transferOwnership(address)",
 		"1f96131e": "updateGasPrice(uint256,uint256)",
 	},
-	Bin: "0x608060405234801561000f575f5ffd5b50604051610fa5380380610fa583398101604081905261002e916100fc565b338061005457604051631e4fbdf760e01b81525f60048201526024015b60405180910390fd5b61005d816100ad565b50805f036100a257604051631c622e5b60e11b815260206004820152601160248201527066696e616c697a6542726964676547617360781b604482015260640161004b565b60035560025561011e565b5f80546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b5f5f6040838503121561010d575f5ffd5b505080516020909101519092909150565b610e7a8061012b5f395ff3fe608060405234801561000f575f5ffd5b50600436106100fa575f3560e01c8063918f867411610093578063ce2e5c6611610063578063ce2e5c66146101f9578063dffa229e14610201578063f289d3ba14610214578063f2fde38b14610227575f5ffd5b8063918f8674146101b457806396ce0795146101cb578063a9f72c18146101d3578063ae766389146101e6575f5ffd5b80636731d860116100ce5780636731d8601461016c578063715018a61461017f578063724e78da146101875780638da5cb5b1461019a575f5ffd5b80625d0f10146100fe5780631b034c1c146101135780631f96131e14610126578063288587e814610139575b5f5ffd5b61011161010c366004610b00565b61023a565b005b610111610121366004610b2b565b61027e565b610111610134366004610b46565b61031f565b61014c610147366004610b66565b610378565b604080519384526020840192909252908201526060015b60405180910390f35b61011161017a366004610c6d565b6103e9565b61011161048f565b610111610195366004610b2b565b6104a2565b5f546040516001600160a01b039091168152602001610163565b6101bd6103e881565b604051908152602001610163565b6103e86101bd565b6101116101e1366004610b66565b61053b565b61014c6101f4366004610b66565b610613565b610111610641565b61011161020f366004610d5b565b61068e565b610111610222366004610b00565b61072d565b610111610235366004610b2b565b6107ae565b6102426107e8565b60028190556040518181527f0312f690e5eab8afc0fc83c2e2558848b2debb98c72fe871573d8950080deb71906020015b60405180910390a150565b6102866107e8565b6001600160a01b0381166102ca576040516304d45a0560e51b81526020600482015260056024820152643a37b5b2b760d91b60448201526064015b60405180910390fd5b6001600160a01b038082165f818152600460205260409020549091160361031c576001600160a01b0381165f90815260046020526040812080546001600160a01b031916815560018101829055600201555b50565b6103276107e8565b5f8281526005602090815260409182902060010183905581518481529081018390527f5c39f52fe1fce1c47c4175fc8ba058e40f59adc2571a3c282c4def80c5c12cbe910160405180910390a15050565b5f5f5f5f5f6103878888610814565b90955090925090508386116103a6575f5f5f94509450945050506103e0565b5f6103b18588610da1565b90506103cb6103e86103c38482610dba565b83919061089c565b95506103da86836103e861089c565b93505050505b93509350939050565b6103f16107e8565b81518351148015610403575080518351145b61042057604051631582cf0d60e21b815260040160405180910390fd5b5f5b83518110156104895761048184828151811061044057610440610dcd565b602002602001015184838151811061045a5761045a610dcd565b602002602001015184848151811061047457610474610dcd565b602002602001015161068e565b600101610422565b50505050565b6104976107e8565b6104a05f610953565b565b6104aa6107e8565b6001600160a01b0381166104ed576040516304d45a0560e51b81526020600482015260096024820152681c1c9a58d95199595960ba1b60448201526064016102c1565b600180546001600160a01b0319166001600160a01b0383169081179091556040519081527fcde95eaba5b290eeb4ecebcb3aa3a398f3098f54a7f754664d87876b10fe6a9890602001610273565b6105436107e8565b5f83815260056020526040902054839015610574576040516302be268960e21b81526004016102c191815260200190565b506001600160a01b0382166105b757604051631c622e5b60e11b815260206004820152600860248201526733b0b9aa37b5b2b760c11b60448201526064016102c1565b6040805160608101825284815260208082019384526001600160a01b039485168284019081525f968752600590915291909420935184559051600184015551600290920180546001600160a01b03191692909116919091179055565b5f5f5f5f6106218787610814565b9195509350905061063585826103e861089c565b91505093509350939050565b6106496107e8565b600180546001600160a01b03191690556040515f81527fcde95eaba5b290eeb4ecebcb3aa3a398f3098f54a7f754664d87876b10fe6a989060200160405180910390a1565b6106966107e8565b6001600160a01b0383166106d5576040516304d45a0560e51b81526020600482015260056024820152643a37b5b2b760d91b60448201526064016102c1565b604080516060810182526001600160a01b0394851680825260208083019586528284019485525f9182526004905291909120905181546001600160a01b03191694169390931783559051600183015551600290910155565b6107356107e8565b805f0361077957604051631c622e5b60e11b815260206004820152601160248201527066696e616c697a6542726964676547617360781b60448201526064016102c1565b60038190556040518181527f570de5cf44bf6056ffb0b1a5be86c62c41ef8c92f81427627f5eadce4cffca7a90602001610273565b6107b66107e8565b6001600160a01b0381166107df57604051631e4fbdf760e01b81525f60048201526024016102c1565b61031c81610953565b5f546001600160a01b031633146104a05760405163118cdaa760e01b81523360048201526024016102c1565b5f5f5f61082185856109a2565b506001600160a01b038086165f81815260046020908152604091829020825160608101845281549095168086526001820154928601929092526002015491840191909152929450909114610878575f600254610883565b806020015181604001515b909450915060018201610894575f91505b509250925092565b5f838302815f1985870982811083820303915050805f036108d0578382816108c6576108c6610de1565b049250505061094c565b8084116108e7576108e76003851502601118610aef565b5f848688095f868103871696879004966002600389028118808a02820302808a02820302808a02820302808a02820302808a02820302808a02909103029181900381900460010186841190950394909402919094039290920491909117919091029150505b9392505050565b5f80546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b5f828152600560209081526040808320815160608101835281548152600180830154948201949094526002909101546001600160a01b039081169282019290925291548392911615806109f6575080518514155b15610a07575f5f9250925050610ae8565b600154604082015160035460208401515f9373__$79c24c681325f76413d25d3c06c8219b6e$__93630f126c6c936001600160a01b039092169290918a91610a4f9190610df5565b6040516001600160e01b031960e087901b1681526001600160a01b0394851660048201529284166024840152921660448201526064810191909152608401606060405180830381865af4158015610aa8573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610acc9190610e0c565b9095509350905080610ae5575f5f935093505050610ae8565b50505b9250929050565b634e487b715f52806020526024601cfd5b5f60208284031215610b10575f5ffd5b5035919050565b6001600160a01b038116811461031c575f5ffd5b5f60208284031215610b3b575f5ffd5b813561094c81610b17565b5f5f60408385031215610b57575f5ffd5b50508035926020909101359150565b5f5f5f60608486031215610b78575f5ffd5b833592506020840135610b8a81610b17565b929592945050506040919091013590565b634e487b7160e01b5f52604160045260245ffd5b604051601f8201601f1916810167ffffffffffffffff81118282101715610bd857610bd8610b9b565b604052919050565b5f67ffffffffffffffff821115610bf957610bf9610b9b565b5060051b60200190565b5f82601f830112610c12575f5ffd5b8135610c25610c2082610be0565b610baf565b8082825260208201915060208360051b860101925085831115610c46575f5ffd5b602085015b83811015610c63578035835260209283019201610c4b565b5095945050505050565b5f5f5f60608486031215610c7f575f5ffd5b833567ffffffffffffffff811115610c95575f5ffd5b8401601f81018613610ca5575f5ffd5b8035610cb3610c2082610be0565b8082825260208201915060208360051b850101925088831115610cd4575f5ffd5b6020840193505b82841015610cff578335610cee81610b17565b825260209384019390910190610cdb565b9550505050602084013567ffffffffffffffff811115610d1d575f5ffd5b610d2986828701610c03565b925050604084013567ffffffffffffffff811115610d45575f5ffd5b610d5186828701610c03565b9150509250925092565b5f5f5f60608486031215610d6d575f5ffd5b8335610d7881610b17565b95602085013595506040909401359392505050565b634e487b7160e01b5f52601160045260245ffd5b81810381811115610db457610db4610d8d565b92915050565b80820180821115610db457610db4610d8d565b634e487b7160e01b5f52603260045260245ffd5b634e487b7160e01b5f52601260045260245ffd5b8082028115828204841417610db457610db4610d8d565b5f5f5f60608486031215610e1e575f5ffd5b83518015158114610e2d575f5ffd5b60208501516040909501519096949550939250505056fea2646970667358221220c640733a6a1a4748e26fbfbedf82a1f392823e69d10ae7b1b096804c1d1898f864736f6c634300081c0033",
+	Bin: "0x608060405234801561000f575f5ffd5b50604051610fce380380610fce83398101604081905261002e916100fc565b338061005457604051631e4fbdf760e01b81525f60048201526024015b60405180910390fd5b61005d816100ad565b50805f036100a257604051631c622e5b60e11b815260206004820152601160248201527066696e616c697a6542726964676547617360781b604482015260640161004b565b60035560025561011e565b5f80546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b5f5f6040838503121561010d575f5ffd5b505080516020909101519092909150565b610ea38061012b5f395ff3fe608060405234801561000f575f5ffd5b50600436106100fa575f3560e01c80638da5cb5b11610093578063ce2e5c6611610063578063ce2e5c6614610228578063dffa229e14610230578063f289d3ba14610243578063f2fde38b14610256575f5ffd5b80638da5cb5b146101ad57806396ce0795146101c7578063a3fc93b3146101d7578063ae76638914610215575f5ffd5b80633f0cf10d116100ce5780633f0cf10d1461016c5780636731d8601461017f578063715018a614610192578063724e78da1461019a575f5ffd5b80625d0f10146100fe57806309585b1c146101135780631b034c1c146101465780631f96131e14610159575b5f5ffd5b61011161010c366004610b29565b610269565b005b610126610121366004610b54565b6102ad565b604080519384526020840192909252908201526060015b60405180910390f35b610111610154366004610b82565b610335565b610111610167366004610b9d565b6103d6565b61011161017a366004610bbd565b61042f565b61011161018d366004610cc4565b610507565b6101116105ad565b6101116101a8366004610b82565b6105c0565b5f546040516001600160a01b03909116815260200161013d565b6040516103e8815260200161013d565b6101ea6101e5366004610b29565b610659565b604080518251815260208084015190820152918101516001600160a01b03169082015260600161013d565b610126610223366004610bbd565b6106c4565b6101116106f2565b61011161023e366004610db2565b61073f565b610111610251366004610b29565b6107de565b610111610264366004610b82565b61085f565b610271610899565b60028190556040518181527f0312f690e5eab8afc0fc83c2e2558848b2debb98c72fe871573d8950080deb71906020015b60405180910390a150565b5f5f5f6102ba85856108c5565b506001600160a01b038086165f81815260046020908152604091829020825160608101845281549095168086526001820154928601929092526002015491840191909152929450909114610311575f60025461031c565b806020015181604001515b90945091506001820161032d575f91505b509250925092565b61033d610899565b6001600160a01b038116610381576040516304d45a0560e51b81526020600482015260056024820152643a37b5b2b760d91b60448201526064015b60405180910390fd5b6001600160a01b038082165f81815260046020526040902054909116036103d3576001600160a01b0381165f90815260046020526040812080546001600160a01b031916815560018101829055600201555b50565b6103de610899565b5f8281526005602090815260409182902060010183905581518481529081018390527f5c39f52fe1fce1c47c4175fc8ba058e40f59adc2571a3c282c4def80c5c12cbe910160405180910390a15050565b610437610899565b5f83815260056020526040902054839015610468576040516302be268960e21b815260040161037891815260200190565b506001600160a01b0382166104ab57604051631c622e5b60e11b815260206004820152600860248201526733b0b9aa37b5b2b760c11b6044820152606401610378565b6040805160608101825284815260208082019384526001600160a01b039485168284019081525f968752600590915291909420935184559051600184015551600290920180546001600160a01b03191692909116919091179055565b61050f610899565b81518351148015610521575080518351145b61053e57604051631582cf0d60e21b815260040160405180910390fd5b5f5b83518110156105a75761059f84828151811061055e5761055e610de4565b602002602001015184838151811061057857610578610de4565b602002602001015184848151811061059257610592610de4565b602002602001015161073f565b600101610540565b50505050565b6105b5610899565b6105be5f610a12565b565b6105c8610899565b6001600160a01b03811661060b576040516304d45a0560e51b81526020600482015260096024820152681c1c9a58d95199595960ba1b6044820152606401610378565b600180546001600160a01b0319166001600160a01b0383169081179091556040519081527fcde95eaba5b290eeb4ecebcb3aa3a398f3098f54a7f754664d87876b10fe6a98906020016102a2565b61068360405180606001604052805f81526020015f81526020015f6001600160a01b031681525090565b505f90815260056020908152604091829020825160608101845281548152600182015492810192909252600201546001600160a01b03169181019190915290565b5f5f5f5f6106d287876102ad565b919550935090506106e685826103e8610a61565b91505093509350939050565b6106fa610899565b600180546001600160a01b03191690556040515f81527fcde95eaba5b290eeb4ecebcb3aa3a398f3098f54a7f754664d87876b10fe6a989060200160405180910390a1565b610747610899565b6001600160a01b038316610786576040516304d45a0560e51b81526020600482015260056024820152643a37b5b2b760d91b6044820152606401610378565b604080516060810182526001600160a01b0394851680825260208083019586528284019485525f9182526004905291909120905181546001600160a01b03191694169390931783559051600183015551600290910155565b6107e6610899565b805f0361082a57604051631c622e5b60e11b815260206004820152601160248201527066696e616c697a6542726964676547617360781b6044820152606401610378565b60038190556040518181527f570de5cf44bf6056ffb0b1a5be86c62c41ef8c92f81427627f5eadce4cffca7a906020016102a2565b610867610899565b6001600160a01b03811661089057604051631e4fbdf760e01b81525f6004820152602401610378565b6103d381610a12565b5f546001600160a01b031633146105be5760405163118cdaa760e01b8152336004820152602401610378565b5f828152600560209081526040808320815160608101835281548152600180830154948201949094526002909101546001600160a01b03908116928201929092529154839291161580610919575080518514155b1561092a575f5f9250925050610a0b565b600154604082015160035460208401515f9373__$79c24c681325f76413d25d3c06c8219b6e$__93630f126c6c936001600160a01b039092169290918a916109729190610df8565b6040516001600160e01b031960e087901b1681526001600160a01b0394851660048201529284166024840152921660448201526064810191909152608401606060405180830381865af41580156109cb573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906109ef9190610e21565b9095509350905080610a08575f5f935093505050610a0b565b50505b9250929050565b5f80546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b5f838302815f1985870982811083820303915050805f03610a9557838281610a8b57610a8b610e59565b0492505050610b11565b808411610aac57610aac6003851502601118610b18565b5f848688095f868103871696879004966002600389028118808a02820302808a02820302808a02820302808a02820302808a02820302808a02909103029181900381900460010186841190950394909402919094039290920491909117919091029150505b9392505050565b634e487b715f52806020526024601cfd5b5f60208284031215610b39575f5ffd5b5035919050565b6001600160a01b03811681146103d3575f5ffd5b5f5f60408385031215610b65575f5ffd5b823591506020830135610b7781610b40565b809150509250929050565b5f60208284031215610b92575f5ffd5b8135610b1181610b40565b5f5f60408385031215610bae575f5ffd5b50508035926020909101359150565b5f5f5f60608486031215610bcf575f5ffd5b833592506020840135610be181610b40565b929592945050506040919091013590565b634e487b7160e01b5f52604160045260245ffd5b604051601f8201601f1916810167ffffffffffffffff81118282101715610c2f57610c2f610bf2565b604052919050565b5f67ffffffffffffffff821115610c5057610c50610bf2565b5060051b60200190565b5f82601f830112610c69575f5ffd5b8135610c7c610c7782610c37565b610c06565b8082825260208201915060208360051b860101925085831115610c9d575f5ffd5b602085015b83811015610cba578035835260209283019201610ca2565b5095945050505050565b5f5f5f60608486031215610cd6575f5ffd5b833567ffffffffffffffff811115610cec575f5ffd5b8401601f81018613610cfc575f5ffd5b8035610d0a610c7782610c37565b8082825260208201915060208360051b850101925088831115610d2b575f5ffd5b6020840193505b82841015610d56578335610d4581610b40565b825260209384019390910190610d32565b9550505050602084013567ffffffffffffffff811115610d74575f5ffd5b610d8086828701610c5a565b925050604084013567ffffffffffffffff811115610d9c575f5ffd5b610da886828701610c5a565b9150509250925092565b5f5f5f60608486031215610dc4575f5ffd5b8335610dcf81610b40565b95602085013595506040909401359392505050565b634e487b7160e01b5f52603260045260245ffd5b8082028115828204841417610e1b57634e487b7160e01b5f52601160045260245ffd5b92915050565b5f5f5f60608486031215610e33575f5ffd5b83518015158114610e42575f5ffd5b602085015160409095015190969495509392505050565b634e487b7160e01b5f52601260045260245ffdfea26469706673582212200439f427f6c59c7ca84a01192299ac9672b3db0e10d8138465a99ec9c09c2eea64736f6c634300081c0033",
 }
 
 // BridgeFeeStationABI is the input ABI used to generate the binding from.
@@ -224,37 +231,6 @@ func (_BridgeFeeStation *BridgeFeeStationTransactorRaw) Transact(opts *bind.Tran
 	return _BridgeFeeStation.Contract.contract.Transact(opts, method, params...)
 }
 
-// DENOMINATOR is a free data retrieval call binding the contract method 0x918f8674.
-//
-// Solidity: function DENOMINATOR() view returns(uint256)
-func (_BridgeFeeStation *BridgeFeeStationCaller) DENOMINATOR(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _BridgeFeeStation.contract.Call(opts, &out, "DENOMINATOR")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// DENOMINATOR is a free data retrieval call binding the contract method 0x918f8674.
-//
-// Solidity: function DENOMINATOR() view returns(uint256)
-func (_BridgeFeeStation *BridgeFeeStationSession) DENOMINATOR() (*big.Int, error) {
-	return _BridgeFeeStation.Contract.DENOMINATOR(&_BridgeFeeStation.CallOpts)
-}
-
-// DENOMINATOR is a free data retrieval call binding the contract method 0x918f8674.
-//
-// Solidity: function DENOMINATOR() view returns(uint256)
-func (_BridgeFeeStation *BridgeFeeStationCallerSession) DENOMINATOR() (*big.Int, error) {
-	return _BridgeFeeStation.Contract.DENOMINATOR(&_BridgeFeeStation.CallOpts)
-}
-
 // Denominator is a free data retrieval call binding the contract method 0x96ce0795.
 //
 // Solidity: function denominator() pure returns(uint256)
@@ -336,54 +312,85 @@ func (_BridgeFeeStation *BridgeFeeStationCallerSession) EstimateFee(remoteChainI
 	return _BridgeFeeStation.Contract.EstimateFee(&_BridgeFeeStation.CallOpts, remoteChainID, token, value)
 }
 
-// EstimateMaxValue is a free data retrieval call binding the contract method 0x288587e8.
+// GetGasInfo is a free data retrieval call binding the contract method 0xa3fc93b3.
 //
-// Solidity: function estimateMaxValue(uint256 remoteChainID, address token, uint256 totalValue) view returns(uint256 value, uint256 gasFee, uint256 exFee)
-func (_BridgeFeeStation *BridgeFeeStationCaller) EstimateMaxValue(opts *bind.CallOpts, remoteChainID *big.Int, token common.Address, totalValue *big.Int) (struct {
-	Value  *big.Int
-	GasFee *big.Int
-	ExFee  *big.Int
+// Solidity: function getGasInfo(uint256 remoteChainID) view returns((uint256,uint256,address))
+func (_BridgeFeeStation *BridgeFeeStationCaller) GetGasInfo(opts *bind.CallOpts, remoteChainID *big.Int) (IBridgeFeeStationGasInfo, error) {
+	var out []interface{}
+	err := _BridgeFeeStation.contract.Call(opts, &out, "getGasInfo", remoteChainID)
+
+	if err != nil {
+		return *new(IBridgeFeeStationGasInfo), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(IBridgeFeeStationGasInfo)).(*IBridgeFeeStationGasInfo)
+
+	return out0, err
+
+}
+
+// GetGasInfo is a free data retrieval call binding the contract method 0xa3fc93b3.
+//
+// Solidity: function getGasInfo(uint256 remoteChainID) view returns((uint256,uint256,address))
+func (_BridgeFeeStation *BridgeFeeStationSession) GetGasInfo(remoteChainID *big.Int) (IBridgeFeeStationGasInfo, error) {
+	return _BridgeFeeStation.Contract.GetGasInfo(&_BridgeFeeStation.CallOpts, remoteChainID)
+}
+
+// GetGasInfo is a free data retrieval call binding the contract method 0xa3fc93b3.
+//
+// Solidity: function getGasInfo(uint256 remoteChainID) view returns((uint256,uint256,address))
+func (_BridgeFeeStation *BridgeFeeStationCallerSession) GetGasInfo(remoteChainID *big.Int) (IBridgeFeeStationGasInfo, error) {
+	return _BridgeFeeStation.Contract.GetGasInfo(&_BridgeFeeStation.CallOpts, remoteChainID)
+}
+
+// GetTokenFee is a free data retrieval call binding the contract method 0x09585b1c.
+//
+// Solidity: function getTokenFee(uint256 remoteChainID, address token) view returns(uint256 minimumAmount, uint256 gasFee, uint256 exFeeRate)
+func (_BridgeFeeStation *BridgeFeeStationCaller) GetTokenFee(opts *bind.CallOpts, remoteChainID *big.Int, token common.Address) (struct {
+	MinimumAmount *big.Int
+	GasFee        *big.Int
+	ExFeeRate     *big.Int
 }, error) {
 	var out []interface{}
-	err := _BridgeFeeStation.contract.Call(opts, &out, "estimateMaxValue", remoteChainID, token, totalValue)
+	err := _BridgeFeeStation.contract.Call(opts, &out, "getTokenFee", remoteChainID, token)
 
 	outstruct := new(struct {
-		Value  *big.Int
-		GasFee *big.Int
-		ExFee  *big.Int
+		MinimumAmount *big.Int
+		GasFee        *big.Int
+		ExFeeRate     *big.Int
 	})
 	if err != nil {
 		return *outstruct, err
 	}
 
-	outstruct.Value = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.MinimumAmount = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 	outstruct.GasFee = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.ExFee = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	outstruct.ExFeeRate = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
 
 	return *outstruct, err
 
 }
 
-// EstimateMaxValue is a free data retrieval call binding the contract method 0x288587e8.
+// GetTokenFee is a free data retrieval call binding the contract method 0x09585b1c.
 //
-// Solidity: function estimateMaxValue(uint256 remoteChainID, address token, uint256 totalValue) view returns(uint256 value, uint256 gasFee, uint256 exFee)
-func (_BridgeFeeStation *BridgeFeeStationSession) EstimateMaxValue(remoteChainID *big.Int, token common.Address, totalValue *big.Int) (struct {
-	Value  *big.Int
-	GasFee *big.Int
-	ExFee  *big.Int
+// Solidity: function getTokenFee(uint256 remoteChainID, address token) view returns(uint256 minimumAmount, uint256 gasFee, uint256 exFeeRate)
+func (_BridgeFeeStation *BridgeFeeStationSession) GetTokenFee(remoteChainID *big.Int, token common.Address) (struct {
+	MinimumAmount *big.Int
+	GasFee        *big.Int
+	ExFeeRate     *big.Int
 }, error) {
-	return _BridgeFeeStation.Contract.EstimateMaxValue(&_BridgeFeeStation.CallOpts, remoteChainID, token, totalValue)
+	return _BridgeFeeStation.Contract.GetTokenFee(&_BridgeFeeStation.CallOpts, remoteChainID, token)
 }
 
-// EstimateMaxValue is a free data retrieval call binding the contract method 0x288587e8.
+// GetTokenFee is a free data retrieval call binding the contract method 0x09585b1c.
 //
-// Solidity: function estimateMaxValue(uint256 remoteChainID, address token, uint256 totalValue) view returns(uint256 value, uint256 gasFee, uint256 exFee)
-func (_BridgeFeeStation *BridgeFeeStationCallerSession) EstimateMaxValue(remoteChainID *big.Int, token common.Address, totalValue *big.Int) (struct {
-	Value  *big.Int
-	GasFee *big.Int
-	ExFee  *big.Int
+// Solidity: function getTokenFee(uint256 remoteChainID, address token) view returns(uint256 minimumAmount, uint256 gasFee, uint256 exFeeRate)
+func (_BridgeFeeStation *BridgeFeeStationCallerSession) GetTokenFee(remoteChainID *big.Int, token common.Address) (struct {
+	MinimumAmount *big.Int
+	GasFee        *big.Int
+	ExFeeRate     *big.Int
 }, error) {
-	return _BridgeFeeStation.Contract.EstimateMaxValue(&_BridgeFeeStation.CallOpts, remoteChainID, token, totalValue)
+	return _BridgeFeeStation.Contract.GetTokenFee(&_BridgeFeeStation.CallOpts, remoteChainID, token)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -480,27 +487,6 @@ func (_BridgeFeeStation *BridgeFeeStationTransactorSession) RenounceOwnership() 
 	return _BridgeFeeStation.Contract.RenounceOwnership(&_BridgeFeeStation.TransactOpts)
 }
 
-// SetChainInfo is a paid mutator transaction binding the contract method 0xa9f72c18.
-//
-// Solidity: function setChainInfo(uint256 remoteChainID, address gasToken, uint256 gasPrice) returns()
-func (_BridgeFeeStation *BridgeFeeStationTransactor) SetChainInfo(opts *bind.TransactOpts, remoteChainID *big.Int, gasToken common.Address, gasPrice *big.Int) (*types.Transaction, error) {
-	return _BridgeFeeStation.contract.Transact(opts, "setChainInfo", remoteChainID, gasToken, gasPrice)
-}
-
-// SetChainInfo is a paid mutator transaction binding the contract method 0xa9f72c18.
-//
-// Solidity: function setChainInfo(uint256 remoteChainID, address gasToken, uint256 gasPrice) returns()
-func (_BridgeFeeStation *BridgeFeeStationSession) SetChainInfo(remoteChainID *big.Int, gasToken common.Address, gasPrice *big.Int) (*types.Transaction, error) {
-	return _BridgeFeeStation.Contract.SetChainInfo(&_BridgeFeeStation.TransactOpts, remoteChainID, gasToken, gasPrice)
-}
-
-// SetChainInfo is a paid mutator transaction binding the contract method 0xa9f72c18.
-//
-// Solidity: function setChainInfo(uint256 remoteChainID, address gasToken, uint256 gasPrice) returns()
-func (_BridgeFeeStation *BridgeFeeStationTransactorSession) SetChainInfo(remoteChainID *big.Int, gasToken common.Address, gasPrice *big.Int) (*types.Transaction, error) {
-	return _BridgeFeeStation.Contract.SetChainInfo(&_BridgeFeeStation.TransactOpts, remoteChainID, gasToken, gasPrice)
-}
-
 // SetExFeeRate is a paid mutator transaction binding the contract method 0x005d0f10.
 //
 // Solidity: function setExFeeRate(uint256 exFeeRate) returns()
@@ -541,6 +527,27 @@ func (_BridgeFeeStation *BridgeFeeStationSession) SetFinalizeBridgeGas(finalizeB
 // Solidity: function setFinalizeBridgeGas(uint256 finalizeBridgeGas) returns()
 func (_BridgeFeeStation *BridgeFeeStationTransactorSession) SetFinalizeBridgeGas(finalizeBridgeGas *big.Int) (*types.Transaction, error) {
 	return _BridgeFeeStation.Contract.SetFinalizeBridgeGas(&_BridgeFeeStation.TransactOpts, finalizeBridgeGas)
+}
+
+// SetGasInfo is a paid mutator transaction binding the contract method 0x3f0cf10d.
+//
+// Solidity: function setGasInfo(uint256 remoteChainID, address gasToken, uint256 gasPrice) returns()
+func (_BridgeFeeStation *BridgeFeeStationTransactor) SetGasInfo(opts *bind.TransactOpts, remoteChainID *big.Int, gasToken common.Address, gasPrice *big.Int) (*types.Transaction, error) {
+	return _BridgeFeeStation.contract.Transact(opts, "setGasInfo", remoteChainID, gasToken, gasPrice)
+}
+
+// SetGasInfo is a paid mutator transaction binding the contract method 0x3f0cf10d.
+//
+// Solidity: function setGasInfo(uint256 remoteChainID, address gasToken, uint256 gasPrice) returns()
+func (_BridgeFeeStation *BridgeFeeStationSession) SetGasInfo(remoteChainID *big.Int, gasToken common.Address, gasPrice *big.Int) (*types.Transaction, error) {
+	return _BridgeFeeStation.Contract.SetGasInfo(&_BridgeFeeStation.TransactOpts, remoteChainID, gasToken, gasPrice)
+}
+
+// SetGasInfo is a paid mutator transaction binding the contract method 0x3f0cf10d.
+//
+// Solidity: function setGasInfo(uint256 remoteChainID, address gasToken, uint256 gasPrice) returns()
+func (_BridgeFeeStation *BridgeFeeStationTransactorSession) SetGasInfo(remoteChainID *big.Int, gasToken common.Address, gasPrice *big.Int) (*types.Transaction, error) {
+	return _BridgeFeeStation.Contract.SetGasInfo(&_BridgeFeeStation.TransactOpts, remoteChainID, gasToken, gasPrice)
 }
 
 // SetPriceFeed is a paid mutator transaction binding the contract method 0x724e78da.

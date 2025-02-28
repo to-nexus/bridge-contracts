@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {BridgeFeeStation} from "../../src/BridgeFeeStation.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Test, console} from "forge-std/Test.sol";
 
 contract SettingTest is Test {
-    bytes32 public constant FINALIZE_TYPEHASH =
-        keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes extraData)");
+    using Math for uint;
+
+    bytes32 public constant FINALIZE_TYPEHASH = keccak256(
+        "Finalize(uint256 remoteChainID,uint256 index,address token,address to,uint256 value,bytes extraData)"
+    );
 
     uint internal constant EX_RATE = 100;
     uint internal constant OWNER_PK = uint(bytes32("owner"));
@@ -83,5 +88,22 @@ contract SettingTest is Test {
         cross = IERC20(new TestToken("Cross", "CROSS", 18));
         testTokenEthereum = IERC20(new TestToken("Test Token", "TT", 18));
         vm.stopPrank();
+    }
+
+    function estimateMaxValue(BridgeFeeStation feeStation, uint remoteChainID, IERC20 token, uint totalValue)
+        internal
+        view
+        returns (bool ok, uint value, uint gasFee, uint exFee)
+    {
+        uint minimumAmount;
+        uint exFeeRate;
+        (minimumAmount, gasFee, exFeeRate) = feeStation.getTokenFee(remoteChainID, token);
+        if (totalValue <= gasFee) return (false, 0, 0, 0);
+
+        uint denominator = feeStation.denominator();
+        uint v = totalValue - gasFee;
+        value = v.mulDiv(denominator, (denominator + exFeeRate));
+        exFee = value.mulDiv(exFeeRate, denominator);
+        ok = value > minimumAmount;
     }
 }

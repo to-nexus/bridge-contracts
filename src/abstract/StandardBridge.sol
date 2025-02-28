@@ -9,13 +9,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IBridgeFeeStation} from "../interface/IBridgeFeeStation.sol";
 import {IStandardBridge} from "../interface/IStandardBridge.sol";
 import {CrossMintableERC20, ICrossMintableERC20} from "../token/CrossMintableERC20.sol";
-import {ChainManager} from "./ChainManager.sol";
+import {BridgeRegistry} from "./BridgeRegistry.sol";
 import {ValidatorManager} from "./ValidatorManager.sol";
 
 /**
@@ -27,7 +26,7 @@ abstract contract StandardBridge is
     UUPSUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    ChainManager,
+    BridgeRegistry,
     ValidatorManager,
     IStandardBridge
 {
@@ -42,6 +41,7 @@ abstract contract StandardBridge is
     error errStandardBridgeInvalidValue(uint expected, uint actual);
     error errStandardBridgeInvalidPermitValue(address token, uint value);
     error errStandardBridgeCanNotZeroAddress(string name);
+    error errStandardBridgeNotExist(string name);
     error errStandardBridgeFailedPermit(address token);
     error errStandardBridgeBurnFailed(address token, address from, uint value);
 
@@ -57,13 +57,18 @@ abstract contract StandardBridge is
         bool permit,
         bytes extraData
     );
-    event BridgeFinalized(uint indexed index, IERC20 indexed token, address indexed to, uint value, uint time);
+    event BridgeFinalized(
+        uint indexed remoteChainID, uint indexed index, IERC20 token, address indexed to, uint value, uint time
+    );
     event BridgeFinalizeReverted(uint indexed index);
     event BridgeFeeCharged(uint indexed index, IERC20 indexed token, address indexed account, uint gasFee, uint exFee);
+    event RewardWalletSet(address wallet);
+    event FeeStationSet(IBridgeFeeStation feeStation);
 
     address internal constant NATIVE_TOKEN = address(1);
-    bytes32 private constant FINALIZE_TYPEHASH =
-        keccak256("Finalize(uint256 index,address token,address to,uint256 value,bytes extraData)");
+    bytes32 private constant FINALIZE_TYPEHASH = keccak256(
+        "Finalize(uint256 remoteChainID,uint256 index,address token,address to,uint256 value,bytes extraData)"
+    );
 
     IBridgeFeeStation public bridgeFeeStation;
     address payable private _rewardWallet;
@@ -87,7 +92,7 @@ abstract contract StandardBridge is
     ) internal onlyInitializing {
         __Ownable_init(_msgSender());
         __Validator_init(_threshold);
-        __ChainManager_init(_crossMintableERC20FactoryCode);
+        __BridgeRegistry_init(_crossMintableERC20FactoryCode);
         __UUPSUpgradeable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -130,77 +135,68 @@ abstract contract StandardBridge is
         return true;
     }
 
-    function finalizeBridge(
-        uint fromChainID,
-        uint index,
-        IERC20 token,
-        address to,
-        uint value,
-        bytes calldata extraData,
-        uint8[] memory v,
-        bytes32[] memory r,
-        bytes32[] memory s
-    ) public payable whenNotPaused onlyValidToken(fromChainID, address(token)) nonReentrant returns (bool) {
+    function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
+        public
+        payable
+        whenNotPaused
+        onlyValidToken(args.remoteChainID, address(args.token))
+        nonReentrant
+        returns (bool)
+    {
         require(msg.value == 0, errStandardBridgeInvalidValue(0, msg.value));
         require(
-            index == getNextFinalizeIndex(fromChainID),
-            errStandardBridgeInvalidIndex(getNextFinalizeIndex(fromChainID), index)
+            args.index == getNextFinalizeIndex(args.remoteChainID),
+            errStandardBridgeInvalidIndex(getNextFinalizeIndex(args.remoteChainID), args.index)
         );
 
         _validateSignature(
-            keccak256(abi.encode(FINALIZE_TYPEHASH, index, address(token), to, value, extraData)), v, r, s
+            keccak256(
+                abi.encode(FINALIZE_TYPEHASH, args.index, address(args.token), args.to, args.value, args.extraData)
+            ),
+            v,
+            r,
+            s
         );
-        _incrementFinalizeIndex(fromChainID);
+        _incrementFinalizeIndex(args.remoteChainID);
 
-        (bool ok, string memory reason) = _finalizeBridge(fromChainID, token, to, value);
+        (bool ok, string memory reason) = _finalizeBridge(args.remoteChainID, args.token, args.to, args.value);
         if (ok) {
-            emit BridgeFinalized(index, token, to, value, block.timestamp);
+            emit BridgeFinalized(args.remoteChainID, args.index, args.token, args.to, args.value, block.timestamp);
         } else {
-            _setRevertedArguments(fromChainID, index, token, to, value, extraData, reason);
-            emit BridgeFinalizeReverted(index);
+            _setRevertedArguments(args, reason);
+            emit BridgeFinalizeReverted(args.index);
         }
 
         return true;
     }
 
     function finalizeBridgeBatch(
-        uint fromChainID,
         FinalizeArguments[] calldata args,
         uint8[][] memory v,
         bytes32[][] memory r,
         bytes32[][] memory s
     ) external payable returns (bool) {
         for (uint i = 0; i < args.length; ++i) {
-            finalizeBridge(
-                fromChainID,
-                args[i].index,
-                args[i].token,
-                args[i].to,
-                args[i].value,
-                args[i].extraData,
-                v[i],
-                r[i],
-                s[i]
-            );
+            finalizeBridge(args[i], v[i], r[i], s[i]);
         }
         return true;
     }
 
-    function retryFinalizeBridge(uint fromChainID, uint index) public whenNotPaused nonReentrant returns (bool) {
-        FinalizeArguments memory args = _getRevertedArguments(fromChainID, index);
+    function retryFinalizeBridge(uint remoteChainID, uint index) public whenNotPaused nonReentrant returns (bool) {
+        FinalizeArguments memory args = revertedArguments(remoteChainID, index);
 
-        (bool ok, string memory reason) = _finalizeBridge(fromChainID, args.token, args.to, args.value);
+        (bool ok, string memory reason) = _finalizeBridge(remoteChainID, args.token, args.to, args.value);
         require(ok, reason);
 
-        _removeRevertedArguments(fromChainID, index);
+        _removeRevertedArguments(remoteChainID, index);
 
-        emit BridgeFinalized(args.index, args.token, args.to, args.value, block.timestamp);
+        emit BridgeFinalized(remoteChainID, args.index, args.token, args.to, args.value, block.timestamp);
         return true;
     }
 
-    function retryFinalizeBridgeBatch(uint fromChainID, uint[] memory indexes) external returns (bool) {
+    function retryFinalizeBridgeBatch(uint remoteChainID, uint[] memory indexes) external returns (bool) {
         for (uint i = 0; i < indexes.length; ++i) {
-            retryFinalizeBridge(fromChainID, indexes[i]);
+            retryFinalizeBridge(remoteChainID, indexes[i]);
         }
         return true;
     }
@@ -446,15 +442,19 @@ abstract contract StandardBridge is
     function setRewardWallet(address payable rewardWallet_) external onlyOwner {
         require(rewardWallet_ != address(0), errStandardBridgeCanNotZeroAddress("rewardWallet_"));
         _rewardWallet = rewardWallet_;
+        emit RewardWalletSet(_rewardWallet);
     }
 
     function setFeeStation(IBridgeFeeStation _bridgeFeeStation) external onlyOwner {
         require(address(_bridgeFeeStation) != address(0), errStandardBridgeCanNotZeroAddress("_bridgeFeeStation"));
         bridgeFeeStation = _bridgeFeeStation;
+        emit FeeStationSet(bridgeFeeStation);
     }
 
     function removeFeeStation() external onlyOwner {
+        require(address(bridgeFeeStation) != address(0), errStandardBridgeNotExist("bridgeFeeStation"));
         bridgeFeeStation = IBridgeFeeStation(address(0));
+        emit FeeStationSet(bridgeFeeStation);
     }
 
     function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {}

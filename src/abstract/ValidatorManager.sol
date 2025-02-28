@@ -1,10 +1,11 @@
 pragma solidity 0.8.28;
 
-import {IValidatorManager} from "../interface/IValidatorManager.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
+import {IValidatorManager} from "../interface/IValidatorManager.sol";
 
 abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IValidatorManager {
     using ECDSA for bytes32;

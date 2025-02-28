@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {BridgeFeeStation} from "../../src/BridgeFeeStation.sol";
 import {CrossBridge} from "../../src/CrossBridge.sol";
+import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 
 import {IPriceFeed, PriceFeed} from "../../src/PriceFeed.sol";
 
@@ -146,7 +147,19 @@ contract CrossChainTest is SettingTest {
             finalizeRevertCross = false;
             vm.expectRevert();
         }
-        ok = bridgeCross.finalizeBridge(ETHEREUM_CHAIN_ID, index, IERC20(token), to, value, NULLDATA, v, r, s);
+        ok = bridgeCross.finalizeBridge(
+            IBridgeRegistry.FinalizeArguments({
+                remoteChainID: ETHEREUM_CHAIN_ID,
+                index: index,
+                token: IERC20(token),
+                to: to,
+                value: value,
+                extraData: NULLDATA
+            }),
+            v,
+            r,
+            s
+        );
     }
 
     function crossCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
@@ -154,7 +167,9 @@ contract CrossChainTest is SettingTest {
         if (address(bridgeFeeStationCross) == address(0)) return (totalValue, 0, 0);
 
         bool ok;
-        (ok, value, gas, ex) = bridgeFeeStationCross.estimateMaxValue(ETHEREUM_CHAIN_ID, token, totalValue);
+        (ok, value, gas, ex) = estimateMaxValue(bridgeFeeStationCross, ETHEREUM_CHAIN_ID, token, totalValue);
         assertTrue(ok);
     }
+
+
 }

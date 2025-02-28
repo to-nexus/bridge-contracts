@@ -5,7 +5,6 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IPriceFeed} from "./interface/IPriceFeed.sol";
-import {PriceFeedLib} from "./lib/PriceFeedLib.sol";
 
 contract PriceFeed is ValidatorManager, IPriceFeed {
     using EnumerableSet for EnumerableSet.AddressSet;

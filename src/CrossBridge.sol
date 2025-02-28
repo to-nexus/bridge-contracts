@@ -3,8 +3,6 @@ pragma solidity 0.8.28;
 
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {StandardBridge} from "./abstract/StandardBridge.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
@@ -14,9 +12,6 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
  * @notice This contract implements the StandardBridge for a specific cross-chain bridge.
  */
 contract CrossBridge is StandardBridge {
-    using Address for address payable;
-    using SafeERC20 for IERC20;
-
     error CrossBridgeInvalidValue(uint expected, uint actual);
     error CrossBridgeInvalidValueUnit(uint value);
     error CrossBridgeCanNotZeroAddress(string name);

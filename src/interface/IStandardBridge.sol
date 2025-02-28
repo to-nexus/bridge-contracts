@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IBridgeFeeStation} from "./IBridgeFeeStation.sol";
-
-import {IChainManager} from "./IChainManager.sol";
-import {IValidatorManager} from "./IValidatorManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-interface IStandardBridge is IValidatorManager, IChainManager {
+import {IBridgeFeeStation} from "./IBridgeFeeStation.sol";
+import {IBridgeRegistry} from "./IBridgeRegistry.sol";
+import {IValidatorManager} from "./IValidatorManager.sol";
+
+interface IStandardBridge is IValidatorManager, IBridgeRegistry {
     struct PermitArguments {
         IERC20Permit token;
         address account;
@@ -39,26 +39,19 @@ interface IStandardBridge is IValidatorManager, IChainManager {
         PermitArguments memory permitArgs,
         bytes calldata extraData
     ) external payable returns (bool);
-    function finalizeBridge(
-        uint fromChainID,
-        uint index,
-        IERC20 token,
-        address to,
-        uint value,
-        bytes calldata extraData,
-        uint8[] memory v,
-        bytes32[] memory r,
-        bytes32[] memory s
-    ) external payable returns (bool);
+    function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
+        external
+        payable
+        returns (bool);
     function finalizeBridgeBatch(
-        uint fromChainID,
         FinalizeArguments[] calldata args,
         uint8[][] memory v,
         bytes32[][] memory r,
         bytes32[][] memory s
     ) external payable returns (bool);
-    function retryFinalizeBridge(uint fromChainID, uint index) external returns (bool);
-    function retryFinalizeBridgeBatch(uint fromChainID, uint[] memory indexes) external returns (bool);
+    function bridgeFeeStation() external view returns (IBridgeFeeStation);
+    function retryFinalizeBridge(uint remoteChainID, uint index) external returns (bool);
+    function retryFinalizeBridgeBatch(uint remoteChainID, uint[] memory indexes) external returns (bool);
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
     function rewardWallet() external view returns (address payable);
