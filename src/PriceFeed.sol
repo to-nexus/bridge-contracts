@@ -111,7 +111,7 @@ contract PriceFeed is ValidatorManager, IPriceFeed {
         updatedAt = block.timestamp;
     }
 
-    function nativeCoin() public pure returns (address) {
+    function nativeToken() public pure returns (address) {
         return NATIVE_TOKEN;
     }
 

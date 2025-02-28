@@ -10,7 +10,7 @@ interface IPriceFeed is IValidatorManager {
         uint lastUpdated;
     }
 
-    function nativeCoin() external pure returns (address);
+    function nativeToken() external pure returns (address);
     function allPrices() external view returns (bool[] memory exist, uint[] memory prices, uint updatedAt_);
     function getPrice(address token) external view returns (bool exist, uint price, uint updatedAt_);
     function getPrices(address[] memory tokens)

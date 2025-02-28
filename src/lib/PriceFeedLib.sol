@@ -67,6 +67,6 @@ library PriceFeedLib {
     /// @param token The address of the token.
     /// @return decimals The number of decimals.
     function _decimals(IPriceFeed feed, address token) private view returns (uint8 decimals) {
-        decimals = token == feed.nativeCoin() ? uint8(18) : IERC20Metadata(token).decimals();
+        decimals = token == feed.nativeToken() ? uint8(18) : IERC20Metadata(token).decimals();
     }
 }

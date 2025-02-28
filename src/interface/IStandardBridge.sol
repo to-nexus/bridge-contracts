@@ -9,6 +9,28 @@ import {IBridgeRegistry} from "./IBridgeRegistry.sol";
 import {IValidatorManager} from "./IValidatorManager.sol";
 
 interface IStandardBridge is IValidatorManager, IBridgeRegistry {
+    struct BridgeTokenArguments {
+        uint remoteChainID;
+        IERC20 token;
+        address to;
+        uint value;
+        uint gasFee;
+        uint exFee;
+        bytes extraData;
+    }
+
+    struct PermitBridgeTokenArguments {
+        uint remoteChainID;
+        IERC20 token;
+        address from;
+        address to;
+        uint value;
+        uint gasFee;
+        uint exFee;
+        bytes extraData;
+        PermitArguments permitArgs;
+    }
+
     struct PermitArguments {
         IERC20Permit token;
         address account;
@@ -28,6 +50,7 @@ interface IStandardBridge is IValidatorManager, IBridgeRegistry {
         uint exFee,
         bytes calldata extraData
     ) external payable returns (bool);
+    function bridgeTokenBatch(BridgeTokenArguments[] calldata args) external payable;
     function permitBridgeToken(
         uint remoteChainID,
         IERC20 token,
@@ -36,9 +59,10 @@ interface IStandardBridge is IValidatorManager, IBridgeRegistry {
         uint value,
         uint gasFee,
         uint exFee,
-        PermitArguments memory permitArgs,
-        bytes calldata extraData
+        bytes calldata extraData,
+        PermitArguments memory permitArgs
     ) external payable returns (bool);
+    function permitBridgeTokenBatch(PermitBridgeTokenArguments[] calldata args) external payable;
     function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
         external
         payable

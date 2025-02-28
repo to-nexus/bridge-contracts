@@ -17,7 +17,7 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
     error errValidatorManagerInsufficientSignature(uint length);
     error errValidatorManagerInvalidSignatures(uint v, uint r, uint s);
 
-    event ValidatorSet(address validators, bool status);
+    event ValidatorSet(address indexed validator, bool indexed status);
     event ThresholdChanged(uint8 threshold);
 
     EnumerableSet.AddressSet private _validators;

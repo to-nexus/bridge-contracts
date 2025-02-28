@@ -14,50 +14,51 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint;
 
-    error errBridgeRegistryNotExistIndex(uint index);
-    error errBridgeRegistryNotExistToken(address token);
-    error errBridgeRegistryNotExistChain(uint chainID);
-    error errBridgeRegistryAleadyExistToken(address token);
-    error errBridgeRegistryAleadyExistChain(uint chainID);
-    error errBridgeRegistryDuplicateIndex(uint index);
-    error errBridgeRegistryCanNotZeroAddress(string name);
-    error errBridgeRegistryInvalidToken(address token);
-    error errBridgeRegistryInsufficientBridgeBalance(uint remoteChainID, address token, uint value);
-    error errBridgeRegistryTokenPaused(address token);
-    error errBridgeRegistryAleadyPaused(address token);
-    error errBridgeRegistryNotPaused(address token);
-    error errBridgeRegistryTokenFactoryNotSet();
+    error BridgeRegistryNotExistIndex(uint index);
+    error BridgeRegistryNotExistToken(address token);
+    error BridgeRegistryNotExistChain(uint chainID);
+    error BridgeRegistryAleadyExistToken(address token);
+    error BridgeRegistryAleadyExistChain(uint chainID);
+    error BridgeRegistryAleadyExistIndex(uint index);
+    error BridgeRegistryAleadyExistFactory(CrossMintableERC20Factory factory);
+    error BridgeRegistryCanNotZeroAddress(string name);
+    error BridgeRegistryCanNotZeroValue(string name);
+    error BridgeRegistryInvalidToken(address token);
+    error BridgeRegistryBalanceLow(uint remoteChainID, address token, uint value);
+    error BridgeRegistryTokenPaused(address token);
+    error BridgeRegistryAleadyPaused(address token);
+    error BridgeRegistryNotPaused(address token);
+    error BridgeRegistryFactoryNotSet();
+    error BridgeRegistryInvalidRate(uint localTokenRate, uint remoteTokenRate);
 
     event TokenPairRegistered(
-        uint indexed remoteChainID, bool isOrigin, address indexed localToken, address indexed remoteToken
+        uint indexed remoteChainID,
+        bool isOrigin,
+        address indexed localToken,
+        address indexed remoteToken,
+        uint localTokenRate,
+        uint remoteTokenRate
     );
     event TokenPairUnregistered(uint indexed remoteChainID, address indexed localToken);
     event TokenPairPaused(uint indexed remoteChainID, address indexed token);
     event TokenPairUnpaused(uint indexed remoteChainID, address indexed token);
-    event ChainSet(uint indexed remoteChainID);
+    event CrossMintableERC20FactorySet(CrossMintableERC20Factory indexed factory);
 
     CrossMintableERC20Factory public crossMintableERC20Factory;
 
     EnumerableSet.UintSet private _chains;
     mapping(uint => Chain) internal _chainData; // chain id : Chain
+    mapping(uint => mapping(address => ExchangeRate)) internal _exchangeRate;
 
     uint[47] private __gap;
 
     function __BridgeRegistry_init(address _crossMintableERC20FactoryCode) internal {
-        if (_crossMintableERC20FactoryCode == address(0)) return;
-
-        bytes memory bytecode = abi.encodePacked(
-            CrossMintableERC20FactoryCode(_crossMintableERC20FactoryCode).code(), abi.encode(address(this))
-        );
-        address addr = Create2.deploy(0, keccak256(abi.encodePacked(block.chainid)), bytecode);
-        require(addr != address(0), "zero");
-
-        crossMintableERC20Factory = CrossMintableERC20Factory(addr);
+        if (_crossMintableERC20FactoryCode != address(0)) _setERC20Factory(_crossMintableERC20FactoryCode);
     }
 
     modifier onlyValidToken(uint remoteChainID, address _token) {
-        require(_chainData[remoteChainID].tokens.contains(_token), errBridgeRegistryInvalidToken(_token));
-        require(!_chainData[remoteChainID].tokenPairs[_token].paused, errBridgeRegistryTokenPaused(_token));
+        require(_chainData[remoteChainID].tokens.contains(_token), BridgeRegistryInvalidToken(_token));
+        require(!_chainData[remoteChainID].tokenPairs[_token].paused, BridgeRegistryTokenPaused(_token));
         _;
     }
 
@@ -73,6 +74,10 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
             _pairs[i] = chain.tokenPairs[tokens[i]];
         }
         return _pairs;
+    }
+
+    function allRevertedIndex(uint remoteChainID) external view returns (uint[] memory) {
+        return _chainData[remoteChainID].reverted.index.values();
     }
 
     function getTokenPair(uint remoteChainID, address token) external view returns (TokenPair memory) {
@@ -122,7 +127,7 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
     function _withdrawToken(uint remoteChainID, address token, uint value) internal {
         Chain storage chain = _chainData[remoteChainID];
         (bool ok, uint deposited) = chain.tokenPairs[token].deposited.trySub(value);
-        require(ok, errBridgeRegistryInsufficientBridgeBalance(chain.remoteChainID, token, value));
+        require(ok, BridgeRegistryBalanceLow(chain.remoteChainID, token, value));
 
         chain.tokenPairs[token].deposited = deposited;
     }
@@ -130,7 +135,7 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
     function _setRevertedArguments(FinalizeArguments calldata args, string memory reason) internal {
         Chain storage chain = _chainData[args.remoteChainID];
         uint index = args.index;
-        require(chain.reverted.index.add(index), errBridgeRegistryDuplicateIndex(index));
+        require(chain.reverted.index.add(index), BridgeRegistryAleadyExistIndex(index));
 
         chain.reverted.data[index] = args;
         chain.reverted.reason[index] = reason;
@@ -138,40 +143,105 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
 
     function _removeRevertedArguments(uint remoteChainID, uint index) internal {
         Chain storage chain = _chainData[remoteChainID];
-        require(chain.reverted.index.remove(index), errBridgeRegistryNotExistIndex(index));
+        require(chain.reverted.index.remove(index), BridgeRegistryNotExistIndex(index));
         delete (chain.reverted.reason[index]);
         delete (chain.reverted.data[index]);
     }
 
     // set function
-    function createToken(uint remoteChainID, address remoteToken, string memory symbol, uint8 decimals)
-        external
-        onlyOwner
-        returns (address tokenAddress)
-    {
-        require(address(crossMintableERC20Factory) != address(0), errBridgeRegistryTokenFactoryNotSet());
+    function createToken(
+        uint remoteChainID,
+        address remoteToken,
+        uint localTokenRate,
+        uint remoteTokenRate,
+        string memory symbol,
+        uint8 decimals
+    ) external onlyOwner returns (address tokenAddress) {
+        require(address(crossMintableERC20Factory) != address(0), BridgeRegistryFactoryNotSet());
         tokenAddress = crossMintableERC20Factory.createCrossMintableERC20(
             keccak256(abi.encodePacked(remoteToken)),
             string(abi.encodePacked("Cross Bridge ", symbol)),
             symbol,
             decimals
         );
-        registerToken(remoteChainID, false, tokenAddress, remoteToken);
+        _registerToken(remoteChainID, false, tokenAddress, remoteToken, localTokenRate, remoteTokenRate);
     }
 
-    function setChain(uint remoteChainID) public onlyOwner {
-        require(_chains.add(remoteChainID), errBridgeRegistryAleadyExistChain(remoteChainID));
-        emit ChainSet(remoteChainID);
+    function registerToken(
+        uint remoteChainID,
+        bool isOrigin,
+        address localToken,
+        address remoteToken,
+        uint localTokenRate,
+        uint remoteTokenRate
+    ) external onlyOwner {
+        _registerToken(remoteChainID, isOrigin, localToken, remoteToken, localTokenRate, remoteTokenRate);
     }
 
-    function registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken)
-        public
-        onlyOwner
-    {
-        require(_chains.contains(remoteChainID), errBridgeRegistryNotExistChain(remoteChainID));
+    function unregisterToken(uint remoteChainID, address token) external onlyOwner {
+        require(_chains.contains(remoteChainID), BridgeRegistryNotExistChain(remoteChainID));
+        require(token != address(0), BridgeRegistryCanNotZeroAddress("token"));
+
         Chain storage chain = _chainData[remoteChainID];
-        require(localToken != address(0), errBridgeRegistryCanNotZeroAddress("localToken"));
-        require(chain.tokens.add(localToken), errBridgeRegistryAleadyExistToken(localToken));
+        require(chain.tokens.remove(token), BridgeRegistryNotExistToken(token));
+        delete (chain.tokenPairs[token]);
+
+        emit TokenPairUnregistered(remoteChainID, token);
+    }
+
+    function pauseToken(uint remoteChainID, address token) external onlyOwner {
+        Chain storage chain = _chainData[remoteChainID];
+        require(chain.tokens.contains(token), BridgeRegistryNotExistToken(token));
+        require(!chain.tokenPairs[token].paused, BridgeRegistryAleadyPaused(token));
+        chain.tokenPairs[token].paused = true;
+
+        emit TokenPairPaused(remoteChainID, token);
+    }
+
+    function unpauseToken(uint remoteChainID, address token) external onlyOwner {
+        Chain storage chain = _chainData[remoteChainID];
+        require(chain.tokens.contains(token), BridgeRegistryNotExistToken(token));
+        require(chain.tokenPairs[token].paused, BridgeRegistryNotPaused(token));
+        chain.tokenPairs[token].paused = false;
+
+        emit TokenPairUnpaused(remoteChainID, token);
+    }
+
+    function setERC20Factory(address factoryCode) external onlyOwner {
+        _setERC20Factory(factoryCode);
+    }
+
+    function _setERC20Factory(address factoryCode) private {
+        require(factoryCode != address(0), BridgeRegistryCanNotZeroAddress("factoryCode"));
+        require(
+            address(crossMintableERC20Factory) == address(0),
+            BridgeRegistryAleadyExistFactory(crossMintableERC20Factory)
+        );
+
+        bytes memory bytecode =
+            abi.encodePacked(CrossMintableERC20FactoryCode(factoryCode).code(), abi.encode(address(this)));
+        crossMintableERC20Factory =
+            CrossMintableERC20Factory(Create2.deploy(0, keccak256(abi.encodePacked(block.chainid)), bytecode));
+
+        emit CrossMintableERC20FactorySet(crossMintableERC20Factory);
+    }
+
+    function _registerToken(
+        uint remoteChainID,
+        bool isOrigin,
+        address localToken,
+        address remoteToken,
+        uint localTokenRate,
+        uint remoteTokenRate
+    ) private {
+        if (_chains.contains(remoteChainID)) {
+            require(_chains.add(remoteChainID), BridgeRegistryAleadyExistChain(remoteChainID));
+        }
+
+        Chain storage chain = _chainData[remoteChainID];
+        require(localToken != address(0), BridgeRegistryCanNotZeroAddress("localToken"));
+        require(chain.tokens.add(localToken), BridgeRegistryAleadyExistToken(localToken));
+
         chain.tokenPairs[localToken] = IBridgeRegistry.TokenPair({
             localToken: localToken,
             remoteToken: remoteToken,
@@ -180,35 +250,26 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
             deposited: 0
         });
 
-        emit TokenPairRegistered(remoteChainID, isOrigin, localToken, remoteToken);
-    }
+        if (localTokenRate != remoteTokenRate) {
+            require(localTokenRate != 0, BridgeRegistryCanNotZeroValue("remoteTokenRate"));
+            require(remoteTokenRate != 0, BridgeRegistryCanNotZeroValue("remoteTokenRate"));
 
-    function unregisterToken(uint remoteChainID, address token) external onlyOwner {
-        require(_chains.contains(remoteChainID), errBridgeRegistryNotExistChain(remoteChainID));
-        require(token != address(0), errBridgeRegistryCanNotZeroAddress("token"));
+            if (localTokenRate > remoteTokenRate) {
+                require(
+                    remoteTokenRate == 1 && localTokenRate % 10 == 0,
+                    BridgeRegistryInvalidRate(localTokenRate, remoteTokenRate)
+                );
+            } else {
+                require(
+                    localTokenRate == 1 && remoteTokenRate % 10 == 0,
+                    BridgeRegistryInvalidRate(localTokenRate, remoteTokenRate)
+                );
+            }
 
-        Chain storage chain = _chainData[remoteChainID];
-        require(chain.tokens.remove(token), errBridgeRegistryNotExistToken(token));
-        delete (chain.tokenPairs[token]);
+            _exchangeRate[remoteChainID][localToken] =
+                ExchangeRate({localTokenRate: localTokenRate, remoteTokenRate: remoteTokenRate});
+        }
 
-        emit TokenPairUnregistered(remoteChainID, token);
-    }
-
-    function pauseToken(uint remoteChainID, address token) external onlyOwner {
-        Chain storage chain = _chainData[remoteChainID];
-        require(chain.tokens.contains(token), errBridgeRegistryNotExistToken(token));
-        require(!chain.tokenPairs[token].paused, errBridgeRegistryAleadyPaused(token));
-        chain.tokenPairs[token].paused = true;
-
-        emit TokenPairPaused(remoteChainID, token);
-    }
-
-    function unpauseToken(uint remoteChainID, address token) external onlyOwner {
-        Chain storage chain = _chainData[remoteChainID];
-        require(chain.tokens.contains(token), errBridgeRegistryNotExistToken(token));
-        require(chain.tokenPairs[token].paused, errBridgeRegistryNotPaused(token));
-        chain.tokenPairs[token].paused = false;
-
-        emit TokenPairUnpaused(remoteChainID, token);
+        emit TokenPairRegistered(remoteChainID, isOrigin, localToken, remoteToken, localTokenRate, remoteTokenRate);
     }
 }

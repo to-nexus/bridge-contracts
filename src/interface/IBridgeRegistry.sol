@@ -14,6 +14,11 @@ interface IBridgeRegistry {
         bytes extraData;
     }
 
+    struct ExchangeRate {
+        uint localTokenRate;
+        uint remoteTokenRate;
+    }
+
     struct Reverted {
         mapping(uint => FinalizeArguments) data; // index : reverted arguments
         mapping(uint => string) reason; // index : reverted reason
@@ -43,6 +48,7 @@ interface IBridgeRegistry {
 
     function allChainIDs() external view returns (uint[] memory);
     function allTokenPairs(uint remoteChainID) external view returns (TokenPair[] memory);
+    function allRevertedIndex(uint remoteChainID) external view returns (uint[] memory);
     function getTokenPair(uint remoteChainID, address token) external view returns (TokenPair memory);
     function getNextInitiateIndex(uint remoteChainID) external view returns (uint);
     function getNextFinalizeIndex(uint remoteChainID) external view returns (uint);

@@ -23,37 +23,11 @@ contract CrossBridge is StandardBridge {
 
     uint[49] private __gap;
 
-    function initialize(
-        uint ethereumChainID,
-        IERC20 cross,
-        uint8 _threshold,
-        address _rewardWallet,
-        address _crossMintableERC20FactoryCode,
-        address _bridgeFeeStation
-    ) external initializer {
-        __StandardBridge_init(_threshold, _rewardWallet, _crossMintableERC20FactoryCode, _bridgeFeeStation);
-
-        require(address(cross) != address(0), CrossBridgeCanNotZeroAddress("cross"));
-        _ethereumChainID = ethereumChainID;
-
-        setChain(ethereumChainID);
-        registerToken(_ethereumChainID, false, NATIVE_TOKEN, address(cross));
-    }
-
-    function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal override {
-        if (remoteChainID == _ethereumChainID && address(token) == NATIVE_TOKEN) {
-            require(value % EX_RATE == 0, CrossBridgeInvalidValueUnit(msg.value));
-        }
-        super._initiateBridge(remoteChainID, token, from, value, fee);
-    }
-
-    function _finalizeBridge(uint remoteChainID, IERC20 token, address to, uint value)
-        internal
-        override
-        returns (bool ok, string memory reason)
+    function initialize(uint8 _threshold, address _rewardWallet, address _crossMintableERC20FactoryCode)
+        external
+        initializer
     {
-        if (address(token) == NATIVE_TOKEN) value = value * EX_RATE;
-        return super._finalizeBridge(remoteChainID, token, to, value);
+        __StandardBridge_init(_threshold, _rewardWallet, _crossMintableERC20FactoryCode);
     }
 
     /**

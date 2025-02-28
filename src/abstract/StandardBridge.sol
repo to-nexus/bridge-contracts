@@ -34,23 +34,25 @@ abstract contract StandardBridge is
     using Address for address payable;
     using SafeERC20 for IERC20;
 
-    error errStandardBridgeInvalidIndex(uint expected, uint actual);
-    error errStandardBridgeInvalidAmount(
+    error StandardBridgeInvalidIndex(uint expected, uint actual);
+    error StandardBridgeInvalidAmount(
         uint minimumValue, uint expectedGas, uint expectedEx, uint actualValue, uint actualGas, uint actualEx
     );
-    error errStandardBridgeInvalidValue(uint expected, uint actual);
-    error errStandardBridgeInvalidPermitValue(address token, uint value);
-    error errStandardBridgeCanNotZeroAddress(string name);
-    error errStandardBridgeNotExist(string name);
-    error errStandardBridgeFailedPermit(address token);
-    error errStandardBridgeBurnFailed(address token, address from, uint value);
+    error StandardBridgeInvalidValueUnit(IERC20 token, uint value);
+    error StandardBridgeInvalidValue(uint expected, uint actual);
+    error StandardBridgeInvalidPermitValue(IERC20 token, uint value);
+    error StandardBridgeCanNotZeroAddress(string name);
+    error StandardBridgeNotExist(string name);
+    error StandardBridgeFailedPermit(IERC20Permit token);
+    error StandardBridgeBurnFailed(IERC20 token, address from, uint value);
+    error StandardBridgeNotMatchPermitAccount(address from, address permitAccount);
 
     event BridgeInitiated(
         uint indexed remoteChainID,
         uint indexed index,
-        IERC20 localToken,
+        IERC20 indexed localToken,
         IERC20 remoteToken,
-        address indexed from,
+        address from,
         address to,
         uint value,
         uint time,
@@ -62,8 +64,9 @@ abstract contract StandardBridge is
     );
     event BridgeFinalizeReverted(uint indexed index);
     event BridgeFeeCharged(uint indexed index, IERC20 indexed token, address indexed account, uint gasFee, uint exFee);
-    event RewardWalletSet(address wallet);
-    event FeeStationSet(IBridgeFeeStation feeStation);
+    event RewardWalletSet(address indexed wallet);
+    event FeeStationSet(IBridgeFeeStation indexed feeStation);
+    event BridgeTokenFailed(bool indexed permit, bool[] success, string[] reason);
 
     address internal constant NATIVE_TOKEN = address(1);
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
@@ -84,12 +87,10 @@ abstract contract StandardBridge is
         assert(msg.value != 0); // Ensure the receive function only accepts non-zero value
     }
 
-    function __StandardBridge_init(
-        uint8 _threshold,
-        address rewardWallet_,
-        address _crossMintableERC20FactoryCode,
-        address _bridgeFeeStation
-    ) internal onlyInitializing {
+    function __StandardBridge_init(uint8 _threshold, address rewardWallet_, address _crossMintableERC20FactoryCode)
+        internal
+        onlyInitializing
+    {
         __Ownable_init(_msgSender());
         __Validator_init(_threshold);
         __BridgeRegistry_init(_crossMintableERC20FactoryCode);
@@ -97,9 +98,7 @@ abstract contract StandardBridge is
         __Pausable_init();
         __ReentrancyGuard_init();
 
-        if (_bridgeFeeStation != address(0)) bridgeFeeStation = IBridgeFeeStation(_bridgeFeeStation);
-
-        require(address(rewardWallet_) != address(0), errStandardBridgeCanNotZeroAddress("rewardWallet"));
+        require(address(rewardWallet_) != address(0), StandardBridgeCanNotZeroAddress("rewardWallet"));
         _rewardWallet = payable(rewardWallet_);
 
         _initializedAt = block.number;
@@ -119,6 +118,32 @@ abstract contract StandardBridge is
         return true;
     }
 
+    function bridgeTokenBatch(BridgeTokenArguments[] calldata args) external payable {
+        bool[] memory success = new bool[](args.length);
+        string[] memory reason = new string[](args.length);
+        for (uint i = 0; i < args.length; ++i) {
+            try this.bridgeToken(
+                args[i].remoteChainID,
+                args[i].token,
+                args[i].to,
+                args[i].value,
+                args[i].gasFee,
+                args[i].exFee,
+                args[i].extraData
+            ) {
+                success[i] = true;
+            } catch Error(string memory _reason) {
+                reason[i] = _reason;
+            } catch Panic(uint errorCode) {
+                reason[i] = _handleRevert(errorCode);
+            } catch (bytes memory lowLevelData) {
+                reason[i] = _handleRevert(lowLevelData);
+            }
+        }
+
+        emit BridgeTokenFailed(false, success, reason);
+    }
+
     function permitBridgeToken(
         uint remoteChainID,
         IERC20 token,
@@ -127,12 +152,41 @@ abstract contract StandardBridge is
         uint value,
         uint gasFee,
         uint exFee,
-        PermitArguments memory permitArgs,
-        bytes calldata extraData
-    ) external payable whenNotPaused onlyValidToken(remoteChainID, address(token)) nonReentrant returns (bool) {
+        bytes calldata extraData,
+        PermitArguments calldata permitArgs
+    ) public payable whenNotPaused onlyValidToken(remoteChainID, address(token)) nonReentrant returns (bool) {
+        require(from == permitArgs.account, StandardBridgeNotMatchPermitAccount(from, permitArgs.account));
         (uint _gasFee, uint _exFee) = _checkAmount(remoteChainID, token, value, gasFee, exFee);
-        _executePermitBridge(remoteChainID, token, from, to, value, _gasFee, _exFee, permitArgs, extraData);
+        _executePermitBridge(remoteChainID, token, from, to, value, _gasFee, _exFee, extraData, permitArgs);
         return true;
+    }
+
+    function permitBridgeTokenBatch(PermitBridgeTokenArguments[] calldata args) external payable {
+        bool[] memory success = new bool[](args.length);
+        string[] memory reason = new string[](args.length);
+        for (uint i = 0; i < args.length; ++i) {
+            try this.permitBridgeToken(
+                args[i].remoteChainID,
+                args[i].token,
+                args[i].from,
+                args[i].to,
+                args[i].value,
+                args[i].gasFee,
+                args[i].exFee,
+                args[i].extraData,
+                args[i].permitArgs
+            ) {
+                success[i] = true;
+            } catch Error(string memory _reason) {
+                reason[i] = _reason;
+            } catch Panic(uint errorCode) {
+                reason[i] = _handleRevert(errorCode);
+            } catch (bytes memory lowLevelData) {
+                reason[i] = _handleRevert(lowLevelData);
+            }
+        }
+
+        emit BridgeTokenFailed(true, success, reason);
     }
 
     function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
@@ -143,10 +197,10 @@ abstract contract StandardBridge is
         nonReentrant
         returns (bool)
     {
-        require(msg.value == 0, errStandardBridgeInvalidValue(0, msg.value));
+        require(msg.value == 0, StandardBridgeInvalidValue(0, msg.value));
         require(
             args.index == getNextFinalizeIndex(args.remoteChainID),
-            errStandardBridgeInvalidIndex(getNextFinalizeIndex(args.remoteChainID), args.index)
+            StandardBridgeInvalidIndex(getNextFinalizeIndex(args.remoteChainID), args.index)
         );
 
         _validateSignature(
@@ -202,12 +256,17 @@ abstract contract StandardBridge is
     }
 
     function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal virtual {
+        uint localTokenRate = _exchangeRate[remoteChainID][address(token)].localTokenRate;
+        if (localTokenRate != 0 && localTokenRate != 1) {
+            require(value % localTokenRate == 0, StandardBridgeInvalidValueUnit(token, value));
+        }
+
         if (address(token) == NATIVE_TOKEN) {
             // Handling native token transfers (e.g., CROSS, ETH, BNB)
-            require(msg.value == value + fee, errStandardBridgeInvalidValue(value + fee, msg.value));
+            require(msg.value == value + fee, StandardBridgeInvalidValue(value + fee, msg.value));
             if (fee != 0) _rewardWallet.sendValue(fee); // Send fees to the reward wallet
         } else {
-            require(msg.value == 0, errStandardBridgeInvalidValue(0, msg.value));
+            require(msg.value == 0, StandardBridgeInvalidValue(0, msg.value));
 
             token.safeTransferFrom(from, address(this), value + fee);
             if (fee != 0) token.safeTransfer(_rewardWallet, fee);
@@ -217,7 +276,7 @@ abstract contract StandardBridge is
             } else {
                 require(
                     ICrossMintableERC20(address(token)).burn(address(this), value), // Burn the wrapped tokens on the source chain
-                    errStandardBridgeBurnFailed(address(token), from, value)
+                    StandardBridgeBurnFailed(token, from, value)
                 );
             }
         }
@@ -228,6 +287,12 @@ abstract contract StandardBridge is
         virtual
         returns (bool ok, string memory reason)
     {
+        ExchangeRate memory exRate = _exchangeRate[remoteChainID][address(token)];
+        if (exRate.localTokenRate != 0) {
+            if (exRate.localTokenRate != 1) value = value * exRate.localTokenRate;
+            else value = value / exRate.remoteTokenRate;
+        }
+
         if (address(token) == NATIVE_TOKEN) {
             payable(to).sendValue(value);
             ok = true;
@@ -246,10 +311,10 @@ abstract contract StandardBridge is
         uint value,
         uint gasFee,
         uint exFee,
-        PermitArguments memory permitArgs,
-        bytes calldata extraData
+        bytes calldata extraData,
+        PermitArguments calldata permitArgs
     ) private {
-        require(permitArgs.value >= value + gasFee + exFee, errStandardBridgeInvalidPermitValue(address(token), value));
+        require(permitArgs.value >= value + gasFee + exFee, StandardBridgeInvalidPermitValue(token, value));
         _executePermit(permitArgs);
         _executeBridge(remoteChainID, token, from, to, value, gasFee, exFee, true, extraData);
     }
@@ -304,7 +369,7 @@ abstract contract StandardBridge is
         (minimumAmount, _gasFee, _exFee) = bridgeFeeStation.estimateFee(remoteChainID, token, value);
         require(
             (value >= minimumAmount) && (gasFee >= _gasFee) && (exFee >= _exFee),
-            errStandardBridgeInvalidAmount(minimumAmount, _gasFee, _exFee, value, gasFee, exFee)
+            StandardBridgeInvalidAmount(minimumAmount, _gasFee, _exFee, value, gasFee, exFee)
         );
     }
 
@@ -338,7 +403,7 @@ abstract contract StandardBridge is
         }
 
         if (returnSize == 0 ? address(permitArgs.token).code.length == 0 : returnValue != 1) {
-            revert errStandardBridgeFailedPermit(address(permitArgs.token));
+            revert StandardBridgeFailedPermit(permitArgs.token);
         }
     }
 
@@ -358,12 +423,12 @@ abstract contract StandardBridge is
         } catch Error(string memory _reason) {
             ok = false;
             reason = _reason;
-        } catch Panic(uint _errorCode) {
+        } catch Panic(uint errorCode) {
             ok = false;
-            reason = string(abi.encodePacked("Panic code: ", _errorCode));
-        } catch (bytes memory _lowLevelData) {
+            reason = _handleRevert(errorCode);
+        } catch (bytes memory lowLevelData) {
             ok = false;
-            reason = string(abi.encodePacked("Low-level error: ", _lowLevelData));
+            reason = _handleRevert(lowLevelData);
         }
     }
 
@@ -376,19 +441,23 @@ abstract contract StandardBridge is
                 ok = true;
                 reason = "";
             } else {
-                ok = false;
                 reason = "StandardBridge: mint failed";
             }
         } catch Error(string memory _reason) {
-            ok = false;
             reason = _reason;
-        } catch Panic(uint _errorCode) {
-            ok = false;
-            reason = string(abi.encodePacked("Panic code: ", _errorCode));
-        } catch (bytes memory _lowLevelData) {
-            ok = false;
-            reason = string(abi.encodePacked("Low-level error: ", _lowLevelData));
+        } catch Panic(uint errorCode) {
+            reason = _handleRevert(errorCode);
+        } catch (bytes memory lowLevelData) {
+            reason = _handleRevert(lowLevelData);
         }
+    }
+
+    function _handleRevert(uint errorCode) private pure returns (string memory reason) {
+        return (string(abi.encodePacked("Panic code: ", errorCode)));
+    }
+
+    function _handleRevert(bytes memory lowLevelData) private pure returns (string memory reason) {
+        return (string(abi.encodePacked("Low-level error: ", lowLevelData)));
     }
 
     /**
@@ -440,19 +509,19 @@ abstract contract StandardBridge is
     }
 
     function setRewardWallet(address payable rewardWallet_) external onlyOwner {
-        require(rewardWallet_ != address(0), errStandardBridgeCanNotZeroAddress("rewardWallet_"));
+        require(rewardWallet_ != address(0), StandardBridgeCanNotZeroAddress("rewardWallet_"));
         _rewardWallet = rewardWallet_;
         emit RewardWalletSet(_rewardWallet);
     }
 
     function setFeeStation(IBridgeFeeStation _bridgeFeeStation) external onlyOwner {
-        require(address(_bridgeFeeStation) != address(0), errStandardBridgeCanNotZeroAddress("_bridgeFeeStation"));
+        require(address(_bridgeFeeStation) != address(0), StandardBridgeCanNotZeroAddress("_bridgeFeeStation"));
         bridgeFeeStation = _bridgeFeeStation;
         emit FeeStationSet(bridgeFeeStation);
     }
 
     function removeFeeStation() external onlyOwner {
-        require(address(bridgeFeeStation) != address(0), errStandardBridgeNotExist("bridgeFeeStation"));
+        require(address(bridgeFeeStation) != address(0), StandardBridgeNotExist("bridgeFeeStation"));
         bridgeFeeStation = IBridgeFeeStation(address(0));
         emit FeeStationSet(bridgeFeeStation);
     }

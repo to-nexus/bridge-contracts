@@ -43,10 +43,9 @@ contract CrossChainTest is SettingTest {
             CrossBridge bridgeCrossImpl = new CrossBridge();
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
-            bridgeCross.initialize(
-                ETHEREUM_CHAIN_ID, cross, threshold, REWARD, address(crossMintableERC20FactoryCode), address(0)
-            );
+            bridgeCross.initialize(threshold, REWARD, address(crossMintableERC20FactoryCode));
 
+            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross), EX_RATE, 1);
             bridgeCross.setValidators(VALIDATORS);
 
             vm.label(address(bridgeCross), "CrossBridge");
@@ -55,11 +54,11 @@ contract CrossChainTest is SettingTest {
         // add token to bridge (cross chain)
         {
             // test token
-            address ttAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), "TT", 18);
+            address ttAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), 1, 1, "TT", 18);
             testTokenCross = IERC20(ttAddress);
 
             // weth
-            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), "ETH", 18);
+            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), 1, 1, "ETH", 18);
             weth = IERC20(wethAddress);
         }
 
@@ -170,6 +169,4 @@ contract CrossChainTest is SettingTest {
         (ok, value, gas, ex) = estimateMaxValue(bridgeFeeStationCross, ETHEREUM_CHAIN_ID, token, totalValue);
         assertTrue(ok);
     }
-
-
 }

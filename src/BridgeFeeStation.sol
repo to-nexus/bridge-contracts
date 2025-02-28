@@ -22,9 +22,9 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
     error BridgeFeeStationInvalidLength();
 
     event BridgeFeeStationFinalizeBridgeGasSet(uint finalizeBridgeGas);
-    event BridgeFeeStationGasPriceUpdated(uint remoteChainID, uint gasPrice);
-    event BridgeFeeStationExchangeFeeUpdated(uint exFee);
-    event BridgeFeeStationPriceFeedUpdated(IPriceFeed priceFeed);
+    event BridgeFeeStationGasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
+    event BridgeFeeStationExchangeFeeUpdated(uint exFeeRate);
+    event BridgeFeeStationPriceFeedUpdated(IPriceFeed indexed priceFeed);
 
     uint private constant DENOMINATOR = 1000;
 
