@@ -14,36 +14,27 @@ interface IBridgeRegistry {
         bytes extraData;
     }
 
-    struct ExchangeRate {
+    struct Chain {
+        uint remoteChainID;
+        uint initiateIndex;
+        uint finalizeIndex;
+        Reverted reverted;
+    }
+
+    struct TokenPair {
+        address localToken;
+        address remoteToken;
         uint localTokenRate;
         uint remoteTokenRate;
+        bool isOrigin;
+        bool paused;
+        uint deposited;
     }
 
     struct Reverted {
         mapping(uint => FinalizeArguments) data; // index : reverted arguments
         mapping(uint => string) reason; // index : reverted reason
         EnumerableSet.UintSet index;
-    }
-
-    struct Index {
-        uint initiate;
-        uint finalize;
-    }
-
-    struct TokenPair {
-        address localToken;
-        address remoteToken;
-        bool isOrigin;
-        bool paused;
-        uint deposited;
-    }
-
-    struct Chain {
-        uint remoteChainID;
-        Index index;
-        Reverted reverted;
-        EnumerableSet.AddressSet tokens;
-        mapping(address => TokenPair) tokenPairs; // localToken : TokenPair
     }
 
     function allChainIDs() external view returns (uint[] memory);

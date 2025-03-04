@@ -11,10 +11,7 @@ import {StandardBridge} from "./abstract/StandardBridge.sol";
 contract BranchBridge is StandardBridge {
     uint[50] private __gap;
 
-    function initialize(uint8 _threshold, address _rewardWallet, address _crossMintableERC20FactoryCode)
-        external
-        initializer
-    {
-        __StandardBridge_init(_threshold, _rewardWallet, _crossMintableERC20FactoryCode);
+    function initialize(uint8 _threshold, address _rewardWallet) external initializer {
+        __StandardBridge_init(_threshold, _rewardWallet);
     }
 }

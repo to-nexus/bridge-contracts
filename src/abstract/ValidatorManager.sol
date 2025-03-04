@@ -17,13 +17,13 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
     error errValidatorManagerInsufficientSignature(uint length);
     error errValidatorManagerInvalidSignatures(uint v, uint r, uint s);
 
-    event ValidatorSet(address indexed validator, bool indexed status);
+    event ValidatorUpdated(address indexed validator, bool indexed status);
     event ThresholdChanged(uint8 threshold);
 
-    EnumerableSet.AddressSet private _validators;
     uint8 private _threshold;
+    EnumerableSet.AddressSet private _validators;
 
-    uint[48] private __gap;
+    uint[47] private __gap;
 
     modifier onlyValidator() {
         require(isValidator(_msgSender()), errValidatorManagerNotValidator(_msgSender()));
@@ -62,22 +62,22 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
     }
 
     function setValidator(address validator) external {
-        _setValidator(validator, true);
+        _updateValidator(validator, true);
     }
 
     function setValidators(address[] memory validators) public {
         for (uint i = 0; i < validators.length; ++i) {
-            _setValidator(validators[i], true);
+            _updateValidator(validators[i], true);
         }
     }
 
     function removeValidator(address validator) external {
-        _setValidator(validator, false);
+        _updateValidator(validator, false);
     }
 
     function removeValidators(address[] memory validators) public {
         for (uint i = 0; i < validators.length; ++i) {
-            _setValidator(validators[i], false);
+            _updateValidator(validators[i], false);
         }
     }
 
@@ -86,10 +86,10 @@ abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IVa
         setValidators(validators);
     }
 
-    function _setValidator(address account, bool set) internal onlyOwner {
+    function _updateValidator(address account, bool set) internal onlyOwner {
         if (set) require(_validators.add(account), errValidatorManagerAlreadyExistValidator(account));
         else require(_validators.remove(account), errValidatorManagerNotExistValidator(account));
-        emit ValidatorSet(account, set);
+        emit ValidatorUpdated(account, set);
     }
 
     function _validateSignature(bytes32 h, uint8[] memory v, bytes32[] memory r, bytes32[] memory s) internal view {

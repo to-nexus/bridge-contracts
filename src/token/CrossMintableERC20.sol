@@ -39,11 +39,11 @@ contract CrossMintableERC20 is Ownable, Pausable, ERC20, ERC20Permit, ICrossMint
         return true;
     }
 
-    function decimals() public view override(ERC20, IERC20Metadata) returns (uint8) {
+    function decimals() public view override(ERC20, ICrossMintableERC20) returns (uint8) {
         return _decimals;
     }
 
-    function nonces(address owner) public view override(ERC20Permit, IERC20Permit) returns (uint) {
+    function nonces(address owner) public view override(ERC20Permit, ICrossMintableERC20) returns (uint) {
         return super.nonces(owner);
     }
 

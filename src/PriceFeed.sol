@@ -9,9 +9,7 @@ import {IPriceFeed} from "./interface/IPriceFeed.sol";
 contract PriceFeed is ValidatorManager, IPriceFeed {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    error PriceFeedCanNotZeroAddress(string name);
     error PriceFeedCanNotZeroValue(string name);
-    error PriceFeedNotExistToken(address token);
     error PriceFeedInvalidLength();
     error PriceFeedInvalidPriceAt(uint at, uint blocktime);
 

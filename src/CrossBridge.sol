@@ -12,10 +12,6 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
  * @notice This contract implements the StandardBridge for a specific cross-chain bridge.
  */
 contract CrossBridge is StandardBridge {
-    error CrossBridgeInvalidValue(uint expected, uint actual);
-    error CrossBridgeInvalidValueUnit(uint value);
-    error CrossBridgeCanNotZeroAddress(string name);
-
     uint private constant EX_RATE = 100; // cross : xcross, 1 : 100
     address private constant PREDEPLOY_ADDRESS = address(0x0956d70000000000000000000000000000000101); // predeployed implementation address
 
@@ -23,11 +19,8 @@ contract CrossBridge is StandardBridge {
 
     uint[49] private __gap;
 
-    function initialize(uint8 _threshold, address _rewardWallet, address _crossMintableERC20FactoryCode)
-        external
-        initializer
-    {
-        __StandardBridge_init(_threshold, _rewardWallet, _crossMintableERC20FactoryCode);
+    function initialize(uint8 _threshold, address _rewardWallet) external initializer {
+        __StandardBridge_init(_threshold, _rewardWallet);
     }
 
     /**

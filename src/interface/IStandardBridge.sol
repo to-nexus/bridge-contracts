@@ -19,18 +19,6 @@ interface IStandardBridge is IValidatorManager, IBridgeRegistry {
         bytes extraData;
     }
 
-    struct PermitBridgeTokenArguments {
-        uint remoteChainID;
-        IERC20 token;
-        address from;
-        address to;
-        uint value;
-        uint gasFee;
-        uint exFee;
-        bytes extraData;
-        PermitArguments permitArgs;
-    }
-
     struct PermitArguments {
         IERC20Permit token;
         address account;
@@ -54,15 +42,16 @@ interface IStandardBridge is IValidatorManager, IBridgeRegistry {
     function permitBridgeToken(
         uint remoteChainID,
         IERC20 token,
-        address from,
         address to,
         uint value,
         uint gasFee,
         uint exFee,
         bytes calldata extraData,
-        PermitArguments memory permitArgs
+        PermitArguments calldata permitArgs
     ) external payable returns (bool);
-    function permitBridgeTokenBatch(PermitBridgeTokenArguments[] calldata args) external payable;
+    function permitBridgeTokenBatch(BridgeTokenArguments[] calldata args, PermitArguments[] calldata permitArgs)
+        external
+        payable;
     function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
         external
         payable

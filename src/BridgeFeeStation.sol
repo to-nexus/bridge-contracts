@@ -17,7 +17,6 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
     using Math for uint;
 
     error BridgeFeeStationChainAleadyExist(uint chainID);
-    error BridgeFeeStationCanNotZeroAddress(string name);
     error BridgeFeeStationCanNotZeroValue(string name);
     error BridgeFeeStationInvalidLength();
 
@@ -45,6 +44,17 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
         return DENOMINATOR;
     }
 
+    function estimateFee(uint remoteChainID, IERC20 token, uint value)
+        external
+        view
+        returns (uint minimumAmount, uint gasFee, uint exFee)
+    {
+        uint exFeeRate;
+        (minimumAmount, gasFee, exFeeRate) = getTokenFee(remoteChainID, token);
+
+        exFee = value * exFeeRate / DENOMINATOR;
+    }
+
     function getGasInfo(uint remoteChainID) external view returns (GasInfo memory) {
         return _gasInfo[remoteChainID];
     }
@@ -55,26 +65,21 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
         view
         returns (uint minimumAmount, uint gasFee, uint exFeeRate)
     {
-        (gasFee,) = _estimateGasToToken(remoteChainID, token);
+        (minimumAmount, exFeeRate) = _getTokenFee(token);
 
-        TokenFee memory tokenFee = _tokensFee[token];
-        (minimumAmount, exFeeRate) =
-            tokenFee.token == token ? (tokenFee.minimumAmount, tokenFee.exFeeRate) : (0, _exFeeRate);
+        (gasFee,) = _calculateGasFee(remoteChainID, token, _finalizeBridgeGas);
+
+        // exFeeRate가 max값이면 0으로 설정 (수수료 면제)
         if (exFeeRate == type(uint).max) exFeeRate = 0;
     }
 
-    function estimateFee(uint remoteChainID, IERC20 token, uint value)
-        external
-        view
-        returns (uint minimumAmount, uint gasFee, uint exFee)
-    {
-        uint exFeeRate;
-        (minimumAmount, gasFee, exFeeRate) = getTokenFee(remoteChainID, token);
-
-        exFee = value.mulDiv(exFeeRate, DENOMINATOR);
+    function _getTokenFee(IERC20 token) private view returns (uint minimumAmount, uint exFeeRate) {
+        TokenFee memory tokenFee = _tokensFee[token];
+        if (tokenFee.token == token) return (tokenFee.minimumAmount, tokenFee.exFeeRate);
+        return (0, _exFeeRate);
     }
 
-    function _estimateGasToToken(uint remoteChainID, IERC20 toToken)
+    function _calculateGasFee(uint remoteChainID, IERC20 token, uint gasAmount)
         private
         view
         returns (uint gasFee, uint updatedAt)
@@ -82,13 +87,10 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
         GasInfo memory gasInfo = _gasInfo[remoteChainID];
         if (address(_priceFeed) == address(0) || gasInfo.chainID != remoteChainID) return (0, 0);
 
-        bool ok;
-        (ok, gasFee, updatedAt) = _priceFeed.calculateAmountB(
-            address(gasInfo.gasToken), address(toToken), gasInfo.gasPrice * _finalizeBridgeGas
-        );
-        if (!ok) return (0, 0);
+        (, gasFee, updatedAt) = _priceFeed.calculateAmountB(address(gasInfo.gasToken), address(token), gasAmount);
     }
 
+    // set functions
     function setGasInfo(uint remoteChainID, IERC20 gasToken, uint gasPrice) external onlyOwner {
         require(_gasInfo[remoteChainID].chainID == 0, BridgeFeeStationChainAleadyExist(remoteChainID));
         require(address(gasToken) != address(0), BridgeFeeStationCanNotZeroValue("gasToken"));
@@ -96,7 +98,7 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
     }
 
     function setTokenFee(IERC20 token, uint minimumAmount, uint exFeeRate) public onlyOwner {
-        require(address(token) != address(0), BridgeFeeStationCanNotZeroAddress("token"));
+        require(address(token) != address(0), BridgeFeeStationCanNotZeroValue("token"));
         _tokensFee[token] = TokenFee({token: token, minimumAmount: minimumAmount, exFeeRate: exFeeRate});
     }
 
@@ -114,7 +116,7 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
     }
 
     function removeTokenFee(IERC20 token) external onlyOwner {
-        require(address(token) != address(0), BridgeFeeStationCanNotZeroAddress("token"));
+        require(address(token) != address(0), BridgeFeeStationCanNotZeroValue("token"));
         if (_tokensFee[token].token == token) delete(_tokensFee[token]);
     }
 
@@ -136,7 +138,7 @@ contract BridgeFeeStation is Ownable, IBridgeFeeStation {
     }
 
     function setPriceFeed(IPriceFeed priceFeed) external onlyOwner {
-        require(address(priceFeed) != address(0), BridgeFeeStationCanNotZeroAddress("priceFeed")); // allow zero address
+        require(address(priceFeed) != address(0), BridgeFeeStationCanNotZeroValue("priceFeed")); // allow zero address
         _priceFeed = priceFeed;
         emit BridgeFeeStationPriceFeedUpdated(_priceFeed);
     }

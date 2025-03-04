@@ -35,14 +35,13 @@ contract BridgeExceptionTest is BridgeTest {
         uint amount = 1000 ether;
 
         vm.selectFork(ethereumForkID);
+        uint transferValue = amount;
         vm.prank(OWNER);
-        cross.transfer(USER, amount);
+        cross.transfer(USER, transferValue);
         vm.prank(USER);
         cross.approve(address(bridgeEthereum), amount);
 
         deposit(false, amount, 5);
-
-        vm.prank(USER);
 
         bridgeRevertCross = true;
         withdraw(true, USER.balance + 1000, 5);

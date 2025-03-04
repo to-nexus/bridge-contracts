@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {BranchBridge} from "../../src/BranchBridge.sol";
 import {BridgeFeeStation, IBridgeFeeStation} from "../../src/BridgeFeeStation.sol";
-import {EthereumBridge} from "../../src/EthereumBridge.sol";
 
 import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {TestToken} from "../token/TestToken.sol";
@@ -17,7 +17,7 @@ contract EthereumChainTest is CrossChainTest {
     bool internal finalizeRevertEthereum = false;
 
     uint internal nextIndexEthereum;
-    EthereumBridge internal bridgeEthereum;
+    BranchBridge internal bridgeEthereum;
     IBridgeFeeStation internal bridgeFeeStationEthereum;
 
     function setUp() public virtual override {
@@ -28,10 +28,10 @@ contract EthereumChainTest is CrossChainTest {
 
         // bridge setup
         {
-            EthereumBridge bridgeEthereumImpl = new EthereumBridge();
+            BranchBridge bridgeEthereumImpl = new BranchBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
-            bridgeEthereum = EthereumBridge(payable(address(bridgeEthereumProxy)));
-            bridgeEthereum.initialize(threshold, REWARD, address(0));
+            bridgeEthereum = BranchBridge(payable(address(bridgeEthereumProxy)));
+            bridgeEthereum.initialize(threshold, REWARD);
 
             bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), 1, EX_RATE);
             bridgeEthereum.setValidators(VALIDATORS);
