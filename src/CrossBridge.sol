@@ -19,8 +19,8 @@ contract CrossBridge is StandardBridge {
 
     uint[49] private __gap;
 
-    function initialize(uint8 _threshold, address _rewardWallet) external initializer {
-        __StandardBridge_init(_threshold, _rewardWallet);
+    function initialize(uint8 _threshold, address _nexus) external initializer {
+        __StandardBridge_init(_threshold, _nexus);
     }
 
     /**

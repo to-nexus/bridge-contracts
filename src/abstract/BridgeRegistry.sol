@@ -30,11 +30,12 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
 
     event TokenPairRegistered(
         uint indexed remoteChainID,
-        bool isOrigin,
         address indexed localToken,
         address indexed remoteToken,
         uint localTokenRate,
-        uint remoteTokenRate
+        uint remoteTokenRate,
+        uint safetyLimit,
+        bool isOrigin
     );
     event TokenPairUnregistered(uint indexed remoteChainID, address indexed localToken);
     event TokenPairPaused(uint indexed remoteChainID, address indexed token);
@@ -52,17 +53,31 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
     uint[44] private __gap;
 
     modifier onlyValidToken(uint remoteChainID, address token) {
-        require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
+        require(_tokenContains(remoteChainID, token), RegistryNotExistToken(token));
         require(!_tokenPairs[remoteChainID][token].paused, RegistryTokenPaused(token));
         _;
     }
 
-    // external nonpayable
+    function _tokenContains(uint remoteChainID, address token) internal view returns (bool) {
+        return _tokens[remoteChainID].contains(token);
+    }
+
+    /**
+     * @notice Creates a new token on the local chain.
+     * @param remoteChainID The ID of the remote chain.
+     * @param remoteToken The address of the token on the remote chain.
+     * @param localTokenRate The rate of the local token.
+     * @param remoteTokenRate The rate of the remote token.
+     * @param symbol The symbol of the token.
+     * @param decimals The decimals of the token.
+     * @return tokenAddress The address of the created token.
+     */
     function createToken(
         uint remoteChainID,
         address remoteToken,
         uint localTokenRate,
         uint remoteTokenRate,
+        uint safetyLimit,
         string memory symbol,
         uint8 decimals
     ) external onlyOwner returns (address tokenAddress) {
@@ -73,20 +88,35 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
             symbol,
             decimals
         );
-        _registerToken(remoteChainID, false, tokenAddress, remoteToken, localTokenRate, remoteTokenRate);
+        _registerToken(remoteChainID, false, tokenAddress, remoteToken, localTokenRate, remoteTokenRate, safetyLimit);
     }
 
+    /**
+     * @notice Registers a token pair.
+     * @param remoteChainID The ID of the remote chain.
+     * @param isOrigin Whether the token is the origin token.
+     * @param localToken The address of the local token.
+     * @param remoteToken The address of the remote token.
+     * @param localTokenRate The rate of the local token.
+     * @param remoteTokenRate The rate of the remote token.
+     */
     function registerToken(
         uint remoteChainID,
         bool isOrigin,
         address localToken,
         address remoteToken,
         uint localTokenRate,
-        uint remoteTokenRate
+        uint remoteTokenRate,
+        uint safetyLimit
     ) external onlyOwner {
-        _registerToken(remoteChainID, isOrigin, localToken, remoteToken, localTokenRate, remoteTokenRate);
+        _registerToken(remoteChainID, isOrigin, localToken, remoteToken, localTokenRate, remoteTokenRate, safetyLimit);
     }
 
+    /**
+     * @notice Unregisters a token pair.
+     * @param remoteChainID The ID of the remote chain.
+     * @param token The address of the token to unregister.
+     */
     function unregisterToken(uint remoteChainID, address token) external onlyOwner {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
         delete (_tokenPairs[remoteChainID][token]);
@@ -94,6 +124,11 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
         emit TokenPairUnregistered(remoteChainID, token);
     }
 
+    /**
+     * @notice Pauses a token pair.
+     * @param remoteChainID The ID of the remote chain.
+     * @param token The address of the token to pause.
+     */
     function pauseToken(uint remoteChainID, address token) external onlyOwner {
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
         require(!_tokenPairs[remoteChainID][token].paused, RegistryTokenPaused(token));
@@ -102,6 +137,11 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
         emit TokenPairPaused(remoteChainID, token);
     }
 
+    /**
+     * @notice Unpauses a token pair.
+     * @param remoteChainID The ID of the remote chain.
+     * @param token The address of the token to unpause.
+     */
     function unpauseToken(uint remoteChainID, address token) external onlyOwner {
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
         require(_tokenPairs[remoteChainID][token].paused, RegistryNotPaused(token));
@@ -110,6 +150,10 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
         emit TokenPairUnpaused(remoteChainID, token);
     }
 
+    /**
+     * @notice Sets the CrossMintableERC20Factory.
+     * @param _crossMintableERC20Factory The address of the CrossMintableERC20Factory.
+     */
     function setCrossMintableERC20Factory(ICrossMintableERC20Factory _crossMintableERC20Factory) external onlyOwner {
         require(
             address(crossMintableERC20Factory) == address(0), RegistryExistFactory(address(crossMintableERC20Factory))
@@ -120,11 +164,31 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
         emit CrossMintableERC20FactorySet(address(crossMintableERC20Factory));
     }
 
-    // external view
+    function clearPending(uint remoteChainIDs) external onlyOwner {
+        uint[] memory indexes = _chainData[remoteChainIDs].pending.index.values();
+        for (uint i = 0; i < indexes.length; ++i) {
+            _removePendingArguments(remoteChainIDs, indexes[i]);
+        }
+    }
+
+    function setSafetyLimit(uint remoteChainID, address token, uint safetyLimit) external onlyOwner {
+        require(_tokenContains(remoteChainID, token), RegistryNotExistToken(token));
+        _tokenPairs[remoteChainID][token].safetyLimit = safetyLimit;
+    }
+
+    /**
+     * @notice Returns all chain IDs.
+     * @return An array of all chain IDs.
+     */
     function allChainIDs() external view returns (uint[] memory) {
         return _chains.values();
     }
 
+    /**
+     * @notice Returns all token pairs for a given remote chain ID.
+     * @param remoteChainID The ID of the remote chain.
+     * @return An array of all token pairs.
+     */
     function allTokenPairs(uint remoteChainID) external view returns (TokenPair[] memory) {
         address[] memory tokens = _tokens[remoteChainID].values();
         TokenPair[] memory _pairs = new TokenPair[](tokens.length);
@@ -134,29 +198,61 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
         return _pairs;
     }
 
-    function allRevertedIndex(uint remoteChainID) external view returns (uint[] memory) {
-        return _chainData[remoteChainID].reverted.index.values();
+    /**
+     * @notice Returns all pending indexes for a given remote chain ID.
+     * @param remoteChainID The ID of the remote chain.
+     * @return An array of all pending indexes.
+     */
+    function allPendingIndex(uint remoteChainID) external view returns (uint[] memory) {
+        return _chainData[remoteChainID].pending.index.values();
     }
 
+    /**
+     * @notice Returns the token pair for a given remote chain ID and token address.
+     * @param remoteChainID The ID of the remote chain.
+     * @param token The address of the token.
+     * @return The token pair.
+     */
     function getTokenPair(uint remoteChainID, address token) external view returns (TokenPair memory) {
         return _tokenPairs[remoteChainID][token];
     }
 
-    // public view
+    /**
+     * @notice Returns the next initiate index for a given remote chain ID.
+     * @param remoteChainID The ID of the remote chain.
+     * @return The next initiate index.
+     */
     function getNextInitiateIndex(uint remoteChainID) public view returns (uint) {
         return _chainData[remoteChainID].initiateIndex + 1;
     }
 
+    /**
+     * @notice Returns the next finalize index for a given remote chain ID.
+     * @param remoteChainID The ID of the remote chain.
+     * @return The next finalize index.
+     */
     function getNextFinalizeIndex(uint remoteChainID) public view returns (uint) {
         return _chainData[remoteChainID].finalizeIndex + 1;
     }
 
-    function revertedArguments(uint remoteChainID, uint index) public view returns (FinalizeArguments memory) {
-        return _chainData[remoteChainID].reverted.data[index];
+    /**
+     * @notice Returns the pending arguments for a given remote chain ID and index.
+     * @param remoteChainID The ID of the remote chain.
+     * @param index The index of the pending arguments.
+     * @return The pending arguments.
+     */
+    function pendingArguments(uint remoteChainID, uint index) public view returns (FinalizeArguments memory) {
+        return _chainData[remoteChainID].pending.data[index];
     }
 
-    function revertedReason(uint remoteChainID, uint index) public view returns (string memory) {
-        return _chainData[remoteChainID].reverted.reason[index];
+    /**
+     * @notice Returns the pending reason for a given remote chain ID and index.
+     * @param remoteChainID The ID of the remote chain.
+     * @param index The index of the pending reason.
+     * @return The pending reason.
+     */
+    function pendingReason(uint remoteChainID, uint index) public view returns (string memory) {
+        return _chainData[remoteChainID].pending.reason[index];
     }
 
     // internal nonpayable
@@ -177,26 +273,28 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
     }
 
     function _withdrawToken(uint remoteChainID, address token, uint value) internal {
-        (bool ok, uint deposited) = _tokenPairs[remoteChainID][token].deposited.trySub(value);
-        require(ok, RegistryBalanceLow(remoteChainID, token, value));
-
-        _tokenPairs[remoteChainID][token].deposited = deposited;
+        TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
+        require(tokenPair.deposited >= value + tokenPair.pendingAmount, RegistryBalanceLow(remoteChainID, token, value));
+        tokenPair.deposited -= value;
     }
 
-    function _setRevertedArguments(FinalizeArguments calldata args, string memory reason) internal {
+    function _setPendingArguments(FinalizeArguments calldata args, string memory reason) internal {
         Chain storage chain = _chainData[args.remoteChainID];
         uint index = args.index;
-        require(chain.reverted.index.add(index), RegistryExistIndex(index));
+        require(chain.pending.index.add(index), RegistryExistIndex(index));
 
-        chain.reverted.data[index] = args;
-        chain.reverted.reason[index] = reason;
+        chain.pending.data[index] = args;
+        chain.pending.reason[index] = reason;
+        TokenPair storage tokenPair = _tokenPairs[args.remoteChainID][address(args.token)];
+        if (tokenPair.isOrigin) tokenPair.pendingAmount += args.value;
     }
 
-    function _removeRevertedArguments(uint remoteChainID, uint index) internal {
-        Chain storage chain = _chainData[remoteChainID];
-        require(chain.reverted.index.remove(index), RegistryNotExistIndex(index));
-        delete (chain.reverted.reason[index]);
-        delete (chain.reverted.data[index]);
+    function _removePendingArguments(uint remoteChainID, uint index) internal {
+        PendingData storage pending = _chainData[remoteChainID].pending;
+        require(pending.index.remove(index), RegistryNotExistIndex(index));
+
+        delete (pending.reason[index]);
+        delete (pending.data[index]);
     }
 
     // private functions
@@ -206,7 +304,8 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
         address localToken,
         address remoteToken,
         uint localTokenRate,
-        uint remoteTokenRate
+        uint remoteTokenRate,
+        uint safetyLimit
     ) private {
         Chain storage chain = _chainData[remoteChainID];
 
@@ -237,11 +336,15 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
             remoteToken: remoteToken,
             localTokenRate: localTokenRate,
             remoteTokenRate: remoteTokenRate,
+            safetyLimit: safetyLimit,
             isOrigin: isOrigin,
             paused: false,
-            deposited: 0
+            deposited: 0,
+            pendingAmount: 0
         });
 
-        emit TokenPairRegistered(remoteChainID, isOrigin, localToken, remoteToken, localTokenRate, remoteTokenRate);
+        emit TokenPairRegistered(
+            remoteChainID, localToken, remoteToken, localTokenRate, remoteTokenRate, safetyLimit, isOrigin
+        );
     }
 }

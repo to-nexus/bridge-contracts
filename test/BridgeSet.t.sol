@@ -14,7 +14,9 @@ contract BridgeSetTest is BridgeTest {
         bridgeEthereum.setValidator(VALIDATOR5);
         ok = bridgeEthereum.isValidator(VALIDATOR5);
         vm.assertTrue(ok);
+        vm.stopPrank();
 
+        vm.startPrank(CrossOWNER);
         vm.selectFork(crossForkID);
         bridgeCross.removeValidator(VALIDATOR5);
         ok = bridgeCross.isValidator(VALIDATOR5);
@@ -22,7 +24,6 @@ contract BridgeSetTest is BridgeTest {
         bridgeCross.setValidator(VALIDATOR5);
         ok = bridgeCross.isValidator(VALIDATOR5);
         vm.assertTrue(ok);
-
         vm.stopPrank();
     }
 
@@ -41,7 +42,7 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(OWNER);
         bridgeEthereum.pause();
         vm.selectFork(crossForkID);
-        vm.prank(OWNER);
+        vm.prank(CrossOWNER);
         bridgeCross.pause();
 
         vm.selectFork(ethereumForkID);
@@ -62,7 +63,7 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(OWNER);
         bridgeEthereum.unpause();
         vm.selectFork(crossForkID);
-        vm.prank(OWNER);
+        vm.prank(CrossOWNER);
         bridgeCross.unpause();
 
         vm.prank(USER);
@@ -88,7 +89,7 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(OWNER);
         bridgeEthereum.changeThreshold(threshold);
         vm.selectFork(crossForkID);
-        vm.prank(OWNER);
+        vm.prank(CrossOWNER);
         bridgeCross.changeThreshold(threshold);
 
         vm.selectFork(ethereumForkID);
@@ -109,7 +110,7 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(OWNER);
         bridgeEthereum.changeThreshold(threshold);
         vm.selectFork(crossForkID);
-        vm.prank(OWNER);
+        vm.prank(CrossOWNER);
         bridgeCross.changeThreshold(threshold);
 
         vm.selectFork(ethereumForkID);

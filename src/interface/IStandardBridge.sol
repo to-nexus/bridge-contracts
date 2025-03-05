@@ -67,7 +67,7 @@ interface IStandardBridge is IValidatorManager, IBridgeRegistry {
     function retryFinalizeBridgeBatch(uint remoteChainID, uint[] memory indexes) external returns (bool);
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
-    function rewardWallet() external view returns (address payable);
+    function nexus() external view returns (address payable);
     function estimateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view

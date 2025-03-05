@@ -9,6 +9,4 @@ interface ICrossMintableERC20 is IERC20Metadata, IERC20Permit {
     function burn(address _account, uint _amount) external returns (bool);
     function decimals() external view returns (uint8);
     function nonces(address owner) external view returns (uint);
-    function pause() external;
-    function unpause() external;
 }

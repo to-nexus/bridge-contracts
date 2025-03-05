@@ -7,10 +7,10 @@ import {ICrossMintableERC20} from "./ICrossMintableERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20, ERC20Permit, IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract CrossMintableERC20 is Ownable, Pausable, ERC20, ERC20Permit, ICrossMintableERC20 {
-    error errCrossMintableERC20NotBridge(address account);
+contract CrossMintableERC20 is Ownable, ERC20, ERC20Permit, ICrossMintableERC20 {
+    error ERC20NotBridge(address account);
+    error ERC20CanNotTransferToBridge();
 
     uint8 private immutable _decimals;
     address public bridge;
@@ -25,7 +25,7 @@ contract CrossMintableERC20 is Ownable, Pausable, ERC20, ERC20Permit, ICrossMint
     }
 
     modifier onlyBridge() {
-        require(address(bridge) == _msgSender(), errCrossMintableERC20NotBridge(_msgSender()));
+        require(address(bridge) == _msgSender(), ERC20NotBridge(_msgSender()));
         _;
     }
 
@@ -47,15 +47,8 @@ contract CrossMintableERC20 is Ownable, Pausable, ERC20, ERC20Permit, ICrossMint
         return super.nonces(owner);
     }
 
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
-    }
-
-    function _update(address from, address to, uint value) internal override whenNotPaused {
+    function _update(address from, address to, uint value) internal override {
+        if (_msgSender() != address(bridge) && to == address(bridge)) revert ERC20CanNotTransferToBridge();
         super._update(from, to, value);
     }
 }

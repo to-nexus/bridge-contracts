@@ -16,6 +16,7 @@ contract SettingTest is Test {
 
     uint internal constant EX_RATE = 100;
     uint internal constant OWNER_PK = uint(bytes32("owner"));
+    uint internal constant CrossOWNER_PK = uint(bytes32("cross_owner"));
     uint internal constant USER_PK = uint(bytes32("user"));
     uint internal constant REWARD_PK = uint(bytes32("reward"));
     uint internal constant VALIDATOR_PK1 = uint(bytes32("validator1"));
@@ -42,6 +43,7 @@ contract SettingTest is Test {
     IERC20 internal testTokenCross2; // TT2 wrapped
 
     address internal OWNER;
+    address internal CrossOWNER;
     address internal USER;
     address internal REWARD;
     address internal VALIDATOR1;
@@ -63,6 +65,7 @@ contract SettingTest is Test {
         threshold = uint8(3);
 
         OWNER = vm.addr(OWNER_PK);
+        CrossOWNER = vm.addr(CrossOWNER_PK);
         USER = vm.addr(USER_PK);
         REWARD = vm.addr(REWARD_PK);
 
@@ -75,6 +78,7 @@ contract SettingTest is Test {
         VALIDATORS = [VALIDATOR1, VALIDATOR2, VALIDATOR3, VALIDATOR4, VALIDATOR5];
 
         vm.label(OWNER, "owner");
+        vm.label(CrossOWNER, "cross_owner");
         vm.label(USER, "user");
         vm.label(REWARD, "reward");
         vm.label(VALIDATOR1, "validator1");

@@ -31,7 +31,7 @@ contract CrossChainTest is SettingTest {
         nextIndexCross = 1;
 
         vm.selectFork(crossForkID);
-        vm.startPrank(OWNER);
+        vm.startPrank(CrossOWNER);
         // cross token factory
         {}
 
@@ -46,7 +46,7 @@ contract CrossChainTest is SettingTest {
             crossMintableERC20Factory = new CrossMintableERC20Factory(address(bridgeCross));
             bridgeCross.setCrossMintableERC20Factory(crossMintableERC20Factory);
 
-            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross), EX_RATE, 1);
+            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross), EX_RATE, 1, 0);
             bridgeCross.setValidators(VALIDATORS);
 
             vm.label(address(bridgeCross), "CrossBridge");
@@ -55,11 +55,12 @@ contract CrossChainTest is SettingTest {
         // add token to bridge (cross chain)
         {
             // test token
-            address ttAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), 1, 1, "TT", 18);
+            address ttAddress =
+                bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), 1, 1, 0, "TT", 18);
             testTokenCross = IERC20(ttAddress);
 
             // weth
-            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), 1, 1, "ETH", 18);
+            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), 1, 1, 0, "ETH", 18);
             weth = IERC20(wethAddress);
         }
 

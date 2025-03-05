@@ -8,8 +8,6 @@ interface ICrossMintableERC20Factory {
         external
         returns (address tokenAddress);
 
-    function pause(ICrossMintableERC20 token) external;
-    function unpause(ICrossMintableERC20 token) external;
     function allTokens() external view returns (address[] memory);
     function tokenByIndex(uint index) external view returns (address);
     function tokensLength() external view returns (uint);

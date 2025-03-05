@@ -18,8 +18,8 @@ contract CrossMintableERC20FactoryCode {
 contract CrossMintableERC20Factory is ICrossMintableERC20Factory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    error errCrossMintableERC20FactoryNotBridge(address account);
-    error errCrossMintableERC20FactoryNotExist(address token);
+    error ERC20FactoryNotBridge(address account);
+    error ERC20FactoryNotExist(address token);
 
     // slot 0 : bridge
     address public bridge;
@@ -30,7 +30,7 @@ contract CrossMintableERC20Factory is ICrossMintableERC20Factory {
     }
 
     modifier onlyBridge() {
-        require(msg.sender == bridge, errCrossMintableERC20FactoryNotBridge(msg.sender));
+        require(msg.sender == bridge, ERC20FactoryNotBridge(msg.sender));
         _;
     }
 
@@ -42,16 +42,6 @@ contract CrossMintableERC20Factory is ICrossMintableERC20Factory {
         bytes memory bytecode =
             abi.encodePacked(type(CrossMintableERC20).creationCode, abi.encode(bridge, name, symbol, decimals)); // Combine creation code and constructor arguments
         tokenAddress = Create2.deploy(0, salt, bytecode); // Deploy the wrapped token using Create2
-    }
-
-    function pause(ICrossMintableERC20 token) external onlyBridge {
-        require(_tokens.contains(address(token)), errCrossMintableERC20FactoryNotExist(address(token)));
-        token.pause();
-    }
-
-    function unpause(ICrossMintableERC20 token) external onlyBridge {
-        require(_tokens.contains(address(token)), errCrossMintableERC20FactoryNotExist(address(token)));
-        token.unpause();
     }
 
     function allTokens() external view returns (address[] memory) {

@@ -33,15 +33,15 @@ contract EthereumChainTest is CrossChainTest {
             bridgeEthereum = BranchBridge(payable(address(bridgeEthereumProxy)));
             bridgeEthereum.initialize(threshold, REWARD);
 
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), 1, EX_RATE);
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), 1, EX_RATE, 0);
             bridgeEthereum.setValidators(VALIDATORS);
         }
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth), 1, 1);
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth), 1, 1, 0);
             bridgeEthereum.registerToken(
-                CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross), 1, 1
+                CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross), 1, 1, 0
             );
 
             TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY);

@@ -109,7 +109,7 @@ contract StandardBridgeTest is BridgeTest {
         withdrawToken(false, amount, 5);
     }
 
-    function test_reverted_finalize() public {
+    function test_pending_finalize() public {
         uint amount = 1000 * 1e18;
 
         vm.prank(OWNER);
@@ -137,7 +137,7 @@ contract StandardBridgeTest is BridgeTest {
             ethereumFinalize(index, address(testTokenEthereum), USER, value, 5);
 
             vm.selectFork(ethereumForkID);
-            string memory reason = bridgeEthereum.revertedReason(CROSS_CHAIN_ID, index);
+            string memory reason = bridgeEthereum.pendingReason(CROSS_CHAIN_ID, index);
             assertNotEq("", reason);
 
             // token start
