@@ -81,7 +81,7 @@ contract BridgeExceptionTest is BridgeTest {
         // token pause
         vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
-        bridgeEthereum.pauseToken(CROSS_CHAIN_ID, address(cross));
+        bridgeEthereum.setPauseToken(CROSS_CHAIN_ID, address(cross), true);
 
         uint amount = 1000 ether;
 
@@ -96,14 +96,14 @@ contract BridgeExceptionTest is BridgeTest {
         // token unpause
         vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
-        bridgeEthereum.unpauseToken(CROSS_CHAIN_ID, address(cross));
+        bridgeEthereum.setPauseToken(CROSS_CHAIN_ID, address(cross), false);
 
         deposit(false, amount, 5);
 
         // token pause
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.pauseToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
+        bridgeCross.setPauseToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), true);
 
         bridgeRevertCross = true;
         withdraw(true, amount, 5);
@@ -111,7 +111,7 @@ contract BridgeExceptionTest is BridgeTest {
         // token unpause
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.unpauseToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
+        bridgeCross.setPauseToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), false);
 
         withdraw(false, amount * 10, 5);
     }
@@ -136,10 +136,36 @@ contract BridgeExceptionTest is BridgeTest {
         vm.expectRevert();
         bridgeCross.retryFinalizeBridge(ETHEREUM_CHAIN_ID, index);
 
-        vm.prank(CrossOWNER);
-        bridgeCross.setSafetyLimit(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount);
-
+        vm.warp(block.timestamp + 25 hours);
         vm.prank(CrossOWNER);
         bridgeCross.retryFinalizeBridge(ETHEREUM_CHAIN_ID, index);
+    }
+
+    function test_deposit_with_over_safety_limit_manual() public {
+        uint amount = 1000 ether;
+
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        bridgeCross.setSafetyLimit(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount - 1);
+
+        vm.selectFork(ethereumForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeEthereum), amount);
+
+        uint index = deposit(true, amount, 5);
+
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        vm.expectRevert();
+        bridgeCross.retryFinalizeBridge(ETHEREUM_CHAIN_ID, index);
+
+        vm.prank(USER);
+        vm.expectRevert();
+        bridgeCross.manualProcessPending(ETHEREUM_CHAIN_ID, index);
+
+        vm.prank(CrossOWNER);
+        bridgeCross.manualProcessPending(ETHEREUM_CHAIN_ID, index);
     }
 }

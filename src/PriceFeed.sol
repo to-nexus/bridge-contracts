@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IPriceFeed} from "./interface/IPriceFeed.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract PriceFeed is ValidatorManager, IPriceFeed {
+contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error PriceFeedCanNotZeroValue(string name);
@@ -23,11 +23,12 @@ contract PriceFeed is ValidatorManager, IPriceFeed {
 
     mapping(address => PriceData) private _priceData;
 
-    uint[46] private __gap;
+    uint[26] private __gap;
 
     function initialize(uint8 _dollarDecimals) public initializer {
         __Ownable_init(_msgSender());
         __Validator_init(0);
+        __UUPSUpgradeable_init();
 
         dollarDecimals = _dollarDecimals;
         updatedAt = block.timestamp;
@@ -122,4 +123,10 @@ contract PriceFeed is ValidatorManager, IPriceFeed {
         _priceData[token] = PriceData({token: token, price: price, lastUpdated: priceAt});
         emit PriceFeedPriceUpdated(token, price, priceAt);
     }
+
+    /**
+     * @notice Authorizes an upgrade to a new implementation.
+     * @param _newImplementation The address of the new implementation.
+     */
+    function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {}
 }

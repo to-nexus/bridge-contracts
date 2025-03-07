@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IValidatorManager} from "./IValidatorManager.sol";
+import {IRoleManager} from "./IRoleManager.sol";
 
-interface IPriceFeed is IValidatorManager {
+interface IPriceFeed is IRoleManager {
     struct PriceData {
         address token;
         uint price;

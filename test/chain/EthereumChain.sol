@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BranchBridge} from "../../src/BranchBridge.sol";
 import {BridgeFeeStation, IBridgeFeeStation} from "../../src/BridgeFeeStation.sol";
+import {StandardBridge} from "../../src/StandardBridge.sol";
 
 import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
+import {IRoleManager} from "../../src/interface/IRoleManager.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {CrossChainTest} from "./CrossChain.sol";
 
@@ -17,7 +18,7 @@ contract EthereumChainTest is CrossChainTest {
     bool internal finalizeRevertEthereum = false;
 
     uint internal nextIndexEthereum;
-    BranchBridge internal bridgeEthereum;
+    StandardBridge internal bridgeEthereum;
     IBridgeFeeStation internal bridgeFeeStationEthereum;
 
     function setUp() public virtual override {
@@ -28,20 +29,22 @@ contract EthereumChainTest is CrossChainTest {
 
         // bridge setup
         {
-            BranchBridge bridgeEthereumImpl = new BranchBridge();
+            StandardBridge bridgeEthereumImpl = new StandardBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
-            bridgeEthereum = BranchBridge(payable(address(bridgeEthereumProxy)));
+            bridgeEthereum = StandardBridge(payable(address(bridgeEthereumProxy)));
             bridgeEthereum.initialize(threshold, REWARD);
 
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), 1, EX_RATE, 0);
-            bridgeEthereum.setValidators(VALIDATORS);
+            bridgeEthereum.registerToken(
+                CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), -(int(EX_RATE)), 0
+            );
+            bridgeEthereum.setRole(VALIDATOR_ROLE, VALIDATORS, true);
         }
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth), 1, 1, 0);
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth), 0, 0);
             bridgeEthereum.registerToken(
-                CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross), 1, 1, 0
+                CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross), 0, 0
             );
 
             TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY);

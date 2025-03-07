@@ -4,27 +4,32 @@ pragma solidity 0.8.28;
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {StandardBridge} from "./abstract/StandardBridge.sol";
+import {StandardBridge} from "./StandardBridge.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
 
 /**
  * @title CrossBridge
- * @notice This contract implements the StandardBridge for a specific cross-chain bridge.
+ * @notice Implementation of StandardBridge for a specific cross-chain bridge deployment
+ * @dev This contract extends StandardBridge with predeploy functionality for specific chain deployments
+ * - Uses a predefined address for implementation
+ * - Implements proxy verification logic
+ * - Ensures contract is only called through a valid proxy
+ * - Provides security against direct calls to implementation
  */
 contract CrossBridge is StandardBridge {
-    uint private constant EX_RATE = 100; // cross : xcross, 1 : 100
-    address private constant PREDEPLOY_ADDRESS = address(0x0956d70000000000000000000000000000000101); // predeployed implementation address
+    /// @dev Predefined address for the predeployed implementation
+    address private constant PREDEPLOY_ADDRESS = address(0x0956d70000000000000000000000000000000101);
 
-    uint private _ethereumChainID;
-
-    uint[49] private __gap;
-
-    function initialize(uint8 _threshold, address _nexus) external initializer {
-        __StandardBridge_init(_threshold, _nexus);
-    }
+    /// @dev Storage gap for future upgrades
+    uint[50] private __gap;
 
     /**
-     * @dev Override for predeploy. When upgrading the implementation, remove it.
+     * @notice Verifies the contract is called through a valid proxy
+     * @dev Override for predeploy implementation check
+     * - Ensures the contract is called via delegatecall
+     * - Verifies the implementation address matches the predeploy address
+     * - Reverts if called directly or through an invalid proxy
+     * - This prevents unauthorized access to the implementation contract
      */
     function _checkProxy() internal view override {
         if (

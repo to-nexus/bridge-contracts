@@ -3,9 +3,10 @@ pragma solidity ^0.8.13;
 
 import {BridgeFeeStation} from "../../src/BridgeFeeStation.sol";
 import {CrossBridge} from "../../src/CrossBridge.sol";
-import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 
 import {IPriceFeed, PriceFeed} from "../../src/PriceFeed.sol";
+import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
+import {IRoleManager} from "../../src/interface/IRoleManager.sol";
 
 import {CrossMintableERC20} from "../../src/token/CrossMintableERC20.sol";
 import {CrossMintableERC20Factory, CrossMintableERC20FactoryCode} from "../../src/token/CrossMintableERC20Factory.sol";
@@ -46,8 +47,8 @@ contract CrossChainTest is SettingTest {
             crossMintableERC20Factory = new CrossMintableERC20Factory(address(bridgeCross));
             bridgeCross.setCrossMintableERC20Factory(crossMintableERC20Factory);
 
-            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross), EX_RATE, 1, 0);
-            bridgeCross.setValidators(VALIDATORS);
+            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross), int(EX_RATE), 0);
+            bridgeCross.setRole(VALIDATOR_ROLE, VALIDATORS, true);
 
             vm.label(address(bridgeCross), "CrossBridge");
         }
@@ -55,12 +56,11 @@ contract CrossChainTest is SettingTest {
         // add token to bridge (cross chain)
         {
             // test token
-            address ttAddress =
-                bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), 1, 1, 0, "TT", 18);
+            address ttAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), 0, 0, "TT", 18);
             testTokenCross = IERC20(ttAddress);
 
             // weth
-            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), 1, 1, 0, "ETH", 18);
+            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), 0, 0, "ETH", 18);
             weth = IERC20(wethAddress);
         }
 
@@ -70,7 +70,7 @@ contract CrossChainTest is SettingTest {
             ERC1967Proxy priceFeedProxy = new ERC1967Proxy(priceFeedImpl, bytes(""));
             priceFeed = PriceFeed(address(priceFeedProxy));
             priceFeed.initialize(uint8(6));
-            priceFeed.setValidators(VALIDATORS);
+            priceFeed.setRole(VALIDATOR_ROLE, VALIDATORS, true);
 
             bridgeFeeStationCross = new BridgeFeeStation(10, 200000);
             bridgeFeeStationCross.setPriceFeed(IPriceFeed(address(priceFeed)));

@@ -14,6 +14,9 @@ contract SettingTest is Test {
         "Finalize(uint256 remoteChainID,uint256 index,address token,address to,uint256 value,bytes extraData)"
     );
 
+    bytes32 public constant VALIDATOR_ROLE = bytes32("VALIDATOR");
+    bytes32 public constant ADMIN_ROLE = bytes32("ADMIN");
+
     uint internal constant EX_RATE = 100;
     uint internal constant OWNER_PK = uint(bytes32("owner"));
     uint internal constant CrossOWNER_PK = uint(bytes32("cross_owner"));

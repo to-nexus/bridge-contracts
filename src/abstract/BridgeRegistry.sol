@@ -1,158 +1,286 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IBridgeRegistry} from "../interface/IBridgeRegistry.sol";
 import {ICrossMintableERC20Factory} from "../token/ICrossMintableERC20Factory.sol";
+import {RoleManager} from "./RoleManager.sol";
 
-abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
+/**
+ * @title BridgeRegistry
+ * @notice Registry managing token pairs and chain information for the bridge
+ * @dev This contract provides the following key features:
+ * - Token pair registration/deregistration
+ * - Chain information management
+ * - Token pause/unpause functionality
+ * - CrossMintable token creation
+ * - Safety limit management
+ * - Pending operation tracking
+ *
+ * @dev Key structures:
+ * TokenPair {
+ *   localToken: Token address on this chain
+ *   remoteToken: Corresponding token on remote chain
+ *   safetyLimit: Maximum amount that can be processed automatically without additional verification
+ *   isOrigin: Whether this is the origin chain
+ *   paused: Bridge operations paused flag
+ *   deposited: Total amount deposited
+ *   pendingAmount: Amount in pending operations
+ * }
+ *
+ * Chain {
+ *   remoteChainID: ID of the remote chain
+ *   initiateIndex: Current index for initiated bridges
+ *   finalizeIndex: Current index for finalized bridges
+ *   paused: Whether operations for this chain are paused
+ * }
+ *
+ * PendingData {
+ *   args: FinalizeArguments struct with operation details
+ *   reason: Error message explaining pending status
+ *   safeDeadline: Timestamp after which pending operation can be processed
+ * }
+ */
+abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
     using Math for uint;
 
+    error RegistryNotExistChain(uint remoteChainID);
     error RegistryNotExistToken(address token);
     error RegistryNotExistIndex(uint index);
     error RegistryExistFactory(address factory);
     error RegistryExistIndex(uint index);
     error RegistryExistToken(address token);
     error RegistryZeroAddress();
-    error RegistryZeroLocalRate();
-    error RegistryZeroRemoteRate();
+    error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
-    error RegistryNotPaused(address token);
-    error RegistryInvalidRate(uint localTokenRate, uint remoteTokenRate);
-    error RegistryBalanceLow(uint remoteChainID, address token, uint value);
+    error RegistryChainPauseNotChanged(uint remoteChainID);
+    error RegistryTokenPauseNotChanged(address token);
+    error RegistryBalanceLow(uint remoteChainID, address token, uint value, uint deposited, uint pendingAmount);
     error RegistryFactoryNotSet();
 
+    /**
+     * @dev Event emitted when a token pair is registered
+     * @param remoteChainID ID of the remote chain
+     * @param localToken Address of token on this chain
+     * @param remoteToken Address of corresponding token on remote chain
+     * @param exchangeRate Exchange rate for local token
+     * @param safetyLimit Maximum amount that can be bridged
+     * @param isOrigin Whether this is the origin chain for the token
+     */
     event TokenPairRegistered(
         uint indexed remoteChainID,
         address indexed localToken,
         address indexed remoteToken,
-        uint localTokenRate,
-        uint remoteTokenRate,
+        int exchangeRate,
         uint safetyLimit,
         bool isOrigin
     );
+
+    /**
+     * @notice Emitted when a token pair is unregistered
+     * @param remoteChainID ID of the remote chain
+     * @param localToken Address of token on this chain
+     */
     event TokenPairUnregistered(uint indexed remoteChainID, address indexed localToken);
-    event TokenPairPaused(uint indexed remoteChainID, address indexed token);
-    event TokenPairUnpaused(uint indexed remoteChainID, address indexed token);
+
+    /**
+     * @notice Emitted when a token's pause status is changed
+     * @param remoteChainID ID of the remote chain
+     * @param token Address of the token
+     * @param pause New pause status
+     */
+    event TokenPauseSet(uint indexed remoteChainID, address indexed token, bool pause);
+
+    /**
+     * @notice Emitted when a chain is paused or unpaused
+     * @param remoteChainID ID of the remote chain
+     * @param pause New pause status
+     */
+    event ChainPauseSet(uint indexed remoteChainID, bool pause);
+
+    /**
+     * @notice Emitted when a token's safety limit is changed
+     * @param remoteChainID ID of the remote chain
+     * @param token Address of the token
+     * @param safetyLimit New safety limit value
+     */
+    event SafetyLimitSet(uint indexed remoteChainID, address indexed token, uint safetyLimit);
+
+    /**
+     * @notice Emitted when the CrossMintableERC20Factory is set
+     * @param factory Address of the new factory
+     */
     event CrossMintableERC20FactorySet(address indexed factory);
 
+    /// @dev Constant role identifier for admin role
+    bytes32 private constant ADMIN_ROLE = bytes32("ADMIN");
+
+    /// @dev Factory contract for creating new CrossMintable tokens
     ICrossMintableERC20Factory public crossMintableERC20Factory;
 
-    EnumerableSet.UintSet private _chains;
+    /// @dev Timestamp of the latest pending operation that will expire
+    uint internal _latestExpiredPendingTime;
 
-    mapping(uint => Chain) internal _chainData; // chain id : Chain
-    mapping(uint => EnumerableSet.AddressSet) internal _tokens; // chain id : tokens
-    mapping(uint => mapping(address => TokenPair)) internal _tokenPairs; // chain id : token address : TokenPair
+    /// @dev Delay period for safety checks (24 hours)
+    uint private _safetyDelay;
 
-    uint[44] private __gap;
+    /// @dev Set of registered chain IDs
+    EnumerableSet.UintSet internal _chains;
 
-    modifier onlyValidToken(uint remoteChainID, address token) {
-        require(_tokenContains(remoteChainID, token), RegistryNotExistToken(token));
-        require(!_tokenPairs[remoteChainID][token].paused, RegistryTokenPaused(token));
-        _;
-    }
+    /// @dev Mapping from chain ID to Chain struct
+    mapping(uint => Chain) internal _chainData;
 
-    function _tokenContains(uint remoteChainID, address token) internal view returns (bool) {
-        return _tokens[remoteChainID].contains(token);
+    /// @dev Mapping from chain ID to set of registered token addresses
+    mapping(uint => EnumerableSet.AddressSet) internal _tokens;
+
+    /// @dev Mapping from chain ID and token address to TokenPair struct
+    mapping(uint => mapping(address => TokenPair)) internal _tokenPairs;
+
+    /// @dev Mapping from chain ID and token address to exchange rate
+    mapping(uint => mapping(address => int)) internal _exchangeRate;
+
+    /// @dev Mapping from chain ID to set of pending operation indices
+    mapping(uint => EnumerableSet.UintSet) internal _pendingIndex;
+
+    /// @dev Mapping from chain ID and index to pending operation data
+    mapping(uint => mapping(uint => PendingData)) internal _pendingData;
+
+    /// @dev Storage gap for future upgrades
+    uint[39] private __gap;
+
+    /**
+     * @notice Initializes the BridgeRegistry
+     * @dev Sets up initial state
+     * - Grants Admin role to contract owner using ADMIN_ROLE identifier
+     * - Sets safety delay to 24 hours
+     */
+    function __BridgeRegistry_init() internal onlyInitializing {
+        _updateRole(ADMIN_ROLE, owner(), true);
+        _safetyDelay = 24 hours;
     }
 
     /**
-     * @notice Creates a new token on the local chain.
-     * @param remoteChainID The ID of the remote chain.
-     * @param remoteToken The address of the token on the remote chain.
-     * @param localTokenRate The rate of the local token.
-     * @param remoteTokenRate The rate of the remote token.
-     * @param symbol The symbol of the token.
-     * @param decimals The decimals of the token.
-     * @return tokenAddress The address of the created token.
+     * @notice Modifier to restrict function calls to admins only
+     * @dev Checks if caller has Admin role using ADMIN_ROLE identifier
+     */
+    modifier onlyAdmin() {
+        require(hasRole(ADMIN_ROLE, _msgSender()), RoleNotAuthorized(ADMIN_ROLE, _msgSender()));
+        _;
+    }
+
+    /**
+     * @dev Modifier to check if token is registered and not paused
+     * @param remoteChainID Chain ID to check
+     * @param token Token address to check
+     */
+    modifier onlyValidToken(uint remoteChainID, address token) {
+        _validateToken(remoteChainID, token);
+        _;
+    }
+
+    /**
+     * @notice Creates a new token on the local chain
+     * @dev Deploys a new CrossMintable token using the factory
+     * - Generates deterministic salt from remote token
+     * - Creates token with specified parameters
+     * - Registers token pair automatically
+     * @param remoteChainID Chain ID where the original token exists
+     * @param remoteToken Address of the original token
+     * @param exchangeRate Exchange rate for local token
+     * @param safetyLimit Maximum amount that can be bridged
+     * @param symbol Token symbol
+     * @param decimals Token decimals
+     * @return tokenAddress Address of the newly created token
      */
     function createToken(
         uint remoteChainID,
         address remoteToken,
-        uint localTokenRate,
-        uint remoteTokenRate,
+        int exchangeRate,
         uint safetyLimit,
         string memory symbol,
         uint8 decimals
-    ) external onlyOwner returns (address tokenAddress) {
+    ) external returns (address tokenAddress) {
         require(address(crossMintableERC20Factory) != address(0), RegistryFactoryNotSet());
         tokenAddress = crossMintableERC20Factory.createCrossMintableERC20(
             keccak256(abi.encodePacked(remoteToken)),
-            string(abi.encodePacked("Cross Bridge ", symbol)), // @DEV: name을 외부입력을 받을건지 확인
+            string(abi.encodePacked("Cross Bridge ", symbol)),
             symbol,
             decimals
         );
-        _registerToken(remoteChainID, false, tokenAddress, remoteToken, localTokenRate, remoteTokenRate, safetyLimit);
+        registerToken(remoteChainID, false, tokenAddress, remoteToken, exchangeRate, safetyLimit);
     }
 
     /**
-     * @notice Registers a token pair.
-     * @param remoteChainID The ID of the remote chain.
-     * @param isOrigin Whether the token is the origin token.
-     * @param localToken The address of the local token.
-     * @param remoteToken The address of the remote token.
-     * @param localTokenRate The rate of the local token.
-     * @param remoteTokenRate The rate of the remote token.
+     * @notice Registers a token pair for bridging
+     * @dev Links local and remote tokens with specified parameters
+     * - Validates token rates
+     * - Sets up token pair configuration
+     * - Handles both origin and wrapped tokens
+     * @param remoteChainID Target chain identifier
+     * @param isOrigin Whether this is the origin chain for the token
+     * @param localToken Local token address
+     * @param remoteToken Remote token address
+     * @param exchangeRate Exchange rate for local token
+     * @param safetyLimit Maximum amount that can be bridged
      */
     function registerToken(
         uint remoteChainID,
         bool isOrigin,
         address localToken,
         address remoteToken,
-        uint localTokenRate,
-        uint remoteTokenRate,
+        int exchangeRate,
         uint safetyLimit
-    ) external onlyOwner {
-        _registerToken(remoteChainID, isOrigin, localToken, remoteToken, localTokenRate, remoteTokenRate, safetyLimit);
+    ) public onlyOwner {
+        if (_chains.add(remoteChainID)) {
+            _chainData[remoteChainID] =
+                Chain({remoteChainID: remoteChainID, initiateIndex: 0, finalizeIndex: 0, paused: false});
+        }
+
+        require(localToken != address(0), RegistryZeroAddress());
+        require(_tokens[remoteChainID].add(localToken), RegistryExistToken(localToken));
+
+        _tokenPairs[remoteChainID][localToken] = IBridgeRegistry.TokenPair({
+            localToken: localToken,
+            remoteToken: remoteToken,
+            safetyLimit: safetyLimit,
+            isOrigin: isOrigin,
+            paused: false,
+            deposited: 0,
+            pendingAmount: 0
+        });
+        if (exchangeRate > 1 || exchangeRate < -1) _exchangeRate[remoteChainID][localToken] = exchangeRate;
+
+        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, exchangeRate, safetyLimit, isOrigin);
     }
 
     /**
-     * @notice Unregisters a token pair.
-     * @param remoteChainID The ID of the remote chain.
-     * @param token The address of the token to unregister.
+     * @notice Unregisters a token pair
+     * @dev Removes token pair from registry
+     * - Validates token exists
+     * - Cleans up token pair data
+     * - Emits unregistration event
+     * @param remoteChainID Chain ID to unregister from
+     * @param token Token address to unregister
      */
     function unregisterToken(uint remoteChainID, address token) external onlyOwner {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
         delete (_tokenPairs[remoteChainID][token]);
-
+        delete (_exchangeRate[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
     }
 
     /**
-     * @notice Pauses a token pair.
-     * @param remoteChainID The ID of the remote chain.
-     * @param token The address of the token to pause.
-     */
-    function pauseToken(uint remoteChainID, address token) external onlyOwner {
-        require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
-        require(!_tokenPairs[remoteChainID][token].paused, RegistryTokenPaused(token));
-        _tokenPairs[remoteChainID][token].paused = true;
-
-        emit TokenPairPaused(remoteChainID, token);
-    }
-
-    /**
-     * @notice Unpauses a token pair.
-     * @param remoteChainID The ID of the remote chain.
-     * @param token The address of the token to unpause.
-     */
-    function unpauseToken(uint remoteChainID, address token) external onlyOwner {
-        require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
-        require(_tokenPairs[remoteChainID][token].paused, RegistryNotPaused(token));
-        _tokenPairs[remoteChainID][token].paused = false;
-
-        emit TokenPairUnpaused(remoteChainID, token);
-    }
-
-    /**
-     * @notice Sets the CrossMintableERC20Factory.
-     * @param _crossMintableERC20Factory The address of the CrossMintableERC20Factory.
+     * @notice Sets the CrossMintableERC20Factory contract
+     * @dev Updates factory reference for creating new tokens
+     * - Can only be set once
+     * - Validates non-zero address
+     * - Emits factory update event
+     * @param _crossMintableERC20Factory Address of the new factory
      */
     function setCrossMintableERC20Factory(ICrossMintableERC20Factory _crossMintableERC20Factory) external onlyOwner {
         require(
@@ -164,30 +292,84 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
         emit CrossMintableERC20FactorySet(address(crossMintableERC20Factory));
     }
 
-    function clearPending(uint remoteChainIDs) external onlyOwner {
-        uint[] memory indexes = _chainData[remoteChainIDs].pending.index.values();
+    /**
+     * @notice Clears pending bridge operations
+     * @dev Removes all pending operations for a chain
+     * - Iterates through pending indices
+     * - Cleans up pending data
+     * @param remoteChainID Chain ID to clear pending operations for
+     */
+    function clearPending(uint remoteChainID) external onlyOwner {
+        uint[] memory indexes = _pendingIndex[remoteChainID].values();
         for (uint i = 0; i < indexes.length; ++i) {
-            _removePendingArguments(remoteChainIDs, indexes[i]);
+            _removePendingArguments(remoteChainID, indexes[i]);
         }
     }
 
-    function setSafetyLimit(uint remoteChainID, address token, uint safetyLimit) external onlyOwner {
-        require(_tokenContains(remoteChainID, token), RegistryNotExistToken(token));
+    /**
+     * @notice Sets safety limit for a token pair
+     * @dev Updates maximum bridgeable amount
+     * - Validates token exists
+     * - Updates safety limit value
+     * @param remoteChainID Chain ID of the token pair
+     * @param token Token address to update
+     * @param safetyLimit New safety limit value
+     */
+    function setSafetyLimit(uint remoteChainID, address token, uint safetyLimit) external onlyAdmin {
+        require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
         _tokenPairs[remoteChainID][token].safetyLimit = safetyLimit;
+        emit SafetyLimitSet(remoteChainID, token, safetyLimit);
     }
 
     /**
-     * @notice Returns all chain IDs.
-     * @return An array of all chain IDs.
+     * @notice Pauses bridge operations for a specific chain
+     * @dev Temporarily disables all bridge operations for the chain
+     * - Validates chain exists and is not already paused
+     * - Sets pause flag
+     * - Emits pause event
+     * @param remoteChainID Chain ID to pause
+     */
+    function setPauseChain(uint remoteChainID, bool pause) external onlyAdmin {
+        require(_chains.contains(remoteChainID), RegistryNotExistChain(remoteChainID));
+        if (_chainData[remoteChainID].paused != pause) {
+            _chainData[remoteChainID].paused = pause;
+            emit ChainPauseSet(remoteChainID, pause);
+        }
+    }
+
+    /**
+     * @notice Pauses bridging operations for a token pair
+     * @dev Temporarily disables bridge operations
+     * - Validates token exists and is not already paused
+     * - Sets pause flag
+     * - Emits pause event
+     * @param remoteChainID Chain ID of the token pair
+     * @param token Token address to pause
+     */
+    function setPauseToken(uint remoteChainID, address token, bool pause) external onlyAdmin {
+        require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
+        if (_tokenPairs[remoteChainID][token].paused != pause) {
+            _tokenPairs[remoteChainID][token].paused = pause;
+            emit TokenPauseSet(remoteChainID, token, pause);
+        }
+    }
+
+    /**
+     * @notice Returns all registered chain IDs
+     * @dev Retrieves array of chain IDs from storage
+     * @return Array of chain IDs
      */
     function allChainIDs() external view returns (uint[] memory) {
         return _chains.values();
     }
 
     /**
-     * @notice Returns all token pairs for a given remote chain ID.
-     * @param remoteChainID The ID of the remote chain.
-     * @return An array of all token pairs.
+     * @notice Returns all token pairs for a chain
+     * @dev Retrieves and formats token pair data
+     * - Gets all registered tokens for chain
+     * - Maps tokens to their pair data
+     * @param remoteChainID Chain ID to query
+     * @return Array of TokenPair structs
      */
     function allTokenPairs(uint remoteChainID) external view returns (TokenPair[] memory) {
         address[] memory tokens = _tokens[remoteChainID].values();
@@ -199,152 +381,167 @@ abstract contract BridgeRegistry is OwnableUpgradeable, IBridgeRegistry {
     }
 
     /**
-     * @notice Returns all pending indexes for a given remote chain ID.
-     * @param remoteChainID The ID of the remote chain.
-     * @return An array of all pending indexes.
+     * @notice Returns all pending operation indices
+     * @dev Lists indices of incomplete bridge operations
+     * @param remoteChainID Chain ID to query
+     * @return Array of pending indices
      */
     function allPendingIndex(uint remoteChainID) external view returns (uint[] memory) {
-        return _chainData[remoteChainID].pending.index.values();
+        return _pendingIndex[remoteChainID].values();
     }
 
     /**
-     * @notice Returns the token pair for a given remote chain ID and token address.
-     * @param remoteChainID The ID of the remote chain.
-     * @param token The address of the token.
-     * @return The token pair.
+     * @notice Returns token pair information
+     * @dev Retrieves specific token pair configuration
+     * @param remoteChainID Chain ID of the pair
+     * @param token Token address to query
+     * @return TokenPair struct containing pair details
      */
     function getTokenPair(uint remoteChainID, address token) external view returns (TokenPair memory) {
         return _tokenPairs[remoteChainID][token];
     }
 
     /**
-     * @notice Returns the next initiate index for a given remote chain ID.
-     * @param remoteChainID The ID of the remote chain.
-     * @return The next initiate index.
+     * @notice Gets next initiate index for a chain
+     * @dev Returns incremented current initiate index
+     * @param remoteChainID Chain ID to query
+     * @return Next available index for bridge initiation
      */
     function getNextInitiateIndex(uint remoteChainID) public view returns (uint) {
         return _chainData[remoteChainID].initiateIndex + 1;
     }
 
     /**
-     * @notice Returns the next finalize index for a given remote chain ID.
-     * @param remoteChainID The ID of the remote chain.
-     * @return The next finalize index.
+     * @notice Gets next finalize index for a chain
+     * @dev Returns incremented current finalize index
+     * @param remoteChainID Chain ID to query
+     * @return Next available index for bridge finalization
      */
     function getNextFinalizeIndex(uint remoteChainID) public view returns (uint) {
         return _chainData[remoteChainID].finalizeIndex + 1;
     }
 
     /**
-     * @notice Returns the pending arguments for a given remote chain ID and index.
-     * @param remoteChainID The ID of the remote chain.
-     * @param index The index of the pending arguments.
-     * @return The pending arguments.
+     * @notice Returns pending bridge operation details
+     * @dev Retrieves stored finalization arguments
+     * @param remoteChainID Chain ID of pending operation
+     * @param index Index of pending operation
+     * @return PendingData struct with operation details
      */
-    function pendingArguments(uint remoteChainID, uint index) public view returns (FinalizeArguments memory) {
-        return _chainData[remoteChainID].pending.data[index];
+    function getPendingArguments(uint remoteChainID, uint index) external view returns (PendingData memory) {
+        return _pendingData[remoteChainID][index];
     }
 
     /**
-     * @notice Returns the pending reason for a given remote chain ID and index.
-     * @param remoteChainID The ID of the remote chain.
-     * @param index The index of the pending reason.
-     * @return The pending reason.
+     * @notice Checks if there are any expired pending operations
+     * @dev Iterates through all chains and checks if any pending operations have expired
+     * @return true if there are expired pending operations, false otherwise
      */
-    function pendingReason(uint remoteChainID, uint index) public view returns (string memory) {
-        return _chainData[remoteChainID].pending.reason[index];
+    function hasExpiredPending() external view returns (bool) {
+        return _latestExpiredPendingTime >= block.timestamp;
     }
 
-    // internal nonpayable
-    function _incrementInitiateIndex(uint remoteChainID) internal {
+    function _validateToken(uint remoteChainID, address token) private view {
+        // check token is registered
+        require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
+        // check chain is not paused
+        require(!_chainData[remoteChainID].paused, RegistryChainPaused(remoteChainID));
+        // check token is not paused
+        require(!_tokenPairs[remoteChainID][token].paused, RegistryTokenPaused(token));
+    }
+
+    /**
+     * @notice Increments initiate index for a chain
+     * @dev Internal function to update counter
+     * @param remoteChainID Chain ID to update
+     * @return index index value
+     */
+    function _useInitiateIndex(uint remoteChainID) internal returns (uint index) {
         unchecked {
-            ++_chainData[remoteChainID].initiateIndex;
+            index = ++_chainData[remoteChainID].initiateIndex;
         }
     }
 
-    function _incrementFinalizeIndex(uint remoteChainID) internal {
+    /**
+     * @notice Increments finalize index for a chain
+     * @dev Internal function to update counter
+     * @param remoteChainID Chain ID to update
+     * @return index index value
+     */
+    function _useFinalizeIndex(uint remoteChainID) internal returns (uint index) {
         unchecked {
-            ++_chainData[remoteChainID].finalizeIndex;
+            index = ++_chainData[remoteChainID].finalizeIndex;
         }
     }
 
+    /**
+     * @notice Records token deposit
+     * @dev Updates deposited amount for token pair
+     * @param remoteChainID Chain ID of token pair
+     * @param token Token address
+     * @param value Amount deposited
+     */
     function _depositToken(uint remoteChainID, address token, uint value) internal {
         _tokenPairs[remoteChainID][token].deposited += value;
     }
 
+    /**
+     * @notice Processes token withdrawal
+     * @dev Updates deposited amount and validates balance
+     * - Checks sufficient balance including pending amounts
+     * - Reduces deposited amount
+     * @param remoteChainID Chain ID of token pair
+     * @param token Token address
+     * @param value Amount to withdraw
+     */
     function _withdrawToken(uint remoteChainID, address token, uint value) internal {
         TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
-        require(tokenPair.deposited >= value + tokenPair.pendingAmount, RegistryBalanceLow(remoteChainID, token, value));
+        require(
+            tokenPair.deposited >= value + tokenPair.pendingAmount,
+            RegistryBalanceLow(remoteChainID, token, value, tokenPair.deposited, tokenPair.pendingAmount)
+        );
         tokenPair.deposited -= value;
     }
 
-    function _setPendingArguments(FinalizeArguments calldata args, string memory reason) internal {
-        Chain storage chain = _chainData[args.remoteChainID];
-        uint index = args.index;
-        require(chain.pending.index.add(index), RegistryExistIndex(index));
+    /**
+     * @notice Records pending bridge operation
+     * @dev Stores operation details and updates state
+     * - Adds to pending index set
+     * - Stores operation arguments and reason
+     * - Updates pending amounts for origin tokens
+     * @param args Finalization arguments to store
+     * @param reason Error message explaining pending status
+     */
+    function _setPendingArguments(FinalizeArguments calldata args, bytes memory reason, bool delay) internal {
+        require(_pendingIndex[args.remoteChainID].add(args.index), RegistryExistIndex(args.index));
 
-        chain.pending.data[index] = args;
-        chain.pending.reason[index] = reason;
+        uint deadline = 0;
+        if (delay) {
+            deadline = block.timestamp + _safetyDelay;
+            _latestExpiredPendingTime = block.timestamp + _safetyDelay;
+        }
+
+        _pendingData[args.remoteChainID][args.index] = PendingData({args: args, reason: reason, safeDeadline: deadline});
+
         TokenPair storage tokenPair = _tokenPairs[args.remoteChainID][address(args.token)];
         if (tokenPair.isOrigin) tokenPair.pendingAmount += args.value;
     }
 
-    function _removePendingArguments(uint remoteChainID, uint index) internal {
-        PendingData storage pending = _chainData[remoteChainID].pending;
-        require(pending.index.remove(index), RegistryNotExistIndex(index));
+    /**
+     * @notice Removes pending bridge operation
+     * @dev Cleans up pending operation data
+     * - Removes from pending index set
+     * - Clears stored arguments and reason
+     * @param remoteChainID Chain ID of operation
+     * @param index Index of operation to remove
+     */
+    function _removePendingArguments(uint remoteChainID, uint index) internal returns (FinalizeArguments memory args) {
+        require(_pendingIndex[remoteChainID].remove(index), RegistryNotExistIndex(index));
 
-        delete (pending.reason[index]);
-        delete (pending.data[index]);
-    }
+        args = _pendingData[remoteChainID][index].args;
+        TokenPair storage tokenPair = _tokenPairs[remoteChainID][address(args.token)];
 
-    // private functions
-    function _registerToken(
-        uint remoteChainID,
-        bool isOrigin,
-        address localToken,
-        address remoteToken,
-        uint localTokenRate,
-        uint remoteTokenRate,
-        uint safetyLimit
-    ) private {
-        Chain storage chain = _chainData[remoteChainID];
-
-        if (_chains.add(remoteChainID)) chain.remoteChainID = remoteChainID;
-
-        require(localToken != address(0), RegistryZeroAddress());
-        require(_tokens[remoteChainID].add(localToken), RegistryExistToken(localToken));
-
-        if (localTokenRate != remoteTokenRate) {
-            require(localTokenRate != 0, RegistryZeroLocalRate());
-            require(remoteTokenRate != 0, RegistryZeroRemoteRate());
-
-            if (localTokenRate > remoteTokenRate) {
-                require(
-                    remoteTokenRate == 1 && localTokenRate % 10 == 0,
-                    RegistryInvalidRate(localTokenRate, remoteTokenRate)
-                );
-            } else {
-                require(
-                    localTokenRate == 1 && remoteTokenRate % 10 == 0,
-                    RegistryInvalidRate(localTokenRate, remoteTokenRate)
-                );
-            }
-        }
-
-        _tokenPairs[remoteChainID][localToken] = IBridgeRegistry.TokenPair({
-            localToken: localToken,
-            remoteToken: remoteToken,
-            localTokenRate: localTokenRate,
-            remoteTokenRate: remoteTokenRate,
-            safetyLimit: safetyLimit,
-            isOrigin: isOrigin,
-            paused: false,
-            deposited: 0,
-            pendingAmount: 0
-        });
-
-        emit TokenPairRegistered(
-            remoteChainID, localToken, remoteToken, localTokenRate, remoteTokenRate, safetyLimit, isOrigin
-        );
+        if (tokenPair.isOrigin) tokenPair.pendingAmount -= args.value;
+        delete (_pendingData[remoteChainID][index]);
     }
 }

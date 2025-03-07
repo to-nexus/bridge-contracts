@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {IRoleManager} from "../src/interface/IRoleManager.sol";
 import {BridgeTest} from "./Bridge.t.sol";
 
 contract BridgeSetTest is BridgeTest {
@@ -8,21 +9,21 @@ contract BridgeSetTest is BridgeTest {
         vm.startPrank(OWNER);
 
         vm.selectFork(ethereumForkID);
-        bridgeEthereum.removeValidator(VALIDATOR5);
-        bool ok = bridgeEthereum.isValidator(VALIDATOR5);
+        bridgeEthereum.setRole(VALIDATOR_ROLE, VALIDATORS, false);
+        bool ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertFalse(ok);
-        bridgeEthereum.setValidator(VALIDATOR5);
-        ok = bridgeEthereum.isValidator(VALIDATOR5);
+        bridgeEthereum.setRole(VALIDATOR_ROLE, VALIDATORS, true);
+        ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertTrue(ok);
         vm.stopPrank();
 
         vm.startPrank(CrossOWNER);
         vm.selectFork(crossForkID);
-        bridgeCross.removeValidator(VALIDATOR5);
-        ok = bridgeCross.isValidator(VALIDATOR5);
+        bridgeCross.setRole(VALIDATOR_ROLE, VALIDATORS, false);
+        ok = bridgeCross.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertFalse(ok);
-        bridgeCross.setValidator(VALIDATOR5);
-        ok = bridgeCross.isValidator(VALIDATOR5);
+        bridgeCross.setRole(VALIDATOR_ROLE, VALIDATORS, true);
+        ok = bridgeCross.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertTrue(ok);
         vm.stopPrank();
     }
@@ -40,10 +41,10 @@ contract BridgeSetTest is BridgeTest {
 
         vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
-        bridgeEthereum.pause();
+        bridgeEthereum.setPause(true);
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.pause();
+        bridgeCross.setPause(true);
 
         vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
@@ -61,10 +62,10 @@ contract BridgeSetTest is BridgeTest {
 
         vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
-        bridgeEthereum.unpause();
+        bridgeEthereum.setPause(false);
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.unpause();
+        bridgeCross.setPause(false);
 
         vm.prank(USER);
         deposit(false, amount, 5);

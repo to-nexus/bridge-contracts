@@ -6,9 +6,9 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
 
 import {IBridgeFeeStation} from "./IBridgeFeeStation.sol";
 import {IBridgeRegistry} from "./IBridgeRegistry.sol";
-import {IValidatorManager} from "./IValidatorManager.sol";
+import {IRoleManager} from "./IRoleManager.sol";
 
-interface IStandardBridge is IValidatorManager, IBridgeRegistry {
+interface IStandardBridge is IBridgeRegistry {
     struct BridgeTokenArguments {
         uint remoteChainID;
         IERC20 token;
@@ -38,7 +38,6 @@ interface IStandardBridge is IValidatorManager, IBridgeRegistry {
         uint exFee,
         bytes calldata extraData
     ) external payable returns (bool);
-    function bridgeTokenBatch(BridgeTokenArguments[] calldata args) external payable;
     function permitBridgeToken(
         uint remoteChainID,
         IERC20 token,
@@ -67,10 +66,8 @@ interface IStandardBridge is IValidatorManager, IBridgeRegistry {
     function retryFinalizeBridgeBatch(uint remoteChainID, uint[] memory indexes) external returns (bool);
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
-    function nexus() external view returns (address payable);
     function estimateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view
         returns (uint minimum, uint gasFee, uint exFee);
-    function denominator() external view returns (uint);
 }
