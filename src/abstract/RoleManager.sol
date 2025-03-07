@@ -29,7 +29,7 @@ abstract contract RoleManager is OwnableUpgradeable, IRoleManager {
      * @param role Role identifier that was modified
      * @param status True if role was added, false if removed
      */
-    event RoleUpdated(address indexed account, bytes32 indexed role, bool indexed status);
+    event RoleUpdated(address indexed account, bytes32 indexed role, bool status);
 
     /// @dev Mapping from role identifier to set of addresses with that role
     mapping(bytes32 => EnumerableSet.AddressSet) private _roles;

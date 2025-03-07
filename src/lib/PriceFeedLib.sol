@@ -39,7 +39,7 @@ library PriceFeedLib {
         ok = exist[0] && exist[1];
         if (!ok) return (false, 0, 0);
 
-        (uint8 decimalA, uint8 decimalB) = (_decimals(feed, tokenA), _decimals(feed, tokenB));
+        (uint8 decimalA, uint8 decimalB) = (decimals(feed, tokenA), decimals(feed, tokenB));
         amountB = calculateAmountBWithPrice(amountA, prices[0], prices[1], decimalA, decimalB);
     }
 
@@ -65,8 +65,8 @@ library PriceFeedLib {
 
     /// @notice Retrieves the number of decimals for a given token.
     /// @param token The address of the token.
-    /// @return decimals The number of decimals.
-    function _decimals(IPriceFeed feed, address token) private view returns (uint8 decimals) {
-        decimals = token == feed.nativeToken() ? uint8(18) : IERC20Metadata(token).decimals();
+    /// @return _decimals The number of decimals.
+    function decimals(IPriceFeed feed, address token) public view returns (uint8 _decimals) {
+        _decimals = token == feed.nativeToken() ? uint8(18) : IERC20Metadata(token).decimals();
     }
 }

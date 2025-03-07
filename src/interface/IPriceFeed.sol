@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {IPriceOracle} from "./IPriceOracle.sol";
 import {IRoleManager} from "./IRoleManager.sol";
 
-interface IPriceFeed is IRoleManager {
+interface IPriceFeed is IRoleManager, IPriceOracle {
     struct PriceData {
         address token;
         uint price;
@@ -12,7 +13,7 @@ interface IPriceFeed is IRoleManager {
 
     function nativeToken() external pure returns (address);
     function allPrices() external view returns (bool[] memory exist, uint[] memory prices, uint updatedAt_);
-    function getPrice(address token) external view returns (bool exist, uint price, uint updatedAt_);
+    function getDollarPrice(address token) external view returns (bool exist, uint price, uint updatedAt_);
     function getPrices(address[] memory tokens)
         external
         view

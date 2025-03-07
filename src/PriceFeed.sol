@@ -3,6 +3,9 @@ pragma solidity 0.8.28;
 
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IPriceFeed} from "./interface/IPriceFeed.sol";
+
+import {IPriceOracle} from "./interface/IPriceOracle.sol";
+import {PriceFeedLib} from "./lib/PriceFeedLib.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
@@ -12,6 +15,7 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
     error PriceFeedCanNotZeroValue(string name);
     error PriceFeedInvalidLength();
     error PriceFeedInvalidPriceAt(uint at, uint blocktime);
+    error PriceFeedNoSource(address token);
 
     event PriceFeedPriceUpdated(address indexed token, uint price, uint timestamp);
 
@@ -44,7 +48,25 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
         return getPrices(_tokens.values());
     }
 
-    function getPrice(address token) public view returns (bool exist, uint price, uint updatedAt_) {
+    function getPrice(address tokenA, address tokenB) external view returns (uint price, uint lastUpdate) {
+        if (tokenA == tokenB) return (1, block.number);
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = tokenA;
+        tokens[1] = tokenB;
+
+        bool[] memory exist;
+        uint[] memory prices;
+        (exist, prices, lastUpdate) = getPrices(tokens);
+        require(exist[0], PriceFeedNoSource(tokenA));
+        require(exist[1], PriceFeedNoSource(tokenB));
+
+        (uint8 decimalA, uint8 decimalB) = (PriceFeedLib.decimals(this, tokenA), PriceFeedLib.decimals(this, tokenB));
+        price = PriceFeedLib.calculateAmountBWithPrice(1, prices[0], prices[1], decimalA, decimalB);
+        return (price, updatedAt);
+    }
+
+    function getDollarPrice(address token) public view returns (bool exist, uint price, uint updatedAt_) {
         if (!(_priceData[token].token == token)) {
             exist = true;
             price = _priceData[token].price;
