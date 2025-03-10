@@ -69,6 +69,19 @@ contract StandardBridge is
     error StandardNotMatchLength();
     error StandardFailedCall();
 
+    /**
+     * @notice Emitted when a bridge operation is initiated
+     * @param remoteChainID The ID of the destination chain
+     * @param index Unique identifier for this bridge operation
+     * @param localToken Token being bridged from the source chain
+     * @param remoteToken Corresponding token on the destination chain
+     * @param from Address initiating the bridge operation
+     * @param to Recipient address on the destination chain
+     * @param value Amount of tokens being bridged
+     * @param time Timestamp when the operation was initiated
+     * @param permit Whether the bridge operation used a permit
+     * @param extraData Additional data for the bridge operation
+     */
     event BridgeInitiated(
         uint indexed remoteChainID,
         uint indexed index,
@@ -81,13 +94,57 @@ contract StandardBridge is
         bool permit,
         bytes extraData
     );
+
+    /**
+     * @notice Emitted when a bridge operation is finalized on the destination chain
+     * @param remoteChainID The ID of the source chain
+     * @param index Unique identifier for this bridge operation
+     * @param token Token that was bridged to the destination chain
+     * @param to Recipient address receiving the tokens
+     * @param value Amount of tokens received
+     * @param time Timestamp when the finalization occurred
+     */
     event BridgeFinalized(
         uint indexed remoteChainID, uint indexed index, IERC20 token, address indexed to, uint value, uint time
     );
-    event BridgeFinalizePending(uint indexed index);
-    event BridgeFeeCharged(uint indexed index, IERC20 indexed token, address indexed account, uint gasFee, uint exFee);
+
+    /**
+     * @notice Emitted when a bridge finalization is pending due to safety checks or errors
+     * @param remoteChainID The ID of the source chain
+     * @param index Unique identifier for this bridge operation
+     */
+    event BridgeFinalizePending(uint indexed remoteChainID, uint indexed index);
+
+    /**
+     * @notice Emitted when fees are collected for a bridge operation
+     * @param remoteChainID The ID of the destination chain
+     * @param index Unique identifier for this bridge operation
+     * @param token Token used to pay the fees
+     * @param account Address that paid the fees
+     * @param gasFee Amount of gas fee charged
+     * @param exFee Amount of exchange fee charged
+     */
+    event BridgeFeeCharged(
+        uint indexed remoteChainID, uint indexed index, IERC20 indexed token, address account, uint gasFee, uint exFee
+    );
+
+    /**
+     * @notice Emitted when a pending bridge operation is manually locked by an admin
+     * @param remoteChainID The ID of the source chain
+     * @param index Unique identifier for the locked bridge operation
+     */
     event PendingLocked(uint indexed remoteChainID, uint indexed index);
+
+    /**
+     * @notice Emitted when the reward wallet address is updated
+     * @param wallet New reward wallet address
+     */
     event NexusSet(address indexed wallet);
+
+    /**
+     * @notice Emitted when the fee station contract is updated
+     * @param feeStation New fee station contract address
+     */
     event FeeStationSet(IBridgeFeeStation indexed feeStation);
 
     /// @dev Native token representation address
@@ -321,7 +378,7 @@ contract StandardBridge is
             emit BridgeFinalized(args.remoteChainID, args.index, args.token, args.to, args.value, block.timestamp);
         } else {
             _setPendingArguments(args, reason, delay);
-            emit BridgeFinalizePending(args.index);
+            emit BridgeFinalizePending(args.remoteChainID, args.index);
         }
 
         return true;
@@ -566,7 +623,7 @@ contract StandardBridge is
         emit BridgeInitiated(
             remoteChainID, index, token, remoteToken, from, to, value, block.timestamp, permit, extraData
         );
-        emit BridgeFeeCharged(index, token, from, gasFee, exFee);
+        emit BridgeFeeCharged(remoteChainID, index, token, from, gasFee, exFee);
     }
 
     function _transferERC20(uint remoteChainID, IERC20 token, address to, uint value)
