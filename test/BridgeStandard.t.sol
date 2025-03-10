@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {IStandardBridge} from "../src/interface/IStandardBridge.sol";
+import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
 
 import {BridgeTest} from "./Bridge.t.sol";
 import {TestToken} from "./token/TestToken.sol";
@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-contract StandardBridgeTest is BridgeTest {
+contract BaseBridgeTest is BridgeTest {
     bytes32 public constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
@@ -73,7 +73,7 @@ contract StandardBridgeTest is BridgeTest {
 
     function test_fuzz_depositWithdraw_eth(uint amount) public {
         (uint minimum, uint gasFee, uint exFeeRate) = crossGetTokenFee(weth);
-        uint denom = bridgeFeeStationCross.denominator();
+        uint denom = bridgeFeeManagerCross.denominator();
         minimum = minimum + gasFee + (minimum * exFeeRate / denom);
         if (minimum < 10) minimum = 1000;
 
@@ -140,10 +140,10 @@ contract StandardBridgeTest is BridgeTest {
             assertEq(before, testTokenEthereum.balanceOf(USER));
 
             vm.selectFork(ethereumForkID);
-            IStandardBridge.PendingData memory pendingArgs = bridgeEthereum.getPendingArguments(CROSS_CHAIN_ID, index);
+            IBaseBridge.PendingData memory pendingArgs = bridgeEthereum.getPendingArguments(CROSS_CHAIN_ID, index);
             assertEq(pendingArgs.safeDeadline, 0);
             assertEq(pendingArgs.args.index, index);
-            assertEq(address(pendingArgs.args.token), address(testTokenEthereum));
+            assertEq(address(pendingArgs.args.toToken), address(testTokenEthereum));
             assertEq(pendingArgs.args.to, USER);
             assertEq(pendingArgs.args.value, value);
             assertNotEq("", pendingArgs.reason);
@@ -156,7 +156,7 @@ contract StandardBridgeTest is BridgeTest {
             before = testTokenEthereum.balanceOf(USER);
 
             vm.prank(VALIDATOR1);
-            bridgeEthereum.retryFinalizeBridge(CROSS_CHAIN_ID, index);
+            bridgeEthereum.releasePending(CROSS_CHAIN_ID, index);
 
             assertEq(before + value, testTokenEthereum.balanceOf(USER));
         }
@@ -177,7 +177,7 @@ contract StandardBridgeTest is BridgeTest {
         uint userCoinBalance = USER.balance;
         uint bridgeCoinBalance = address(bridgeCross).balance;
 
-        IStandardBridge.PermitArguments memory permitArgs;
+        IBaseBridge.PermitArguments memory permitArgs;
         {
             uint deadline = type(uint).max;
             // make permit sig
@@ -187,7 +187,7 @@ contract StandardBridgeTest is BridgeTest {
             bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
-            permitArgs = IStandardBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
         vm.prank(VALIDATOR1);
@@ -219,7 +219,7 @@ contract StandardBridgeTest is BridgeTest {
         uint userCrossBalance = testTokenCross.balanceOf(USER);
 
         uint index;
-        IStandardBridge.PermitArguments memory permitArgs;
+        IBaseBridge.PermitArguments memory permitArgs;
         {
             // make permit sig
             index = nextIndexCross;
@@ -232,7 +232,7 @@ contract StandardBridgeTest is BridgeTest {
                 MessageHashUtils.toTypedDataHash(IERC20Permit(address(testTokenEthereum)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
 
-            permitArgs = IStandardBridge.PermitArguments(
+            permitArgs = IBaseBridge.PermitArguments(
                 IERC20Permit(address(testTokenEthereum)), USER, amount, type(uint).max, v, r, s
             );
         }
@@ -269,7 +269,7 @@ contract StandardBridgeTest is BridgeTest {
         uint userCoinBalance = USER.balance;
         uint bridgeCoinBalance = address(bridgeCross).balance;
 
-        IStandardBridge.PermitArguments memory permitArgs;
+        IBaseBridge.PermitArguments memory permitArgs;
         {
             uint deadline = type(uint).max;
             // make permit sig
@@ -279,10 +279,10 @@ contract StandardBridgeTest is BridgeTest {
             bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
-            permitArgs = IStandardBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
-        IStandardBridge.PermitArguments memory permitArgs2;
+        IBaseBridge.PermitArguments memory permitArgs2;
         {
             uint deadline = type(uint).max;
             // make permit sig
@@ -292,18 +292,17 @@ contract StandardBridgeTest is BridgeTest {
             bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, OWNER, address(bridgeEthereum), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(OWNER_PK, hash);
-            permitArgs2 =
-                IStandardBridge.PermitArguments(IERC20Permit(address(cross)), OWNER, amount, deadline, v, r, s);
+            permitArgs2 = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), OWNER, amount, deadline, v, r, s);
         }
 
-        IStandardBridge.BridgeTokenArguments[] memory args = new IStandardBridge.BridgeTokenArguments[](2);
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](2);
         {
-            args[0] = IStandardBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA);
+            args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA);
         }
         {
-            args[1] = IStandardBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, amount, 0, 0, NULLDATA);
+            args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, amount, 0, 0, NULLDATA);
         }
-        IStandardBridge.PermitArguments[] memory permitArgsArray = new IStandardBridge.PermitArguments[](2);
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](2);
         {
             permitArgsArray[0] = permitArgs;
         }
@@ -342,7 +341,7 @@ contract StandardBridgeTest is BridgeTest {
     //     uint userCoinBalance = USER.balance;
     //     uint bridgeCoinBalance = address(bridgeCross).balance;
 
-    //     IStandardBridge.PermitArguments memory permitArgs;
+    //     IBaseBridge.PermitArguments memory permitArgs;
     //     {
     //         uint deadline = type(uint).max;
     //         // make permit sig
@@ -352,10 +351,10 @@ contract StandardBridgeTest is BridgeTest {
     //         bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
     //         bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
     //         (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
-    //         permitArgs = IStandardBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
+    //         permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
     //     }
 
-    //     IStandardBridge.PermitArguments memory permitArgs2;
+    //     IBaseBridge.PermitArguments memory permitArgs2;
     //     {
     //         uint deadline = type(uint).max;
     //         // make permit sig
@@ -366,17 +365,17 @@ contract StandardBridgeTest is BridgeTest {
     //         bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
     //         (uint8 v, bytes32 r, bytes32 s) = vm.sign(OWNER_PK, hash);
     //         permitArgs2 =
-    //             IStandardBridge.PermitArguments(IERC20Permit(address(cross)), OWNER, amount, deadline, v + 1, r, s); // invalid v
+    //             IBaseBridge.PermitArguments(IERC20Permit(address(cross)), OWNER, amount, deadline, v + 1, r, s); // invalid v
     //     }
 
-    //     IStandardBridge.BridgeTokenArguments[] memory args = new IStandardBridge.BridgeTokenArguments[](2);
+    //     IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](2);
     //     {
-    //         args[0] = IStandardBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA);
+    //         args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA);
     //     }
     //     {
-    //         args[1] = IStandardBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, amount, 0, 0, NULLDATA);
+    //         args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, amount, 0, 0, NULLDATA);
     //     }
-    //     IStandardBridge.PermitArguments[] memory permitArgsArray = new IStandardBridge.PermitArguments[](2);
+    //     IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](2);
     //     {
     //         permitArgsArray[0] = permitArgs;
     //     }

@@ -6,7 +6,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IBridgeRegistry} from "../interface/IBridgeRegistry.sol";
-import {ICrossMintableERC20Factory} from "../token/ICrossMintableERC20Factory.sol";
+import {ICrossMintableERC20Code} from "../token/ICrossMintableERC20Code.sol";
 import {RoleManager} from "./RoleManager.sol";
 
 /**
@@ -17,14 +17,13 @@ import {RoleManager} from "./RoleManager.sol";
  * - Chain information management
  * - Token pause/unpause functionality
  * - CrossMintable token creation
- * - Safety limit management
  * - Pending operation tracking
  *
  * @dev Key structures:
  * TokenPair {
  *   localToken: Token address on this chain
  *   remoteToken: Corresponding token on remote chain
- *   safetyLimit: Maximum amount that can be processed automatically without additional verification
+ *   verificationAmountThreshold: Maximum amount that can be processed automatically without additional verification
  *   isOrigin: Whether this is the origin chain
  *   paused: Bridge operations paused flag
  *   deposited: Total amount deposited
@@ -52,7 +51,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryNotExistChain(uint remoteChainID);
     error RegistryNotExistToken(address token);
     error RegistryNotExistIndex(uint index);
-    error RegistryExistFactory(address factory);
+    error RegistryExistERC20Code(address code);
     error RegistryExistIndex(uint index);
     error RegistryExistToken(address token);
     error RegistryZeroAddress();
@@ -64,20 +63,20 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryFactoryNotSet();
 
     /**
-     * @dev Event emitted when a token pair is registered
+     * @notice Emitted when a token pair is registered
      * @param remoteChainID ID of the remote chain
      * @param localToken Address of token on this chain
      * @param remoteToken Address of corresponding token on remote chain
-     * @param exchangeRate Exchange rate for local token
-     * @param safetyLimit Maximum amount that can be bridged
+     * @param conversionRatio Exchange rate for local token
+     * @param verificationAmountThreshold Maximum amount that can be bridged
      * @param isOrigin Whether this is the origin chain for the token
      */
     event TokenPairRegistered(
         uint indexed remoteChainID,
         address indexed localToken,
         address indexed remoteToken,
-        int exchangeRate,
-        uint safetyLimit,
+        int conversionRatio,
+        uint verificationAmountThreshold,
         bool isOrigin
     );
 
@@ -107,27 +106,27 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @notice Emitted when a token's safety limit is changed
      * @param remoteChainID ID of the remote chain
      * @param token Address of the token
-     * @param safetyLimit New safety limit value
+     * @param verificationAmountThreshold New safety limit value
      */
-    event SafetyLimitSet(uint indexed remoteChainID, address indexed token, uint safetyLimit);
+    event SafetyLimitSet(uint indexed remoteChainID, address indexed token, uint verificationAmountThreshold);
 
     /**
      * @notice Emitted when the CrossMintableERC20Factory is set
-     * @param factory Address of the new factory
+     * @param code Address of the CrossMintableERC20 Code contract
      */
-    event CrossMintableERC20FactorySet(address indexed factory);
+    event CrossMintableERC20CodeSet(address indexed code);
 
     /// @dev Constant role identifier for admin role
     bytes32 private constant ADMIN_ROLE = bytes32("ADMIN");
 
     /// @dev Factory contract for creating new CrossMintable tokens
-    ICrossMintableERC20Factory public crossMintableERC20Factory;
+    ICrossMintableERC20Code public crossMintableERC20Code;
 
     /// @dev Timestamp of the latest pending operation that will expire
     uint internal _latestExpiredPendingTime;
 
     /// @dev Delay period for safety checks (24 hours)
-    uint private _safetyDelay;
+    uint private _verificationDelay;
 
     /// @dev Set of registered chain IDs
     EnumerableSet.UintSet internal _chains;
@@ -142,7 +141,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     mapping(uint => mapping(address => TokenPair)) internal _tokenPairs;
 
     /// @dev Mapping from chain ID and token address to exchange rate
-    mapping(uint => mapping(address => int)) internal _exchangeRate;
+    mapping(uint => mapping(address => int)) internal _conversionRatio;
 
     /// @dev Mapping from chain ID to set of pending operation indices
     mapping(uint => EnumerableSet.UintSet) internal _pendingIndex;
@@ -161,7 +160,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function __BridgeRegistry_init() internal onlyInitializing {
         _updateRole(ADMIN_ROLE, owner(), true);
-        _safetyDelay = 24 hours;
+        _verificationDelay = 24 hours;
     }
 
     /**
@@ -174,7 +173,8 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     }
 
     /**
-     * @dev Modifier to check if token is registered and not paused
+     * @notice Modifier to check if token is registered and not paused
+     * @dev Validates token status for bridge operations
      * @param remoteChainID Chain ID to check
      * @param token Token address to check
      */
@@ -191,8 +191,8 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Registers token pair automatically
      * @param remoteChainID Chain ID where the original token exists
      * @param remoteToken Address of the original token
-     * @param exchangeRate Exchange rate for local token
-     * @param safetyLimit Maximum amount that can be bridged
+     * @param conversionRatio Exchange rate for local token
+     * @param verificationAmountThreshold Maximum amount that can be bridged
      * @param symbol Token symbol
      * @param decimals Token decimals
      * @return tokenAddress Address of the newly created token
@@ -200,19 +200,14 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     function createToken(
         uint remoteChainID,
         address remoteToken,
-        int exchangeRate,
-        uint safetyLimit,
+        int conversionRatio,
+        uint verificationAmountThreshold,
         string memory symbol,
         uint8 decimals
     ) external returns (address tokenAddress) {
-        require(address(crossMintableERC20Factory) != address(0), RegistryFactoryNotSet());
-        tokenAddress = crossMintableERC20Factory.createCrossMintableERC20(
-            keccak256(abi.encodePacked(remoteToken)),
-            string(abi.encodePacked("Cross Bridge ", symbol)),
-            symbol,
-            decimals
-        );
-        registerToken(remoteChainID, false, tokenAddress, remoteToken, exchangeRate, safetyLimit);
+        require(address(crossMintableERC20Code) != address(0), RegistryFactoryNotSet());
+        tokenAddress = crossMintableERC20Code.createCrossMintableERC20(remoteChainID, remoteToken, symbol, decimals);
+        registerToken(remoteChainID, false, tokenAddress, remoteToken, conversionRatio, verificationAmountThreshold);
     }
 
     /**
@@ -225,16 +220,16 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param isOrigin Whether this is the origin chain for the token
      * @param localToken Local token address
      * @param remoteToken Remote token address
-     * @param exchangeRate Exchange rate for local token
-     * @param safetyLimit Maximum amount that can be bridged
+     * @param conversionRatio Exchange rate for local token
+     * @param verificationAmountThreshold Maximum amount that can be automatically bridged
      */
     function registerToken(
         uint remoteChainID,
         bool isOrigin,
         address localToken,
         address remoteToken,
-        int exchangeRate,
-        uint safetyLimit
+        int conversionRatio,
+        uint verificationAmountThreshold
     ) public onlyOwner {
         if (_chains.add(remoteChainID)) {
             _chainData[remoteChainID] =
@@ -247,15 +242,17 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         _tokenPairs[remoteChainID][localToken] = IBridgeRegistry.TokenPair({
             localToken: localToken,
             remoteToken: remoteToken,
-            safetyLimit: safetyLimit,
+            verificationAmountThreshold: verificationAmountThreshold,
             isOrigin: isOrigin,
             paused: false,
             deposited: 0,
             pendingAmount: 0
         });
-        if (exchangeRate > 1 || exchangeRate < -1) _exchangeRate[remoteChainID][localToken] = exchangeRate;
+        if (conversionRatio > 1 || conversionRatio < -1) _conversionRatio[remoteChainID][localToken] = conversionRatio;
 
-        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, exchangeRate, safetyLimit, isOrigin);
+        emit TokenPairRegistered(
+            remoteChainID, localToken, remoteToken, conversionRatio, verificationAmountThreshold, isOrigin
+        );
     }
 
     /**
@@ -270,7 +267,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     function unregisterToken(uint remoteChainID, address token) external onlyOwner {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
         delete (_tokenPairs[remoteChainID][token]);
-        delete (_exchangeRate[remoteChainID][token]);
+        delete (_conversionRatio[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
     }
 
@@ -280,16 +277,14 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Can only be set once
      * - Validates non-zero address
      * - Emits factory update event
-     * @param _crossMintableERC20Factory Address of the new factory
+     * @param _crossMintableERC20Code Address of the new factory
      */
-    function setCrossMintableERC20Factory(ICrossMintableERC20Factory _crossMintableERC20Factory) external onlyOwner {
-        require(
-            address(crossMintableERC20Factory) == address(0), RegistryExistFactory(address(crossMintableERC20Factory))
-        );
-        require(address(_crossMintableERC20Factory) != address(0), RegistryZeroAddress());
+    function setCrossMintableERC20Code(ICrossMintableERC20Code _crossMintableERC20Code) external onlyOwner {
+        require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
+        require(address(_crossMintableERC20Code) != address(0), RegistryZeroAddress());
 
-        crossMintableERC20Factory = _crossMintableERC20Factory;
-        emit CrossMintableERC20FactorySet(address(crossMintableERC20Factory));
+        crossMintableERC20Code = _crossMintableERC20Code;
+        emit CrossMintableERC20CodeSet(address(crossMintableERC20Code));
     }
 
     /**
@@ -313,12 +308,12 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Updates safety limit value
      * @param remoteChainID Chain ID of the token pair
      * @param token Token address to update
-     * @param safetyLimit New safety limit value
+     * @param verificationAmountThreshold New safety limit value
      */
-    function setSafetyLimit(uint remoteChainID, address token, uint safetyLimit) external onlyAdmin {
+    function setSafetyLimit(uint remoteChainID, address token, uint verificationAmountThreshold) external onlyAdmin {
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
-        _tokenPairs[remoteChainID][token].safetyLimit = safetyLimit;
-        emit SafetyLimitSet(remoteChainID, token, safetyLimit);
+        _tokenPairs[remoteChainID][token].verificationAmountThreshold = verificationAmountThreshold;
+        emit SafetyLimitSet(remoteChainID, token, verificationAmountThreshold);
     }
 
     /**
@@ -328,13 +323,12 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Sets pause flag
      * - Emits pause event
      * @param remoteChainID Chain ID to pause
+     * @param pause Whether to pause (true) or unpause (false)
      */
     function setPauseChain(uint remoteChainID, bool pause) external onlyAdmin {
         require(_chains.contains(remoteChainID), RegistryNotExistChain(remoteChainID));
-        if (_chainData[remoteChainID].paused != pause) {
-            _chainData[remoteChainID].paused = pause;
-            emit ChainPauseSet(remoteChainID, pause);
-        }
+        _chainData[remoteChainID].paused = pause;
+        emit ChainPauseSet(remoteChainID, pause);
     }
 
     /**
@@ -345,13 +339,12 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Emits pause event
      * @param remoteChainID Chain ID of the token pair
      * @param token Token address to pause
+     * @param pause Whether to pause (true) or unpause (false)
      */
     function setPauseToken(uint remoteChainID, address token, bool pause) external onlyAdmin {
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
-        if (_tokenPairs[remoteChainID][token].paused != pause) {
-            _tokenPairs[remoteChainID][token].paused = pause;
-            emit TokenPauseSet(remoteChainID, token, pause);
-        }
+        _tokenPairs[remoteChainID][token].paused = pause;
+        emit TokenPauseSet(remoteChainID, token, pause);
     }
 
     /**
@@ -441,6 +434,15 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         return _latestExpiredPendingTime >= block.timestamp;
     }
 
+    /**
+     * @notice Validates token registration and status
+     * @dev Internal function to check token can be used for bridging
+     * - Verifies token is registered
+     * - Verifies chain is not paused
+     * - Verifies token is not paused
+     * @param remoteChainID Chain ID to check
+     * @param token Token address to check
+     */
     function _validateToken(uint remoteChainID, address token) private view {
         // check token is registered
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
@@ -454,7 +456,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @notice Increments initiate index for a chain
      * @dev Internal function to update counter
      * @param remoteChainID Chain ID to update
-     * @return index index value
+     * @return index Current index value (after increment)
      */
     function _useInitiateIndex(uint remoteChainID) internal returns (uint index) {
         unchecked {
@@ -466,7 +468,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @notice Increments finalize index for a chain
      * @dev Internal function to update counter
      * @param remoteChainID Chain ID to update
-     * @return index index value
+     * @return index Current index value (after increment)
      */
     function _useFinalizeIndex(uint remoteChainID) internal returns (uint index) {
         unchecked {
@@ -509,21 +511,23 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Adds to pending index set
      * - Stores operation arguments and reason
      * - Updates pending amounts for origin tokens
+     * - Updates safety deadline for delayed processing
      * @param args Finalization arguments to store
      * @param reason Error message explaining pending status
+     * @param delay Whether to delay processing (safety delay)
      */
     function _setPendingArguments(FinalizeArguments calldata args, bytes memory reason, bool delay) internal {
-        require(_pendingIndex[args.remoteChainID].add(args.index), RegistryExistIndex(args.index));
+        require(_pendingIndex[args.fromChainID].add(args.index), RegistryExistIndex(args.index));
 
         uint deadline = 0;
         if (delay) {
-            deadline = block.timestamp + _safetyDelay;
-            _latestExpiredPendingTime = block.timestamp + _safetyDelay;
+            deadline = block.timestamp + _verificationDelay;
+            _latestExpiredPendingTime = block.timestamp + _verificationDelay;
         }
 
-        _pendingData[args.remoteChainID][args.index] = PendingData({args: args, reason: reason, safeDeadline: deadline});
+        _pendingData[args.fromChainID][args.index] = PendingData({args: args, reason: reason, safeDeadline: deadline});
 
-        TokenPair storage tokenPair = _tokenPairs[args.remoteChainID][address(args.token)];
+        TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
         if (tokenPair.isOrigin) tokenPair.pendingAmount += args.value;
     }
 
@@ -532,14 +536,16 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @dev Cleans up pending operation data
      * - Removes from pending index set
      * - Clears stored arguments and reason
+     * - Updates pending amounts for origin tokens
      * @param remoteChainID Chain ID of operation
      * @param index Index of operation to remove
+     * @return args The finalization arguments of the removed pending operation
      */
     function _removePendingArguments(uint remoteChainID, uint index) internal returns (FinalizeArguments memory args) {
         require(_pendingIndex[remoteChainID].remove(index), RegistryNotExistIndex(index));
 
         args = _pendingData[remoteChainID][index].args;
-        TokenPair storage tokenPair = _tokenPairs[remoteChainID][address(args.token)];
+        TokenPair storage tokenPair = _tokenPairs[remoteChainID][address(args.toToken)];
 
         if (tokenPair.isOrigin) tokenPair.pendingAmount -= args.value;
         delete (_pendingData[remoteChainID][index]);

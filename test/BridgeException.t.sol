@@ -134,11 +134,11 @@ contract BridgeExceptionTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         vm.expectRevert();
-        bridgeCross.retryFinalizeBridge(ETHEREUM_CHAIN_ID, index);
+        bridgeCross.releasePending(ETHEREUM_CHAIN_ID, index);
 
         vm.warp(block.timestamp + 25 hours);
         vm.prank(CrossOWNER);
-        bridgeCross.retryFinalizeBridge(ETHEREUM_CHAIN_ID, index);
+        bridgeCross.releasePending(ETHEREUM_CHAIN_ID, index);
     }
 
     function test_deposit_with_over_safety_limit_manual() public {
@@ -159,7 +159,7 @@ contract BridgeExceptionTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         vm.expectRevert();
-        bridgeCross.retryFinalizeBridge(ETHEREUM_CHAIN_ID, index);
+        bridgeCross.releasePending(ETHEREUM_CHAIN_ID, index);
 
         vm.prank(USER);
         vm.expectRevert();

@@ -13,7 +13,8 @@ interface IPriceFeed is IRoleManager, IPriceOracle {
 
     function nativeToken() external pure returns (address);
     function allPrices() external view returns (bool[] memory exist, uint[] memory prices, uint updatedAt_);
-    function getDollarPrice(address token) external view returns (bool exist, uint price, uint updatedAt_);
+    function getTokenPriceInDollars(address token) external view returns (bool exist, uint price, uint updatedAt_);
+    function getNativeTokenPrice(uint chainID) external view returns (bool exist, uint price, uint updatedAt_);
     function getPrices(address[] memory tokens)
         external
         view

@@ -7,9 +7,9 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 interface IBridgeRegistry is IRoleManager {
     struct FinalizeArguments {
-        uint remoteChainID;
+        uint fromChainID;
         uint index;
-        IERC20 token;
+        IERC20 toToken;
         address to;
         uint value;
         bytes extraData;
@@ -27,7 +27,7 @@ interface IBridgeRegistry is IRoleManager {
         address remoteToken; // remote token address
         bool paused; // whether the token is paused
         bool isOrigin; // whether the token is origin token
-        uint safetyLimit; // safety limit of the token
+        uint verificationAmountThreshold; // safety limit of the token
         uint deposited; // deposited amount of the token
         uint pendingAmount; // pending amount of the token
     }

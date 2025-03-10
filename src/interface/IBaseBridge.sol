@@ -4,14 +4,14 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-import {IBridgeFeeStation} from "./IBridgeFeeStation.sol";
+import {IBridgeFeeManager} from "./IBridgeFeeManager.sol";
 import {IBridgeRegistry} from "./IBridgeRegistry.sol";
 import {IRoleManager} from "./IRoleManager.sol";
 
-interface IStandardBridge is IBridgeRegistry {
+interface IBaseBridge is IBridgeRegistry {
     struct BridgeTokenArguments {
-        uint remoteChainID;
-        IERC20 token;
+        uint toChainID;
+        IERC20 fromToken;
         address to;
         uint value;
         uint gasFee;
@@ -30,8 +30,8 @@ interface IStandardBridge is IBridgeRegistry {
     }
 
     function bridgeToken(
-        uint remoteChainID,
-        IERC20 token,
+        uint toChainID,
+        IERC20 fromToken,
         address to,
         uint value,
         uint gasFee,
@@ -39,8 +39,8 @@ interface IStandardBridge is IBridgeRegistry {
         bytes calldata extraData
     ) external payable returns (bool);
     function permitBridgeToken(
-        uint remoteChainID,
-        IERC20 token,
+        uint toChainID,
+        IERC20 fromToken,
         address to,
         uint value,
         uint gasFee,
@@ -61,13 +61,13 @@ interface IStandardBridge is IBridgeRegistry {
         bytes32[][] memory r,
         bytes32[][] memory s
     ) external payable returns (bool);
-    function bridgeFeeStation() external view returns (IBridgeFeeStation);
-    function retryFinalizeBridge(uint remoteChainID, uint index) external returns (bool);
-    function retryFinalizeBridgeBatch(uint remoteChainID, uint[] memory indexes) external returns (bool);
+    function bridgeFeeManager() external view returns (IBridgeFeeManager);
+    function releasePending(uint remoteChainID, uint index) external returns (bool);
+    function releasePendingBatch(uint remoteChainID, uint[] memory indexes) external returns (bool);
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
-    function estimateFee(uint remoteChainID, IERC20 token, uint value)
+    function calculateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view
-        returns (uint minimum, uint gasFee, uint exFee);
+        returns (uint minimumValue, uint gasFee, uint exFee);
 }

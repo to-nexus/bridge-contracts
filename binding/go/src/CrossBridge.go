@@ -31,21 +31,22 @@ var (
 
 // CrossBridgeMetaData contains all meta data concerning the CrossBridge contract.
 var CrossBridgeMetaData = &bind.MetaData{
-	ABI: "[{\"stateMutability\":\"payable\",\"type\":\"receive\"},{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allChainIDs\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"allPendingIndex\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"allTokenPairs\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"paused\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"safetyLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deposited\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pendingAmount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeRegistry.TokenPair[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bridgeFeeStation\",\"outputs\":[{\"internalType\":\"contractIBridgeFeeStation\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"name\":\"bridgeToken\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"threshold_\",\"type\":\"uint8\"}],\"name\":\"changeThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"clearPending\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"exchangeRate\",\"type\":\"int256\"},{\"internalType\":\"uint256\",\"name\":\"safetyLimit\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"symbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"decimals\",\"type\":\"uint8\"}],\"name\":\"createToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"crossMintableERC20Factory\",\"outputs\":[{\"internalType\":\"contractICrossMintableERC20Factory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"domainSeparator\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"eip712Domain\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"fields\",\"type\":\"bytes1\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"verifyingContract\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"extensions\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"estimateFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"minimumAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.FinalizeArguments\",\"name\":\"args\",\"type\":\"tuple\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"}],\"name\":\"finalizeBridge\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.FinalizeArguments[]\",\"name\":\"args\",\"type\":\"tuple[]\"},{\"internalType\":\"uint8[][]\",\"name\":\"v\",\"type\":\"uint8[][]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"r\",\"type\":\"bytes32[][]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"s\",\"type\":\"bytes32[][]\"}],\"name\":\"finalizeBridgeBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"getNextFinalizeIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"getNextInitiateIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getPendingArguments\",\"outputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.FinalizeArguments\",\"name\":\"args\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"safeDeadline\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"reason\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.PendingData\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleMembers\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getTokenPair\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"paused\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"safetyLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deposited\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pendingAmount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeRegistry.TokenPair\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hasExpiredPending\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_threshold\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"nexus_\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initializedAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"lockPending\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"manualProcessPending\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nexus\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"contractIERC20Permit\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"internalType\":\"structIStandardBridge.PermitArguments\",\"name\":\"permitArgs\",\"type\":\"tuple\"}],\"name\":\"permitBridgeToken\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIStandardBridge.BridgeTokenArguments[]\",\"name\":\"args\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"contractIERC20Permit\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"internalType\":\"structIStandardBridge.PermitArguments[]\",\"name\":\"permitArgs\",\"type\":\"tuple[]\"}],\"name\":\"permitBridgeTokenBatch\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"maxCount\",\"type\":\"uint256\"}],\"name\":\"processExpiredPending\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"},{\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"exchangeRate\",\"type\":\"int256\"},{\"internalType\":\"uint256\",\"name\":\"safetyLimit\",\"type\":\"uint256\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"newAccounts\",\"type\":\"address[]\"}],\"name\":\"resetRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"retryFinalizeBridge\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"indexes\",\"type\":\"uint256[]\"}],\"name\":\"retryFinalizeBridgeBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractICrossMintableERC20Factory\",\"name\":\"_crossMintableERC20Factory\",\"type\":\"address\"}],\"name\":\"setCrossMintableERC20Factory\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIBridgeFeeStation\",\"name\":\"_bridgeFeeStation\",\"type\":\"address\"}],\"name\":\"setFeeStation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"nexus_\",\"type\":\"address\"}],\"name\":\"setNexus\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"set\",\"type\":\"bool\"}],\"name\":\"setPause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"setPauseChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"setPauseToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"accounts\",\"type\":\"address[]\"},{\"internalType\":\"bool\",\"name\":\"set\",\"type\":\"bool\"}],\"name\":\"setRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"safetyLimit\",\"type\":\"uint256\"}],\"name\":\"setSafetyLimit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"threshold\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"unregisterToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"name\":\"BridgeFeeCharged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BridgeFinalizePending\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"}],\"name\":\"BridgeFinalized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"localToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"permit\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"name\":\"BridgeInitiated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"ChainPauseSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"factory\",\"type\":\"address\"}],\"name\":\"CrossMintableERC20FactorySet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"EIP712DomainChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contractIBridgeFeeStation\",\"name\":\"feeStation\",\"type\":\"address\"}],\"name\":\"FeeStationSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"wallet\",\"type\":\"address\"}],\"name\":\"NexusSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"PendingLocked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"RoleUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"safetyLimit\",\"type\":\"uint256\"}],\"name\":\"SafetyLimitSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"threshold\",\"type\":\"uint8\"}],\"name\":\"ThresholdChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"int256\",\"name\":\"exchangeRate\",\"type\":\"int256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"safetyLimit\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"}],\"name\":\"TokenPairRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"}],\"name\":\"TokenPairUnregistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"TokenPauseSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ECDSAInvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"ECDSAInvalidSignatureLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"ECDSAInvalidSignatureS\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"EnforcedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ExpectedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deposited\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pendingAmount\",\"type\":\"uint256\"}],\"name\":\"RegistryBalanceLow\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"RegistryChainPauseNotChanged\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"RegistryChainPaused\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"factory\",\"type\":\"address\"}],\"name\":\"RegistryExistFactory\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"RegistryExistIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryExistToken\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RegistryFactoryNotSet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"RegistryNotExistChain\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"RegistryNotExistIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryNotExistToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryTokenPauseNotChanged\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryTokenPaused\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RegistryZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleAlreadyGranted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RoleCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RoleInvalid\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleNotAuthorized\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleNotGranted\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"StandardBurnFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StandardCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StandardCanNotZeroMsgValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StandardFailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StandardInvalidAmount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"StandardInvalidBalance\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"StandardInvalidIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"StandardInvalidMsgValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"expected\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"actual\",\"type\":\"address\"}],\"name\":\"StandardInvalidPermitToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"StandardInvalidValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"StandardInvalidValueUnit\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StandardNotExist\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"StandardNotExistIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"StandardNotExistToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"safeDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"StandardNotExpiredSafeDeadline\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StandardNotMatchLength\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"ValidatorInsufficientSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"v\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"r\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"s\",\"type\":\"uint256\"}],\"name\":\"ValidatorInvalidSignatures\",\"type\":\"error\"}]",
+	ABI: "[{\"stateMutability\":\"payable\",\"type\":\"receive\"},{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allChainIDs\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"allPendingIndex\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"allTokenPairs\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"paused\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"verificationAmountThreshold\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deposited\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pendingAmount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeRegistry.TokenPair[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bridgeFeeManager\",\"outputs\":[{\"internalType\":\"contractIBridgeFeeManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"fromToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"name\":\"bridgeToken\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"calculateFee\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"minimumValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"threshold_\",\"type\":\"uint8\"}],\"name\":\"changeThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"clearPending\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"conversionRatio\",\"type\":\"int256\"},{\"internalType\":\"uint256\",\"name\":\"verificationAmountThreshold\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"symbol\",\"type\":\"string\"},{\"internalType\":\"uint8\",\"name\":\"decimals\",\"type\":\"uint8\"}],\"name\":\"createToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"tokenAddress\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"crossMintableERC20Code\",\"outputs\":[{\"internalType\":\"contractICrossMintableERC20Code\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dev\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"domainSeparator\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"eip712Domain\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"fields\",\"type\":\"bytes1\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"verifyingContract\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"extensions\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"fromChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.FinalizeArguments\",\"name\":\"args\",\"type\":\"tuple\"},{\"internalType\":\"uint8[]\",\"name\":\"v\",\"type\":\"uint8[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"r\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"s\",\"type\":\"bytes32[]\"}],\"name\":\"finalizeBridge\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"fromChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.FinalizeArguments[]\",\"name\":\"args\",\"type\":\"tuple[]\"},{\"internalType\":\"uint8[][]\",\"name\":\"v\",\"type\":\"uint8[][]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"r\",\"type\":\"bytes32[][]\"},{\"internalType\":\"bytes32[][]\",\"name\":\"s\",\"type\":\"bytes32[][]\"}],\"name\":\"finalizeBridgeBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"getNextFinalizeIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"getNextInitiateIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getPendingArguments\",\"outputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"fromChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.FinalizeArguments\",\"name\":\"args\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"safeDeadline\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"reason\",\"type\":\"bytes\"}],\"internalType\":\"structIBridgeRegistry.PendingData\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleMembers\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getTokenPair\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"paused\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"verificationAmountThreshold\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deposited\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pendingAmount\",\"type\":\"uint256\"}],\"internalType\":\"structIBridgeRegistry.TokenPair\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"hasExpiredPending\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_threshold\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"dev_\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initializedAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"manualProcessPending\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"fromToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"contractIERC20Permit\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"internalType\":\"structIBaseBridge.PermitArguments\",\"name\":\"permitArgs\",\"type\":\"tuple\"}],\"name\":\"permitBridgeToken\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"fromToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structIBaseBridge.BridgeTokenArguments[]\",\"name\":\"args\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"contractIERC20Permit\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"internalType\":\"structIBaseBridge.PermitArguments[]\",\"name\":\"permitArgs\",\"type\":\"tuple[]\"}],\"name\":\"permitBridgeTokenBatch\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"},{\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"conversionRatio\",\"type\":\"int256\"},{\"internalType\":\"uint256\",\"name\":\"verificationAmountThreshold\",\"type\":\"uint256\"}],\"name\":\"registerToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"maxCount\",\"type\":\"uint256\"}],\"name\":\"releaseExpiredPending\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"releasePending\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"indexes\",\"type\":\"uint256[]\"}],\"name\":\"releasePendingBatch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"newAccounts\",\"type\":\"address[]\"}],\"name\":\"resetRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractICrossMintableERC20Code\",\"name\":\"_crossMintableERC20Code\",\"type\":\"address\"}],\"name\":\"setCrossMintableERC20Code\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"dev_\",\"type\":\"address\"}],\"name\":\"setDev\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIBridgeFeeManager\",\"name\":\"_bridgeFeeManager\",\"type\":\"address\"}],\"name\":\"setFeeManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"set\",\"type\":\"bool\"}],\"name\":\"setPause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"setPauseChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"setPauseToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"accounts\",\"type\":\"address[]\"},{\"internalType\":\"bool\",\"name\":\"set\",\"type\":\"bool\"}],\"name\":\"setRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"verificationAmountThreshold\",\"type\":\"uint256\"}],\"name\":\"setSafetyLimit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"setVerificationDeadline\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"threshold\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"unregisterToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"fromChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"}],\"name\":\"BridgeFinalized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"fromToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"permit\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"name\":\"BridgeInitiated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"fromChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"time\",\"type\":\"uint256\"}],\"name\":\"BridgePending\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"ChainPauseSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"code\",\"type\":\"address\"}],\"name\":\"CrossMintableERC20CodeSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"EIP712DomainChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"RoleUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"verificationAmountThreshold\",\"type\":\"uint256\"}],\"name\":\"SafetyLimitSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"threshold\",\"type\":\"uint8\"}],\"name\":\"ThresholdChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"remoteToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"int256\",\"name\":\"conversionRatio\",\"type\":\"int256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"verificationAmountThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isOrigin\",\"type\":\"bool\"}],\"name\":\"TokenPairRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"localToken\",\"type\":\"address\"}],\"name\":\"TokenPairUnregistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"pause\",\"type\":\"bool\"}],\"name\":\"TokenPauseSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"fromChainID\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"VerificationDeadlineSet\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeBurnFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BaseBridgeCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BaseBridgeCanNotZeroMsgValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"reason\",\"type\":\"string\"}],\"name\":\"BaseBridgeFailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BaseBridgeInvalidAmount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeInvalidBalance\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeInvalidIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeInvalidMsgValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"expected\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"actual\",\"type\":\"address\"}],\"name\":\"BaseBridgeInvalidPermitToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"expected\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actual\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeInvalidValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeInvalidValueUnit\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeNotExistIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"BaseBridgeNotExistToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"safeDeadline\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"BaseBridgeNotExpired\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BaseBridgeNotMatchLength\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ECDSAInvalidSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"ECDSAInvalidSignatureLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"s\",\"type\":\"bytes32\"}],\"name\":\"ECDSAInvalidSignatureS\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"EnforcedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ExpectedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deposited\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pendingAmount\",\"type\":\"uint256\"}],\"name\":\"RegistryBalanceLow\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"RegistryChainPauseNotChanged\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"RegistryChainPaused\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"code\",\"type\":\"address\"}],\"name\":\"RegistryExistERC20Code\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"RegistryExistIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryExistToken\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RegistryFactoryNotSet\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"remoteChainID\",\"type\":\"uint256\"}],\"name\":\"RegistryNotExistChain\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"RegistryNotExistIndex\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryNotExistToken\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryTokenPauseNotChanged\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"RegistryTokenPaused\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RegistryZeroAddress\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleAlreadyGranted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RoleCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RoleInvalid\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleNotAuthorized\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleNotGranted\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"ValidatorInsufficientSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"v\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"r\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"s\",\"type\":\"uint256\"}],\"name\":\"ValidatorInvalidSignatures\",\"type\":\"error\"}]",
 	Sigs: map[string]string{
 		"ad3cb1cc": "UPGRADE_INTERFACE_VERSION()",
 		"cf56118e": "allChainIDs()",
 		"79214874": "allPendingIndex(uint256)",
 		"5b605f5c": "allTokenPairs(uint256)",
-		"47666cb1": "bridgeFeeStation()",
+		"25bd5666": "bridgeFeeManager()",
 		"5fd262de": "bridgeToken(uint256,address,address,uint256,uint256,uint256,bytes)",
+		"df6e87dc": "calculateFee(uint256,address,uint256)",
 		"b7f3358d": "changeThreshold(uint8)",
 		"0b43c02c": "clearPending(uint256)",
 		"d016d625": "createToken(uint256,address,int256,uint256,string,uint8)",
-		"8f517c17": "crossMintableERC20Factory()",
+		"4be13f83": "crossMintableERC20Code()",
+		"91cca3db": "dev()",
 		"f698da25": "domainSeparator()",
 		"84b0196e": "eip712Domain()",
-		"ae766389": "estimateFee(uint256,address,uint256)",
 		"1938e0f2": "finalizeBridge((uint256,uint256,address,address,uint256,bytes),uint8[],bytes32[],bytes32[])",
 		"88d67d6d": "finalizeBridgeBatch((uint256,uint256,address,address,uint256,bytes)[],uint8[][],bytes32[][],bytes32[][])",
 		"d5717fc5": "getNextFinalizeIndex(uint256)",
@@ -57,34 +58,33 @@ var CrossBridgeMetaData = &bind.MetaData{
 		"91d14854": "hasRole(bytes32,address)",
 		"5187599d": "initialize(uint8,address)",
 		"91cf6d3e": "initializedAt()",
-		"f17f6cb7": "lockPending(uint256,uint256)",
 		"7f4ab9f5": "manualProcessPending(uint256,uint256)",
-		"a3f5c1d2": "nexus()",
 		"8da5cb5b": "owner()",
 		"5c975abb": "paused()",
 		"4d5d0056": "permitBridgeToken(uint256,address,address,uint256,uint256,uint256,bytes,(address,address,uint256,uint256,uint8,bytes32,bytes32))",
 		"d605665b": "permitBridgeTokenBatch((uint256,address,address,uint256,uint256,uint256,bytes)[],(address,address,uint256,uint256,uint8,bytes32,bytes32)[])",
-		"1089fd58": "processExpiredPending(uint256)",
 		"52d1902d": "proxiableUUID()",
 		"1e7bf215": "registerToken(uint256,bool,address,address,int256,uint256)",
+		"c1cb05dd": "releaseExpiredPending(uint256)",
+		"4ee078ba": "releasePending(uint256,uint256)",
+		"6b0e4821": "releasePendingBatch(uint256,uint256[])",
 		"715018a6": "renounceOwnership()",
 		"2d87b7ee": "resetRole(bytes32,address[])",
-		"3960e787": "retryFinalizeBridge(uint256,uint256)",
-		"030372c3": "retryFinalizeBridgeBatch(uint256,uint256[])",
-		"1a1aebbb": "setCrossMintableERC20Factory(address)",
-		"54db0126": "setFeeStation(address)",
-		"2670b817": "setNexus(address)",
+		"e2af6cd7": "setCrossMintableERC20Code(address)",
+		"d477f05f": "setDev(address)",
+		"472d35b9": "setFeeManager(address)",
 		"bedb86fb": "setPause(bool)",
 		"6160751f": "setPauseChain(uint256,bool)",
 		"4d3f0da9": "setPauseToken(uint256,address,bool)",
 		"d4bf502a": "setRole(bytes32,address[],bool)",
 		"39a621f3": "setSafetyLimit(uint256,address,uint256)",
+		"3ca5b39f": "setVerificationDeadline(uint256,uint256,uint256)",
 		"42cde4e8": "threshold()",
 		"f2fde38b": "transferOwnership(address)",
 		"f4509643": "unregisterToken(uint256,address)",
 		"4f1ef286": "upgradeToAndCall(address,bytes)",
 	},
-	Bin: "0x60a060405230608052348015610013575f5ffd5b5061001c610021565b6100d3565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00805468010000000000000000900460ff16156100715760405163f92ee8a960e01b815260040160405180910390fd5b80546001600160401b03908116146100d05780546001600160401b0319166001600160401b0390811782556040519081527fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d29060200160405180910390a15b50565b608051615fa86100eb5f395f613a150152615fa85ff3fe6080604052600436106102c2575f3560e01c80637f4ab9f51161016f578063ae766389116100d8578063d4bf502a11610092578063f17f6cb71161006d578063f17f6cb714610973578063f2fde38b14610992578063f4509643146109b1578063f698da25146109d0575f5ffd5b8063d4bf502a14610922578063d5717fc514610941578063d605665b14610960575f5ffd5b8063ae7663891461084b578063b33eb36e14610885578063b7f3358d146108b1578063bedb86fb146108d0578063cf56118e146108ef578063d016d62514610903575f5ffd5b806391cf6d3e1161012957806391cf6d3e1461077357806391d1485414610787578063a3246ad3146107a6578063a3f5c1d2146107d2578063ad3cb1cc146107ef578063ae6893f81461082c575f5ffd5b80637f4ab9f514610601578063814914b51461062057806384b0196e1461070657806388d67d6d1461072d5780638da5cb5b146107405780638f517c1714610754575f5ffd5b806347666cb11161022b57806354db0126116101e55780635fd262de116101c05780635fd262de1461058f5780636160751f146105a2578063715018a6146105c157806379214874146105d5575f5ffd5b806354db0126146105215780635b605f5c146105405780635c975abb1461056c575f5ffd5b806347666cb1146104645780634d3f0da91461049b5780634d5d0056146104ba5780634f1ef286146104cd5780635187599d146104e057806352d1902d146104ff575f5ffd5b80632670b8171161027c5780632670b817146103b05780632d87b7ee146103cf5780633960e787146103ee57806339a621f31461040d5780633d507c5e1461042c57806342cde4e814610443575f5ffd5b8063030372c3146102ed5780630b43c02c146103215780631089fd58146103405780631938e0f21461035f5780631a1aebbb146103725780631e7bf21514610391575f5ffd5b366102e957345f036102e7576040516365d14ce560e11b815260040160405180910390fd5b005b5f5ffd5b3480156102f8575f5ffd5b5061030c610307366004614d40565b6109e4565b60405190151581526020015b60405180910390f35b34801561032c575f5ffd5b506102e761033b366004614de1565b610a28565b34801561034b575f5ffd5b506102e761035a366004614de1565b610a84565b61030c61036d366004614ed4565b610d6c565b34801561037d575f5ffd5b506102e761038c366004614fa1565b611139565b34801561039c575f5ffd5b506102e76103ab366004614fc9565b6111e9565b3480156103bb575f5ffd5b506102e76103ca366004614fa1565b611499565b3480156103da575f5ffd5b506102e76103e936600461508e565b611511565b3480156103f9575f5ffd5b5061030c6104083660046150d1565b611543565b348015610418575f5ffd5b506102e76104273660046150f1565b611848565b348015610437575f5ffd5b5060335442111561030c565b34801561044e575f5ffd5b5060645460405160ff9091168152602001610318565b34801561046f575f5ffd5b50609654610483906001600160a01b031681565b6040516001600160a01b039091168152602001610318565b3480156104a6575f5ffd5b506102e76104b5366004615126565b61193b565b61030c6104c83660046151a9565b611a79565b6102e76104db3660046152c1565b611c6c565b3480156104eb575f5ffd5b506102e76104fa366004615303565b611c87565b34801561050a575f5ffd5b50610513611d95565b604051908152602001610318565b34801561052c575f5ffd5b506102e761053b366004614fa1565b611db0565b34801561054b575f5ffd5b5061055f61055a366004614de1565b611e48565b604051610318919061538b565b348015610577575f5ffd5b505f516020615f335f395f51905f525460ff1661030c565b61030c61059d3660046153d8565b611fcd565b3480156105ad575f5ffd5b506102e76105bc366004615460565b612036565b3480156105cc575f5ffd5b506102e761212b565b3480156105e0575f5ffd5b506105f46105ef366004614de1565b61213e565b60405161031891906154bd565b34801561060c575f5ffd5b5061030c61061b3660046150d1565b612157565b34801561062b575f5ffd5b506106f961063a3660046154cf565b6040805160e0810182525f80825260208201819052918101829052606081018290526080810182905260a0810182905260c0810191909152505f9182526039602090815260408084206001600160a01b039384168552825292839020835160e08101855281548416815260018201549384169281019290925260ff600160a01b84048116151594830194909452600160a81b9092049092161515606083015260028101546080830152600381015460a08301526004015460c082015290565b60405161031891906154f2565b348015610711575f5ffd5b5061071a6121f2565b604051610318979695949392919061552e565b61030c61073b36600461565b565b61229b565b34801561074b575f5ffd5b50610483612336565b34801561075f575f5ffd5b50603254610483906001600160a01b031681565b34801561077e575f5ffd5b50609854610513565b348015610792575f5ffd5b5061030c6107a13660046154cf565b612364565b3480156107b1575f5ffd5b506107c56107c0366004614de1565b61237b565b604051610318919061578b565b3480156107dd575f5ffd5b506097546001600160a01b0316610483565b3480156107fa575f5ffd5b5061081f604051806040016040528060058152602001640352e302e360dc1b81525081565b60405161031891906157cb565b348015610837575f5ffd5b50610513610846366004614de1565b612394565b348015610856575f5ffd5b5061086a6108653660046150f1565b6123b0565b60408051938452602084019290925290820152606001610318565b348015610890575f5ffd5b506108a461089f3660046150d1565b61243f565b60405161031891906157dd565b3480156108bc575f5ffd5b506102e76108cb36600461586f565b6125e9565b3480156108db575f5ffd5b506102e76108ea366004615888565b61263a565b3480156108fa575f5ffd5b506105f461265b565b34801561090e575f5ffd5b5061048361091d3660046158a3565b61266c565b34801561092d575f5ffd5b506102e761093c36600461592c565b61277c565b34801561094c575f5ffd5b5061051361095b366004614de1565b6127b3565b6102e761096e366004615977565b6127cf565b34801561097e575f5ffd5b506102e761098d3660046150d1565b612962565b34801561099d575f5ffd5b506102e76109ac366004614fa1565b612a39565b3480156109bc575f5ffd5b506102e76109cb3660046154cf565b612a73565b3480156109db575f5ffd5b50610513612b58565b5f805b8251811015610a1c57610a1384848381518110610a0657610a06615a10565b6020026020010151611543565b506001016109e7565b50600190505b92915050565b610a30612b61565b5f818152603b60205260408120610a4690612b93565b90505f5b8151811015610a7f57610a7683838381518110610a6957610a69615a10565b6020026020010151612b9f565b50600101610a4a565b505050565b426033541015610a915750565b5f80610a9d6035612b93565b90505f5b8151811015610d66575f828281518110610abd57610abd615a10565b6020908102919091018101515f818152603790925260409091206003015490915060ff1615610aec5750610d5e565b5f818152603b60205260408120610b0290612b93565b90505f5b8151811015610d5a575f828281518110610b2257610b22615a10565b6020908102919091018101515f868152603c83526040808220838352909352828120835161012081019094528054606085019081526001820154608086015260028201546001600160a01b0390811660a087015260038301541660c0860152600482015460e0860152600582018054949650929493919284928491610100850191610bac90615a24565b80601f0160208091040260200160405190810160405280929190818152602001828054610bd890615a24565b8015610c235780601f10610bfa57610100808354040283529160200191610c23565b820191905f5260205f20905b815481529060010190602001808311610c0657829003601f168201915b505050505081525050815260200160068201548152602001600782018054610c4a90615a24565b80601f0160208091040260200160405190810160405280929190818152602001828054610c7690615a24565b8015610cc15780601f10610c9857610100808354040283529160200191610cc1565b820191905f5260205f20905b815481529060010190602001808311610ca457829003601f168201915b5050509190925250508151515f90815260396020908152604080832085518201516001600160a01b0316845290915290206001015491925050600160a01b900460ff16158015610d145750602081015115155b8015610d235750428160200151105b15610d5057610d328583612dac565b5088610d3d89615a70565b98508810610d5057505050505050505050565b5050600101610b06565b5050505b600101610aa1565b50505050565b5f610d75612e7b565b610d7d612eab565b610da5610d906060870160408801614fa1565b86355f90815260386020526040902090612ee2565b610db56060870160408801614fa1565b90610de4576040516353b2527760e11b81526001600160a01b0390911660048201526024015b60405180910390fd5b505f348015610e0f576040516329e2b03f60e21b815260048101929092526024820152604401610ddb565b505084355f9081526037602052604081206002018054600101908190559050806020870135808214610e5d57604051631351db4160e31b815260048101929092526024820152604401610ddb565b50610eef90507fb2b56073c3812af4a57f2830cbc00b1dd751f01c9c75ccee5c7f4efa28f8d89f6020880135610e9960608a0160408b01614fa1565b610ea960808b0160608c01614fa1565b60808b0135610ebb60a08d018d615a88565b604051602001610ed19796959493929190615af2565b60405160208183030381529060405280519060200120868686612f03565b85355f90815260396020526040808220606091839182918290610f17908d8701908e01614fa1565b6001600160a01b03908116825260208083019390935260409182015f20825160e08101845281548316815260018201549283169481019490945260ff600160a01b8304811615801594860194909452600160a81b9092049091161515606084015260028101546080840152600381015460a08401526004015460c0830152909150610fc8576040518060400160405280600c81526020016b1d1bdad95b881c185d5cd95960a21b8152509250611051565b608081015115801590610fe2575089608001358160800151105b1561101c57604051806040016040528060118152602001701bdd995c881cd859995d1e481b1a5b5a5d607a1b815250925060019150611051565b61104b8a3561103160608d0160408e01614fa1565b61104160808e0160608f01614fa1565b8d60800135613153565b90945092505b5082156110d95761106860808a0160608b01614fa1565b6001600160a01b031660208a01358a357f94ee0e8d51fc110ff38d48510c267aeced8608d1c96f14d63e93085dba231d6b6110a960608e0160408f01614fa1565b604080516001600160a01b03909216825260808f01356020830152429082015260600160405180910390a4611113565b6110e489838361324a565b60405160208a0135907f40c1d3562756f3f19a0504cfdef1405cc3fcb9c8cf0660fff1d5f86a37d40fe2905f90a25b600194505050505061113160015f516020615f535f395f51905f5255565b949350505050565b611141612b61565b6032546001600160a01b0316801561117857604051639ad61dbd60e01b81526001600160a01b039091166004820152602401610ddb565b506001600160a01b0381166111a057604051636ca1fdd760e01b815260040160405180910390fd5b603280546001600160a01b0319166001600160a01b0383169081179091556040517f18df1bf4db6b347f79d6775fd433461aadaf0c13ed6ac4e83873534f6705c1b9905f90a250565b6111f1612b61565b6111fc60358761340a565b1561125957604080516080810182528781525f6020808301828152838501838152606085018481528c855260379093529490922092518355905160018301559151600282015590516003909101805460ff19169115159190911790555b6001600160a01b03841661128057604051636ca1fdd760e01b815260040160405180910390fd5b5f8681526038602052604090206112979085613415565b84906112c2576040516311dd05f360e31b81526001600160a01b039091166004820152602401610ddb565b506040518060e00160405280856001600160a01b03168152602001846001600160a01b031681526020015f1515815260200186151581526020018281526020015f81526020015f81525060395f8881526020019081526020015f205f866001600160a01b03166001600160a01b031681526020019081526020015f205f820151815f015f6101000a8154816001600160a01b0302191690836001600160a01b031602179055506020820151816001015f6101000a8154816001600160a01b0302191690836001600160a01b0316021790555060408201518160010160146101000a81548160ff02191690831515021790555060608201518160010160156101000a81548160ff0219169083151502179055506080820151816002015560a0820151816003015560c08201518160040155905050600182138061140457505f1982125b1561142e575f868152603a602090815260408083206001600160a01b038816845290915290208290555b826001600160a01b0316846001600160a01b0316877fffd50b3f28a6ab2baf4fb67d8aaf0a6c918767d3e790535a54eb250c503b2a6685858a6040516114899392919092835260208301919091521515604082015260600190565b60405180910390a4505050505050565b6114a1612b61565b6001600160a01b0381166114c857604051630fb9363360e41b815260040160405180910390fd5b609780546001600160a01b0319166001600160a01b0383169081179091556040517f489b51edd4714861d63224d4ab9a10ed75c25102854b0dae7b961bfc094e1f0f905f90a250565b6115338261152d5f5f8681526020019081526020015f20612b93565b5f61277c565b61153f8282600161277c565b5050565b5f61154c612e7b565b611554612eab565b5f838152603b6020526040902061156b9083613429565b829061158d57604051630e0b575b60e21b8152600401610ddb91815260200190565b505f838152603c60209081526040808320858452909152808220815161012081019092528054606083019081526001820154608084015260028201546001600160a01b0390811660a085015260038301541660c0840152600482015460e084015260058201805484929184916101008501919061160990615a24565b80601f016020809104026020016040519081016040528092919081815260200182805461163590615a24565b80156116805780601f1061165757610100808354040283529160200191611680565b820191905f5260205f20905b81548152906001019060200180831161166357829003601f168201915b5050505050815250508152602001600682015481526020016007820180546116a790615a24565b80601f01602080910402602001604051908101604052809291908181526020018280546116d390615a24565b801561171e5780601f106116f55761010080835404028352916020019161171e565b820191905f5260205f20905b81548152906001019060200180831161170157829003601f168201915b505050919092525050505f85815260396020908152604080832084518201516001600160a01b03908116855290835292819020815160e08101835281548516815260018201549485169381019390935260ff600160a01b8504811615801585850152600160a81b909504161515606084015260028101546080840152600381015460a08401526004015460c08301528351015192935091906117df576040516338384f6f60e11b81526001600160a01b039091166004820152602401610ddb565b50602082015115806117f45750428260200151105b826020015142909161182257604051636d60854360e01b815260048101929092526024820152604401610ddb565b505061182e8585612dac565b92505050610a2260015f516020615f535f395f51905f5255565b61185a6420a226a4a760d91b33612364565b6420a226a4a760d91b3390916118955760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610ddb565b50505f8381526038602052604090206118ae9083612ee2565b82906118d95760405163153096f360e11b81526001600160a01b039091166004820152602401610ddb565b505f8381526039602090815260408083206001600160a01b038616808552908352928190206002018490555183815285917fd54edc9ee33780fc813e88b7fcafd9163ae63168837ee363914a2f892670d7c891015b60405180910390a3505050565b61194d6420a226a4a760d91b33612364565b6420a226a4a760d91b3390916119885760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610ddb565b50505f8381526038602052604090206119a19083612ee2565b82906119cc5760405163153096f360e11b81526001600160a01b039091166004820152602401610ddb565b505f8381526039602090815260408083206001600160a01b038616845290915290206001015460ff600160a01b90910416151581151514610a7f575f8381526039602090815260408083206001600160a01b0386168085529252918290206001018054841515600160a01b0260ff60a01b19909116179055905184907f493160def6e3ff3605efa5011d5fe909dfb92d4d4bc921682b8022e559dd7bea9061192e90851515815260200190565b5f611a82612e7b565b8989611a8e8282613440565b611a96612eab565b611aa36020850185614fa1565b6001600160a01b038c81169116148b611abf6020870187614fa1565b9091611af15760405163a9212f4360e01b81526001600160a01b03928316600482015291166024820152604401610ddb565b5050611b008c8c8b8b8b613516565b909850965086611b10898b615b3f565b611b1a9190615b3f565b6040850135101587611b2c8a8c615b3f565b611b369190615b3f565b85604001359091611b63576040516365efbabf60e11b815260048101929092526024820152604401610ddb565b505f9050611b776040860160208701614fa1565b3060408701356060880135611b9260a08a0160808b0161586f565b6040516001600160a01b0395861660248201529490931660448501526064840191909152608483015260ff1660a482015260a086013560c482015260c086013560e48201526101040160408051601f19818403018152919052602080820180516001600160e01b031663d505accf60e01b179052909150611c2090611c1990870187614fa1565b5f836135fa565b50611c438c8c611c366040880160208901614fa1565b8d8d8d8d60018e8e613723565b60019250611c5d60015f516020615f535f395f51905f5255565b50509998505050505050505050565b611c74613858565b611c7d826138be565b61153f82826138c6565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a008054600160401b810460ff1615906001600160401b03165f81158015611ccb5750825b90505f826001600160401b03166001148015611ce65750303b155b905081158015611cf4575080155b15611d125760405163f92ee8a960e01b815260040160405180910390fd5b845467ffffffffffffffff191660011785558315611d3c57845460ff60401b1916600160401b1785555b611d468787613982565b8315611d8c57845460ff60401b19168555604051600181527fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d29060200160405180910390a15b50505050505050565b5f611d9e613a0a565b505f516020615f135f395f51905f5290565b611dc26420a226a4a760d91b33612364565b6420a226a4a760d91b339091611dfd5760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610ddb565b5050609680546001600160a01b0319166001600160a01b0383169081179091556040517f68e453b7f82baf4a13086202d4cfa2c41dc5c07b2f441c1f6da0d93bee2ea444905f90a250565b5f81815260386020526040812060609190611e6290612b93565b90505f81516001600160401b03811115611e7e57611e7e614cb2565b604051908082528060200260200182016040528015611ee357816020015b6040805160e0810182525f8082526020808301829052928201819052606082018190526080820181905260a0820181905260c082015282525f19909201910181611e9c5790505b5090505f5b8251811015611fc55760395f8681526020019081526020015f205f848381518110611f1557611f15615a10565b6020908102919091018101516001600160a01b0390811683528282019390935260409182015f20825160e08101845281548516815260018201549485169281019290925260ff600160a01b85048116151593830193909352600160a81b9093049091161515606082015260028201546080820152600382015460a082015260049091015460c08201528251839083908110611fb257611fb2615a10565b6020908102919091010152600101611ee8565b509392505050565b5f611fd6612e7b565b8888611fe28282613440565b611fea612eab565b611ff78b8b8a8a8a613516565b909750955061200e8b8b338c8c8c8c5f8d8d613723565b6001925061202860015f516020615f535f395f51905f5255565b505098975050505050505050565b6120486420a226a4a760d91b33612364565b6420a226a4a760d91b3390916120835760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610ddb565b506120919050603583613429565b82906120b35760405163ac7dbbfd60e01b8152600401610ddb91815260200190565b505f8281526037602052604090206003015460ff1615158115151461153f575f82815260376020908152604091829020600301805460ff1916841515908117909155915191825283917f41ee956671dd2884b868e36b1976ae869e7977d8cc9476d99563a0c0c1f3c675910160405180910390a25050565b612133612b61565b61213c5f613a53565b565b5f818152603b60205260409020606090610a2290612b93565b5f61216a6420a226a4a760d91b33612364565b6420a226a4a760d91b3390916121a55760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610ddb565b50505f838152603b602052604090206121be9083613429565b82906121e057604051630e0b575b60e21b8152600401610ddb91815260200190565b506121eb8383612dac565b9392505050565b5f60608082808083815f516020615ef35f395f51905f52805490915015801561221d57506001810154155b6122615760405162461bcd60e51b81526020600482015260156024820152741152540dcc4c8e88155b9a5b9a5d1a585b1a5e9959605a1b6044820152606401610ddb565b612269613ac3565b612271613b83565b604080515f80825260208201909252600f60f81b9c939b5091995046985030975095509350915050565b5f805b85811015612329576123208787838181106122bb576122bb615a10565b90506020028101906122cd9190615b52565b8683815181106122df576122df615a10565b60200260200101518684815181106122f9576122f9615a10565b602002602001015186858151811061231357612313615a10565b6020026020010151610d6c565b5060010161229e565b5060019695505050505050565b7f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300546001600160a01b031690565b5f8281526020819052604081206121eb9083612ee2565b5f818152602081905260409020606090610a2290612b93565b5f818152603760205260408120600190810154610a2291615b3f565b60965460405163ae76638960e01b8152600481018590526001600160a01b038481166024830152604482018490525f92839283929091169063ae76638990606401606060405180830381865afa15801561240c573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906124309190615b70565b91989097509095509350505050565b612447614bff565b5f838152603c6020908152604080832085845290915290819020815161012081019092528054606083019081526001820154608084015260028201546001600160a01b0390811660a085015260038301541660c0840152600482015460e08401526005820180548492918491610100850191906124c390615a24565b80601f01602080910402602001604051908101604052809291908181526020018280546124ef90615a24565b801561253a5780601f106125115761010080835404028352916020019161253a565b820191905f5260205f20905b81548152906001019060200180831161251d57829003601f168201915b50505050508152505081526020016006820154815260200160078201805461256190615a24565b80601f016020809104026020016040519081016040528092919081815260200182805461258d90615a24565b80156125d85780601f106125af576101008083540402835291602001916125d8565b820191905f5260205f20905b8154815290600101906020018083116125bb57829003601f168201915b505050505081525050905092915050565b6125f1612b61565b6064805460ff191660ff83169081179091556040519081527f541ae612d90d592d7865e446bfd28eb8c1de1ced93c6f992a6df36c9e7bd33ff906020015b60405180910390a150565b612642612b61565b801561265357612650613bc1565b50565b612650613c1d565b60606126676035612b93565b905090565b6032545f906001600160a01b0316612697576040516315aeca0d60e11b815260040160405180910390fd5b6032546040516bffffffffffffffffffffffff19606089901b1660208201526001600160a01b0390911690634804a0419060340160405160208183030381529060405280519060200120856040516020016126f29190615bb2565b60405160208183030381529060405286866040518563ffffffff1660e01b81526004016127229493929190615bd3565b6020604051808303815f875af115801561273e573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906127629190615c12565b9050612772875f838989896111e9565b9695505050505050565b5f5b8251811015610d66576127ab8484838151811061279d5761279d615a10565b602002602001015184613c62565b60010161277e565b5f81815260376020526040812060020154610a22906001615b3f565b8281146127ef5760405163214485c960e01b815260040160405180910390fd5b5f5b8381101561295b5761295285858381811061280e5761280e615a10565b90506020028101906128209190615c2d565b3586868481811061283357612833615a10565b90506020028101906128459190615c2d565b612856906040810190602001614fa1565b87878581811061286857612868615a10565b905060200281019061287a9190615c2d565b61288b906060810190604001614fa1565b88888681811061289d5761289d615a10565b90506020028101906128af9190615c2d565b606001358989878181106128c5576128c5615a10565b90506020028101906128d79190615c2d565b608001358a8a888181106128ed576128ed615a10565b90506020028101906128ff9190615c2d565b60a001358b8b8981811061291557612915615a10565b90506020028101906129279190615c2d565b6129359060c0810190615a88565b8b8b8b81811061294757612947615a10565b905060e00201611a79565b506001016127f1565b5050505050565b6129746420a226a4a760d91b33612364565b6420a226a4a760d91b3390916129af5760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610ddb565b50505f828152603b602052604090206129c89082613429565b81906129ea57604051630e0b575b60e21b8152600401610ddb91815260200190565b505f828152603c602090815260408083208484529091528082205f1960069091015551829184917fa4e22101eb77eafdff61069f49689ebfe0c71e0dab0640d5c0b7bb11d1abb4f69190a35050565b612a41612b61565b6001600160a01b038116612a6a57604051631e4fbdf760e01b81525f6004820152602401610ddb565b61265081613a53565b612a7b612b61565b5f828152603860205260409020612a929082613d92565b8190612abd5760405163153096f360e11b81526001600160a01b039091166004820152602401610ddb565b505f8281526039602090815260408083206001600160a01b03851680855290835281842080546001600160a01b03191681556001810180546001600160b01b03191690556002810185905560038101859055600401849055858452603a835281842081855290925280832083905551909184917fa7353976a33b36069eee140579faabe142bd14e7f8dd5496ac9199bd862edd4d9190a35050565b5f612667613da6565b33612b6a612336565b6001600160a01b03161461213c5760405163118cdaa760e01b8152336004820152602401610ddb565b60605f6121eb83613daf565b612ba7614c25565b5f838152603b60205260409020612bbe9083613e08565b8290612be057604051637f11bea960e01b8152600401610ddb91815260200190565b505f838152603c60209081526040808320858452825291829020825160c0810184528154815260018201549281019290925260028101546001600160a01b0390811693830193909352600381015490921660608201526004820154608082015260058201805491929160a084019190612c5890615a24565b80601f0160208091040260200160405190810160405280929190818152602001828054612c8490615a24565b8015612ccf5780601f10612ca657610100808354040283529160200191612ccf565b820191905f5260205f20905b815481529060010190602001808311612cb257829003601f168201915b505050919092525050505f848152603960209081526040808320848201516001600160a01b031684529091529020600181015491925090600160a81b900460ff1615612d32578160800151816004015f828254612d2c9190615c41565b90915550505b5f848152603c602090815260408083208684529091528120818155600181018290556002810180546001600160a01b0319908116909155600382018054909116905560048101829055908181612d8b6005830182614c68565b5050600682015f9055600782015f612da39190614c68565b50505092915050565b5f5f612db88484612b9f565b90505f5f612dd7835f0151846040015185606001518660800151613153565b91509150818190612dfb5760405162461bcd60e51b8152600401610ddb91906157cb565b5082606001516001600160a01b03168360200151877f94ee0e8d51fc110ff38d48510c267aeced8608d1c96f14d63e93085dba231d6b8660400151876080015142604051612e67939291906001600160a01b039390931683526020830191909152604082015260600190565b60405180910390a450600195945050505050565b5f516020615f335f395f51905f525460ff161561213c5760405163d93c066560e01b815260040160405180910390fd5b5f516020615f535f395f51905f52805460011901612edc57604051633ee5aeb560e01b815260040160405180910390fd5b60029055565b6001600160a01b0381165f90815260018301602052604081205415156121eb565b8251825181148015612f155750815181145b835183518392612f49576040516324227ae160e21b8152600481019390935260248301919091526044820152606401610ddb565b505060645482915060ff16811015612f7757604051631aebd17960e11b8152600401610ddb91815260200190565b505f80826001600160401b03811115612f9257612f92614cb2565b604051908082528060200260200182016040528015612fbb578160200160208202803683370190505b5090505f5b8381101561311d575f61302b888381518110612fde57612fde615a10565b6020026020010151888481518110612ff857612ff8615a10565b602002602001015188858151811061301257613012615a10565b60200260200101516130238d613e13565b929190613e3f565b9050613043682b20a624a220aa27a960b91b82612364565b682b20a624a220aa27a960b91b8290916130825760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610ddb565b505f9050805b858110156130d3578481815181106130a2576130a2615a10565b60200260200101516001600160a01b0316836001600160a01b0316036130cb57600191506130d3565b600101613088565b508061311357818486815181106130ec576130ec615a10565b60200260200101906001600160a01b031690816001600160a01b0316815250508460010194505b5050600101612fc0565b50606454829060ff1681101561314957604051631aebd17960e11b8152600401610ddb91815260200190565b5050505050505050565b5f848152603a602090815260408083206001600160a01b038716845290915281205460609060018113156131925761318b8185615c54565b93506131b1565b5f198112156131b1576131a481615c6b565b6131ae9085615c99565b93505b5f196001600160a01b038716016131e4576131db858560405180602001604052805f8152506135fa565b6001925061323f565b831561323f575f8781526039602090815260408083206001600160a01b038a168452909152902060010154600160a81b900460ff16156132345761322a87878787613e6b565b9250925050613241565b61322a868686613f61565b505b94509492505050565b82355f908152603b602090815260409091206132689185013561340a565b83602001359061328e576040516307a5c91d60e31b8152600401610ddb91815260200190565b505f81156132b7576034546132a39042615b3f565b9050603454426132b39190615b3f565b6033555b6040518060600160405280856132cc90615cac565b81526020808201849052604091820186905286355f908152603c82528281208883013582528252829020835180518255918201516001820155918101516002830180546001600160a01b039283166001600160a01b03199182161790915560608301516003850180549190931691161790556080810151600483015560a08101518290600582019061335e9082615d76565b505050602082015160068201556040820151600782019061337f9082615d76565b50505083355f908152603960205260408082209082906133a59060608901908901614fa1565b6001600160a01b0316815260208101919091526040015f206001810154909150600160a81b900460ff161561295b578460800135816004015f8282546133eb9190615b3f565b90915550505050505050565b60015f516020615f535f395f51905f5255565b5f6121eb8383614043565b5f6121eb836001600160a01b038416614043565b5f81815260018301602052604081205415156121eb565b5f8281526038602052604090206134579082612ee2565b81906134825760405163153096f360e11b81526001600160a01b039091166004820152602401610ddb565b505f82815260376020526040902060030154829060ff16156134ba57604051636fc24b7960e11b8152600401610ddb91815260200190565b505f8281526039602090815260408083206001600160a01b03851684529091529020600101548190600160a01b900460ff1615610a7f576040516338384f6f60e11b81526001600160a01b039091166004820152602401610ddb565b6096545f9081906001600160a01b031661353457505f9050806135f0565b60965460405163ae76638960e01b8152600481018990526001600160a01b038881166024830152604482018890525f92169063ae76638990606401606060405180830381865afa15801561358a573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906135ae9190615b70565b909450925090508086108015906135c55750828510155b80156135d15750818410155b6135ee5760405163dc48c7f160e01b815260040160405180910390fd5b505b9550959350505050565b814747821115613626576040516371e4d07760e11b815260048101929092526024820152604401610ddb565b50505f5f846001600160a01b031684846040516136439190615e30565b5f6040518083038185875af1925050503d805f811461367d576040519150601f19603f3d011682016040523d82523d5f602084013e613682565b606091505b5091509150816136b55780511561369c5780518082602001fd5b604051630daf67c960e11b815260040160405180910390fd5b835f0361295b5780515f036136f357846001600160a01b03163b5f036136ee57604051630daf67c960e11b815260040160405180910390fd5b61295b565b602081015160018115151461371b57604051630daf67c960e11b815260040160405180910390fd5b505050505050565b6137398a8a8a89613734898b615b3f565b61408f565b5f8a815260376020526040812060019081018054909101908190558190915060395f8d81526020019081526020015f205f8c6001600160a01b03166001600160a01b031681526020019081526020015f206001015f9054906101000a90046001600160a01b031690508a6001600160a01b0316828d7f65b3e69df9006ac5b2f943ef9e7b59b447c491764e645bbf1dd8cf7f32eca5d7848e8e8e428d8d8d6040516137eb989796959493929190615e3b565b60405180910390a4896001600160a01b03168b6001600160a01b0316837f1f9715c5cdb86339f28cd3b93f6162d190a5c00b9305a65ee0889d1a7c00304d8a8a604051613842929190918252602082015260400190565b60405180910390a4505050505050505050505050565b30610101620956d760881b0114806138a05750610101620956d760881b016138945f516020615f135f395f51905f52546001600160a01b031690565b6001600160a01b031614155b1561213c5760405163703e46dd60e11b815260040160405180910390fd5b612650612b61565b816001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa925050508015613920575060408051601f3d908101601f1916820190925261391d91810190615e85565b60015b61394857604051634c9c8ce360e01b81526001600160a01b0383166004820152602401610ddb565b5f516020615f135f395f51905f52811461397857604051632a87526960e21b815260048101829052602401610ddb565b610a7f83836142e0565b61398a614335565b6139933361437e565b61399b61438f565b6139a3614397565b6139ab6143a7565b6139b4826143b7565b6139bc61441d565b6001600160a01b0381166139e357604051630fb9363360e41b815260040160405180910390fd5b609780546001600160a01b0319166001600160a01b03929092169190911790555043609855565b306001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000161461213c5760405163703e46dd60e11b815260040160405180910390fd5b7f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c19930080546001600160a01b031981166001600160a01b03848116918217845560405192169182907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a3505050565b7fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d10280546060915f516020615ef35f395f51905f5291613b0190615a24565b80601f0160208091040260200160405190810160405280929190818152602001828054613b2d90615a24565b8015613b785780601f10613b4f57610100808354040283529160200191613b78565b820191905f5260205f20905b815481529060010190602001808311613b5b57829003601f168201915b505050505091505090565b7fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d10380546060915f516020615ef35f395f51905f5291613b0190615a24565b613bc9612e7b565b5f516020615f335f395f51905f52805460ff191660011781557f62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258335b6040516001600160a01b03909116815260200161262f565b613c25614449565b5f516020615f335f395f51905f52805460ff191681557f5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa33613c05565b613c6a612b61565b6001600160a01b038216613c9157604051635989b9d360e01b815260040160405180910390fd5b82613caf57604051630e1b39f960e31b815260040160405180910390fd5b8015613d06575f838152602081905260409020613ccc9083613415565b83839091613cff57604051631b753c1b60e21b815260048101929092526001600160a01b03166024820152604401610ddb565b5050613d53565b5f838152602081905260409020613d1d9083613d92565b83839091613d5057604051633a401ef360e21b815260048101929092526001600160a01b03166024820152604401610ddb565b50505b80151583836001600160a01b03167f8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f360405160405180910390a4505050565b5f6121eb836001600160a01b038416614478565b5f61266761455b565b6060815f01805480602002602001604051908101604052809291908181526020018280548015613dfc57602002820191905f5260205f20905b815481526020019060010190808311613de8575b50505050509050919050565b5f6121eb8383614478565b5f610a22613e1f613da6565b8360405161190160f01b8152600281019290925260228201526042902090565b5f5f5f5f613e4f888888886145ce565b925092509250613e5f8282614696565b50909695505050505050565b60405163a9059cbb60e01b81526001600160a01b038381166004830152602482018390525f9160609186169063a9059cbb906044016020604051808303815f875af1925050508015613eda575060408051601f3d908101601f19168201909252613ed791810190615e9c565b60015b613f14573d808015613f07576040519150601f19603f3d011682016040523d82523d5f602084013e613f0c565b606091505b509050613241565b8092508015613f2d57613f2887878661474e565b61323f565b6040518060400160405280600f81526020016e1d1c985b9cd9995c8819985a5b1959608a1b81525091505094509492505050565b6040516340c10f1960e01b81526001600160a01b038381166004830152602482018390525f916060918616906340c10f19906044016020604051808303815f875af1925050508015613fd0575060408051601f3d908101601f19168201909252613fcd91810190615e9c565b60015b61400a573d808015613ffd576040519150601f19603f3d011682016040523d82523d5f602084013e614002565b606091505b50905061403b565b80925080614039576040518060400160405280600b81526020016a1b5a5b9d0819985a5b195960aa1b81525091505b505b935093915050565b5f81815260018301602052604081205461408857508154600181810184555f848152602080822090930184905584548482528286019093526040902091909155610a22565b505f610a22565b5f858152603a602090815260408083206001600160a01b038816845290915290205460018113156140fa576140c48184615eb7565b85908490156140f7576040516348d53e0760e01b81526001600160a01b0390921660048301526024820152604401610ddb565b50505b5f196001600160a01b0386160161417d576141158284615b3f565b34146141218385615b3f565b34909161414a576040516329e2b03f60e21b815260048101929092526024820152604401610ddb565b505081156141785760975460408051602081019091525f8152614178916001600160a01b03169084906135fa565b61371b565b5f3480156141a7576040516329e2b03f60e21b815260048101929092526024820152604401610ddb565b506141cb905084306141b98587615b3f565b6001600160a01b0389169291906147f9565b81156141eb576097546141eb906001600160a01b03878116911684614860565b5f8681526039602090815260408083206001600160a01b0389168452909152902060010154600160a81b900460ff161561422a57614178868685614891565b604051632770a7eb60e21b8152306004820152602481018490526001600160a01b03861690639dc29fac906044016020604051808303815f875af1158015614274573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906142989190615e9c565b8585859091926142d55760405163601bc95b60e11b81526001600160a01b0393841660048201529290911660248301526044820152606401610ddb565b505050505050505050565b6142e9826148cf565b6040516001600160a01b038316907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a280511561432d57610a7f8282614932565b61153f6149a4565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a0054600160401b900460ff1661213c57604051631afcd79f60e31b815260040160405180910390fd5b614386614335565b612650816149c3565b61213c614335565b61439f614335565b61213c6149cb565b6143af614335565b61213c6149eb565b6143bf614335565b614407604051806040016040528060098152602001682b30b634b230ba37b960b91b815250604051806040016040528060058152602001640312e302e360dc1b8152506149f3565b6064805460ff191660ff92909216919091179055565b614425614335565b6144406420a226a4a760d91b614439612336565b6001613c62565b62015180603455565b5f516020615f335f395f51905f525460ff1661213c57604051638dfc202b60e01b815260040160405180910390fd5b5f8181526001830160205260408120548015614552575f61449a600183615c41565b85549091505f906144ad90600190615c41565b905080821461450c575f865f0182815481106144cb576144cb615a10565b905f5260205f200154905080875f0184815481106144eb576144eb615a10565b5f918252602080832090910192909255918252600188019052604090208390555b855486908061451d5761451d615eca565b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f905560019350505050610a22565b5f915050610a22565b5f7f8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f614585614a05565b61458d614a6d565b60408051602081019490945283019190915260608201524660808201523060a082015260c00160405160208183030381529060405280519060200120905090565b5f80807f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a084111561460757505f9150600390508261468c565b604080515f808252602082018084528a905260ff891692820192909252606081018790526080810186905260019060a0016020604051602081039080840390855afa158015614658573d5f5f3e3d5ffd5b5050604051601f1901519150506001600160a01b03811661468357505f92506001915082905061468c565b92505f91508190505b9450945094915050565b5f8260038111156146a9576146a9615ede565b036146b2575050565b60018260038111156146c6576146c6615ede565b036146e45760405163f645eedf60e01b815260040160405180910390fd5b60028260038111156146f8576146f8615ede565b036147195760405163fce698f760e01b815260048101829052602401610ddb565b600382600381111561472d5761472d615ede565b0361153f576040516335e2f38360e21b815260048101829052602401610ddb565b5f8381526039602090815260408083206001600160a01b03861684529091529020600481015461477e9083615b3f565b6003820154600483015486928692869290918210156147d6576040516352c2db3360e01b815260048101959095526001600160a01b03909316602485015260448401919091526064830152608482015260a401610ddb565b505050505081816003015f8282546147ee9190615c41565b909155505050505050565b6040516001600160a01b038481166024830152838116604483015260648201839052610d669186918216906323b872dd906084015b604051602081830303815290604052915060e01b6020820180516001600160e01b038381831617835250505050614aaf565b6040516001600160a01b03838116602483015260448201839052610a7f91859182169063a9059cbb9060640161482e565b5f8381526039602090815260408083206001600160a01b0386168452909152812060030180548392906148c5908490615b3f565b9091555050505050565b806001600160a01b03163b5f0361490457604051634c9c8ce360e01b81526001600160a01b0382166004820152602401610ddb565b5f516020615f135f395f51905f5280546001600160a01b0319166001600160a01b0392909216919091179055565b60605f5f846001600160a01b03168460405161494e9190615e30565b5f60405180830381855af49150503d805f8114614986576040519150601f19603f3d011682016040523d82523d5f602084013e61498b565b606091505b509150915061499b858383614b1b565b95945050505050565b341561213c5760405163b398979f60e01b815260040160405180910390fd5b612a41614335565b6149d3614335565b5f516020615f335f395f51905f52805460ff19169055565b6133f7614335565b6149fb614335565b61153f8282614b77565b5f5f516020615ef35f395f51905f5281614a1d613ac3565b805190915015614a3557805160209091012092915050565b81548015614a44579392505050565b7fc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470935050505090565b5f5f516020615ef35f395f51905f5281614a85613b83565b805190915015614a9d57805160209091012092915050565b60018201548015614a44579392505050565b5f5f60205f8451602086015f885af180614ace576040513d5f823e3d81fd5b50505f513d91508115614ae5578060011415614af2565b6001600160a01b0384163b155b15610d6657604051635274afe760e01b81526001600160a01b0385166004820152602401610ddb565b606082614b3057614b2b82614bd6565b6121eb565b8151158015614b4757506001600160a01b0384163b155b15614b7057604051639996b31560e01b81526001600160a01b0385166004820152602401610ddb565b5092915050565b614b7f614335565b5f516020615ef35f395f51905f527fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d102614bb88482615d76565b5060038101614bc78382615d76565b505f8082556001909101555050565b805115614be65780518082602001fd5b60405163d6bda27560e01b815260040160405180910390fd5b6040518060600160405280614c12614c25565b81526020015f8152602001606081525090565b6040518060c001604052805f81526020015f81526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f8152602001606081525090565b508054614c7490615a24565b5f825580601f10614c83575050565b601f0160209004905f5260205f209081019061265091905b80821115614cae575f8155600101614c9b565b5090565b634e487b7160e01b5f52604160045260245ffd5b60405160c081016001600160401b0381118282101715614ce857614ce8614cb2565b60405290565b604051601f8201601f191681016001600160401b0381118282101715614d1657614d16614cb2565b604052919050565b5f6001600160401b03821115614d3657614d36614cb2565b5060051b60200190565b5f5f60408385031215614d51575f5ffd5b8235915060208301356001600160401b03811115614d6d575f5ffd5b8301601f81018513614d7d575f5ffd5b8035614d90614d8b82614d1e565b614cee565b8082825260208201915060208360051b850101925087831115614db1575f5ffd5b6020840193505b82841015614dd3578335825260209384019390910190614db8565b809450505050509250929050565b5f60208284031215614df1575f5ffd5b5035919050565b803560ff81168114614e08575f5ffd5b919050565b5f82601f830112614e1c575f5ffd5b8135614e2a614d8b82614d1e565b8082825260208201915060208360051b860101925085831115614e4b575f5ffd5b602085015b83811015614e6f57614e6181614df8565b835260209283019201614e50565b5095945050505050565b5f82601f830112614e88575f5ffd5b8135614e96614d8b82614d1e565b8082825260208201915060208360051b860101925085831115614eb7575f5ffd5b602085015b83811015614e6f578035835260209283019201614ebc565b5f5f5f5f60808587031215614ee7575f5ffd5b84356001600160401b03811115614efc575f5ffd5b850160c08188031215614f0d575f5ffd5b935060208501356001600160401b03811115614f27575f5ffd5b614f3387828801614e0d565b93505060408501356001600160401b03811115614f4e575f5ffd5b614f5a87828801614e79565b92505060608501356001600160401b03811115614f75575f5ffd5b614f8187828801614e79565b91505092959194509250565b6001600160a01b0381168114612650575f5ffd5b5f60208284031215614fb1575f5ffd5b81356121eb81614f8d565b8015158114612650575f5ffd5b5f5f5f5f5f5f60c08789031215614fde575f5ffd5b863595506020870135614ff081614fbc565b9450604087013561500081614f8d565b9350606087013561501081614f8d565b9598949750929560808101359460a0909101359350915050565b5f82601f830112615039575f5ffd5b8135615047614d8b82614d1e565b8082825260208201915060208360051b860101925085831115615068575f5ffd5b602085015b83811015614e6f57803561508081614f8d565b83526020928301920161506d565b5f5f6040838503121561509f575f5ffd5b8235915060208301356001600160401b038111156150bb575f5ffd5b6150c78582860161502a565b9150509250929050565b5f5f604083850312156150e2575f5ffd5b50508035926020909101359150565b5f5f5f60608486031215615103575f5ffd5b83359250602084013561511581614f8d565b929592945050506040919091013590565b5f5f5f60608486031215615138575f5ffd5b83359250602084013561514a81614f8d565b9150604084013561515a81614fbc565b809150509250925092565b5f5f83601f840112615175575f5ffd5b5081356001600160401b0381111561518b575f5ffd5b6020830191508360208285010111156151a2575f5ffd5b9250929050565b5f5f5f5f5f5f5f5f5f898b036101c08112156151c3575f5ffd5b8a35995060208b01356151d581614f8d565b985060408b01356151e581614f8d565b975060608b0135965060808b0135955060a08b0135945060c08b01356001600160401b03811115615214575f5ffd5b6152208d828e01615165565b90955093505060e060df1982011215615237575f5ffd5b5060e08a0190509295985092959850929598565b5f5f6001600160401b0384111561526457615264614cb2565b50601f8301601f191660200161527981614cee565b91505082815283838301111561528d575f5ffd5b828260208301375f602084830101529392505050565b5f82601f8301126152b2575f5ffd5b6121eb8383356020850161524b565b5f5f604083850312156152d2575f5ffd5b82356152dd81614f8d565b915060208301356001600160401b038111156152f7575f5ffd5b6150c7858286016152a3565b5f5f60408385031215615314575f5ffd5b61531d83614df8565b9150602083013561532d81614f8d565b809150509250929050565b80516001600160a01b039081168352602080830151909116908301526040808201511515908301526060808201511515908301526080808201519083015260a0818101519083015260c090810151910152565b602080825282518282018190525f918401906040840190835b818110156153cd576153b7838551615338565b6020939093019260e092909201916001016153a4565b509095945050505050565b5f5f5f5f5f5f5f5f60e0898b0312156153ef575f5ffd5b88359750602089013561540181614f8d565b9650604089013561541181614f8d565b9550606089013594506080890135935060a0890135925060c08901356001600160401b03811115615440575f5ffd5b61544c8b828c01615165565b999c989b5096995094979396929594505050565b5f5f60408385031215615471575f5ffd5b82359150602083013561532d81614fbc565b5f8151808452602084019350602083015f5b828110156154b3578151865260209586019590910190600101615495565b5093949350505050565b602081525f6121eb6020830184615483565b5f5f604083850312156154e0575f5ffd5b82359150602083013561532d81614f8d565b60e08101610a228284615338565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b60ff60f81b8816815260e060208201525f61554c60e0830189615500565b828103604084015261555e8189615500565b606084018890526001600160a01b038716608085015260a0840186905283810360c0850152905061558f8185615483565b9a9950505050505050505050565b5f5f83601f8401126155ad575f5ffd5b5081356001600160401b038111156155c3575f5ffd5b6020830191508360208260051b85010111156151a2575f5ffd5b5f82601f8301126155ec575f5ffd5b81356155fa614d8b82614d1e565b8082825260208201915060208360051b86010192508583111561561b575f5ffd5b602085015b83811015614e6f5780356001600160401b0381111561563d575f5ffd5b61564c886020838a0101614e79565b84525060209283019201615620565b5f5f5f5f5f6080868803121561566f575f5ffd5b85356001600160401b03811115615684575f5ffd5b6156908882890161559d565b90965094505060208601356001600160401b038111156156ae575f5ffd5b8601601f810188136156be575f5ffd5b80356156cc614d8b82614d1e565b8082825260208201915060208360051b85010192508a8311156156ed575f5ffd5b602084015b8381101561572d5780356001600160401b0381111561570f575f5ffd5b61571e8d602083890101614e0d565b845250602092830192016156f2565b50955050505060408601356001600160401b0381111561574b575f5ffd5b615757888289016155dd565b92505060608601356001600160401b03811115615772575f5ffd5b61577e888289016155dd565b9150509295509295909350565b602080825282518282018190525f918401906040840190835b818110156153cd5783516001600160a01b03168352602093840193909201916001016157a4565b602081525f6121eb6020830184615500565b602081525f82516060602084015280516080840152602081015160a084015260018060a01b0360408201511660c084015260018060a01b0360608201511660e0840152608081015161010084015260a0810151905060c0610120840152615848610140840182615500565b9050602084015160408401526040840151601f1984830301606085015261499b8282615500565b5f6020828403121561587f575f5ffd5b6121eb82614df8565b5f60208284031215615898575f5ffd5b81356121eb81614fbc565b5f5f5f5f5f5f60c087890312156158b8575f5ffd5b8635955060208701356158ca81614f8d565b9450604087013593506060870135925060808701356001600160401b038111156158f2575f5ffd5b8701601f81018913615902575f5ffd5b6159118982356020840161524b565b92505061592060a08801614df8565b90509295509295509295565b5f5f5f6060848603121561593e575f5ffd5b8335925060208401356001600160401b0381111561595a575f5ffd5b6159668682870161502a565b925050604084013561515a81614fbc565b5f5f5f5f6040858703121561598a575f5ffd5b84356001600160401b0381111561599f575f5ffd5b6159ab8782880161559d565b90955093505060208501356001600160401b038111156159c9575f5ffd5b8501601f810187136159d9575f5ffd5b80356001600160401b038111156159ee575f5ffd5b87602060e083028401011115615a02575f5ffd5b949793965060200194505050565b634e487b7160e01b5f52603260045260245ffd5b600181811c90821680615a3857607f821691505b602082108103615a5657634e487b7160e01b5f52602260045260245ffd5b50919050565b634e487b7160e01b5f52601160045260245ffd5b5f60018201615a8157615a81615a5c565b5060010190565b5f5f8335601e19843603018112615a9d575f5ffd5b8301803591506001600160401b03821115615ab6575f5ffd5b6020019150368190038213156151a2575f5ffd5b81835281816020850137505f828201602090810191909152601f909101601f19169091010190565b878152602081018790526001600160a01b038681166040830152851660608201526080810184905260c060a082018190525f90615b329083018486615aca565b9998505050505050505050565b80820180821115610a2257610a22615a5c565b5f823560be19833603018112615b66575f5ffd5b9190910192915050565b5f5f5f60608486031215615b82575f5ffd5b5050815160208301516040909301519094929350919050565b5f81518060208401855e5f93019283525090919050565b6c021b937b9b990213934b233b29609d1b81525f6121eb600d830184615b9b565b848152608060208201525f615beb6080830186615500565b8281036040840152615bfd8186615500565b91505060ff8316606083015295945050505050565b5f60208284031215615c22575f5ffd5b81516121eb81614f8d565b5f823560de19833603018112615b66575f5ffd5b81810381811115610a2257610a22615a5c565b8082028115828204841417610a2257610a22615a5c565b5f600160ff1b8201615c7f57615c7f615a5c565b505f0390565b634e487b7160e01b5f52601260045260245ffd5b5f82615ca757615ca7615c85565b500490565b5f60c08236031215615cbc575f5ffd5b615cc4614cc6565b82358152602080840135908201526040830135615ce081614f8d565b60408201526060830135615cf381614f8d565b60608201526080838101359082015260a08301356001600160401b03811115615d1a575f5ffd5b615d26368286016152a3565b60a08301525092915050565b601f821115610a7f57805f5260205f20601f840160051c81016020851015615d575750805b601f840160051c820191505b8181101561295b575f8155600101615d63565b81516001600160401b03811115615d8f57615d8f614cb2565b615da381615d9d8454615a24565b84615d32565b6020601f821160018114615dd5575f8315615dbe5750848201515b5f19600385901b1c1916600184901b17845561295b565b5f84815260208120601f198516915b82811015615e045787850151825560209485019460019092019101615de4565b5084821015615e2157868401515f19600387901b60f8161c191681555b50505050600190811b01905550565b5f6121eb8284615b9b565b6001600160a01b038981168252888116602083015287166040820152606081018690526080810185905283151560a082015260e060c082018190525f9061558f9083018486615aca565b5f60208284031215615e95575f5ffd5b5051919050565b5f60208284031215615eac575f5ffd5b81516121eb81614fbc565b5f82615ec557615ec5615c85565b500690565b634e487b7160e01b5f52603160045260245ffd5b634e487b7160e01b5f52602160045260245ffdfea16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d100360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbccd5ed15c6e187e77e9aee88184c21f4f2182ab5827cb3b7e07fbedcd63f033009b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00a2646970667358221220e78cb77e6bf0cbf74f76f1149ab952699d3568bbfd99c860dab00147fea7bfc664736f6c634300081c0033",
+	Bin: "0x60a060405230608052348015610013575f5ffd5b5061001c610021565b6100d3565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00805468010000000000000000900460ff16156100715760405163f92ee8a960e01b815260040160405180910390fd5b80546001600160401b03908116146100d05780546001600160401b0319166001600160401b0390811782556040519081527fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d29060200160405180910390a15b50565b608051615f716100eb5f395f6139980152615f715ff3fe6080604052600436106102c2575f3560e01c8063814914b51161016f578063bedb86fb116100d8578063d5717fc511610092578063e2af6cd71161006d578063e2af6cd714610973578063f2fde38b14610992578063f4509643146109b1578063f698da25146109d0575f5ffd5b8063d5717fc514610907578063d605665b14610926578063df6e87dc14610939575f5ffd5b8063bedb86fb14610858578063c1cb05dd14610877578063cf56118e14610896578063d016d625146108aa578063d477f05f146108c9578063d4bf502a146108e8575f5ffd5b806391d148541161012957806391d1485414610766578063a3246ad314610785578063ad3cb1cc146107b1578063ae6893f8146107ee578063b33eb36e1461080d578063b7f3358d14610839575f5ffd5b8063814914b51461060157806384b0196e146106e757806388d67d6d1461070e5780638da5cb5b1461072157806391cca3db1461073557806391cf6d3e14610752575f5ffd5b80634d5d00561161022b5780635c975abb116101e55780636b0e4821116101c05780636b0e482114610583578063715018a6146105a257806379214874146105b65780637f4ab9f5146105e2575f5ffd5b80635c975abb1461052e5780635fd262de146105515780636160751f14610564575f5ffd5b80634d5d00561461047c5780634ee078ba1461048f5780634f1ef286146104ae5780635187599d146104c157806352d1902d146104e05780635b605f5c14610502575f5ffd5b80633ca5b39f1161027c5780633ca5b39f146103c85780633d507c5e146103e757806342cde4e8146103fe578063472d35b91461041f5780634be13f831461043e5780634d3f0da91461045d575f5ffd5b80630b43c02c146102ed5780631938e0f21461030c5780631e7bf2151461033457806325bd5666146103535780632d87b7ee1461038a57806339a621f3146103a9575f5ffd5b366102e957345f036102e7576040516304a4cdd960e51b815260040160405180910390fd5b005b5f5ffd5b3480156102f8575f5ffd5b506102e7610307366004614c61565b6109e4565b61031f61031a366004614de7565b610a40565b60405190151581526020015b60405180910390f35b34801561033f575f5ffd5b506102e761034e366004614ec1565b610e5b565b34801561035e575f5ffd5b50609654610372906001600160a01b031681565b6040516001600160a01b03909116815260200161032b565b348015610395575f5ffd5b506102e76103a4366004614f86565b61110b565b3480156103b4575f5ffd5b506102e76103c3366004614fc9565b61113d565b3480156103d3575f5ffd5b506102e76103e2366004614ffe565b611230565b3480156103f2575f5ffd5b5060335442111561031f565b348015610409575f5ffd5b5060645460405160ff909116815260200161032b565b34801561042a575f5ffd5b506102e7610439366004615027565b611309565b348015610449575f5ffd5b50603254610372906001600160a01b031681565b348015610468575f5ffd5b506102e7610477366004615042565b61137a565b61031f61048a3660046150c5565b61147e565b34801561049a575f5ffd5b5061031f6104a9366004615167565b6116a0565b6102e76104bc3660046151fd565b6119ab565b3480156104cc575f5ffd5b506102e76104db36600461523f565b6119c6565b3480156104eb575f5ffd5b506104f4611ad4565b60405190815260200161032b565b34801561050d575f5ffd5b5061052161051c366004614c61565b611aef565b60405161032b91906152c7565b348015610539575f5ffd5b505f516020615efc5f395f51905f525460ff1661031f565b61031f61055f366004615314565b611c74565b34801561056f575f5ffd5b506102e761057e36600461539c565b611cdd565b34801561058e575f5ffd5b5061031f61059d3660046153bf565b611db4565b3480156105ad575f5ffd5b506102e7611df6565b3480156105c1575f5ffd5b506105d56105d0366004614c61565b611e09565b60405161032b9190615495565b3480156105ed575f5ffd5b5061031f6105fc366004615167565b611e22565b34801561060c575f5ffd5b506106da61061b3660046154a7565b6040805160e0810182525f80825260208201819052918101829052606081018290526080810182905260a0810182905260c0810191909152505f9182526039602090815260408084206001600160a01b039384168552825292839020835160e08101855281548416815260018201549384169281019290925260ff600160a01b84048116151594830194909452600160a81b9092049092161515606083015260028101546080830152600381015460a08301526004015460c082015290565b60405161032b91906154ca565b3480156106f2575f5ffd5b506106fb611ebd565b60405161032b9796959493929190615506565b61031f61071c366004615633565b611f66565b34801561072c575f5ffd5b50610372612001565b348015610740575f5ffd5b506097546001600160a01b0316610372565b34801561075d575f5ffd5b506098546104f4565b348015610771575f5ffd5b5061031f6107803660046154a7565b61202f565b348015610790575f5ffd5b506107a461079f366004614c61565b612046565b60405161032b9190615763565b3480156107bc575f5ffd5b506107e1604051806040016040528060058152602001640352e302e360dc1b81525081565b60405161032b91906157a3565b3480156107f9575f5ffd5b506104f4610808366004614c61565b61205f565b348015610818575f5ffd5b5061082c610827366004615167565b61207b565b60405161032b91906157b5565b348015610844575f5ffd5b506102e7610853366004615847565b612225565b348015610863575f5ffd5b506102e7610872366004615860565b612276565b348015610882575f5ffd5b506102e7610891366004614c61565b612297565b3480156108a1575f5ffd5b506105d561257f565b3480156108b5575f5ffd5b506103726108c436600461587b565b612590565b3480156108d4575f5ffd5b506102e76108e3366004615027565b61264b565b3480156108f3575f5ffd5b506102e7610902366004615904565b61269c565b348015610912575f5ffd5b506104f4610921366004614c61565b6126d3565b6102e761093436600461594f565b6126ef565b348015610944575f5ffd5b50610958610953366004614fc9565b612882565b6040805193845260208401929092529082015260600161032b565b34801561097e575f5ffd5b506102e761098d366004615027565b612911565b34801561099d575f5ffd5b506102e76109ac366004615027565b6129c1565b3480156109bc575f5ffd5b506102e76109cb3660046154a7565b6129fb565b3480156109db575f5ffd5b506104f4612ae0565b6109ec612ae9565b5f818152603b60205260408120610a0290612b1b565b90505f5b8151811015610a3b57610a3283838381518110610a2557610a256159e8565b6020026020010151612b27565b50600101610a06565b505050565b5f610a49612d34565b610a51612d64565b610a79610a646060870160408801615027565b86355f90815260386020526040902090612d9b565b610a896060870160408801615027565b90610ab857604051633142cb1160e11b81526001600160a01b0390911660048201526024015b60405180910390fd5b505f348015610ae3576040516362624a5160e11b815260048101929092526024820152604401610aaf565b505084355f9081526037602052604081206002018054600101908190559050806020870135808214610b315760405163a6ab65c560e01b815260048101929092526024820152604401610aaf565b50610bc390507fd03fbc82682decb107729b5ed42c725f2c3d2fc7a69eb5ffa0daffc7b77219146020880135610b6d60608a0160408b01615027565b610b7d60808b0160608c01615027565b60808b0135610b8f60a08d018d6159fc565b604051602001610ba59796959493929190615a66565b60405160208183030381529060405280519060200120868686612dbc565b85355f90815260396020526040808220606091839182918290610beb908d8701908e01615027565b6001600160a01b03908116825260208083019390935260409182015f20825160e08101845281548316815260018201549283169481019490945260ff600160a01b8304811615801594860194909452600160a81b9092049091161515606084015260028101546080840152600381015460a08401526004015460c0830152909150610c9c576040518060400160405280600c81526020016b1d1bdad95b881c185d5cd95960a21b8152509250610d25565b608081015115801590610cb6575089608001358160800151105b15610cf057604051806040016040528060118152602001701bdd995c881cd859995d1e481b1a5b5a5d607a1b815250925060019150610d25565b610d1f8a35610d0560608d0160408e01615027565b610d1560808e0160608f01615027565b8d6080013561300c565b90945092505b508215610dad57610d3c60608a0160408b01615027565b6001600160a01b031660208a01358a357f94ee0e8d51fc110ff38d48510c267aeced8608d1c96f14d63e93085dba231d6b610d7d60808e0160608f01615027565b604080516001600160a01b03909216825260808f01356020830152429082015260600160405180910390a4610e35565b610db88983836130fa565b610dc860608a0160408b01615027565b6001600160a01b031660208a01358a357fd3122beb443f4b66faef07d45daf96faf0ffc23e050550cf1bbcbe6105f6bee7610e0960808e0160608f01615027565b604080516001600160a01b03909216825260808f01356020830152429082015260600160405180910390a45b6001945050505050610e5360015f516020615f1c5f395f51905f5255565b949350505050565b610e63612ae9565b610e6e6035876132ba565b15610ecb57604080516080810182528781525f6020808301828152838501838152606085018481528c855260379093529490922092518355905160018301559151600282015590516003909101805460ff19169115159190911790555b6001600160a01b038416610ef257604051636ca1fdd760e01b815260040160405180910390fd5b5f868152603860205260409020610f0990856132c5565b8490610f34576040516311dd05f360e31b81526001600160a01b039091166004820152602401610aaf565b506040518060e00160405280856001600160a01b03168152602001846001600160a01b031681526020015f1515815260200186151581526020018281526020015f81526020015f81525060395f8881526020019081526020015f205f866001600160a01b03166001600160a01b031681526020019081526020015f205f820151815f015f6101000a8154816001600160a01b0302191690836001600160a01b031602179055506020820151816001015f6101000a8154816001600160a01b0302191690836001600160a01b0316021790555060408201518160010160146101000a81548160ff02191690831515021790555060608201518160010160156101000a81548160ff0219169083151502179055506080820151816002015560a0820151816003015560c08201518160040155905050600182138061107657505f1982125b156110a0575f868152603a602090815260408083206001600160a01b038816845290915290208290555b826001600160a01b0316846001600160a01b0316877fffd50b3f28a6ab2baf4fb67d8aaf0a6c918767d3e790535a54eb250c503b2a6685858a6040516110fb9392919092835260208301919091521515604082015260600190565b60405180910390a4505050505050565b61112d826111275f5f8681526020019081526020015f20612b1b565b5f61269c565b6111398282600161269c565b5050565b61114f6420a226a4a760d91b3361202f565b6420a226a4a760d91b33909161118a5760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610aaf565b50505f8381526038602052604090206111a39083612d9b565b82906111ce5760405163153096f360e11b81526001600160a01b039091166004820152602401610aaf565b505f8381526039602090815260408083206001600160a01b038616808552908352928190206002018490555183815285917fd54edc9ee33780fc813e88b7fcafd9163ae63168837ee363914a2f892670d7c891015b60405180910390a3505050565b6112426420a226a4a760d91b3361202f565b6420a226a4a760d91b33909161127d5760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610aaf565b50505f838152603b6020526040902061129690836132d9565b82906112b8576040516373a1390160e11b8152600401610aaf91815260200190565b505f838152603c602090815260408083208584528252918290206006018390559051828152839185917ffcfd532dc7387ad29a63519b09004fa6a982a1853a71522d0d5fe94f3ef76d0d9101611223565b61131b6420a226a4a760d91b3361202f565b6420a226a4a760d91b3390916113565760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610aaf565b5050609680546001600160a01b0319166001600160a01b0392909216919091179055565b61138c6420a226a4a760d91b3361202f565b6420a226a4a760d91b3390916113c75760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610aaf565b50505f8381526038602052604090206113e09083612d9b565b829061140b5760405163153096f360e11b81526001600160a01b039091166004820152602401610aaf565b505f8381526039602090815260408083206001600160a01b0386168085529252918290206001018054841515600160a01b0260ff60a01b19909116179055905184907f493160def6e3ff3605efa5011d5fe909dfb92d4d4bc921682b8022e559dd7bea9061122390851515815260200190565b5f611487612d34565b898961149382826132f0565b61149b612d64565b6114a86020850185615027565b6001600160a01b038c81169116148b6114c46020870187615027565b90916114f6576040516313f7c32b60e31b81526001600160a01b03928316600482015291166024820152604401610aaf565b50506115058c8c8b8b8b6133c6565b909850965086611515898b615ac7565b61151f9190615ac7565b60408501351015876115318a8c615ac7565b61153b9190615ac7565b856040013590916115685760405163943892eb60e01b815260048101929092526024820152604401610aaf565b505f905061157c6040860160208701615027565b306040870135606088013561159760a08a0160808b01615847565b6040516001600160a01b0395861660248201529490931660448501526064840191909152608483015260ff1660a482015260a086013560c482015260c086013560e48201526101040160408051601f19818403018152919052602080820180516001600160e01b031663d505accf60e01b1790529091505f9081906116299061162290890189615027565b5f856134aa565b9150915081819061164e5760405163e8b5c4bb60e01b8152600401610aaf91906157a3565b505050506116778c8c86602001602081019061166a9190615027565b8d8d8d8d60018e8e613627565b6001925061169160015f516020615f1c5f395f51905f5255565b50509998505050505050505050565b5f6116a9612d34565b6116b1612d64565b5f838152603b602052604090206116c890836132d9565b82906116ea576040516373a1390160e11b8152600401610aaf91815260200190565b505f838152603c60209081526040808320858452909152808220815161012081019092528054606083019081526001820154608084015260028201546001600160a01b0390811660a085015260038301541660c0840152600482015460e084015260058201805484929184916101008501919061176690615ada565b80601f016020809104026020016040519081016040528092919081815260200182805461179290615ada565b80156117dd5780601f106117b4576101008083540402835291602001916117dd565b820191905f5260205f20905b8154815290600101906020018083116117c057829003601f168201915b50505050508152505081526020016006820154815260200160078201805461180490615ada565b80601f016020809104026020016040519081016040528092919081815260200182805461183090615ada565b801561187b5780601f106118525761010080835404028352916020019161187b565b820191905f5260205f20905b81548152906001019060200180831161185e57829003601f168201915b505050919092525050505f85815260396020908152604080832084518201516001600160a01b03908116855290835292819020815160e08101835281548516815260018201549485169381019390935260ff600160a01b8504811615801585850152600160a81b909504161515606084015260028101546080840152600381015460a08401526004015460c083015283510151929350919061193c576040516338384f6f60e11b81526001600160a01b039091166004820152602401610aaf565b50602082015115806119515750428260200151105b826020015142909161197f57604051637a88099160e11b815260048101929092526024820152604401610aaf565b505061198b8585613709565b925050506119a560015f516020615f1c5f395f51905f5255565b92915050565b6119b36137db565b6119bc82613841565b6111398282613849565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a008054600160401b810460ff1615906001600160401b03165f81158015611a0a5750825b90505f826001600160401b03166001148015611a255750303b155b905081158015611a33575080155b15611a515760405163f92ee8a960e01b815260040160405180910390fd5b845467ffffffffffffffff191660011785558315611a7b57845460ff60401b1916600160401b1785555b611a858787613905565b8315611acb57845460ff60401b19168555604051600181527fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d29060200160405180910390a15b50505050505050565b5f611add61398d565b505f516020615edc5f395f51905f5290565b5f81815260386020526040812060609190611b0990612b1b565b90505f81516001600160401b03811115611b2557611b25614c78565b604051908082528060200260200182016040528015611b8a57816020015b6040805160e0810182525f8082526020808301829052928201819052606082018190526080820181905260a0820181905260c082015282525f19909201910181611b435790505b5090505f5b8251811015611c6c5760395f8681526020019081526020015f205f848381518110611bbc57611bbc6159e8565b6020908102919091018101516001600160a01b0390811683528282019390935260409182015f20825160e08101845281548516815260018201549485169281019290925260ff600160a01b85048116151593830193909352600160a81b9093049091161515606082015260028201546080820152600382015460a082015260049091015460c08201528251839083908110611c5957611c596159e8565b6020908102919091010152600101611b8f565b509392505050565b5f611c7d612d34565b8888611c8982826132f0565b611c91612d64565b611c9e8b8b8a8a8a6133c6565b9097509550611cb58b8b338c8c8c8c5f8d8d613627565b60019250611ccf60015f516020615f1c5f395f51905f5255565b505098975050505050505050565b611cef6420a226a4a760d91b3361202f565b6420a226a4a760d91b339091611d2a5760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610aaf565b50611d3890506035836132d9565b8290611d5a5760405163ac7dbbfd60e01b8152600401610aaf91815260200190565b505f82815260376020908152604091829020600301805460ff1916841515908117909155915191825283917f41ee956671dd2884b868e36b1976ae869e7977d8cc9476d99563a0c0c1f3c675910160405180910390a25050565b5f805b8251811015611dec57611de384848381518110611dd657611dd66159e8565b60200260200101516116a0565b50600101611db7565b5060019392505050565b611dfe612ae9565b611e075f6139d6565b565b5f818152603b602052604090206060906119a590612b1b565b5f611e356420a226a4a760d91b3361202f565b6420a226a4a760d91b339091611e705760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610aaf565b50505f838152603b60205260409020611e8990836132d9565b8290611eab576040516373a1390160e11b8152600401610aaf91815260200190565b50611eb68383613709565b9392505050565b5f60608082808083815f516020615ebc5f395f51905f528054909150158015611ee857506001810154155b611f2c5760405162461bcd60e51b81526020600482015260156024820152741152540dcc4c8e88155b9a5b9a5d1a585b1a5e9959605a1b6044820152606401610aaf565b611f34613a46565b611f3c613b06565b604080515f80825260208201909252600f60f81b9c939b5091995046985030975095509350915050565b5f805b85811015611ff457611feb878783818110611f8657611f866159e8565b9050602002810190611f989190615b12565b868381518110611faa57611faa6159e8565b6020026020010151868481518110611fc457611fc46159e8565b6020026020010151868581518110611fde57611fde6159e8565b6020026020010151610a40565b50600101611f69565b5060019695505050505050565b7f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300546001600160a01b031690565b5f828152602081905260408120611eb69083612d9b565b5f8181526020819052604090206060906119a590612b1b565b5f8181526037602052604081206001908101546119a591615ac7565b612083614bae565b5f838152603c6020908152604080832085845290915290819020815161012081019092528054606083019081526001820154608084015260028201546001600160a01b0390811660a085015260038301541660c0840152600482015460e08401526005820180548492918491610100850191906120ff90615ada565b80601f016020809104026020016040519081016040528092919081815260200182805461212b90615ada565b80156121765780601f1061214d57610100808354040283529160200191612176565b820191905f5260205f20905b81548152906001019060200180831161215957829003601f168201915b50505050508152505081526020016006820154815260200160078201805461219d90615ada565b80601f01602080910402602001604051908101604052809291908181526020018280546121c990615ada565b80156122145780601f106121eb57610100808354040283529160200191612214565b820191905f5260205f20905b8154815290600101906020018083116121f757829003601f168201915b505050505081525050905092915050565b61222d612ae9565b6064805460ff191660ff83169081179091556040519081527f541ae612d90d592d7865e446bfd28eb8c1de1ced93c6f992a6df36c9e7bd33ff906020015b60405180910390a150565b61227e612ae9565b801561228f5761228c613b44565b50565b61228c613ba0565b4260335410156122a45750565b5f806122b06035612b1b565b90505f5b8151811015612579575f8282815181106122d0576122d06159e8565b6020908102919091018101515f818152603790925260409091206003015490915060ff16156122ff5750612571565b5f818152603b6020526040812061231590612b1b565b90505f5b815181101561256d575f828281518110612335576123356159e8565b6020908102919091018101515f868152603c83526040808220838352909352828120835161012081019094528054606085019081526001820154608086015260028201546001600160a01b0390811660a087015260038301541660c0860152600482015460e08601526005820180549496509294939192849284916101008501916123bf90615ada565b80601f01602080910402602001604051908101604052809291908181526020018280546123eb90615ada565b80156124365780601f1061240d57610100808354040283529160200191612436565b820191905f5260205f20905b81548152906001019060200180831161241957829003601f168201915b50505050508152505081526020016006820154815260200160078201805461245d90615ada565b80601f016020809104026020016040519081016040528092919081815260200182805461248990615ada565b80156124d45780601f106124ab576101008083540402835291602001916124d4565b820191905f5260205f20905b8154815290600101906020018083116124b757829003601f168201915b5050509190925250508151515f90815260396020908152604080832085518201516001600160a01b0316845290915290206001015491925050600160a01b900460ff161580156125275750602081015115155b80156125365750428160200151105b15612563576125458583613709565b508861255089615b30565b9850881061256357505050505050505050565b5050600101612319565b5050505b6001016122b4565b50505050565b606061258b6035612b1b565b905090565b6032545f906001600160a01b03166125bb576040516315aeca0d60e11b815260040160405180910390fd5b603254604051637c469ea160e11b81526001600160a01b039091169063f88d3d42906125f1908a908a9088908890600401615b48565b6020604051808303815f875af115801561260d573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906126319190615b85565b9050612641875f83898989610e5b565b9695505050505050565b612653612ae9565b6001600160a01b03811661267a57604051638219abe360e01b815260040160405180910390fd5b609780546001600160a01b0319166001600160a01b0392909216919091179055565b5f5b8251811015612579576126cb848483815181106126bd576126bd6159e8565b602002602001015184613be5565b60010161269e565b5f818152603760205260408120600201546119a5906001615ac7565b82811461270f576040516329f517fd60e01b815260040160405180910390fd5b5f5b8381101561287b5761287285858381811061272e5761272e6159e8565b90506020028101906127409190615ba0565b35868684818110612753576127536159e8565b90506020028101906127659190615ba0565b612776906040810190602001615027565b878785818110612788576127886159e8565b905060200281019061279a9190615ba0565b6127ab906060810190604001615027565b8888868181106127bd576127bd6159e8565b90506020028101906127cf9190615ba0565b606001358989878181106127e5576127e56159e8565b90506020028101906127f79190615ba0565b608001358a8a8881811061280d5761280d6159e8565b905060200281019061281f9190615ba0565b60a001358b8b89818110612835576128356159e8565b90506020028101906128479190615ba0565b6128559060c08101906159fc565b8b8b8b818110612867576128676159e8565b905060e0020161147e565b50600101612711565b5050505050565b6096546040516337dba1f760e21b8152600481018590526001600160a01b038481166024830152604482018490525f92839283929091169063df6e87dc90606401606060405180830381865afa1580156128de573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906129029190615bb4565b91989097509095509350505050565b612919612ae9565b6032546001600160a01b031680156129505760405163f6c75f8f60e01b81526001600160a01b039091166004820152602401610aaf565b506001600160a01b03811661297857604051636ca1fdd760e01b815260040160405180910390fd5b603280546001600160a01b0319166001600160a01b0383169081179091556040517fedd032701363d0aea82c2dd885af304cc0627d71af78c87d1a2159ef3f9d2cee905f90a250565b6129c9612ae9565b6001600160a01b0381166129f257604051631e4fbdf760e01b81525f6004820152602401610aaf565b61228c816139d6565b612a03612ae9565b5f828152603860205260409020612a1a9082613d14565b8190612a455760405163153096f360e11b81526001600160a01b039091166004820152602401610aaf565b505f8281526039602090815260408083206001600160a01b03851680855290835281842080546001600160a01b03191681556001810180546001600160b01b03191690556002810185905560038101859055600401849055858452603a835281842081855290925280832083905551909184917fa7353976a33b36069eee140579faabe142bd14e7f8dd5496ac9199bd862edd4d9190a35050565b5f61258b613d28565b33612af2612001565b6001600160a01b031614611e075760405163118cdaa760e01b8152336004820152602401610aaf565b60605f611eb683613d31565b612b2f614bd4565b5f838152603b60205260409020612b469083613d8a565b8290612b6857604051637f11bea960e01b8152600401610aaf91815260200190565b505f838152603c60209081526040808320858452825291829020825160c0810184528154815260018201549281019290925260028101546001600160a01b0390811693830193909352600381015490921660608201526004820154608082015260058201805491929160a084019190612be090615ada565b80601f0160208091040260200160405190810160405280929190818152602001828054612c0c90615ada565b8015612c575780601f10612c2e57610100808354040283529160200191612c57565b820191905f5260205f20905b815481529060010190602001808311612c3a57829003601f168201915b505050919092525050505f848152603960209081526040808320848201516001600160a01b031684529091529020600181015491925090600160a81b900460ff1615612cba578160800151816004015f828254612cb49190615bdf565b90915550505b5f848152603c602090815260408083208684529091528120818155600181018290556002810180546001600160a01b0319908116909155600382018054909116905560048101829055908181612d136005830182614c17565b5050600682015f9055600782015f612d2b9190614c17565b50505092915050565b5f516020615efc5f395f51905f525460ff1615611e075760405163d93c066560e01b815260040160405180910390fd5b5f516020615f1c5f395f51905f52805460011901612d9557604051633ee5aeb560e01b815260040160405180910390fd5b60029055565b6001600160a01b0381165f9081526001830160205260408120541515611eb6565b8251825181148015612dce5750815181145b835183518392612e02576040516324227ae160e21b8152600481019390935260248301919091526044820152606401610aaf565b505060645482915060ff16811015612e3057604051631aebd17960e11b8152600401610aaf91815260200190565b505f80826001600160401b03811115612e4b57612e4b614c78565b604051908082528060200260200182016040528015612e74578160200160208202803683370190505b5090505f5b83811015612fd6575f612ee4888381518110612e9757612e976159e8565b6020026020010151888481518110612eb157612eb16159e8565b6020026020010151888581518110612ecb57612ecb6159e8565b6020026020010151612edc8d613d95565b929190613dc1565b9050612efc682b20a624a220aa27a960b91b8261202f565b682b20a624a220aa27a960b91b829091612f3b5760405163698bd5ff60e01b815260048101929092526001600160a01b03166024820152604401610aaf565b505f9050805b85811015612f8c57848181518110612f5b57612f5b6159e8565b60200260200101516001600160a01b0316836001600160a01b031603612f845760019150612f8c565b600101612f41565b5080612fcc5781848681518110612fa557612fa56159e8565b60200260200101906001600160a01b031690816001600160a01b0316815250508460010194505b5050600101612e79565b50606454829060ff1681101561300257604051631aebd17960e11b8152600401610aaf91815260200190565b5050505050505050565b5f848152603a602090815260408083206001600160a01b0387168452909152812054606090600181131561304b576130448185615bf2565b935061306a565b5f1981121561306a5761305d81615c09565b6130679085615c37565b93505b5f196001600160a01b0387160161309e57613094858560405180602001604052805f8152506134aa565b92509250506130f1565b83156130ef575f8781526039602090815260408083206001600160a01b038a168452909152902060010154600160a81b900460ff16156130e45761309487878787613ded565b613094868686613ee3565b505b94509492505050565b82355f908152603b60209081526040909120613118918501356132ba565b83602001359061313e576040516307a5c91d60e31b8152600401610aaf91815260200190565b505f8115613167576034546131539042615ac7565b9050603454426131639190615ac7565b6033555b60405180606001604052808561317c90615c4a565b81526020808201849052604091820186905286355f908152603c82528281208883013582528252829020835180518255918201516001820155918101516002830180546001600160a01b039283166001600160a01b03199182161790915560608301516003850180549190931691161790556080810151600483015560a08101518290600582019061320e9082615d14565b505050602082015160068201556040820151600782019061322f9082615d14565b50505083355f908152603960205260408082209082906132559060608901908901615027565b6001600160a01b0316815260208101919091526040015f206001810154909150600160a81b900460ff161561287b578460800135816004015f82825461329b9190615ac7565b90915550505050505050565b60015f516020615f1c5f395f51905f5255565b5f611eb68383613fc4565b5f611eb6836001600160a01b038416613fc4565b5f8181526001830160205260408120541515611eb6565b5f8281526038602052604090206133079082612d9b565b81906133325760405163153096f360e11b81526001600160a01b039091166004820152602401610aaf565b505f82815260376020526040902060030154829060ff161561336a57604051636fc24b7960e11b8152600401610aaf91815260200190565b505f8281526039602090815260408083206001600160a01b03851684529091529020600101548190600160a01b900460ff1615610a3b576040516338384f6f60e11b81526001600160a01b039091166004820152602401610aaf565b6096545f9081906001600160a01b03166133e457505f9050806134a0565b6096546040516337dba1f760e21b8152600481018990526001600160a01b038881166024830152604482018890525f92169063df6e87dc90606401606060405180830381865afa15801561343a573d5f5f3e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061345e9190615bb4565b909450925090508086108015906134755750828510155b80156134815750818410155b61349e576040516358e8878560e01b815260040160405180910390fd5b505b9550959350505050565b5f60608347478211156134d957604051632f2a246160e21b815260048101929092526024820152604401610aaf565b50506060856001600160a01b031685856040516134f69190615dce565b5f6040518083038185875af1925050503d805f8114613530576040519150601f19603f3d011682016040523d82523d5f602084013e613535565b606091505b5090935090508261357a57805115613551575f9250905061361f565b50506040805180820190915260088152671c995d995c9d195960c21b60208201525f915061361f565b845f0361360a5780515f036135c857856001600160a01b03163b5f036135c35750506040805180820190915260088152676e6f7420636f646560c01b60208201525f915061361f565b61360a565b6020810151600181151514613608575f6040518060400160405280600c81526020016b72657475726e2066616c736560a01b81525093509350505061361f565b505b505060408051602081019091525f8152600191505b935093915050565b61363d8a8a8a89613638898b615ac7565b614010565b5f8a815260376020526040812060019081018054909101908190558190915060395f8d81526020019081526020015f205f8c6001600160a01b03166001600160a01b031681526020019081526020015f206001015f9054906101000a90046001600160a01b03169050896001600160a01b0316828d7f732adeda688b3a630ef0effe2e3fc34e22b5ae8c24cdb7d3ba5a0fb3a004db508e858e8e8e8e428f8f8f6040516136f39a99989796959493929190615de4565b60405180910390a4505050505050505050505050565b5f5f6137158484612b27565b90505f5f613734835f015184604001518560600151866080015161300c565b915091508181906137585760405162461bcd60e51b8152600401610aaf91906157a3565b5082604001516001600160a01b03168360200151845f01517f94ee0e8d51fc110ff38d48510c267aeced8608d1c96f14d63e93085dba231d6b86606001518760800151426040516137c7939291906001600160a01b039390931683526020830191909152604082015260600190565b60405180910390a450600195945050505050565b3061c0de625c0eb760891b011480613823575061c0de625c0eb760891b016138175f516020615edc5f395f51905f52546001600160a01b031690565b6001600160a01b031614155b15611e075760405163703e46dd60e11b815260040160405180910390fd5b61228c612ae9565b816001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa9250505080156138a3575060408051601f3d908101601f191682019092526138a091810190615e4e565b60015b6138cb57604051634c9c8ce360e01b81526001600160a01b0383166004820152602401610aaf565b5f516020615edc5f395f51905f5281146138fb57604051632a87526960e21b815260048101829052602401610aaf565b610a3b838361428f565b61390d6142e4565b6139163361432d565b61391e61433e565b613926614346565b61392e614356565b61393782614366565b61393f6143cc565b6001600160a01b03811661396657604051638219abe360e01b815260040160405180910390fd5b609780546001600160a01b0319166001600160a01b03929092169190911790555043609855565b306001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001614611e075760405163703e46dd60e11b815260040160405180910390fd5b7f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c19930080546001600160a01b031981166001600160a01b03848116918217845560405192169182907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a3505050565b7fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d10280546060915f516020615ebc5f395f51905f5291613a8490615ada565b80601f0160208091040260200160405190810160405280929190818152602001828054613ab090615ada565b8015613afb5780601f10613ad257610100808354040283529160200191613afb565b820191905f5260205f20905b815481529060010190602001808311613ade57829003601f168201915b505050505091505090565b7fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d10380546060915f516020615ebc5f395f51905f5291613a8490615ada565b613b4c612d34565b5f516020615efc5f395f51905f52805460ff191660011781557f62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258335b6040516001600160a01b03909116815260200161226b565b613ba86143f8565b5f516020615efc5f395f51905f52805460ff191681557f5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa33613b88565b613bed612ae9565b6001600160a01b038216613c1457604051635989b9d360e01b815260040160405180910390fd5b82613c3257604051630e1b39f960e31b815260040160405180910390fd5b8015613c89575f838152602081905260409020613c4f90836132c5565b83839091613c8257604051631b753c1b60e21b815260048101929092526001600160a01b03166024820152604401610aaf565b5050613cd6565b5f838152602081905260409020613ca09083613d14565b83839091613cd357604051633a401ef360e21b815260048101929092526001600160a01b03166024820152604401610aaf565b50505b82826001600160a01b03167f8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f383604051611223911515815260200190565b5f611eb6836001600160a01b038416614427565b5f61258b61450a565b6060815f01805480602002602001604051908101604052809291908181526020018280548015613d7e57602002820191905f5260205f20905b815481526020019060010190808311613d6a575b50505050509050919050565b5f611eb68383614427565b5f6119a5613da1613d28565b8360405161190160f01b8152600281019290925260228201526042902090565b5f5f5f5f613dd18888888861457d565b925092509250613de18282614645565b50909695505050505050565b60405163a9059cbb60e01b81526001600160a01b038381166004830152602482018390525f9160609186169063a9059cbb906044016020604051808303815f875af1925050508015613e5c575060408051601f3d908101601f19168201909252613e5991810190615e65565b60015b613e96573d808015613e89576040519150601f19603f3d011682016040523d82523d5f602084013e613e8e565b606091505b5090506130f1565b8092508015613eaf57613eaa8787866146fd565b6130ef565b6040518060400160405280600f81526020016e1d1c985b9cd9995c8819985a5b1959608a1b81525091505094509492505050565b6040516340c10f1960e01b81526001600160a01b038381166004830152602482018390525f916060918616906340c10f19906044016020604051808303815f875af1925050508015613f52575060408051601f3d908101601f19168201909252613f4f91810190615e65565b60015b613f8c573d808015613f7f576040519150601f19603f3d011682016040523d82523d5f602084013e613f84565b606091505b50905061361f565b80925080613fbb576040518060400160405280600b81526020016a1b5a5b9d0819985a5b195960aa1b81525091505b50935093915050565b5f81815260018301602052604081205461400957508154600181810184555f8481526020808220909301849055845484825282860190935260409020919091556119a5565b505f6119a5565b5f858152603a602090815260408083206001600160a01b0388168452909152902054600181131561407b576140458184615e80565b8590849015614078576040516305330e5560e11b81526001600160a01b0390921660048301526024820152604401610aaf565b50505b5f196001600160a01b0386160161412b576140968284615ac7565b34146140a28385615ac7565b3490916140cb576040516362624a5160e11b815260048101929092526024820152604401610aaf565b505081156141265760975460408051602081019091525f8082529182916140fd916001600160a01b03169086906134aa565b915091508181906141225760405163e8b5c4bb60e01b8152600401610aaf91906157a3565b5050505b614287565b5f348015614155576040516362624a5160e11b815260048101929092526024820152604401610aaf565b50614179905084306141678587615ac7565b6001600160a01b0389169291906147a8565b811561419957609754614199906001600160a01b0387811691168461480f565b5f8681526039602090815260408083206001600160a01b0389168452909152902060010154600160a81b900460ff16156141d857614126868685614840565b604051632770a7eb60e21b8152306004820152602481018490526001600160a01b03861690639dc29fac906044016020604051808303815f875af1158015614222573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906142469190615e65565b85858590919261428357604051639ac2f56d60e01b81526001600160a01b0393841660048201529290911660248301526044820152606401610aaf565b5050505b505050505050565b6142988261487e565b6040516001600160a01b038316907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a28051156142dc57610a3b82826148e1565b611139614953565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a0054600160401b900460ff16611e0757604051631afcd79f60e31b815260040160405180910390fd5b6143356142e4565b61228c81614972565b611e076142e4565b61434e6142e4565b611e0761497a565b61435e6142e4565b611e0761499a565b61436e6142e4565b6143b6604051806040016040528060098152602001682b30b634b230ba37b960b91b815250604051806040016040528060058152602001640312e302e360dc1b8152506149a2565b6064805460ff191660ff92909216919091179055565b6143d46142e4565b6143ef6420a226a4a760d91b6143e8612001565b6001613be5565b62015180603455565b5f516020615efc5f395f51905f525460ff16611e0757604051638dfc202b60e01b815260040160405180910390fd5b5f8181526001830160205260408120548015614501575f614449600183615bdf565b85549091505f9061445c90600190615bdf565b90508082146144bb575f865f01828154811061447a5761447a6159e8565b905f5260205f200154905080875f01848154811061449a5761449a6159e8565b5f918252602080832090910192909255918252600188019052604090208390555b85548690806144cc576144cc615e93565b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f9055600193505050506119a5565b5f9150506119a5565b5f7f8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f6145346149b4565b61453c614a1c565b60408051602081019490945283019190915260608201524660808201523060a082015260c00160405160208183030381529060405280519060200120905090565b5f80807f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a08411156145b657505f9150600390508261463b565b604080515f808252602082018084528a905260ff891692820192909252606081018790526080810186905260019060a0016020604051602081039080840390855afa158015614607573d5f5f3e3d5ffd5b5050604051601f1901519150506001600160a01b03811661463257505f92506001915082905061463b565b92505f91508190505b9450945094915050565b5f82600381111561465857614658615ea7565b03614661575050565b600182600381111561467557614675615ea7565b036146935760405163f645eedf60e01b815260040160405180910390fd5b60028260038111156146a7576146a7615ea7565b036146c85760405163fce698f760e01b815260048101829052602401610aaf565b60038260038111156146dc576146dc615ea7565b03611139576040516335e2f38360e21b815260048101829052602401610aaf565b5f8381526039602090815260408083206001600160a01b03861684529091529020600481015461472d9083615ac7565b600382015460048301548692869286929091821015614785576040516352c2db3360e01b815260048101959095526001600160a01b03909316602485015260448401919091526064830152608482015260a401610aaf565b505050505081816003015f82825461479d9190615bdf565b909155505050505050565b6040516001600160a01b0384811660248301528381166044830152606482018390526125799186918216906323b872dd906084015b604051602081830303815290604052915060e01b6020820180516001600160e01b038381831617835250505050614a5e565b6040516001600160a01b03838116602483015260448201839052610a3b91859182169063a9059cbb906064016147dd565b5f8381526039602090815260408083206001600160a01b038616845290915281206003018054839290614874908490615ac7565b9091555050505050565b806001600160a01b03163b5f036148b357604051634c9c8ce360e01b81526001600160a01b0382166004820152602401610aaf565b5f516020615edc5f395f51905f5280546001600160a01b0319166001600160a01b0392909216919091179055565b60605f5f846001600160a01b0316846040516148fd9190615dce565b5f60405180830381855af49150503d805f8114614935576040519150601f19603f3d011682016040523d82523d5f602084013e61493a565b606091505b509150915061494a858383614aca565b95945050505050565b3415611e075760405163b398979f60e01b815260040160405180910390fd5b6129c96142e4565b6149826142e4565b5f516020615efc5f395f51905f52805460ff19169055565b6132a76142e4565b6149aa6142e4565b6111398282614b26565b5f5f516020615ebc5f395f51905f52816149cc613a46565b8051909150156149e457805160209091012092915050565b815480156149f3579392505050565b7fc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470935050505090565b5f5f516020615ebc5f395f51905f5281614a34613b06565b805190915015614a4c57805160209091012092915050565b600182015480156149f3579392505050565b5f5f60205f8451602086015f885af180614a7d576040513d5f823e3d81fd5b50505f513d91508115614a94578060011415614aa1565b6001600160a01b0384163b155b1561257957604051635274afe760e01b81526001600160a01b0385166004820152602401610aaf565b606082614adf57614ada82614b85565b611eb6565b8151158015614af657506001600160a01b0384163b155b15614b1f57604051639996b31560e01b81526001600160a01b0385166004820152602401610aaf565b5092915050565b614b2e6142e4565b5f516020615ebc5f395f51905f527fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d102614b678482615d14565b5060038101614b768382615d14565b505f8082556001909101555050565b805115614b955780518082602001fd5b60405163d6bda27560e01b815260040160405180910390fd5b6040518060600160405280614bc1614bd4565b81526020015f8152602001606081525090565b6040518060c001604052805f81526020015f81526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f8152602001606081525090565b508054614c2390615ada565b5f825580601f10614c32575050565b601f0160209004905f5260205f209081019061228c91905b80821115614c5d575f8155600101614c4a565b5090565b5f60208284031215614c71575f5ffd5b5035919050565b634e487b7160e01b5f52604160045260245ffd5b60405160c081016001600160401b0381118282101715614cae57614cae614c78565b60405290565b604051601f8201601f191681016001600160401b0381118282101715614cdc57614cdc614c78565b604052919050565b5f6001600160401b03821115614cfc57614cfc614c78565b5060051b60200190565b803560ff81168114614d16575f5ffd5b919050565b5f82601f830112614d2a575f5ffd5b8135614d3d614d3882614ce4565b614cb4565b8082825260208201915060208360051b860101925085831115614d5e575f5ffd5b602085015b83811015614d8257614d7481614d06565b835260209283019201614d63565b5095945050505050565b5f82601f830112614d9b575f5ffd5b8135614da9614d3882614ce4565b8082825260208201915060208360051b860101925085831115614dca575f5ffd5b602085015b83811015614d82578035835260209283019201614dcf565b5f5f5f5f60808587031215614dfa575f5ffd5b84356001600160401b03811115614e0f575f5ffd5b850160c08188031215614e20575f5ffd5b935060208501356001600160401b03811115614e3a575f5ffd5b614e4687828801614d1b565b93505060408501356001600160401b03811115614e61575f5ffd5b614e6d87828801614d8c565b92505060608501356001600160401b03811115614e88575f5ffd5b614e9487828801614d8c565b91505092959194509250565b801515811461228c575f5ffd5b6001600160a01b038116811461228c575f5ffd5b5f5f5f5f5f5f60c08789031215614ed6575f5ffd5b863595506020870135614ee881614ea0565b94506040870135614ef881614ead565b93506060870135614f0881614ead565b9598949750929560808101359460a0909101359350915050565b5f82601f830112614f31575f5ffd5b8135614f3f614d3882614ce4565b8082825260208201915060208360051b860101925085831115614f60575f5ffd5b602085015b83811015614d82578035614f7881614ead565b835260209283019201614f65565b5f5f60408385031215614f97575f5ffd5b8235915060208301356001600160401b03811115614fb3575f5ffd5b614fbf85828601614f22565b9150509250929050565b5f5f5f60608486031215614fdb575f5ffd5b833592506020840135614fed81614ead565b929592945050506040919091013590565b5f5f5f60608486031215615010575f5ffd5b505081359360208301359350604090920135919050565b5f60208284031215615037575f5ffd5b8135611eb681614ead565b5f5f5f60608486031215615054575f5ffd5b83359250602084013561506681614ead565b9150604084013561507681614ea0565b809150509250925092565b5f5f83601f840112615091575f5ffd5b5081356001600160401b038111156150a7575f5ffd5b6020830191508360208285010111156150be575f5ffd5b9250929050565b5f5f5f5f5f5f5f5f5f898b036101c08112156150df575f5ffd5b8a35995060208b01356150f181614ead565b985060408b013561510181614ead565b975060608b0135965060808b0135955060a08b0135945060c08b01356001600160401b03811115615130575f5ffd5b61513c8d828e01615081565b90955093505060e060df1982011215615153575f5ffd5b5060e08a0190509295985092959850929598565b5f5f60408385031215615178575f5ffd5b50508035926020909101359150565b5f5f6001600160401b038411156151a0576151a0614c78565b50601f8301601f19166020016151b581614cb4565b9150508281528383830111156151c9575f5ffd5b828260208301375f602084830101529392505050565b5f82601f8301126151ee575f5ffd5b611eb683833560208501615187565b5f5f6040838503121561520e575f5ffd5b823561521981614ead565b915060208301356001600160401b03811115615233575f5ffd5b614fbf858286016151df565b5f5f60408385031215615250575f5ffd5b61525983614d06565b9150602083013561526981614ead565b809150509250929050565b80516001600160a01b039081168352602080830151909116908301526040808201511515908301526060808201511515908301526080808201519083015260a0818101519083015260c090810151910152565b602080825282518282018190525f918401906040840190835b81811015615309576152f3838551615274565b6020939093019260e092909201916001016152e0565b509095945050505050565b5f5f5f5f5f5f5f5f60e0898b03121561532b575f5ffd5b88359750602089013561533d81614ead565b9650604089013561534d81614ead565b9550606089013594506080890135935060a0890135925060c08901356001600160401b0381111561537c575f5ffd5b6153888b828c01615081565b999c989b5096995094979396929594505050565b5f5f604083850312156153ad575f5ffd5b82359150602083013561526981614ea0565b5f5f604083850312156153d0575f5ffd5b8235915060208301356001600160401b038111156153ec575f5ffd5b8301601f810185136153fc575f5ffd5b803561540a614d3882614ce4565b8082825260208201915060208360051b85010192508783111561542b575f5ffd5b6020840193505b8284101561544d578335825260209384019390910190615432565b809450505050509250929050565b5f8151808452602084019350602083015f5b8281101561548b57815186526020958601959091019060010161546d565b5093949350505050565b602081525f611eb6602083018461545b565b5f5f604083850312156154b8575f5ffd5b82359150602083013561526981614ead565b60e081016119a58284615274565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b60ff60f81b8816815260e060208201525f61552460e08301896154d8565b828103604084015261553681896154d8565b606084018890526001600160a01b038716608085015260a0840186905283810360c08501529050615567818561545b565b9a9950505050505050505050565b5f5f83601f840112615585575f5ffd5b5081356001600160401b0381111561559b575f5ffd5b6020830191508360208260051b85010111156150be575f5ffd5b5f82601f8301126155c4575f5ffd5b81356155d2614d3882614ce4565b8082825260208201915060208360051b8601019250858311156155f3575f5ffd5b602085015b83811015614d825780356001600160401b03811115615615575f5ffd5b615624886020838a0101614d8c565b845250602092830192016155f8565b5f5f5f5f5f60808688031215615647575f5ffd5b85356001600160401b0381111561565c575f5ffd5b61566888828901615575565b90965094505060208601356001600160401b03811115615686575f5ffd5b8601601f81018813615696575f5ffd5b80356156a4614d3882614ce4565b8082825260208201915060208360051b85010192508a8311156156c5575f5ffd5b602084015b838110156157055780356001600160401b038111156156e7575f5ffd5b6156f68d602083890101614d1b565b845250602092830192016156ca565b50955050505060408601356001600160401b03811115615723575f5ffd5b61572f888289016155b5565b92505060608601356001600160401b0381111561574a575f5ffd5b615756888289016155b5565b9150509295509295909350565b602080825282518282018190525f918401906040840190835b818110156153095783516001600160a01b031683526020938401939092019160010161577c565b602081525f611eb660208301846154d8565b602081525f82516060602084015280516080840152602081015160a084015260018060a01b0360408201511660c084015260018060a01b0360608201511660e0840152608081015161010084015260a0810151905060c06101208401526158206101408401826154d8565b9050602084015160408401526040840151601f1984830301606085015261494a82826154d8565b5f60208284031215615857575f5ffd5b611eb682614d06565b5f60208284031215615870575f5ffd5b8135611eb681614ea0565b5f5f5f5f5f5f60c08789031215615890575f5ffd5b8635955060208701356158a281614ead565b9450604087013593506060870135925060808701356001600160401b038111156158ca575f5ffd5b8701601f810189136158da575f5ffd5b6158e989823560208401615187565b9250506158f860a08801614d06565b90509295509295509295565b5f5f5f60608486031215615916575f5ffd5b8335925060208401356001600160401b03811115615932575f5ffd5b61593e86828701614f22565b925050604084013561507681614ea0565b5f5f5f5f60408587031215615962575f5ffd5b84356001600160401b03811115615977575f5ffd5b61598387828801615575565b90955093505060208501356001600160401b038111156159a1575f5ffd5b8501601f810187136159b1575f5ffd5b80356001600160401b038111156159c6575f5ffd5b87602060e0830284010111156159da575f5ffd5b949793965060200194505050565b634e487b7160e01b5f52603260045260245ffd5b5f5f8335601e19843603018112615a11575f5ffd5b8301803591506001600160401b03821115615a2a575f5ffd5b6020019150368190038213156150be575f5ffd5b81835281816020850137505f828201602090810191909152601f909101601f19169091010190565b878152602081018790526001600160a01b038681166040830152851660608201526080810184905260c060a082018190525f90615aa69083018486615a3e565b9998505050505050505050565b634e487b7160e01b5f52601160045260245ffd5b808201808211156119a5576119a5615ab3565b600181811c90821680615aee57607f821691505b602082108103615b0c57634e487b7160e01b5f52602260045260245ffd5b50919050565b5f823560be19833603018112615b26575f5ffd5b9190910192915050565b5f60018201615b4157615b41615ab3565b5060010190565b8481526001600160a01b03841660208201526080604082018190525f90615b71908301856154d8565b905060ff8316606083015295945050505050565b5f60208284031215615b95575f5ffd5b8151611eb681614ead565b5f823560de19833603018112615b26575f5ffd5b5f5f5f60608486031215615bc6575f5ffd5b5050815160208301516040909301519094929350919050565b818103818111156119a5576119a5615ab3565b80820281158282048414176119a5576119a5615ab3565b5f600160ff1b8201615c1d57615c1d615ab3565b505f0390565b634e487b7160e01b5f52601260045260245ffd5b5f82615c4557615c45615c23565b500490565b5f60c08236031215615c5a575f5ffd5b615c62614c8c565b82358152602080840135908201526040830135615c7e81614ead565b60408201526060830135615c9181614ead565b60608201526080838101359082015260a08301356001600160401b03811115615cb8575f5ffd5b615cc4368286016151df565b60a08301525092915050565b601f821115610a3b57805f5260205f20601f840160051c81016020851015615cf55750805b601f840160051c820191505b8181101561287b575f8155600101615d01565b81516001600160401b03811115615d2d57615d2d614c78565b615d4181615d3b8454615ada565b84615cd0565b6020601f821160018114615d73575f8315615d5c5750848201515b5f19600385901b1c1916600184901b17845561287b565b5f84815260208120601f198516915b82811015615da25787850151825560209485019460019092019101615d82565b5084821015615dbf57868401515f19600387901b60f8161c191681555b50505050600190811b01905550565b5f82518060208501845e5f920191825250919050565b6001600160a01b038b811682528a8116602083015289166040820152606081018890526080810187905260a0810186905260c0810185905283151560e082015261012061010082018190525f90615e3e9083018486615a3e565b9c9b505050505050505050505050565b5f60208284031215615e5e575f5ffd5b5051919050565b5f60208284031215615e75575f5ffd5b8151611eb681614ea0565b5f82615e8e57615e8e615c23565b500690565b634e487b7160e01b5f52603160045260245ffd5b634e487b7160e01b5f52602160045260245ffdfea16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d100360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbccd5ed15c6e187e77e9aee88184c21f4f2182ab5827cb3b7e07fbedcd63f033009b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00a2646970667358221220d4e6e99b1aed5ea2326e6351296075dbdf639177b010b483a9c4d709d8231b7c64736f6c634300081c0033",
 }
 
 // CrossBridgeABI is the input ABI used to generate the binding from.
@@ -382,12 +382,12 @@ func (_CrossBridge *CrossBridgeCallerSession) AllTokenPairs(remoteChainID *big.I
 	return _CrossBridge.Contract.AllTokenPairs(&_CrossBridge.CallOpts, remoteChainID)
 }
 
-// BridgeFeeStation is a free data retrieval call binding the contract method 0x47666cb1.
+// BridgeFeeManager is a free data retrieval call binding the contract method 0x25bd5666.
 //
-// Solidity: function bridgeFeeStation() view returns(address)
-func (_CrossBridge *CrossBridgeCaller) BridgeFeeStation(opts *bind.CallOpts) (common.Address, error) {
+// Solidity: function bridgeFeeManager() view returns(address)
+func (_CrossBridge *CrossBridgeCaller) BridgeFeeManager(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _CrossBridge.contract.Call(opts, &out, "bridgeFeeStation")
+	err := _CrossBridge.contract.Call(opts, &out, "bridgeFeeManager")
 
 	if err != nil {
 		return *new(common.Address), err
@@ -399,26 +399,76 @@ func (_CrossBridge *CrossBridgeCaller) BridgeFeeStation(opts *bind.CallOpts) (co
 
 }
 
-// BridgeFeeStation is a free data retrieval call binding the contract method 0x47666cb1.
+// BridgeFeeManager is a free data retrieval call binding the contract method 0x25bd5666.
 //
-// Solidity: function bridgeFeeStation() view returns(address)
-func (_CrossBridge *CrossBridgeSession) BridgeFeeStation() (common.Address, error) {
-	return _CrossBridge.Contract.BridgeFeeStation(&_CrossBridge.CallOpts)
+// Solidity: function bridgeFeeManager() view returns(address)
+func (_CrossBridge *CrossBridgeSession) BridgeFeeManager() (common.Address, error) {
+	return _CrossBridge.Contract.BridgeFeeManager(&_CrossBridge.CallOpts)
 }
 
-// BridgeFeeStation is a free data retrieval call binding the contract method 0x47666cb1.
+// BridgeFeeManager is a free data retrieval call binding the contract method 0x25bd5666.
 //
-// Solidity: function bridgeFeeStation() view returns(address)
-func (_CrossBridge *CrossBridgeCallerSession) BridgeFeeStation() (common.Address, error) {
-	return _CrossBridge.Contract.BridgeFeeStation(&_CrossBridge.CallOpts)
+// Solidity: function bridgeFeeManager() view returns(address)
+func (_CrossBridge *CrossBridgeCallerSession) BridgeFeeManager() (common.Address, error) {
+	return _CrossBridge.Contract.BridgeFeeManager(&_CrossBridge.CallOpts)
 }
 
-// CrossMintableERC20Factory is a free data retrieval call binding the contract method 0x8f517c17.
+// CalculateFee is a free data retrieval call binding the contract method 0xdf6e87dc.
 //
-// Solidity: function crossMintableERC20Factory() view returns(address)
-func (_CrossBridge *CrossBridgeCaller) CrossMintableERC20Factory(opts *bind.CallOpts) (common.Address, error) {
+// Solidity: function calculateFee(uint256 remoteChainID, address token, uint256 value) view returns(uint256 minimumValue, uint256 gasFee, uint256 exFee)
+func (_CrossBridge *CrossBridgeCaller) CalculateFee(opts *bind.CallOpts, remoteChainID *big.Int, token common.Address, value *big.Int) (struct {
+	MinimumValue *big.Int
+	GasFee       *big.Int
+	ExFee        *big.Int
+}, error) {
 	var out []interface{}
-	err := _CrossBridge.contract.Call(opts, &out, "crossMintableERC20Factory")
+	err := _CrossBridge.contract.Call(opts, &out, "calculateFee", remoteChainID, token, value)
+
+	outstruct := new(struct {
+		MinimumValue *big.Int
+		GasFee       *big.Int
+		ExFee        *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.MinimumValue = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.GasFee = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.ExFee = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// CalculateFee is a free data retrieval call binding the contract method 0xdf6e87dc.
+//
+// Solidity: function calculateFee(uint256 remoteChainID, address token, uint256 value) view returns(uint256 minimumValue, uint256 gasFee, uint256 exFee)
+func (_CrossBridge *CrossBridgeSession) CalculateFee(remoteChainID *big.Int, token common.Address, value *big.Int) (struct {
+	MinimumValue *big.Int
+	GasFee       *big.Int
+	ExFee        *big.Int
+}, error) {
+	return _CrossBridge.Contract.CalculateFee(&_CrossBridge.CallOpts, remoteChainID, token, value)
+}
+
+// CalculateFee is a free data retrieval call binding the contract method 0xdf6e87dc.
+//
+// Solidity: function calculateFee(uint256 remoteChainID, address token, uint256 value) view returns(uint256 minimumValue, uint256 gasFee, uint256 exFee)
+func (_CrossBridge *CrossBridgeCallerSession) CalculateFee(remoteChainID *big.Int, token common.Address, value *big.Int) (struct {
+	MinimumValue *big.Int
+	GasFee       *big.Int
+	ExFee        *big.Int
+}, error) {
+	return _CrossBridge.Contract.CalculateFee(&_CrossBridge.CallOpts, remoteChainID, token, value)
+}
+
+// CrossMintableERC20Code is a free data retrieval call binding the contract method 0x4be13f83.
+//
+// Solidity: function crossMintableERC20Code() view returns(address)
+func (_CrossBridge *CrossBridgeCaller) CrossMintableERC20Code(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _CrossBridge.contract.Call(opts, &out, "crossMintableERC20Code")
 
 	if err != nil {
 		return *new(common.Address), err
@@ -430,18 +480,49 @@ func (_CrossBridge *CrossBridgeCaller) CrossMintableERC20Factory(opts *bind.Call
 
 }
 
-// CrossMintableERC20Factory is a free data retrieval call binding the contract method 0x8f517c17.
+// CrossMintableERC20Code is a free data retrieval call binding the contract method 0x4be13f83.
 //
-// Solidity: function crossMintableERC20Factory() view returns(address)
-func (_CrossBridge *CrossBridgeSession) CrossMintableERC20Factory() (common.Address, error) {
-	return _CrossBridge.Contract.CrossMintableERC20Factory(&_CrossBridge.CallOpts)
+// Solidity: function crossMintableERC20Code() view returns(address)
+func (_CrossBridge *CrossBridgeSession) CrossMintableERC20Code() (common.Address, error) {
+	return _CrossBridge.Contract.CrossMintableERC20Code(&_CrossBridge.CallOpts)
 }
 
-// CrossMintableERC20Factory is a free data retrieval call binding the contract method 0x8f517c17.
+// CrossMintableERC20Code is a free data retrieval call binding the contract method 0x4be13f83.
 //
-// Solidity: function crossMintableERC20Factory() view returns(address)
-func (_CrossBridge *CrossBridgeCallerSession) CrossMintableERC20Factory() (common.Address, error) {
-	return _CrossBridge.Contract.CrossMintableERC20Factory(&_CrossBridge.CallOpts)
+// Solidity: function crossMintableERC20Code() view returns(address)
+func (_CrossBridge *CrossBridgeCallerSession) CrossMintableERC20Code() (common.Address, error) {
+	return _CrossBridge.Contract.CrossMintableERC20Code(&_CrossBridge.CallOpts)
+}
+
+// Dev is a free data retrieval call binding the contract method 0x91cca3db.
+//
+// Solidity: function dev() view returns(address)
+func (_CrossBridge *CrossBridgeCaller) Dev(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _CrossBridge.contract.Call(opts, &out, "dev")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Dev is a free data retrieval call binding the contract method 0x91cca3db.
+//
+// Solidity: function dev() view returns(address)
+func (_CrossBridge *CrossBridgeSession) Dev() (common.Address, error) {
+	return _CrossBridge.Contract.Dev(&_CrossBridge.CallOpts)
+}
+
+// Dev is a free data retrieval call binding the contract method 0x91cca3db.
+//
+// Solidity: function dev() view returns(address)
+func (_CrossBridge *CrossBridgeCallerSession) Dev() (common.Address, error) {
+	return _CrossBridge.Contract.Dev(&_CrossBridge.CallOpts)
 }
 
 // DomainSeparator is a free data retrieval call binding the contract method 0xf698da25.
@@ -543,56 +624,6 @@ func (_CrossBridge *CrossBridgeCallerSession) Eip712Domain() (struct {
 	Extensions        []*big.Int
 }, error) {
 	return _CrossBridge.Contract.Eip712Domain(&_CrossBridge.CallOpts)
-}
-
-// EstimateFee is a free data retrieval call binding the contract method 0xae766389.
-//
-// Solidity: function estimateFee(uint256 remoteChainID, address token, uint256 value) view returns(uint256 minimumAmount, uint256 gasFee, uint256 exFee)
-func (_CrossBridge *CrossBridgeCaller) EstimateFee(opts *bind.CallOpts, remoteChainID *big.Int, token common.Address, value *big.Int) (struct {
-	MinimumAmount *big.Int
-	GasFee        *big.Int
-	ExFee         *big.Int
-}, error) {
-	var out []interface{}
-	err := _CrossBridge.contract.Call(opts, &out, "estimateFee", remoteChainID, token, value)
-
-	outstruct := new(struct {
-		MinimumAmount *big.Int
-		GasFee        *big.Int
-		ExFee         *big.Int
-	})
-	if err != nil {
-		return *outstruct, err
-	}
-
-	outstruct.MinimumAmount = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.GasFee = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.ExFee = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
-
-	return *outstruct, err
-
-}
-
-// EstimateFee is a free data retrieval call binding the contract method 0xae766389.
-//
-// Solidity: function estimateFee(uint256 remoteChainID, address token, uint256 value) view returns(uint256 minimumAmount, uint256 gasFee, uint256 exFee)
-func (_CrossBridge *CrossBridgeSession) EstimateFee(remoteChainID *big.Int, token common.Address, value *big.Int) (struct {
-	MinimumAmount *big.Int
-	GasFee        *big.Int
-	ExFee         *big.Int
-}, error) {
-	return _CrossBridge.Contract.EstimateFee(&_CrossBridge.CallOpts, remoteChainID, token, value)
-}
-
-// EstimateFee is a free data retrieval call binding the contract method 0xae766389.
-//
-// Solidity: function estimateFee(uint256 remoteChainID, address token, uint256 value) view returns(uint256 minimumAmount, uint256 gasFee, uint256 exFee)
-func (_CrossBridge *CrossBridgeCallerSession) EstimateFee(remoteChainID *big.Int, token common.Address, value *big.Int) (struct {
-	MinimumAmount *big.Int
-	GasFee        *big.Int
-	ExFee         *big.Int
-}, error) {
-	return _CrossBridge.Contract.EstimateFee(&_CrossBridge.CallOpts, remoteChainID, token, value)
 }
 
 // GetNextFinalizeIndex is a free data retrieval call binding the contract method 0xd5717fc5.
@@ -843,37 +874,6 @@ func (_CrossBridge *CrossBridgeCallerSession) InitializedAt() (*big.Int, error) 
 	return _CrossBridge.Contract.InitializedAt(&_CrossBridge.CallOpts)
 }
 
-// Nexus is a free data retrieval call binding the contract method 0xa3f5c1d2.
-//
-// Solidity: function nexus() view returns(address)
-func (_CrossBridge *CrossBridgeCaller) Nexus(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _CrossBridge.contract.Call(opts, &out, "nexus")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Nexus is a free data retrieval call binding the contract method 0xa3f5c1d2.
-//
-// Solidity: function nexus() view returns(address)
-func (_CrossBridge *CrossBridgeSession) Nexus() (common.Address, error) {
-	return _CrossBridge.Contract.Nexus(&_CrossBridge.CallOpts)
-}
-
-// Nexus is a free data retrieval call binding the contract method 0xa3f5c1d2.
-//
-// Solidity: function nexus() view returns(address)
-func (_CrossBridge *CrossBridgeCallerSession) Nexus() (common.Address, error) {
-	return _CrossBridge.Contract.Nexus(&_CrossBridge.CallOpts)
-}
-
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
 // Solidity: function owner() view returns(address)
@@ -1000,23 +1000,23 @@ func (_CrossBridge *CrossBridgeCallerSession) Threshold() (uint8, error) {
 
 // BridgeToken is a paid mutator transaction binding the contract method 0x5fd262de.
 //
-// Solidity: function bridgeToken(uint256 remoteChainID, address token, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData) payable returns(bool)
-func (_CrossBridge *CrossBridgeTransactor) BridgeToken(opts *bind.TransactOpts, remoteChainID *big.Int, token common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "bridgeToken", remoteChainID, token, to, value, gasFee, exFee, extraData)
+// Solidity: function bridgeToken(uint256 toChainID, address fromToken, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData) payable returns(bool)
+func (_CrossBridge *CrossBridgeTransactor) BridgeToken(opts *bind.TransactOpts, toChainID *big.Int, fromToken common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "bridgeToken", toChainID, fromToken, to, value, gasFee, exFee, extraData)
 }
 
 // BridgeToken is a paid mutator transaction binding the contract method 0x5fd262de.
 //
-// Solidity: function bridgeToken(uint256 remoteChainID, address token, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData) payable returns(bool)
-func (_CrossBridge *CrossBridgeSession) BridgeToken(remoteChainID *big.Int, token common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte) (*types.Transaction, error) {
-	return _CrossBridge.Contract.BridgeToken(&_CrossBridge.TransactOpts, remoteChainID, token, to, value, gasFee, exFee, extraData)
+// Solidity: function bridgeToken(uint256 toChainID, address fromToken, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData) payable returns(bool)
+func (_CrossBridge *CrossBridgeSession) BridgeToken(toChainID *big.Int, fromToken common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte) (*types.Transaction, error) {
+	return _CrossBridge.Contract.BridgeToken(&_CrossBridge.TransactOpts, toChainID, fromToken, to, value, gasFee, exFee, extraData)
 }
 
 // BridgeToken is a paid mutator transaction binding the contract method 0x5fd262de.
 //
-// Solidity: function bridgeToken(uint256 remoteChainID, address token, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData) payable returns(bool)
-func (_CrossBridge *CrossBridgeTransactorSession) BridgeToken(remoteChainID *big.Int, token common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte) (*types.Transaction, error) {
-	return _CrossBridge.Contract.BridgeToken(&_CrossBridge.TransactOpts, remoteChainID, token, to, value, gasFee, exFee, extraData)
+// Solidity: function bridgeToken(uint256 toChainID, address fromToken, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData) payable returns(bool)
+func (_CrossBridge *CrossBridgeTransactorSession) BridgeToken(toChainID *big.Int, fromToken common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte) (*types.Transaction, error) {
+	return _CrossBridge.Contract.BridgeToken(&_CrossBridge.TransactOpts, toChainID, fromToken, to, value, gasFee, exFee, extraData)
 }
 
 // ChangeThreshold is a paid mutator transaction binding the contract method 0xb7f3358d.
@@ -1063,23 +1063,23 @@ func (_CrossBridge *CrossBridgeTransactorSession) ClearPending(remoteChainID *bi
 
 // CreateToken is a paid mutator transaction binding the contract method 0xd016d625.
 //
-// Solidity: function createToken(uint256 remoteChainID, address remoteToken, int256 exchangeRate, uint256 safetyLimit, string symbol, uint8 decimals) returns(address tokenAddress)
-func (_CrossBridge *CrossBridgeTransactor) CreateToken(opts *bind.TransactOpts, remoteChainID *big.Int, remoteToken common.Address, exchangeRate *big.Int, safetyLimit *big.Int, symbol string, decimals uint8) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "createToken", remoteChainID, remoteToken, exchangeRate, safetyLimit, symbol, decimals)
+// Solidity: function createToken(uint256 remoteChainID, address remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold, string symbol, uint8 decimals) returns(address tokenAddress)
+func (_CrossBridge *CrossBridgeTransactor) CreateToken(opts *bind.TransactOpts, remoteChainID *big.Int, remoteToken common.Address, conversionRatio *big.Int, verificationAmountThreshold *big.Int, symbol string, decimals uint8) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "createToken", remoteChainID, remoteToken, conversionRatio, verificationAmountThreshold, symbol, decimals)
 }
 
 // CreateToken is a paid mutator transaction binding the contract method 0xd016d625.
 //
-// Solidity: function createToken(uint256 remoteChainID, address remoteToken, int256 exchangeRate, uint256 safetyLimit, string symbol, uint8 decimals) returns(address tokenAddress)
-func (_CrossBridge *CrossBridgeSession) CreateToken(remoteChainID *big.Int, remoteToken common.Address, exchangeRate *big.Int, safetyLimit *big.Int, symbol string, decimals uint8) (*types.Transaction, error) {
-	return _CrossBridge.Contract.CreateToken(&_CrossBridge.TransactOpts, remoteChainID, remoteToken, exchangeRate, safetyLimit, symbol, decimals)
+// Solidity: function createToken(uint256 remoteChainID, address remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold, string symbol, uint8 decimals) returns(address tokenAddress)
+func (_CrossBridge *CrossBridgeSession) CreateToken(remoteChainID *big.Int, remoteToken common.Address, conversionRatio *big.Int, verificationAmountThreshold *big.Int, symbol string, decimals uint8) (*types.Transaction, error) {
+	return _CrossBridge.Contract.CreateToken(&_CrossBridge.TransactOpts, remoteChainID, remoteToken, conversionRatio, verificationAmountThreshold, symbol, decimals)
 }
 
 // CreateToken is a paid mutator transaction binding the contract method 0xd016d625.
 //
-// Solidity: function createToken(uint256 remoteChainID, address remoteToken, int256 exchangeRate, uint256 safetyLimit, string symbol, uint8 decimals) returns(address tokenAddress)
-func (_CrossBridge *CrossBridgeTransactorSession) CreateToken(remoteChainID *big.Int, remoteToken common.Address, exchangeRate *big.Int, safetyLimit *big.Int, symbol string, decimals uint8) (*types.Transaction, error) {
-	return _CrossBridge.Contract.CreateToken(&_CrossBridge.TransactOpts, remoteChainID, remoteToken, exchangeRate, safetyLimit, symbol, decimals)
+// Solidity: function createToken(uint256 remoteChainID, address remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold, string symbol, uint8 decimals) returns(address tokenAddress)
+func (_CrossBridge *CrossBridgeTransactorSession) CreateToken(remoteChainID *big.Int, remoteToken common.Address, conversionRatio *big.Int, verificationAmountThreshold *big.Int, symbol string, decimals uint8) (*types.Transaction, error) {
+	return _CrossBridge.Contract.CreateToken(&_CrossBridge.TransactOpts, remoteChainID, remoteToken, conversionRatio, verificationAmountThreshold, symbol, decimals)
 }
 
 // FinalizeBridge is a paid mutator transaction binding the contract method 0x1938e0f2.
@@ -1126,44 +1126,23 @@ func (_CrossBridge *CrossBridgeTransactorSession) FinalizeBridgeBatch(args []IBr
 
 // Initialize is a paid mutator transaction binding the contract method 0x5187599d.
 //
-// Solidity: function initialize(uint8 _threshold, address nexus_) returns()
-func (_CrossBridge *CrossBridgeTransactor) Initialize(opts *bind.TransactOpts, _threshold uint8, nexus_ common.Address) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "initialize", _threshold, nexus_)
+// Solidity: function initialize(uint8 _threshold, address dev_) returns()
+func (_CrossBridge *CrossBridgeTransactor) Initialize(opts *bind.TransactOpts, _threshold uint8, dev_ common.Address) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "initialize", _threshold, dev_)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x5187599d.
 //
-// Solidity: function initialize(uint8 _threshold, address nexus_) returns()
-func (_CrossBridge *CrossBridgeSession) Initialize(_threshold uint8, nexus_ common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.Initialize(&_CrossBridge.TransactOpts, _threshold, nexus_)
+// Solidity: function initialize(uint8 _threshold, address dev_) returns()
+func (_CrossBridge *CrossBridgeSession) Initialize(_threshold uint8, dev_ common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.Initialize(&_CrossBridge.TransactOpts, _threshold, dev_)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x5187599d.
 //
-// Solidity: function initialize(uint8 _threshold, address nexus_) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) Initialize(_threshold uint8, nexus_ common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.Initialize(&_CrossBridge.TransactOpts, _threshold, nexus_)
-}
-
-// LockPending is a paid mutator transaction binding the contract method 0xf17f6cb7.
-//
-// Solidity: function lockPending(uint256 remoteChainID, uint256 index) returns()
-func (_CrossBridge *CrossBridgeTransactor) LockPending(opts *bind.TransactOpts, remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "lockPending", remoteChainID, index)
-}
-
-// LockPending is a paid mutator transaction binding the contract method 0xf17f6cb7.
-//
-// Solidity: function lockPending(uint256 remoteChainID, uint256 index) returns()
-func (_CrossBridge *CrossBridgeSession) LockPending(remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.LockPending(&_CrossBridge.TransactOpts, remoteChainID, index)
-}
-
-// LockPending is a paid mutator transaction binding the contract method 0xf17f6cb7.
-//
-// Solidity: function lockPending(uint256 remoteChainID, uint256 index) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) LockPending(remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.LockPending(&_CrossBridge.TransactOpts, remoteChainID, index)
+// Solidity: function initialize(uint8 _threshold, address dev_) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) Initialize(_threshold uint8, dev_ common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.Initialize(&_CrossBridge.TransactOpts, _threshold, dev_)
 }
 
 // ManualProcessPending is a paid mutator transaction binding the contract method 0x7f4ab9f5.
@@ -1189,86 +1168,128 @@ func (_CrossBridge *CrossBridgeTransactorSession) ManualProcessPending(remoteCha
 
 // PermitBridgeToken is a paid mutator transaction binding the contract method 0x4d5d0056.
 //
-// Solidity: function permitBridgeToken(uint256 remoteChainID, address token, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs) payable returns(bool)
-func (_CrossBridge *CrossBridgeTransactor) PermitBridgeToken(opts *bind.TransactOpts, remoteChainID *big.Int, token common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte, permitArgs IStandardBridgePermitArguments) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "permitBridgeToken", remoteChainID, token, to, value, gasFee, exFee, extraData, permitArgs)
+// Solidity: function permitBridgeToken(uint256 toChainID, address fromToken, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs) payable returns(bool)
+func (_CrossBridge *CrossBridgeTransactor) PermitBridgeToken(opts *bind.TransactOpts, toChainID *big.Int, fromToken common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte, permitArgs IBaseBridgePermitArguments) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "permitBridgeToken", toChainID, fromToken, to, value, gasFee, exFee, extraData, permitArgs)
 }
 
 // PermitBridgeToken is a paid mutator transaction binding the contract method 0x4d5d0056.
 //
-// Solidity: function permitBridgeToken(uint256 remoteChainID, address token, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs) payable returns(bool)
-func (_CrossBridge *CrossBridgeSession) PermitBridgeToken(remoteChainID *big.Int, token common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte, permitArgs IStandardBridgePermitArguments) (*types.Transaction, error) {
-	return _CrossBridge.Contract.PermitBridgeToken(&_CrossBridge.TransactOpts, remoteChainID, token, to, value, gasFee, exFee, extraData, permitArgs)
+// Solidity: function permitBridgeToken(uint256 toChainID, address fromToken, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs) payable returns(bool)
+func (_CrossBridge *CrossBridgeSession) PermitBridgeToken(toChainID *big.Int, fromToken common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte, permitArgs IBaseBridgePermitArguments) (*types.Transaction, error) {
+	return _CrossBridge.Contract.PermitBridgeToken(&_CrossBridge.TransactOpts, toChainID, fromToken, to, value, gasFee, exFee, extraData, permitArgs)
 }
 
 // PermitBridgeToken is a paid mutator transaction binding the contract method 0x4d5d0056.
 //
-// Solidity: function permitBridgeToken(uint256 remoteChainID, address token, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs) payable returns(bool)
-func (_CrossBridge *CrossBridgeTransactorSession) PermitBridgeToken(remoteChainID *big.Int, token common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte, permitArgs IStandardBridgePermitArguments) (*types.Transaction, error) {
-	return _CrossBridge.Contract.PermitBridgeToken(&_CrossBridge.TransactOpts, remoteChainID, token, to, value, gasFee, exFee, extraData, permitArgs)
+// Solidity: function permitBridgeToken(uint256 toChainID, address fromToken, address to, uint256 value, uint256 gasFee, uint256 exFee, bytes extraData, (address,address,uint256,uint256,uint8,bytes32,bytes32) permitArgs) payable returns(bool)
+func (_CrossBridge *CrossBridgeTransactorSession) PermitBridgeToken(toChainID *big.Int, fromToken common.Address, to common.Address, value *big.Int, gasFee *big.Int, exFee *big.Int, extraData []byte, permitArgs IBaseBridgePermitArguments) (*types.Transaction, error) {
+	return _CrossBridge.Contract.PermitBridgeToken(&_CrossBridge.TransactOpts, toChainID, fromToken, to, value, gasFee, exFee, extraData, permitArgs)
 }
 
 // PermitBridgeTokenBatch is a paid mutator transaction binding the contract method 0xd605665b.
 //
 // Solidity: function permitBridgeTokenBatch((uint256,address,address,uint256,uint256,uint256,bytes)[] args, (address,address,uint256,uint256,uint8,bytes32,bytes32)[] permitArgs) payable returns()
-func (_CrossBridge *CrossBridgeTransactor) PermitBridgeTokenBatch(opts *bind.TransactOpts, args []IStandardBridgeBridgeTokenArguments, permitArgs []IStandardBridgePermitArguments) (*types.Transaction, error) {
+func (_CrossBridge *CrossBridgeTransactor) PermitBridgeTokenBatch(opts *bind.TransactOpts, args []IBaseBridgeBridgeTokenArguments, permitArgs []IBaseBridgePermitArguments) (*types.Transaction, error) {
 	return _CrossBridge.contract.Transact(opts, "permitBridgeTokenBatch", args, permitArgs)
 }
 
 // PermitBridgeTokenBatch is a paid mutator transaction binding the contract method 0xd605665b.
 //
 // Solidity: function permitBridgeTokenBatch((uint256,address,address,uint256,uint256,uint256,bytes)[] args, (address,address,uint256,uint256,uint8,bytes32,bytes32)[] permitArgs) payable returns()
-func (_CrossBridge *CrossBridgeSession) PermitBridgeTokenBatch(args []IStandardBridgeBridgeTokenArguments, permitArgs []IStandardBridgePermitArguments) (*types.Transaction, error) {
+func (_CrossBridge *CrossBridgeSession) PermitBridgeTokenBatch(args []IBaseBridgeBridgeTokenArguments, permitArgs []IBaseBridgePermitArguments) (*types.Transaction, error) {
 	return _CrossBridge.Contract.PermitBridgeTokenBatch(&_CrossBridge.TransactOpts, args, permitArgs)
 }
 
 // PermitBridgeTokenBatch is a paid mutator transaction binding the contract method 0xd605665b.
 //
 // Solidity: function permitBridgeTokenBatch((uint256,address,address,uint256,uint256,uint256,bytes)[] args, (address,address,uint256,uint256,uint8,bytes32,bytes32)[] permitArgs) payable returns()
-func (_CrossBridge *CrossBridgeTransactorSession) PermitBridgeTokenBatch(args []IStandardBridgeBridgeTokenArguments, permitArgs []IStandardBridgePermitArguments) (*types.Transaction, error) {
+func (_CrossBridge *CrossBridgeTransactorSession) PermitBridgeTokenBatch(args []IBaseBridgeBridgeTokenArguments, permitArgs []IBaseBridgePermitArguments) (*types.Transaction, error) {
 	return _CrossBridge.Contract.PermitBridgeTokenBatch(&_CrossBridge.TransactOpts, args, permitArgs)
 }
 
-// ProcessExpiredPending is a paid mutator transaction binding the contract method 0x1089fd58.
+// RegisterToken is a paid mutator transaction binding the contract method 0x1e7bf215.
 //
-// Solidity: function processExpiredPending(uint256 maxCount) returns()
-func (_CrossBridge *CrossBridgeTransactor) ProcessExpiredPending(opts *bind.TransactOpts, maxCount *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "processExpiredPending", maxCount)
-}
-
-// ProcessExpiredPending is a paid mutator transaction binding the contract method 0x1089fd58.
-//
-// Solidity: function processExpiredPending(uint256 maxCount) returns()
-func (_CrossBridge *CrossBridgeSession) ProcessExpiredPending(maxCount *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.ProcessExpiredPending(&_CrossBridge.TransactOpts, maxCount)
-}
-
-// ProcessExpiredPending is a paid mutator transaction binding the contract method 0x1089fd58.
-//
-// Solidity: function processExpiredPending(uint256 maxCount) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) ProcessExpiredPending(maxCount *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.ProcessExpiredPending(&_CrossBridge.TransactOpts, maxCount)
+// Solidity: function registerToken(uint256 remoteChainID, bool isOrigin, address localToken, address remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold) returns()
+func (_CrossBridge *CrossBridgeTransactor) RegisterToken(opts *bind.TransactOpts, remoteChainID *big.Int, isOrigin bool, localToken common.Address, remoteToken common.Address, conversionRatio *big.Int, verificationAmountThreshold *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "registerToken", remoteChainID, isOrigin, localToken, remoteToken, conversionRatio, verificationAmountThreshold)
 }
 
 // RegisterToken is a paid mutator transaction binding the contract method 0x1e7bf215.
 //
-// Solidity: function registerToken(uint256 remoteChainID, bool isOrigin, address localToken, address remoteToken, int256 exchangeRate, uint256 safetyLimit) returns()
-func (_CrossBridge *CrossBridgeTransactor) RegisterToken(opts *bind.TransactOpts, remoteChainID *big.Int, isOrigin bool, localToken common.Address, remoteToken common.Address, exchangeRate *big.Int, safetyLimit *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "registerToken", remoteChainID, isOrigin, localToken, remoteToken, exchangeRate, safetyLimit)
+// Solidity: function registerToken(uint256 remoteChainID, bool isOrigin, address localToken, address remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold) returns()
+func (_CrossBridge *CrossBridgeSession) RegisterToken(remoteChainID *big.Int, isOrigin bool, localToken common.Address, remoteToken common.Address, conversionRatio *big.Int, verificationAmountThreshold *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.RegisterToken(&_CrossBridge.TransactOpts, remoteChainID, isOrigin, localToken, remoteToken, conversionRatio, verificationAmountThreshold)
 }
 
 // RegisterToken is a paid mutator transaction binding the contract method 0x1e7bf215.
 //
-// Solidity: function registerToken(uint256 remoteChainID, bool isOrigin, address localToken, address remoteToken, int256 exchangeRate, uint256 safetyLimit) returns()
-func (_CrossBridge *CrossBridgeSession) RegisterToken(remoteChainID *big.Int, isOrigin bool, localToken common.Address, remoteToken common.Address, exchangeRate *big.Int, safetyLimit *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.RegisterToken(&_CrossBridge.TransactOpts, remoteChainID, isOrigin, localToken, remoteToken, exchangeRate, safetyLimit)
+// Solidity: function registerToken(uint256 remoteChainID, bool isOrigin, address localToken, address remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) RegisterToken(remoteChainID *big.Int, isOrigin bool, localToken common.Address, remoteToken common.Address, conversionRatio *big.Int, verificationAmountThreshold *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.RegisterToken(&_CrossBridge.TransactOpts, remoteChainID, isOrigin, localToken, remoteToken, conversionRatio, verificationAmountThreshold)
 }
 
-// RegisterToken is a paid mutator transaction binding the contract method 0x1e7bf215.
+// ReleaseExpiredPending is a paid mutator transaction binding the contract method 0xc1cb05dd.
 //
-// Solidity: function registerToken(uint256 remoteChainID, bool isOrigin, address localToken, address remoteToken, int256 exchangeRate, uint256 safetyLimit) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) RegisterToken(remoteChainID *big.Int, isOrigin bool, localToken common.Address, remoteToken common.Address, exchangeRate *big.Int, safetyLimit *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.RegisterToken(&_CrossBridge.TransactOpts, remoteChainID, isOrigin, localToken, remoteToken, exchangeRate, safetyLimit)
+// Solidity: function releaseExpiredPending(uint256 maxCount) returns()
+func (_CrossBridge *CrossBridgeTransactor) ReleaseExpiredPending(opts *bind.TransactOpts, maxCount *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "releaseExpiredPending", maxCount)
+}
+
+// ReleaseExpiredPending is a paid mutator transaction binding the contract method 0xc1cb05dd.
+//
+// Solidity: function releaseExpiredPending(uint256 maxCount) returns()
+func (_CrossBridge *CrossBridgeSession) ReleaseExpiredPending(maxCount *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.ReleaseExpiredPending(&_CrossBridge.TransactOpts, maxCount)
+}
+
+// ReleaseExpiredPending is a paid mutator transaction binding the contract method 0xc1cb05dd.
+//
+// Solidity: function releaseExpiredPending(uint256 maxCount) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) ReleaseExpiredPending(maxCount *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.ReleaseExpiredPending(&_CrossBridge.TransactOpts, maxCount)
+}
+
+// ReleasePending is a paid mutator transaction binding the contract method 0x4ee078ba.
+//
+// Solidity: function releasePending(uint256 remoteChainID, uint256 index) returns(bool)
+func (_CrossBridge *CrossBridgeTransactor) ReleasePending(opts *bind.TransactOpts, remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "releasePending", remoteChainID, index)
+}
+
+// ReleasePending is a paid mutator transaction binding the contract method 0x4ee078ba.
+//
+// Solidity: function releasePending(uint256 remoteChainID, uint256 index) returns(bool)
+func (_CrossBridge *CrossBridgeSession) ReleasePending(remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.ReleasePending(&_CrossBridge.TransactOpts, remoteChainID, index)
+}
+
+// ReleasePending is a paid mutator transaction binding the contract method 0x4ee078ba.
+//
+// Solidity: function releasePending(uint256 remoteChainID, uint256 index) returns(bool)
+func (_CrossBridge *CrossBridgeTransactorSession) ReleasePending(remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.ReleasePending(&_CrossBridge.TransactOpts, remoteChainID, index)
+}
+
+// ReleasePendingBatch is a paid mutator transaction binding the contract method 0x6b0e4821.
+//
+// Solidity: function releasePendingBatch(uint256 remoteChainID, uint256[] indexes) returns(bool)
+func (_CrossBridge *CrossBridgeTransactor) ReleasePendingBatch(opts *bind.TransactOpts, remoteChainID *big.Int, indexes []*big.Int) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "releasePendingBatch", remoteChainID, indexes)
+}
+
+// ReleasePendingBatch is a paid mutator transaction binding the contract method 0x6b0e4821.
+//
+// Solidity: function releasePendingBatch(uint256 remoteChainID, uint256[] indexes) returns(bool)
+func (_CrossBridge *CrossBridgeSession) ReleasePendingBatch(remoteChainID *big.Int, indexes []*big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.ReleasePendingBatch(&_CrossBridge.TransactOpts, remoteChainID, indexes)
+}
+
+// ReleasePendingBatch is a paid mutator transaction binding the contract method 0x6b0e4821.
+//
+// Solidity: function releasePendingBatch(uint256 remoteChainID, uint256[] indexes) returns(bool)
+func (_CrossBridge *CrossBridgeTransactorSession) ReleasePendingBatch(remoteChainID *big.Int, indexes []*big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.ReleasePendingBatch(&_CrossBridge.TransactOpts, remoteChainID, indexes)
 }
 
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
@@ -1313,109 +1334,67 @@ func (_CrossBridge *CrossBridgeTransactorSession) ResetRole(role [32]byte, newAc
 	return _CrossBridge.Contract.ResetRole(&_CrossBridge.TransactOpts, role, newAccounts)
 }
 
-// RetryFinalizeBridge is a paid mutator transaction binding the contract method 0x3960e787.
+// SetCrossMintableERC20Code is a paid mutator transaction binding the contract method 0xe2af6cd7.
 //
-// Solidity: function retryFinalizeBridge(uint256 remoteChainID, uint256 index) returns(bool)
-func (_CrossBridge *CrossBridgeTransactor) RetryFinalizeBridge(opts *bind.TransactOpts, remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "retryFinalizeBridge", remoteChainID, index)
+// Solidity: function setCrossMintableERC20Code(address _crossMintableERC20Code) returns()
+func (_CrossBridge *CrossBridgeTransactor) SetCrossMintableERC20Code(opts *bind.TransactOpts, _crossMintableERC20Code common.Address) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "setCrossMintableERC20Code", _crossMintableERC20Code)
 }
 
-// RetryFinalizeBridge is a paid mutator transaction binding the contract method 0x3960e787.
+// SetCrossMintableERC20Code is a paid mutator transaction binding the contract method 0xe2af6cd7.
 //
-// Solidity: function retryFinalizeBridge(uint256 remoteChainID, uint256 index) returns(bool)
-func (_CrossBridge *CrossBridgeSession) RetryFinalizeBridge(remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.RetryFinalizeBridge(&_CrossBridge.TransactOpts, remoteChainID, index)
+// Solidity: function setCrossMintableERC20Code(address _crossMintableERC20Code) returns()
+func (_CrossBridge *CrossBridgeSession) SetCrossMintableERC20Code(_crossMintableERC20Code common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetCrossMintableERC20Code(&_CrossBridge.TransactOpts, _crossMintableERC20Code)
 }
 
-// RetryFinalizeBridge is a paid mutator transaction binding the contract method 0x3960e787.
+// SetCrossMintableERC20Code is a paid mutator transaction binding the contract method 0xe2af6cd7.
 //
-// Solidity: function retryFinalizeBridge(uint256 remoteChainID, uint256 index) returns(bool)
-func (_CrossBridge *CrossBridgeTransactorSession) RetryFinalizeBridge(remoteChainID *big.Int, index *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.RetryFinalizeBridge(&_CrossBridge.TransactOpts, remoteChainID, index)
+// Solidity: function setCrossMintableERC20Code(address _crossMintableERC20Code) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) SetCrossMintableERC20Code(_crossMintableERC20Code common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetCrossMintableERC20Code(&_CrossBridge.TransactOpts, _crossMintableERC20Code)
 }
 
-// RetryFinalizeBridgeBatch is a paid mutator transaction binding the contract method 0x030372c3.
+// SetDev is a paid mutator transaction binding the contract method 0xd477f05f.
 //
-// Solidity: function retryFinalizeBridgeBatch(uint256 remoteChainID, uint256[] indexes) returns(bool)
-func (_CrossBridge *CrossBridgeTransactor) RetryFinalizeBridgeBatch(opts *bind.TransactOpts, remoteChainID *big.Int, indexes []*big.Int) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "retryFinalizeBridgeBatch", remoteChainID, indexes)
+// Solidity: function setDev(address dev_) returns()
+func (_CrossBridge *CrossBridgeTransactor) SetDev(opts *bind.TransactOpts, dev_ common.Address) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "setDev", dev_)
 }
 
-// RetryFinalizeBridgeBatch is a paid mutator transaction binding the contract method 0x030372c3.
+// SetDev is a paid mutator transaction binding the contract method 0xd477f05f.
 //
-// Solidity: function retryFinalizeBridgeBatch(uint256 remoteChainID, uint256[] indexes) returns(bool)
-func (_CrossBridge *CrossBridgeSession) RetryFinalizeBridgeBatch(remoteChainID *big.Int, indexes []*big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.RetryFinalizeBridgeBatch(&_CrossBridge.TransactOpts, remoteChainID, indexes)
+// Solidity: function setDev(address dev_) returns()
+func (_CrossBridge *CrossBridgeSession) SetDev(dev_ common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetDev(&_CrossBridge.TransactOpts, dev_)
 }
 
-// RetryFinalizeBridgeBatch is a paid mutator transaction binding the contract method 0x030372c3.
+// SetDev is a paid mutator transaction binding the contract method 0xd477f05f.
 //
-// Solidity: function retryFinalizeBridgeBatch(uint256 remoteChainID, uint256[] indexes) returns(bool)
-func (_CrossBridge *CrossBridgeTransactorSession) RetryFinalizeBridgeBatch(remoteChainID *big.Int, indexes []*big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.RetryFinalizeBridgeBatch(&_CrossBridge.TransactOpts, remoteChainID, indexes)
+// Solidity: function setDev(address dev_) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) SetDev(dev_ common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetDev(&_CrossBridge.TransactOpts, dev_)
 }
 
-// SetCrossMintableERC20Factory is a paid mutator transaction binding the contract method 0x1a1aebbb.
+// SetFeeManager is a paid mutator transaction binding the contract method 0x472d35b9.
 //
-// Solidity: function setCrossMintableERC20Factory(address _crossMintableERC20Factory) returns()
-func (_CrossBridge *CrossBridgeTransactor) SetCrossMintableERC20Factory(opts *bind.TransactOpts, _crossMintableERC20Factory common.Address) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "setCrossMintableERC20Factory", _crossMintableERC20Factory)
+// Solidity: function setFeeManager(address _bridgeFeeManager) returns()
+func (_CrossBridge *CrossBridgeTransactor) SetFeeManager(opts *bind.TransactOpts, _bridgeFeeManager common.Address) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "setFeeManager", _bridgeFeeManager)
 }
 
-// SetCrossMintableERC20Factory is a paid mutator transaction binding the contract method 0x1a1aebbb.
+// SetFeeManager is a paid mutator transaction binding the contract method 0x472d35b9.
 //
-// Solidity: function setCrossMintableERC20Factory(address _crossMintableERC20Factory) returns()
-func (_CrossBridge *CrossBridgeSession) SetCrossMintableERC20Factory(_crossMintableERC20Factory common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetCrossMintableERC20Factory(&_CrossBridge.TransactOpts, _crossMintableERC20Factory)
+// Solidity: function setFeeManager(address _bridgeFeeManager) returns()
+func (_CrossBridge *CrossBridgeSession) SetFeeManager(_bridgeFeeManager common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetFeeManager(&_CrossBridge.TransactOpts, _bridgeFeeManager)
 }
 
-// SetCrossMintableERC20Factory is a paid mutator transaction binding the contract method 0x1a1aebbb.
+// SetFeeManager is a paid mutator transaction binding the contract method 0x472d35b9.
 //
-// Solidity: function setCrossMintableERC20Factory(address _crossMintableERC20Factory) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) SetCrossMintableERC20Factory(_crossMintableERC20Factory common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetCrossMintableERC20Factory(&_CrossBridge.TransactOpts, _crossMintableERC20Factory)
-}
-
-// SetFeeStation is a paid mutator transaction binding the contract method 0x54db0126.
-//
-// Solidity: function setFeeStation(address _bridgeFeeStation) returns()
-func (_CrossBridge *CrossBridgeTransactor) SetFeeStation(opts *bind.TransactOpts, _bridgeFeeStation common.Address) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "setFeeStation", _bridgeFeeStation)
-}
-
-// SetFeeStation is a paid mutator transaction binding the contract method 0x54db0126.
-//
-// Solidity: function setFeeStation(address _bridgeFeeStation) returns()
-func (_CrossBridge *CrossBridgeSession) SetFeeStation(_bridgeFeeStation common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetFeeStation(&_CrossBridge.TransactOpts, _bridgeFeeStation)
-}
-
-// SetFeeStation is a paid mutator transaction binding the contract method 0x54db0126.
-//
-// Solidity: function setFeeStation(address _bridgeFeeStation) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) SetFeeStation(_bridgeFeeStation common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetFeeStation(&_CrossBridge.TransactOpts, _bridgeFeeStation)
-}
-
-// SetNexus is a paid mutator transaction binding the contract method 0x2670b817.
-//
-// Solidity: function setNexus(address nexus_) returns()
-func (_CrossBridge *CrossBridgeTransactor) SetNexus(opts *bind.TransactOpts, nexus_ common.Address) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "setNexus", nexus_)
-}
-
-// SetNexus is a paid mutator transaction binding the contract method 0x2670b817.
-//
-// Solidity: function setNexus(address nexus_) returns()
-func (_CrossBridge *CrossBridgeSession) SetNexus(nexus_ common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetNexus(&_CrossBridge.TransactOpts, nexus_)
-}
-
-// SetNexus is a paid mutator transaction binding the contract method 0x2670b817.
-//
-// Solidity: function setNexus(address nexus_) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) SetNexus(nexus_ common.Address) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetNexus(&_CrossBridge.TransactOpts, nexus_)
+// Solidity: function setFeeManager(address _bridgeFeeManager) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) SetFeeManager(_bridgeFeeManager common.Address) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetFeeManager(&_CrossBridge.TransactOpts, _bridgeFeeManager)
 }
 
 // SetPause is a paid mutator transaction binding the contract method 0xbedb86fb.
@@ -1504,23 +1483,44 @@ func (_CrossBridge *CrossBridgeTransactorSession) SetRole(role [32]byte, account
 
 // SetSafetyLimit is a paid mutator transaction binding the contract method 0x39a621f3.
 //
-// Solidity: function setSafetyLimit(uint256 remoteChainID, address token, uint256 safetyLimit) returns()
-func (_CrossBridge *CrossBridgeTransactor) SetSafetyLimit(opts *bind.TransactOpts, remoteChainID *big.Int, token common.Address, safetyLimit *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.contract.Transact(opts, "setSafetyLimit", remoteChainID, token, safetyLimit)
+// Solidity: function setSafetyLimit(uint256 remoteChainID, address token, uint256 verificationAmountThreshold) returns()
+func (_CrossBridge *CrossBridgeTransactor) SetSafetyLimit(opts *bind.TransactOpts, remoteChainID *big.Int, token common.Address, verificationAmountThreshold *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "setSafetyLimit", remoteChainID, token, verificationAmountThreshold)
 }
 
 // SetSafetyLimit is a paid mutator transaction binding the contract method 0x39a621f3.
 //
-// Solidity: function setSafetyLimit(uint256 remoteChainID, address token, uint256 safetyLimit) returns()
-func (_CrossBridge *CrossBridgeSession) SetSafetyLimit(remoteChainID *big.Int, token common.Address, safetyLimit *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetSafetyLimit(&_CrossBridge.TransactOpts, remoteChainID, token, safetyLimit)
+// Solidity: function setSafetyLimit(uint256 remoteChainID, address token, uint256 verificationAmountThreshold) returns()
+func (_CrossBridge *CrossBridgeSession) SetSafetyLimit(remoteChainID *big.Int, token common.Address, verificationAmountThreshold *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetSafetyLimit(&_CrossBridge.TransactOpts, remoteChainID, token, verificationAmountThreshold)
 }
 
 // SetSafetyLimit is a paid mutator transaction binding the contract method 0x39a621f3.
 //
-// Solidity: function setSafetyLimit(uint256 remoteChainID, address token, uint256 safetyLimit) returns()
-func (_CrossBridge *CrossBridgeTransactorSession) SetSafetyLimit(remoteChainID *big.Int, token common.Address, safetyLimit *big.Int) (*types.Transaction, error) {
-	return _CrossBridge.Contract.SetSafetyLimit(&_CrossBridge.TransactOpts, remoteChainID, token, safetyLimit)
+// Solidity: function setSafetyLimit(uint256 remoteChainID, address token, uint256 verificationAmountThreshold) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) SetSafetyLimit(remoteChainID *big.Int, token common.Address, verificationAmountThreshold *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetSafetyLimit(&_CrossBridge.TransactOpts, remoteChainID, token, verificationAmountThreshold)
+}
+
+// SetVerificationDeadline is a paid mutator transaction binding the contract method 0x3ca5b39f.
+//
+// Solidity: function setVerificationDeadline(uint256 remoteChainID, uint256 index, uint256 deadline) returns()
+func (_CrossBridge *CrossBridgeTransactor) SetVerificationDeadline(opts *bind.TransactOpts, remoteChainID *big.Int, index *big.Int, deadline *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.contract.Transact(opts, "setVerificationDeadline", remoteChainID, index, deadline)
+}
+
+// SetVerificationDeadline is a paid mutator transaction binding the contract method 0x3ca5b39f.
+//
+// Solidity: function setVerificationDeadline(uint256 remoteChainID, uint256 index, uint256 deadline) returns()
+func (_CrossBridge *CrossBridgeSession) SetVerificationDeadline(remoteChainID *big.Int, index *big.Int, deadline *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetVerificationDeadline(&_CrossBridge.TransactOpts, remoteChainID, index, deadline)
+}
+
+// SetVerificationDeadline is a paid mutator transaction binding the contract method 0x3ca5b39f.
+//
+// Solidity: function setVerificationDeadline(uint256 remoteChainID, uint256 index, uint256 deadline) returns()
+func (_CrossBridge *CrossBridgeTransactorSession) SetVerificationDeadline(remoteChainID *big.Int, index *big.Int, deadline *big.Int) (*types.Transaction, error) {
+	return _CrossBridge.Contract.SetVerificationDeadline(&_CrossBridge.TransactOpts, remoteChainID, index, deadline)
 }
 
 // TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
@@ -1607,314 +1607,6 @@ func (_CrossBridge *CrossBridgeTransactorSession) Receive() (*types.Transaction,
 	return _CrossBridge.Contract.Receive(&_CrossBridge.TransactOpts)
 }
 
-// CrossBridgeBridgeFeeChargedIterator is returned from FilterBridgeFeeCharged and is used to iterate over the raw logs and unpacked data for BridgeFeeCharged events raised by the CrossBridge contract.
-type CrossBridgeBridgeFeeChargedIterator struct {
-	Event *CrossBridgeBridgeFeeCharged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *CrossBridgeBridgeFeeChargedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(CrossBridgeBridgeFeeCharged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(CrossBridgeBridgeFeeCharged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossBridgeBridgeFeeChargedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *CrossBridgeBridgeFeeChargedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// CrossBridgeBridgeFeeCharged represents a BridgeFeeCharged event raised by the CrossBridge contract.
-type CrossBridgeBridgeFeeCharged struct {
-	Index   *big.Int
-	Token   common.Address
-	Account common.Address
-	GasFee  *big.Int
-	ExFee   *big.Int
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterBridgeFeeCharged is a free log retrieval operation binding the contract event 0x1f9715c5cdb86339f28cd3b93f6162d190a5c00b9305a65ee0889d1a7c00304d.
-//
-// Solidity: event BridgeFeeCharged(uint256 indexed index, address indexed token, address indexed account, uint256 gasFee, uint256 exFee)
-func (_CrossBridge *CrossBridgeFilterer) FilterBridgeFeeCharged(opts *bind.FilterOpts, index []*big.Int, token []common.Address, account []common.Address) (*CrossBridgeBridgeFeeChargedIterator, error) {
-
-	var indexRule []interface{}
-	for _, indexItem := range index {
-		indexRule = append(indexRule, indexItem)
-	}
-	var tokenRule []interface{}
-	for _, tokenItem := range token {
-		tokenRule = append(tokenRule, tokenItem)
-	}
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "BridgeFeeCharged", indexRule, tokenRule, accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return &CrossBridgeBridgeFeeChargedIterator{contract: _CrossBridge.contract, event: "BridgeFeeCharged", logs: logs, sub: sub}, nil
-}
-
-// WatchBridgeFeeCharged is a free log subscription operation binding the contract event 0x1f9715c5cdb86339f28cd3b93f6162d190a5c00b9305a65ee0889d1a7c00304d.
-//
-// Solidity: event BridgeFeeCharged(uint256 indexed index, address indexed token, address indexed account, uint256 gasFee, uint256 exFee)
-func (_CrossBridge *CrossBridgeFilterer) WatchBridgeFeeCharged(opts *bind.WatchOpts, sink chan<- *CrossBridgeBridgeFeeCharged, index []*big.Int, token []common.Address, account []common.Address) (event.Subscription, error) {
-
-	var indexRule []interface{}
-	for _, indexItem := range index {
-		indexRule = append(indexRule, indexItem)
-	}
-	var tokenRule []interface{}
-	for _, tokenItem := range token {
-		tokenRule = append(tokenRule, tokenItem)
-	}
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "BridgeFeeCharged", indexRule, tokenRule, accountRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(CrossBridgeBridgeFeeCharged)
-				if err := _CrossBridge.contract.UnpackLog(event, "BridgeFeeCharged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseBridgeFeeCharged is a log parse operation binding the contract event 0x1f9715c5cdb86339f28cd3b93f6162d190a5c00b9305a65ee0889d1a7c00304d.
-//
-// Solidity: event BridgeFeeCharged(uint256 indexed index, address indexed token, address indexed account, uint256 gasFee, uint256 exFee)
-func (_CrossBridge *CrossBridgeFilterer) ParseBridgeFeeCharged(log types.Log) (*CrossBridgeBridgeFeeCharged, error) {
-	event := new(CrossBridgeBridgeFeeCharged)
-	if err := _CrossBridge.contract.UnpackLog(event, "BridgeFeeCharged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// CrossBridgeBridgeFinalizePendingIterator is returned from FilterBridgeFinalizePending and is used to iterate over the raw logs and unpacked data for BridgeFinalizePending events raised by the CrossBridge contract.
-type CrossBridgeBridgeFinalizePendingIterator struct {
-	Event *CrossBridgeBridgeFinalizePending // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *CrossBridgeBridgeFinalizePendingIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(CrossBridgeBridgeFinalizePending)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(CrossBridgeBridgeFinalizePending)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossBridgeBridgeFinalizePendingIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *CrossBridgeBridgeFinalizePendingIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// CrossBridgeBridgeFinalizePending represents a BridgeFinalizePending event raised by the CrossBridge contract.
-type CrossBridgeBridgeFinalizePending struct {
-	Index *big.Int
-	Raw   types.Log // Blockchain specific contextual infos
-}
-
-// FilterBridgeFinalizePending is a free log retrieval operation binding the contract event 0x40c1d3562756f3f19a0504cfdef1405cc3fcb9c8cf0660fff1d5f86a37d40fe2.
-//
-// Solidity: event BridgeFinalizePending(uint256 indexed index)
-func (_CrossBridge *CrossBridgeFilterer) FilterBridgeFinalizePending(opts *bind.FilterOpts, index []*big.Int) (*CrossBridgeBridgeFinalizePendingIterator, error) {
-
-	var indexRule []interface{}
-	for _, indexItem := range index {
-		indexRule = append(indexRule, indexItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "BridgeFinalizePending", indexRule)
-	if err != nil {
-		return nil, err
-	}
-	return &CrossBridgeBridgeFinalizePendingIterator{contract: _CrossBridge.contract, event: "BridgeFinalizePending", logs: logs, sub: sub}, nil
-}
-
-// WatchBridgeFinalizePending is a free log subscription operation binding the contract event 0x40c1d3562756f3f19a0504cfdef1405cc3fcb9c8cf0660fff1d5f86a37d40fe2.
-//
-// Solidity: event BridgeFinalizePending(uint256 indexed index)
-func (_CrossBridge *CrossBridgeFilterer) WatchBridgeFinalizePending(opts *bind.WatchOpts, sink chan<- *CrossBridgeBridgeFinalizePending, index []*big.Int) (event.Subscription, error) {
-
-	var indexRule []interface{}
-	for _, indexItem := range index {
-		indexRule = append(indexRule, indexItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "BridgeFinalizePending", indexRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(CrossBridgeBridgeFinalizePending)
-				if err := _CrossBridge.contract.UnpackLog(event, "BridgeFinalizePending", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseBridgeFinalizePending is a log parse operation binding the contract event 0x40c1d3562756f3f19a0504cfdef1405cc3fcb9c8cf0660fff1d5f86a37d40fe2.
-//
-// Solidity: event BridgeFinalizePending(uint256 indexed index)
-func (_CrossBridge *CrossBridgeFilterer) ParseBridgeFinalizePending(log types.Log) (*CrossBridgeBridgeFinalizePending, error) {
-	event := new(CrossBridgeBridgeFinalizePending)
-	if err := _CrossBridge.contract.UnpackLog(event, "BridgeFinalizePending", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // CrossBridgeBridgeFinalizedIterator is returned from FilterBridgeFinalized and is used to iterate over the raw logs and unpacked data for BridgeFinalized events raised by the CrossBridge contract.
 type CrossBridgeBridgeFinalizedIterator struct {
 	Event *CrossBridgeBridgeFinalized // Event containing the contract specifics and raw log
@@ -1984,35 +1676,34 @@ func (it *CrossBridgeBridgeFinalizedIterator) Close() error {
 
 // CrossBridgeBridgeFinalized represents a BridgeFinalized event raised by the CrossBridge contract.
 type CrossBridgeBridgeFinalized struct {
-	RemoteChainID *big.Int
-	Index         *big.Int
-	Token         common.Address
-	To            common.Address
-	Value         *big.Int
-	Time          *big.Int
-	Raw           types.Log // Blockchain specific contextual infos
+	FromChainID *big.Int
+	Index       *big.Int
+	ToToken     common.Address
+	To          common.Address
+	Value       *big.Int
+	Time        *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
 }
 
 // FilterBridgeFinalized is a free log retrieval operation binding the contract event 0x94ee0e8d51fc110ff38d48510c267aeced8608d1c96f14d63e93085dba231d6b.
 //
-// Solidity: event BridgeFinalized(uint256 indexed remoteChainID, uint256 indexed index, address token, address indexed to, uint256 value, uint256 time)
-func (_CrossBridge *CrossBridgeFilterer) FilterBridgeFinalized(opts *bind.FilterOpts, remoteChainID []*big.Int, index []*big.Int, to []common.Address) (*CrossBridgeBridgeFinalizedIterator, error) {
+// Solidity: event BridgeFinalized(uint256 indexed fromChainID, uint256 indexed index, address indexed toToken, address to, uint256 value, uint256 time)
+func (_CrossBridge *CrossBridgeFilterer) FilterBridgeFinalized(opts *bind.FilterOpts, fromChainID []*big.Int, index []*big.Int, toToken []common.Address) (*CrossBridgeBridgeFinalizedIterator, error) {
 
-	var remoteChainIDRule []interface{}
-	for _, remoteChainIDItem := range remoteChainID {
-		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
+	var fromChainIDRule []interface{}
+	for _, fromChainIDItem := range fromChainID {
+		fromChainIDRule = append(fromChainIDRule, fromChainIDItem)
 	}
 	var indexRule []interface{}
 	for _, indexItem := range index {
 		indexRule = append(indexRule, indexItem)
 	}
-
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
+	var toTokenRule []interface{}
+	for _, toTokenItem := range toToken {
+		toTokenRule = append(toTokenRule, toTokenItem)
 	}
 
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "BridgeFinalized", remoteChainIDRule, indexRule, toRule)
+	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "BridgeFinalized", fromChainIDRule, indexRule, toTokenRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2021,24 +1712,23 @@ func (_CrossBridge *CrossBridgeFilterer) FilterBridgeFinalized(opts *bind.Filter
 
 // WatchBridgeFinalized is a free log subscription operation binding the contract event 0x94ee0e8d51fc110ff38d48510c267aeced8608d1c96f14d63e93085dba231d6b.
 //
-// Solidity: event BridgeFinalized(uint256 indexed remoteChainID, uint256 indexed index, address token, address indexed to, uint256 value, uint256 time)
-func (_CrossBridge *CrossBridgeFilterer) WatchBridgeFinalized(opts *bind.WatchOpts, sink chan<- *CrossBridgeBridgeFinalized, remoteChainID []*big.Int, index []*big.Int, to []common.Address) (event.Subscription, error) {
+// Solidity: event BridgeFinalized(uint256 indexed fromChainID, uint256 indexed index, address indexed toToken, address to, uint256 value, uint256 time)
+func (_CrossBridge *CrossBridgeFilterer) WatchBridgeFinalized(opts *bind.WatchOpts, sink chan<- *CrossBridgeBridgeFinalized, fromChainID []*big.Int, index []*big.Int, toToken []common.Address) (event.Subscription, error) {
 
-	var remoteChainIDRule []interface{}
-	for _, remoteChainIDItem := range remoteChainID {
-		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
+	var fromChainIDRule []interface{}
+	for _, fromChainIDItem := range fromChainID {
+		fromChainIDRule = append(fromChainIDRule, fromChainIDItem)
 	}
 	var indexRule []interface{}
 	for _, indexItem := range index {
 		indexRule = append(indexRule, indexItem)
 	}
-
-	var toRule []interface{}
-	for _, toItem := range to {
-		toRule = append(toRule, toItem)
+	var toTokenRule []interface{}
+	for _, toTokenItem := range toToken {
+		toTokenRule = append(toTokenRule, toTokenItem)
 	}
 
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "BridgeFinalized", remoteChainIDRule, indexRule, toRule)
+	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "BridgeFinalized", fromChainIDRule, indexRule, toTokenRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2072,7 +1762,7 @@ func (_CrossBridge *CrossBridgeFilterer) WatchBridgeFinalized(opts *bind.WatchOp
 
 // ParseBridgeFinalized is a log parse operation binding the contract event 0x94ee0e8d51fc110ff38d48510c267aeced8608d1c96f14d63e93085dba231d6b.
 //
-// Solidity: event BridgeFinalized(uint256 indexed remoteChainID, uint256 indexed index, address token, address indexed to, uint256 value, uint256 time)
+// Solidity: event BridgeFinalized(uint256 indexed fromChainID, uint256 indexed index, address indexed toToken, address to, uint256 value, uint256 time)
 func (_CrossBridge *CrossBridgeFilterer) ParseBridgeFinalized(log types.Log) (*CrossBridgeBridgeFinalized, error) {
 	event := new(CrossBridgeBridgeFinalized)
 	if err := _CrossBridge.contract.UnpackLog(event, "BridgeFinalized", log); err != nil {
@@ -2151,63 +1841,67 @@ func (it *CrossBridgeBridgeInitiatedIterator) Close() error {
 
 // CrossBridgeBridgeInitiated represents a BridgeInitiated event raised by the CrossBridge contract.
 type CrossBridgeBridgeInitiated struct {
-	RemoteChainID *big.Int
-	Index         *big.Int
-	LocalToken    common.Address
-	RemoteToken   common.Address
-	From          common.Address
-	To            common.Address
-	Value         *big.Int
-	Time          *big.Int
-	Permit        bool
-	ExtraData     []byte
-	Raw           types.Log // Blockchain specific contextual infos
+	ToChainID *big.Int
+	Index     *big.Int
+	FromToken common.Address
+	ToToken   common.Address
+	From      common.Address
+	To        common.Address
+	Value     *big.Int
+	GasFee    *big.Int
+	ExFee     *big.Int
+	Time      *big.Int
+	Permit    bool
+	ExtraData []byte
+	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterBridgeInitiated is a free log retrieval operation binding the contract event 0x65b3e69df9006ac5b2f943ef9e7b59b447c491764e645bbf1dd8cf7f32eca5d7.
+// FilterBridgeInitiated is a free log retrieval operation binding the contract event 0x732adeda688b3a630ef0effe2e3fc34e22b5ae8c24cdb7d3ba5a0fb3a004db50.
 //
-// Solidity: event BridgeInitiated(uint256 indexed remoteChainID, uint256 indexed index, address indexed localToken, address remoteToken, address from, address to, uint256 value, uint256 time, bool permit, bytes extraData)
-func (_CrossBridge *CrossBridgeFilterer) FilterBridgeInitiated(opts *bind.FilterOpts, remoteChainID []*big.Int, index []*big.Int, localToken []common.Address) (*CrossBridgeBridgeInitiatedIterator, error) {
+// Solidity: event BridgeInitiated(uint256 indexed toChainID, uint256 indexed index, address fromToken, address toToken, address indexed from, address to, uint256 value, uint256 gasFee, uint256 exFee, uint256 time, bool permit, bytes extraData)
+func (_CrossBridge *CrossBridgeFilterer) FilterBridgeInitiated(opts *bind.FilterOpts, toChainID []*big.Int, index []*big.Int, from []common.Address) (*CrossBridgeBridgeInitiatedIterator, error) {
 
-	var remoteChainIDRule []interface{}
-	for _, remoteChainIDItem := range remoteChainID {
-		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
+	var toChainIDRule []interface{}
+	for _, toChainIDItem := range toChainID {
+		toChainIDRule = append(toChainIDRule, toChainIDItem)
 	}
 	var indexRule []interface{}
 	for _, indexItem := range index {
 		indexRule = append(indexRule, indexItem)
 	}
-	var localTokenRule []interface{}
-	for _, localTokenItem := range localToken {
-		localTokenRule = append(localTokenRule, localTokenItem)
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "BridgeInitiated", remoteChainIDRule, indexRule, localTokenRule)
+	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "BridgeInitiated", toChainIDRule, indexRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
 	return &CrossBridgeBridgeInitiatedIterator{contract: _CrossBridge.contract, event: "BridgeInitiated", logs: logs, sub: sub}, nil
 }
 
-// WatchBridgeInitiated is a free log subscription operation binding the contract event 0x65b3e69df9006ac5b2f943ef9e7b59b447c491764e645bbf1dd8cf7f32eca5d7.
+// WatchBridgeInitiated is a free log subscription operation binding the contract event 0x732adeda688b3a630ef0effe2e3fc34e22b5ae8c24cdb7d3ba5a0fb3a004db50.
 //
-// Solidity: event BridgeInitiated(uint256 indexed remoteChainID, uint256 indexed index, address indexed localToken, address remoteToken, address from, address to, uint256 value, uint256 time, bool permit, bytes extraData)
-func (_CrossBridge *CrossBridgeFilterer) WatchBridgeInitiated(opts *bind.WatchOpts, sink chan<- *CrossBridgeBridgeInitiated, remoteChainID []*big.Int, index []*big.Int, localToken []common.Address) (event.Subscription, error) {
+// Solidity: event BridgeInitiated(uint256 indexed toChainID, uint256 indexed index, address fromToken, address toToken, address indexed from, address to, uint256 value, uint256 gasFee, uint256 exFee, uint256 time, bool permit, bytes extraData)
+func (_CrossBridge *CrossBridgeFilterer) WatchBridgeInitiated(opts *bind.WatchOpts, sink chan<- *CrossBridgeBridgeInitiated, toChainID []*big.Int, index []*big.Int, from []common.Address) (event.Subscription, error) {
 
-	var remoteChainIDRule []interface{}
-	for _, remoteChainIDItem := range remoteChainID {
-		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
+	var toChainIDRule []interface{}
+	for _, toChainIDItem := range toChainID {
+		toChainIDRule = append(toChainIDRule, toChainIDItem)
 	}
 	var indexRule []interface{}
 	for _, indexItem := range index {
 		indexRule = append(indexRule, indexItem)
 	}
-	var localTokenRule []interface{}
-	for _, localTokenItem := range localToken {
-		localTokenRule = append(localTokenRule, localTokenItem)
+
+	var fromRule []interface{}
+	for _, fromItem := range from {
+		fromRule = append(fromRule, fromItem)
 	}
 
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "BridgeInitiated", remoteChainIDRule, indexRule, localTokenRule)
+	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "BridgeInitiated", toChainIDRule, indexRule, fromRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2239,12 +1933,177 @@ func (_CrossBridge *CrossBridgeFilterer) WatchBridgeInitiated(opts *bind.WatchOp
 	}), nil
 }
 
-// ParseBridgeInitiated is a log parse operation binding the contract event 0x65b3e69df9006ac5b2f943ef9e7b59b447c491764e645bbf1dd8cf7f32eca5d7.
+// ParseBridgeInitiated is a log parse operation binding the contract event 0x732adeda688b3a630ef0effe2e3fc34e22b5ae8c24cdb7d3ba5a0fb3a004db50.
 //
-// Solidity: event BridgeInitiated(uint256 indexed remoteChainID, uint256 indexed index, address indexed localToken, address remoteToken, address from, address to, uint256 value, uint256 time, bool permit, bytes extraData)
+// Solidity: event BridgeInitiated(uint256 indexed toChainID, uint256 indexed index, address fromToken, address toToken, address indexed from, address to, uint256 value, uint256 gasFee, uint256 exFee, uint256 time, bool permit, bytes extraData)
 func (_CrossBridge *CrossBridgeFilterer) ParseBridgeInitiated(log types.Log) (*CrossBridgeBridgeInitiated, error) {
 	event := new(CrossBridgeBridgeInitiated)
 	if err := _CrossBridge.contract.UnpackLog(event, "BridgeInitiated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// CrossBridgeBridgePendingIterator is returned from FilterBridgePending and is used to iterate over the raw logs and unpacked data for BridgePending events raised by the CrossBridge contract.
+type CrossBridgeBridgePendingIterator struct {
+	Event *CrossBridgeBridgePending // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *CrossBridgeBridgePendingIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(CrossBridgeBridgePending)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(CrossBridgeBridgePending)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *CrossBridgeBridgePendingIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *CrossBridgeBridgePendingIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// CrossBridgeBridgePending represents a BridgePending event raised by the CrossBridge contract.
+type CrossBridgeBridgePending struct {
+	FromChainID *big.Int
+	Index       *big.Int
+	ToToken     common.Address
+	To          common.Address
+	Value       *big.Int
+	Time        *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterBridgePending is a free log retrieval operation binding the contract event 0xd3122beb443f4b66faef07d45daf96faf0ffc23e050550cf1bbcbe6105f6bee7.
+//
+// Solidity: event BridgePending(uint256 indexed fromChainID, uint256 indexed index, address indexed toToken, address to, uint256 value, uint256 time)
+func (_CrossBridge *CrossBridgeFilterer) FilterBridgePending(opts *bind.FilterOpts, fromChainID []*big.Int, index []*big.Int, toToken []common.Address) (*CrossBridgeBridgePendingIterator, error) {
+
+	var fromChainIDRule []interface{}
+	for _, fromChainIDItem := range fromChainID {
+		fromChainIDRule = append(fromChainIDRule, fromChainIDItem)
+	}
+	var indexRule []interface{}
+	for _, indexItem := range index {
+		indexRule = append(indexRule, indexItem)
+	}
+	var toTokenRule []interface{}
+	for _, toTokenItem := range toToken {
+		toTokenRule = append(toTokenRule, toTokenItem)
+	}
+
+	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "BridgePending", fromChainIDRule, indexRule, toTokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return &CrossBridgeBridgePendingIterator{contract: _CrossBridge.contract, event: "BridgePending", logs: logs, sub: sub}, nil
+}
+
+// WatchBridgePending is a free log subscription operation binding the contract event 0xd3122beb443f4b66faef07d45daf96faf0ffc23e050550cf1bbcbe6105f6bee7.
+//
+// Solidity: event BridgePending(uint256 indexed fromChainID, uint256 indexed index, address indexed toToken, address to, uint256 value, uint256 time)
+func (_CrossBridge *CrossBridgeFilterer) WatchBridgePending(opts *bind.WatchOpts, sink chan<- *CrossBridgeBridgePending, fromChainID []*big.Int, index []*big.Int, toToken []common.Address) (event.Subscription, error) {
+
+	var fromChainIDRule []interface{}
+	for _, fromChainIDItem := range fromChainID {
+		fromChainIDRule = append(fromChainIDRule, fromChainIDItem)
+	}
+	var indexRule []interface{}
+	for _, indexItem := range index {
+		indexRule = append(indexRule, indexItem)
+	}
+	var toTokenRule []interface{}
+	for _, toTokenItem := range toToken {
+		toTokenRule = append(toTokenRule, toTokenItem)
+	}
+
+	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "BridgePending", fromChainIDRule, indexRule, toTokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(CrossBridgeBridgePending)
+				if err := _CrossBridge.contract.UnpackLog(event, "BridgePending", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseBridgePending is a log parse operation binding the contract event 0xd3122beb443f4b66faef07d45daf96faf0ffc23e050550cf1bbcbe6105f6bee7.
+//
+// Solidity: event BridgePending(uint256 indexed fromChainID, uint256 indexed index, address indexed toToken, address to, uint256 value, uint256 time)
+func (_CrossBridge *CrossBridgeFilterer) ParseBridgePending(log types.Log) (*CrossBridgeBridgePending, error) {
+	event := new(CrossBridgeBridgePending)
+	if err := _CrossBridge.contract.UnpackLog(event, "BridgePending", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -2396,9 +2255,9 @@ func (_CrossBridge *CrossBridgeFilterer) ParseChainPauseSet(log types.Log) (*Cro
 	return event, nil
 }
 
-// CrossBridgeCrossMintableERC20FactorySetIterator is returned from FilterCrossMintableERC20FactorySet and is used to iterate over the raw logs and unpacked data for CrossMintableERC20FactorySet events raised by the CrossBridge contract.
-type CrossBridgeCrossMintableERC20FactorySetIterator struct {
-	Event *CrossBridgeCrossMintableERC20FactorySet // Event containing the contract specifics and raw log
+// CrossBridgeCrossMintableERC20CodeSetIterator is returned from FilterCrossMintableERC20CodeSet and is used to iterate over the raw logs and unpacked data for CrossMintableERC20CodeSet events raised by the CrossBridge contract.
+type CrossBridgeCrossMintableERC20CodeSetIterator struct {
+	Event *CrossBridgeCrossMintableERC20CodeSet // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -2412,7 +2271,7 @@ type CrossBridgeCrossMintableERC20FactorySetIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *CrossBridgeCrossMintableERC20FactorySetIterator) Next() bool {
+func (it *CrossBridgeCrossMintableERC20CodeSetIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -2421,7 +2280,7 @@ func (it *CrossBridgeCrossMintableERC20FactorySetIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(CrossBridgeCrossMintableERC20FactorySet)
+			it.Event = new(CrossBridgeCrossMintableERC20CodeSet)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -2436,7 +2295,7 @@ func (it *CrossBridgeCrossMintableERC20FactorySetIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(CrossBridgeCrossMintableERC20FactorySet)
+		it.Event = new(CrossBridgeCrossMintableERC20CodeSet)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -2452,51 +2311,51 @@ func (it *CrossBridgeCrossMintableERC20FactorySetIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossBridgeCrossMintableERC20FactorySetIterator) Error() error {
+func (it *CrossBridgeCrossMintableERC20CodeSetIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *CrossBridgeCrossMintableERC20FactorySetIterator) Close() error {
+func (it *CrossBridgeCrossMintableERC20CodeSetIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// CrossBridgeCrossMintableERC20FactorySet represents a CrossMintableERC20FactorySet event raised by the CrossBridge contract.
-type CrossBridgeCrossMintableERC20FactorySet struct {
-	Factory common.Address
-	Raw     types.Log // Blockchain specific contextual infos
+// CrossBridgeCrossMintableERC20CodeSet represents a CrossMintableERC20CodeSet event raised by the CrossBridge contract.
+type CrossBridgeCrossMintableERC20CodeSet struct {
+	Code common.Address
+	Raw  types.Log // Blockchain specific contextual infos
 }
 
-// FilterCrossMintableERC20FactorySet is a free log retrieval operation binding the contract event 0x18df1bf4db6b347f79d6775fd433461aadaf0c13ed6ac4e83873534f6705c1b9.
+// FilterCrossMintableERC20CodeSet is a free log retrieval operation binding the contract event 0xedd032701363d0aea82c2dd885af304cc0627d71af78c87d1a2159ef3f9d2cee.
 //
-// Solidity: event CrossMintableERC20FactorySet(address indexed factory)
-func (_CrossBridge *CrossBridgeFilterer) FilterCrossMintableERC20FactorySet(opts *bind.FilterOpts, factory []common.Address) (*CrossBridgeCrossMintableERC20FactorySetIterator, error) {
+// Solidity: event CrossMintableERC20CodeSet(address indexed code)
+func (_CrossBridge *CrossBridgeFilterer) FilterCrossMintableERC20CodeSet(opts *bind.FilterOpts, code []common.Address) (*CrossBridgeCrossMintableERC20CodeSetIterator, error) {
 
-	var factoryRule []interface{}
-	for _, factoryItem := range factory {
-		factoryRule = append(factoryRule, factoryItem)
+	var codeRule []interface{}
+	for _, codeItem := range code {
+		codeRule = append(codeRule, codeItem)
 	}
 
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "CrossMintableERC20FactorySet", factoryRule)
+	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "CrossMintableERC20CodeSet", codeRule)
 	if err != nil {
 		return nil, err
 	}
-	return &CrossBridgeCrossMintableERC20FactorySetIterator{contract: _CrossBridge.contract, event: "CrossMintableERC20FactorySet", logs: logs, sub: sub}, nil
+	return &CrossBridgeCrossMintableERC20CodeSetIterator{contract: _CrossBridge.contract, event: "CrossMintableERC20CodeSet", logs: logs, sub: sub}, nil
 }
 
-// WatchCrossMintableERC20FactorySet is a free log subscription operation binding the contract event 0x18df1bf4db6b347f79d6775fd433461aadaf0c13ed6ac4e83873534f6705c1b9.
+// WatchCrossMintableERC20CodeSet is a free log subscription operation binding the contract event 0xedd032701363d0aea82c2dd885af304cc0627d71af78c87d1a2159ef3f9d2cee.
 //
-// Solidity: event CrossMintableERC20FactorySet(address indexed factory)
-func (_CrossBridge *CrossBridgeFilterer) WatchCrossMintableERC20FactorySet(opts *bind.WatchOpts, sink chan<- *CrossBridgeCrossMintableERC20FactorySet, factory []common.Address) (event.Subscription, error) {
+// Solidity: event CrossMintableERC20CodeSet(address indexed code)
+func (_CrossBridge *CrossBridgeFilterer) WatchCrossMintableERC20CodeSet(opts *bind.WatchOpts, sink chan<- *CrossBridgeCrossMintableERC20CodeSet, code []common.Address) (event.Subscription, error) {
 
-	var factoryRule []interface{}
-	for _, factoryItem := range factory {
-		factoryRule = append(factoryRule, factoryItem)
+	var codeRule []interface{}
+	for _, codeItem := range code {
+		codeRule = append(codeRule, codeItem)
 	}
 
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "CrossMintableERC20FactorySet", factoryRule)
+	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "CrossMintableERC20CodeSet", codeRule)
 	if err != nil {
 		return nil, err
 	}
@@ -2506,8 +2365,8 @@ func (_CrossBridge *CrossBridgeFilterer) WatchCrossMintableERC20FactorySet(opts 
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(CrossBridgeCrossMintableERC20FactorySet)
-				if err := _CrossBridge.contract.UnpackLog(event, "CrossMintableERC20FactorySet", log); err != nil {
+				event := new(CrossBridgeCrossMintableERC20CodeSet)
+				if err := _CrossBridge.contract.UnpackLog(event, "CrossMintableERC20CodeSet", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -2528,12 +2387,12 @@ func (_CrossBridge *CrossBridgeFilterer) WatchCrossMintableERC20FactorySet(opts 
 	}), nil
 }
 
-// ParseCrossMintableERC20FactorySet is a log parse operation binding the contract event 0x18df1bf4db6b347f79d6775fd433461aadaf0c13ed6ac4e83873534f6705c1b9.
+// ParseCrossMintableERC20CodeSet is a log parse operation binding the contract event 0xedd032701363d0aea82c2dd885af304cc0627d71af78c87d1a2159ef3f9d2cee.
 //
-// Solidity: event CrossMintableERC20FactorySet(address indexed factory)
-func (_CrossBridge *CrossBridgeFilterer) ParseCrossMintableERC20FactorySet(log types.Log) (*CrossBridgeCrossMintableERC20FactorySet, error) {
-	event := new(CrossBridgeCrossMintableERC20FactorySet)
-	if err := _CrossBridge.contract.UnpackLog(event, "CrossMintableERC20FactorySet", log); err != nil {
+// Solidity: event CrossMintableERC20CodeSet(address indexed code)
+func (_CrossBridge *CrossBridgeFilterer) ParseCrossMintableERC20CodeSet(log types.Log) (*CrossBridgeCrossMintableERC20CodeSet, error) {
+	event := new(CrossBridgeCrossMintableERC20CodeSet)
+	if err := _CrossBridge.contract.UnpackLog(event, "CrossMintableERC20CodeSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -2673,150 +2532,6 @@ func (_CrossBridge *CrossBridgeFilterer) ParseEIP712DomainChanged(log types.Log)
 	return event, nil
 }
 
-// CrossBridgeFeeStationSetIterator is returned from FilterFeeStationSet and is used to iterate over the raw logs and unpacked data for FeeStationSet events raised by the CrossBridge contract.
-type CrossBridgeFeeStationSetIterator struct {
-	Event *CrossBridgeFeeStationSet // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *CrossBridgeFeeStationSetIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(CrossBridgeFeeStationSet)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(CrossBridgeFeeStationSet)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossBridgeFeeStationSetIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *CrossBridgeFeeStationSetIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// CrossBridgeFeeStationSet represents a FeeStationSet event raised by the CrossBridge contract.
-type CrossBridgeFeeStationSet struct {
-	FeeStation common.Address
-	Raw        types.Log // Blockchain specific contextual infos
-}
-
-// FilterFeeStationSet is a free log retrieval operation binding the contract event 0x68e453b7f82baf4a13086202d4cfa2c41dc5c07b2f441c1f6da0d93bee2ea444.
-//
-// Solidity: event FeeStationSet(address indexed feeStation)
-func (_CrossBridge *CrossBridgeFilterer) FilterFeeStationSet(opts *bind.FilterOpts, feeStation []common.Address) (*CrossBridgeFeeStationSetIterator, error) {
-
-	var feeStationRule []interface{}
-	for _, feeStationItem := range feeStation {
-		feeStationRule = append(feeStationRule, feeStationItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "FeeStationSet", feeStationRule)
-	if err != nil {
-		return nil, err
-	}
-	return &CrossBridgeFeeStationSetIterator{contract: _CrossBridge.contract, event: "FeeStationSet", logs: logs, sub: sub}, nil
-}
-
-// WatchFeeStationSet is a free log subscription operation binding the contract event 0x68e453b7f82baf4a13086202d4cfa2c41dc5c07b2f441c1f6da0d93bee2ea444.
-//
-// Solidity: event FeeStationSet(address indexed feeStation)
-func (_CrossBridge *CrossBridgeFilterer) WatchFeeStationSet(opts *bind.WatchOpts, sink chan<- *CrossBridgeFeeStationSet, feeStation []common.Address) (event.Subscription, error) {
-
-	var feeStationRule []interface{}
-	for _, feeStationItem := range feeStation {
-		feeStationRule = append(feeStationRule, feeStationItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "FeeStationSet", feeStationRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(CrossBridgeFeeStationSet)
-				if err := _CrossBridge.contract.UnpackLog(event, "FeeStationSet", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseFeeStationSet is a log parse operation binding the contract event 0x68e453b7f82baf4a13086202d4cfa2c41dc5c07b2f441c1f6da0d93bee2ea444.
-//
-// Solidity: event FeeStationSet(address indexed feeStation)
-func (_CrossBridge *CrossBridgeFilterer) ParseFeeStationSet(log types.Log) (*CrossBridgeFeeStationSet, error) {
-	event := new(CrossBridgeFeeStationSet)
-	if err := _CrossBridge.contract.UnpackLog(event, "FeeStationSet", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // CrossBridgeInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the CrossBridge contract.
 type CrossBridgeInitializedIterator struct {
 	Event *CrossBridgeInitialized // Event containing the contract specifics and raw log
@@ -2945,150 +2660,6 @@ func (_CrossBridge *CrossBridgeFilterer) WatchInitialized(opts *bind.WatchOpts, 
 func (_CrossBridge *CrossBridgeFilterer) ParseInitialized(log types.Log) (*CrossBridgeInitialized, error) {
 	event := new(CrossBridgeInitialized)
 	if err := _CrossBridge.contract.UnpackLog(event, "Initialized", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// CrossBridgeNexusSetIterator is returned from FilterNexusSet and is used to iterate over the raw logs and unpacked data for NexusSet events raised by the CrossBridge contract.
-type CrossBridgeNexusSetIterator struct {
-	Event *CrossBridgeNexusSet // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *CrossBridgeNexusSetIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(CrossBridgeNexusSet)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(CrossBridgeNexusSet)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossBridgeNexusSetIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *CrossBridgeNexusSetIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// CrossBridgeNexusSet represents a NexusSet event raised by the CrossBridge contract.
-type CrossBridgeNexusSet struct {
-	Wallet common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterNexusSet is a free log retrieval operation binding the contract event 0x489b51edd4714861d63224d4ab9a10ed75c25102854b0dae7b961bfc094e1f0f.
-//
-// Solidity: event NexusSet(address indexed wallet)
-func (_CrossBridge *CrossBridgeFilterer) FilterNexusSet(opts *bind.FilterOpts, wallet []common.Address) (*CrossBridgeNexusSetIterator, error) {
-
-	var walletRule []interface{}
-	for _, walletItem := range wallet {
-		walletRule = append(walletRule, walletItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "NexusSet", walletRule)
-	if err != nil {
-		return nil, err
-	}
-	return &CrossBridgeNexusSetIterator{contract: _CrossBridge.contract, event: "NexusSet", logs: logs, sub: sub}, nil
-}
-
-// WatchNexusSet is a free log subscription operation binding the contract event 0x489b51edd4714861d63224d4ab9a10ed75c25102854b0dae7b961bfc094e1f0f.
-//
-// Solidity: event NexusSet(address indexed wallet)
-func (_CrossBridge *CrossBridgeFilterer) WatchNexusSet(opts *bind.WatchOpts, sink chan<- *CrossBridgeNexusSet, wallet []common.Address) (event.Subscription, error) {
-
-	var walletRule []interface{}
-	for _, walletItem := range wallet {
-		walletRule = append(walletRule, walletItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "NexusSet", walletRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(CrossBridgeNexusSet)
-				if err := _CrossBridge.contract.UnpackLog(event, "NexusSet", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseNexusSet is a log parse operation binding the contract event 0x489b51edd4714861d63224d4ab9a10ed75c25102854b0dae7b961bfc094e1f0f.
-//
-// Solidity: event NexusSet(address indexed wallet)
-func (_CrossBridge *CrossBridgeFilterer) ParseNexusSet(log types.Log) (*CrossBridgeNexusSet, error) {
-	event := new(CrossBridgeNexusSet)
-	if err := _CrossBridge.contract.UnpackLog(event, "NexusSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -3382,159 +2953,6 @@ func (_CrossBridge *CrossBridgeFilterer) ParsePaused(log types.Log) (*CrossBridg
 	return event, nil
 }
 
-// CrossBridgePendingLockedIterator is returned from FilterPendingLocked and is used to iterate over the raw logs and unpacked data for PendingLocked events raised by the CrossBridge contract.
-type CrossBridgePendingLockedIterator struct {
-	Event *CrossBridgePendingLocked // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *CrossBridgePendingLockedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(CrossBridgePendingLocked)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(CrossBridgePendingLocked)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossBridgePendingLockedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *CrossBridgePendingLockedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// CrossBridgePendingLocked represents a PendingLocked event raised by the CrossBridge contract.
-type CrossBridgePendingLocked struct {
-	RemoteChainID *big.Int
-	Index         *big.Int
-	Raw           types.Log // Blockchain specific contextual infos
-}
-
-// FilterPendingLocked is a free log retrieval operation binding the contract event 0xa4e22101eb77eafdff61069f49689ebfe0c71e0dab0640d5c0b7bb11d1abb4f6.
-//
-// Solidity: event PendingLocked(uint256 indexed remoteChainID, uint256 indexed index)
-func (_CrossBridge *CrossBridgeFilterer) FilterPendingLocked(opts *bind.FilterOpts, remoteChainID []*big.Int, index []*big.Int) (*CrossBridgePendingLockedIterator, error) {
-
-	var remoteChainIDRule []interface{}
-	for _, remoteChainIDItem := range remoteChainID {
-		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
-	}
-	var indexRule []interface{}
-	for _, indexItem := range index {
-		indexRule = append(indexRule, indexItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "PendingLocked", remoteChainIDRule, indexRule)
-	if err != nil {
-		return nil, err
-	}
-	return &CrossBridgePendingLockedIterator{contract: _CrossBridge.contract, event: "PendingLocked", logs: logs, sub: sub}, nil
-}
-
-// WatchPendingLocked is a free log subscription operation binding the contract event 0xa4e22101eb77eafdff61069f49689ebfe0c71e0dab0640d5c0b7bb11d1abb4f6.
-//
-// Solidity: event PendingLocked(uint256 indexed remoteChainID, uint256 indexed index)
-func (_CrossBridge *CrossBridgeFilterer) WatchPendingLocked(opts *bind.WatchOpts, sink chan<- *CrossBridgePendingLocked, remoteChainID []*big.Int, index []*big.Int) (event.Subscription, error) {
-
-	var remoteChainIDRule []interface{}
-	for _, remoteChainIDItem := range remoteChainID {
-		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
-	}
-	var indexRule []interface{}
-	for _, indexItem := range index {
-		indexRule = append(indexRule, indexItem)
-	}
-
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "PendingLocked", remoteChainIDRule, indexRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(CrossBridgePendingLocked)
-				if err := _CrossBridge.contract.UnpackLog(event, "PendingLocked", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParsePendingLocked is a log parse operation binding the contract event 0xa4e22101eb77eafdff61069f49689ebfe0c71e0dab0640d5c0b7bb11d1abb4f6.
-//
-// Solidity: event PendingLocked(uint256 indexed remoteChainID, uint256 indexed index)
-func (_CrossBridge *CrossBridgeFilterer) ParsePendingLocked(log types.Log) (*CrossBridgePendingLocked, error) {
-	event := new(CrossBridgePendingLocked)
-	if err := _CrossBridge.contract.UnpackLog(event, "PendingLocked", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // CrossBridgeRoleUpdatedIterator is returned from FilterRoleUpdated and is used to iterate over the raw logs and unpacked data for RoleUpdated events raised by the CrossBridge contract.
 type CrossBridgeRoleUpdatedIterator struct {
 	Event *CrossBridgeRoleUpdated // Event containing the contract specifics and raw log
@@ -3612,8 +3030,8 @@ type CrossBridgeRoleUpdated struct {
 
 // FilterRoleUpdated is a free log retrieval operation binding the contract event 0x8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f3.
 //
-// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool indexed status)
-func (_CrossBridge *CrossBridgeFilterer) FilterRoleUpdated(opts *bind.FilterOpts, account []common.Address, role [][32]byte, status []bool) (*CrossBridgeRoleUpdatedIterator, error) {
+// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool status)
+func (_CrossBridge *CrossBridgeFilterer) FilterRoleUpdated(opts *bind.FilterOpts, account []common.Address, role [][32]byte) (*CrossBridgeRoleUpdatedIterator, error) {
 
 	var accountRule []interface{}
 	for _, accountItem := range account {
@@ -3623,12 +3041,8 @@ func (_CrossBridge *CrossBridgeFilterer) FilterRoleUpdated(opts *bind.FilterOpts
 	for _, roleItem := range role {
 		roleRule = append(roleRule, roleItem)
 	}
-	var statusRule []interface{}
-	for _, statusItem := range status {
-		statusRule = append(statusRule, statusItem)
-	}
 
-	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "RoleUpdated", accountRule, roleRule, statusRule)
+	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "RoleUpdated", accountRule, roleRule)
 	if err != nil {
 		return nil, err
 	}
@@ -3637,8 +3051,8 @@ func (_CrossBridge *CrossBridgeFilterer) FilterRoleUpdated(opts *bind.FilterOpts
 
 // WatchRoleUpdated is a free log subscription operation binding the contract event 0x8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f3.
 //
-// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool indexed status)
-func (_CrossBridge *CrossBridgeFilterer) WatchRoleUpdated(opts *bind.WatchOpts, sink chan<- *CrossBridgeRoleUpdated, account []common.Address, role [][32]byte, status []bool) (event.Subscription, error) {
+// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool status)
+func (_CrossBridge *CrossBridgeFilterer) WatchRoleUpdated(opts *bind.WatchOpts, sink chan<- *CrossBridgeRoleUpdated, account []common.Address, role [][32]byte) (event.Subscription, error) {
 
 	var accountRule []interface{}
 	for _, accountItem := range account {
@@ -3648,12 +3062,8 @@ func (_CrossBridge *CrossBridgeFilterer) WatchRoleUpdated(opts *bind.WatchOpts, 
 	for _, roleItem := range role {
 		roleRule = append(roleRule, roleItem)
 	}
-	var statusRule []interface{}
-	for _, statusItem := range status {
-		statusRule = append(statusRule, statusItem)
-	}
 
-	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "RoleUpdated", accountRule, roleRule, statusRule)
+	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "RoleUpdated", accountRule, roleRule)
 	if err != nil {
 		return nil, err
 	}
@@ -3687,7 +3097,7 @@ func (_CrossBridge *CrossBridgeFilterer) WatchRoleUpdated(opts *bind.WatchOpts, 
 
 // ParseRoleUpdated is a log parse operation binding the contract event 0x8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f3.
 //
-// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool indexed status)
+// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool status)
 func (_CrossBridge *CrossBridgeFilterer) ParseRoleUpdated(log types.Log) (*CrossBridgeRoleUpdated, error) {
 	event := new(CrossBridgeRoleUpdated)
 	if err := _CrossBridge.contract.UnpackLog(event, "RoleUpdated", log); err != nil {
@@ -3766,15 +3176,15 @@ func (it *CrossBridgeSafetyLimitSetIterator) Close() error {
 
 // CrossBridgeSafetyLimitSet represents a SafetyLimitSet event raised by the CrossBridge contract.
 type CrossBridgeSafetyLimitSet struct {
-	RemoteChainID *big.Int
-	Token         common.Address
-	SafetyLimit   *big.Int
-	Raw           types.Log // Blockchain specific contextual infos
+	RemoteChainID               *big.Int
+	Token                       common.Address
+	VerificationAmountThreshold *big.Int
+	Raw                         types.Log // Blockchain specific contextual infos
 }
 
 // FilterSafetyLimitSet is a free log retrieval operation binding the contract event 0xd54edc9ee33780fc813e88b7fcafd9163ae63168837ee363914a2f892670d7c8.
 //
-// Solidity: event SafetyLimitSet(uint256 indexed remoteChainID, address indexed token, uint256 safetyLimit)
+// Solidity: event SafetyLimitSet(uint256 indexed remoteChainID, address indexed token, uint256 verificationAmountThreshold)
 func (_CrossBridge *CrossBridgeFilterer) FilterSafetyLimitSet(opts *bind.FilterOpts, remoteChainID []*big.Int, token []common.Address) (*CrossBridgeSafetyLimitSetIterator, error) {
 
 	var remoteChainIDRule []interface{}
@@ -3795,7 +3205,7 @@ func (_CrossBridge *CrossBridgeFilterer) FilterSafetyLimitSet(opts *bind.FilterO
 
 // WatchSafetyLimitSet is a free log subscription operation binding the contract event 0xd54edc9ee33780fc813e88b7fcafd9163ae63168837ee363914a2f892670d7c8.
 //
-// Solidity: event SafetyLimitSet(uint256 indexed remoteChainID, address indexed token, uint256 safetyLimit)
+// Solidity: event SafetyLimitSet(uint256 indexed remoteChainID, address indexed token, uint256 verificationAmountThreshold)
 func (_CrossBridge *CrossBridgeFilterer) WatchSafetyLimitSet(opts *bind.WatchOpts, sink chan<- *CrossBridgeSafetyLimitSet, remoteChainID []*big.Int, token []common.Address) (event.Subscription, error) {
 
 	var remoteChainIDRule []interface{}
@@ -3841,7 +3251,7 @@ func (_CrossBridge *CrossBridgeFilterer) WatchSafetyLimitSet(opts *bind.WatchOpt
 
 // ParseSafetyLimitSet is a log parse operation binding the contract event 0xd54edc9ee33780fc813e88b7fcafd9163ae63168837ee363914a2f892670d7c8.
 //
-// Solidity: event SafetyLimitSet(uint256 indexed remoteChainID, address indexed token, uint256 safetyLimit)
+// Solidity: event SafetyLimitSet(uint256 indexed remoteChainID, address indexed token, uint256 verificationAmountThreshold)
 func (_CrossBridge *CrossBridgeFilterer) ParseSafetyLimitSet(log types.Log) (*CrossBridgeSafetyLimitSet, error) {
 	event := new(CrossBridgeSafetyLimitSet)
 	if err := _CrossBridge.contract.UnpackLog(event, "SafetyLimitSet", log); err != nil {
@@ -4054,18 +3464,18 @@ func (it *CrossBridgeTokenPairRegisteredIterator) Close() error {
 
 // CrossBridgeTokenPairRegistered represents a TokenPairRegistered event raised by the CrossBridge contract.
 type CrossBridgeTokenPairRegistered struct {
-	RemoteChainID *big.Int
-	LocalToken    common.Address
-	RemoteToken   common.Address
-	ExchangeRate  *big.Int
-	SafetyLimit   *big.Int
-	IsOrigin      bool
-	Raw           types.Log // Blockchain specific contextual infos
+	RemoteChainID               *big.Int
+	LocalToken                  common.Address
+	RemoteToken                 common.Address
+	ConversionRatio             *big.Int
+	VerificationAmountThreshold *big.Int
+	IsOrigin                    bool
+	Raw                         types.Log // Blockchain specific contextual infos
 }
 
 // FilterTokenPairRegistered is a free log retrieval operation binding the contract event 0xffd50b3f28a6ab2baf4fb67d8aaf0a6c918767d3e790535a54eb250c503b2a66.
 //
-// Solidity: event TokenPairRegistered(uint256 indexed remoteChainID, address indexed localToken, address indexed remoteToken, int256 exchangeRate, uint256 safetyLimit, bool isOrigin)
+// Solidity: event TokenPairRegistered(uint256 indexed remoteChainID, address indexed localToken, address indexed remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold, bool isOrigin)
 func (_CrossBridge *CrossBridgeFilterer) FilterTokenPairRegistered(opts *bind.FilterOpts, remoteChainID []*big.Int, localToken []common.Address, remoteToken []common.Address) (*CrossBridgeTokenPairRegisteredIterator, error) {
 
 	var remoteChainIDRule []interface{}
@@ -4090,7 +3500,7 @@ func (_CrossBridge *CrossBridgeFilterer) FilterTokenPairRegistered(opts *bind.Fi
 
 // WatchTokenPairRegistered is a free log subscription operation binding the contract event 0xffd50b3f28a6ab2baf4fb67d8aaf0a6c918767d3e790535a54eb250c503b2a66.
 //
-// Solidity: event TokenPairRegistered(uint256 indexed remoteChainID, address indexed localToken, address indexed remoteToken, int256 exchangeRate, uint256 safetyLimit, bool isOrigin)
+// Solidity: event TokenPairRegistered(uint256 indexed remoteChainID, address indexed localToken, address indexed remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold, bool isOrigin)
 func (_CrossBridge *CrossBridgeFilterer) WatchTokenPairRegistered(opts *bind.WatchOpts, sink chan<- *CrossBridgeTokenPairRegistered, remoteChainID []*big.Int, localToken []common.Address, remoteToken []common.Address) (event.Subscription, error) {
 
 	var remoteChainIDRule []interface{}
@@ -4140,7 +3550,7 @@ func (_CrossBridge *CrossBridgeFilterer) WatchTokenPairRegistered(opts *bind.Wat
 
 // ParseTokenPairRegistered is a log parse operation binding the contract event 0xffd50b3f28a6ab2baf4fb67d8aaf0a6c918767d3e790535a54eb250c503b2a66.
 //
-// Solidity: event TokenPairRegistered(uint256 indexed remoteChainID, address indexed localToken, address indexed remoteToken, int256 exchangeRate, uint256 safetyLimit, bool isOrigin)
+// Solidity: event TokenPairRegistered(uint256 indexed remoteChainID, address indexed localToken, address indexed remoteToken, int256 conversionRatio, uint256 verificationAmountThreshold, bool isOrigin)
 func (_CrossBridge *CrossBridgeFilterer) ParseTokenPairRegistered(log types.Log) (*CrossBridgeTokenPairRegistered, error) {
 	event := new(CrossBridgeTokenPairRegistered)
 	if err := _CrossBridge.contract.UnpackLog(event, "TokenPairRegistered", log); err != nil {
@@ -4729,6 +4139,160 @@ func (_CrossBridge *CrossBridgeFilterer) WatchUpgraded(opts *bind.WatchOpts, sin
 func (_CrossBridge *CrossBridgeFilterer) ParseUpgraded(log types.Log) (*CrossBridgeUpgraded, error) {
 	event := new(CrossBridgeUpgraded)
 	if err := _CrossBridge.contract.UnpackLog(event, "Upgraded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// CrossBridgeVerificationDeadlineSetIterator is returned from FilterVerificationDeadlineSet and is used to iterate over the raw logs and unpacked data for VerificationDeadlineSet events raised by the CrossBridge contract.
+type CrossBridgeVerificationDeadlineSetIterator struct {
+	Event *CrossBridgeVerificationDeadlineSet // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *CrossBridgeVerificationDeadlineSetIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(CrossBridgeVerificationDeadlineSet)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(CrossBridgeVerificationDeadlineSet)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *CrossBridgeVerificationDeadlineSetIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *CrossBridgeVerificationDeadlineSetIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// CrossBridgeVerificationDeadlineSet represents a VerificationDeadlineSet event raised by the CrossBridge contract.
+type CrossBridgeVerificationDeadlineSet struct {
+	FromChainID *big.Int
+	Index       *big.Int
+	Deadline    *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterVerificationDeadlineSet is a free log retrieval operation binding the contract event 0xfcfd532dc7387ad29a63519b09004fa6a982a1853a71522d0d5fe94f3ef76d0d.
+//
+// Solidity: event VerificationDeadlineSet(uint256 indexed fromChainID, uint256 indexed index, uint256 deadline)
+func (_CrossBridge *CrossBridgeFilterer) FilterVerificationDeadlineSet(opts *bind.FilterOpts, fromChainID []*big.Int, index []*big.Int) (*CrossBridgeVerificationDeadlineSetIterator, error) {
+
+	var fromChainIDRule []interface{}
+	for _, fromChainIDItem := range fromChainID {
+		fromChainIDRule = append(fromChainIDRule, fromChainIDItem)
+	}
+	var indexRule []interface{}
+	for _, indexItem := range index {
+		indexRule = append(indexRule, indexItem)
+	}
+
+	logs, sub, err := _CrossBridge.contract.FilterLogs(opts, "VerificationDeadlineSet", fromChainIDRule, indexRule)
+	if err != nil {
+		return nil, err
+	}
+	return &CrossBridgeVerificationDeadlineSetIterator{contract: _CrossBridge.contract, event: "VerificationDeadlineSet", logs: logs, sub: sub}, nil
+}
+
+// WatchVerificationDeadlineSet is a free log subscription operation binding the contract event 0xfcfd532dc7387ad29a63519b09004fa6a982a1853a71522d0d5fe94f3ef76d0d.
+//
+// Solidity: event VerificationDeadlineSet(uint256 indexed fromChainID, uint256 indexed index, uint256 deadline)
+func (_CrossBridge *CrossBridgeFilterer) WatchVerificationDeadlineSet(opts *bind.WatchOpts, sink chan<- *CrossBridgeVerificationDeadlineSet, fromChainID []*big.Int, index []*big.Int) (event.Subscription, error) {
+
+	var fromChainIDRule []interface{}
+	for _, fromChainIDItem := range fromChainID {
+		fromChainIDRule = append(fromChainIDRule, fromChainIDItem)
+	}
+	var indexRule []interface{}
+	for _, indexItem := range index {
+		indexRule = append(indexRule, indexItem)
+	}
+
+	logs, sub, err := _CrossBridge.contract.WatchLogs(opts, "VerificationDeadlineSet", fromChainIDRule, indexRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(CrossBridgeVerificationDeadlineSet)
+				if err := _CrossBridge.contract.UnpackLog(event, "VerificationDeadlineSet", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseVerificationDeadlineSet is a log parse operation binding the contract event 0xfcfd532dc7387ad29a63519b09004fa6a982a1853a71522d0d5fe94f3ef76d0d.
+//
+// Solidity: event VerificationDeadlineSet(uint256 indexed fromChainID, uint256 indexed index, uint256 deadline)
+func (_CrossBridge *CrossBridgeFilterer) ParseVerificationDeadlineSet(log types.Log) (*CrossBridgeVerificationDeadlineSet, error) {
+	event := new(CrossBridgeVerificationDeadlineSet)
+	if err := _CrossBridge.contract.UnpackLog(event, "VerificationDeadlineSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

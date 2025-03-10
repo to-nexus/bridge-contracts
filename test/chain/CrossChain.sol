@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeFeeStation} from "../../src/BridgeFeeStation.sol";
+import {BridgeFeeManager} from "../../src/BridgeFeeManager.sol";
 import {CrossBridge} from "../../src/CrossBridge.sol";
 
 import {IPriceFeed, PriceFeed} from "../../src/PriceFeed.sol";
@@ -9,7 +9,8 @@ import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {IRoleManager} from "../../src/interface/IRoleManager.sol";
 
 import {CrossMintableERC20} from "../../src/token/CrossMintableERC20.sol";
-import {CrossMintableERC20Factory, CrossMintableERC20FactoryCode} from "../../src/token/CrossMintableERC20Factory.sol";
+import {CrossMintableERC20Code} from "../../src/token/CrossMintableERC20Code.sol";
+import {ICrossMintableERC20Code} from "../../src/token/ICrossMintableERC20Code.sol";
 import {SettingTest} from "./Setting.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -23,9 +24,9 @@ contract CrossChainTest is SettingTest {
 
     uint internal nextIndexCross;
     CrossBridge internal bridgeCross;
-    BridgeFeeStation internal bridgeFeeStationCross;
+    BridgeFeeManager internal bridgeFeeManagerCross;
     PriceFeed internal priceFeed;
-    CrossMintableERC20Factory internal crossMintableERC20Factory;
+    ICrossMintableERC20Code internal crossMintableERC20Code;
 
     function setUp() public virtual override {
         super.setUp();
@@ -33,8 +34,6 @@ contract CrossChainTest is SettingTest {
 
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
-        // cross token factory
-        {}
 
         // bridge setup
         {
@@ -44,8 +43,8 @@ contract CrossChainTest is SettingTest {
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
             bridgeCross.initialize(threshold, REWARD);
 
-            crossMintableERC20Factory = new CrossMintableERC20Factory(address(bridgeCross));
-            bridgeCross.setCrossMintableERC20Factory(crossMintableERC20Factory);
+            crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
+            bridgeCross.setCrossMintableERC20Code(crossMintableERC20Code);
 
             bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross), int(EX_RATE), 0);
             bridgeCross.setRole(VALIDATOR_ROLE, VALIDATORS, true);
@@ -69,14 +68,14 @@ contract CrossChainTest is SettingTest {
             address priceFeedImpl = address(new PriceFeed());
             ERC1967Proxy priceFeedProxy = new ERC1967Proxy(priceFeedImpl, bytes(""));
             priceFeed = PriceFeed(address(priceFeedProxy));
-            priceFeed.initialize(uint8(6));
+            priceFeed.initialize(uint8(6), 100000);
             priceFeed.setRole(VALIDATOR_ROLE, VALIDATORS, true);
 
-            bridgeFeeStationCross = new BridgeFeeStation(10, 200000);
-            bridgeFeeStationCross.setPriceFeed(IPriceFeed(address(priceFeed)));
+            bridgeFeeManagerCross = new BridgeFeeManager(10, 200000);
+            bridgeFeeManagerCross.setPriceFeed(IPriceFeed(address(priceFeed)));
         }
 
-        bridgeCross.setFeeStation(bridgeFeeStationCross);
+        bridgeCross.setFeeManager(bridgeFeeManagerCross);
 
         vm.deal(address(bridgeCross), INITIAL_SUPPLY * EX_RATE);
         vm.stopPrank();
@@ -149,9 +148,9 @@ contract CrossChainTest is SettingTest {
         }
         ok = bridgeCross.finalizeBridge(
             IBridgeRegistry.FinalizeArguments({
-                remoteChainID: ETHEREUM_CHAIN_ID,
+                fromChainID: ETHEREUM_CHAIN_ID,
                 index: index,
-                token: IERC20(token),
+                toToken: IERC20(token),
                 to: to,
                 value: value,
                 extraData: NULLDATA
@@ -164,16 +163,16 @@ contract CrossChainTest is SettingTest {
 
     function crossCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
         vm.selectFork(crossForkID);
-        if (address(bridgeFeeStationCross) == address(0)) return (totalValue, 0, 0);
+        if (address(bridgeFeeManagerCross) == address(0)) return (totalValue, 0, 0);
 
         bool ok;
-        (ok, value, gas, ex) = estimateMaxValue(bridgeFeeStationCross, ETHEREUM_CHAIN_ID, token, totalValue);
+        (ok, value, gas, ex) = estimateMaxValue(bridgeFeeManagerCross, ETHEREUM_CHAIN_ID, token, totalValue);
         assertTrue(ok);
     }
 
     function crossGetTokenFee(IERC20 token) public returns (uint minimum, uint gasFee, uint exFeeRate) {
         vm.selectFork(crossForkID);
-        if (address(bridgeFeeStationCross) == address(0)) return (0, 0, 0);
-        (minimum, gasFee, exFeeRate) = bridgeFeeStationCross.getTokenFee(ETHEREUM_CHAIN_ID, token);
+        if (address(bridgeFeeManagerCross) == address(0)) return (0, 0, 0);
+        (minimum, gasFee, exFeeRate) = bridgeFeeManagerCross.getTokenFee(ETHEREUM_CHAIN_ID, token);
     }
 }

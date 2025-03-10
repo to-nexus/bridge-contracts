@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeFeeStation, IBridgeFeeStation} from "../../src/BridgeFeeStation.sol";
-import {StandardBridge} from "../../src/StandardBridge.sol";
+import {BaseBridge} from "../../src/BaseBridge.sol";
+import {BridgeFeeManager, IBridgeFeeManager} from "../../src/BridgeFeeManager.sol";
 
 import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {IRoleManager} from "../../src/interface/IRoleManager.sol";
@@ -18,8 +18,8 @@ contract EthereumChainTest is CrossChainTest {
     bool internal finalizeRevertEthereum = false;
 
     uint internal nextIndexEthereum;
-    StandardBridge internal bridgeEthereum;
-    IBridgeFeeStation internal bridgeFeeStationEthereum;
+    BaseBridge internal bridgeEthereum;
+    IBridgeFeeManager internal bridgeFeeManagerEthereum;
 
     function setUp() public virtual override {
         super.setUp();
@@ -29,9 +29,9 @@ contract EthereumChainTest is CrossChainTest {
 
         // bridge setup
         {
-            StandardBridge bridgeEthereumImpl = new StandardBridge();
+            BaseBridge bridgeEthereumImpl = new BaseBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
-            bridgeEthereum = StandardBridge(payable(address(bridgeEthereumProxy)));
+            bridgeEthereum = BaseBridge(payable(address(bridgeEthereumProxy)));
             bridgeEthereum.initialize(threshold, REWARD);
 
             bridgeEthereum.registerToken(
@@ -108,9 +108,9 @@ contract EthereumChainTest is CrossChainTest {
         }
         ok = bridgeEthereum.finalizeBridge(
             IBridgeRegistry.FinalizeArguments({
-                remoteChainID: CROSS_CHAIN_ID,
+                fromChainID: CROSS_CHAIN_ID,
                 index: index,
-                token: IERC20(token),
+                toToken: IERC20(token),
                 to: to,
                 value: value,
                 extraData: NULLDATA
@@ -124,9 +124,9 @@ contract EthereumChainTest is CrossChainTest {
     function ethereumCalcFee(IERC20, uint) public pure returns (uint value, uint gas, uint ex) {
         return (value, 0, 0); // no fee
             // vm.selectFork(ethereumForkID);
-            // if (address(bridgeFeeStationEthereum) == address(0)) return (value, 0, 0);
+            // if (address(bridgeFeeManagerEthereum) == address(0)) return (value, 0, 0);
             // bool ok;
-            // (value, gas, ex, ok) = bridgeFeeStationEthereum.calculateMax(token, totalValue);
+            // (value, gas, ex, ok) = bridgeFeeManagerEthereum.calculateMax(token, totalValue);
             // assertTrue(ok);
     }
 }

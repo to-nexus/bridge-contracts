@@ -6,41 +6,36 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPriceFeed} from "../interface/IPriceFeed.sol";
 
-library PriceFeedLib {
+library CalcGasFeeLib {
     using Math for uint;
 
-    error PriceFeedLibCanNotZeroValue(string name);
-    error PriceFeedLibOverflow();
+    error CalcGasFeeLibCanNotZeroValue(string name);
+    error CalcGasFeeLibOverflow();
 
     /**
      * @notice Calculates an amount of token A to an equivalent amount of token B based on their prices.
      * @param feed The IPriceFeed contract instance.
-     * @param tokenA The address of token A.
-     * @param tokenB The address of token B.
-     * @param amountA The amount of token A to calculate.
+     * @param toChainID The chain ID of the destination chain.
+     * @param token The address of token A.
+     * @param nativeTokenAmount The amount of native token to calculate.
      * @return ok True if both token prices are valid, false otherwise.
      * @return amountB The equivalent amount of token B.
      * @return updatedAt The updated time.
      */
-    function calculateAmountB(IPriceFeed feed, address tokenA, address tokenB, uint amountA)
+    function calculateTokenAmountForGasFee(IPriceFeed feed, uint toChainID, address token, uint nativeTokenAmount)
         external
         view
         returns (bool ok, uint amountB, uint updatedAt)
     {
-        if (tokenA == tokenB) return (true, amountA, block.timestamp);
-
-        address[] memory tokens = new address[](2);
-        tokens[0] = tokenA;
-        tokens[1] = tokenB;
-
-        bool[] memory exist;
-        uint[] memory prices;
-        (exist, prices, updatedAt) = feed.getPrices(tokens);
-        ok = exist[0] && exist[1];
+        uint nativeTokenPrice;
+        (ok, nativeTokenPrice, updatedAt) = feed.getNativeTokenPrice(toChainID);
         if (!ok) return (false, 0, 0);
 
-        (uint8 decimalA, uint8 decimalB) = (decimals(feed, tokenA), decimals(feed, tokenB));
-        amountB = calculateAmountBWithPrice(amountA, prices[0], prices[1], decimalA, decimalB);
+        uint price;
+        (ok, price, updatedAt) = feed.getTokenPriceInDollars(token);
+        if (!ok) return (false, 0, 0);
+
+        amountB = calculateAmountBWithPrice(nativeTokenAmount, nativeTokenPrice, price, 18, decimals(feed, token));
     }
 
     /// @notice Calculates an amount of token A to an equivalent amount of token B using provided price data.
@@ -55,12 +50,12 @@ library PriceFeedLib {
         pure
         returns (uint amountB)
     {
-        require(priceA != 0, PriceFeedLibCanNotZeroValue("priceA"));
+        require(priceA != 0, CalcGasFeeLibCanNotZeroValue("priceA"));
         bool ok;
         (ok, amountB) = decimalB >= decimalA
             ? amountA.tryMul(priceB.mulDiv(10 ** (decimalB - decimalA), priceA))
             : amountA.tryMul(priceB / (10 ** (decimalA - decimalB)) / priceA);
-        require(ok, PriceFeedLibOverflow());
+        require(ok, CalcGasFeeLibOverflow());
     }
 
     /// @notice Retrieves the number of decimals for a given token.

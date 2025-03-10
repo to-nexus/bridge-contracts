@@ -8,7 +8,7 @@ import {IRoleManager} from "../interface/IRoleManager.sol";
 
 /**
  * @title RoleManager
- * @notice Abstract contract for managing bridge roles and signature verification
+ * @notice Abstract contract for managing bridge roles and access control
  * @dev This contract provides the following key features:
  * - Adding/removing/managing roles
  * - Basic role management functionality
@@ -100,8 +100,8 @@ abstract contract RoleManager is OwnableUpgradeable, IRoleManager {
      * - Validates role is not zero bytes32
      * - Adds or removes role based on grant parameter
      * - Emits RoleUpdated event
-     * @param account Address to update
      * @param role Role identifier to modify
+     * @param account Address to update
      * @param grant True to add, false to remove
      */
     function _updateRole(bytes32 role, address account, bool grant) internal virtual onlyOwner {
