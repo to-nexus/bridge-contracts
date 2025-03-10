@@ -13,19 +13,19 @@ library CalcGasFeeLib {
     error CalcGasFeeLibOverflow();
 
     /**
-     * @notice Calculates an amount of token A to an equivalent amount of token B based on their prices.
+     * @notice Calculates the equivalent amount of token based on the native token amount.
      * @param feed The IPriceFeed contract instance.
      * @param toChainID The chain ID of the destination chain.
-     * @param token The address of token A.
+     * @param token The address of token.
      * @param nativeTokenAmount The amount of native token to calculate.
      * @return ok True if both token prices are valid, false otherwise.
-     * @return amountB The equivalent amount of token B.
+     * @return tokenAmount The equivalent amount of token.
      * @return updatedAt The updated time.
      */
     function calculateTokenAmountForGasFee(IPriceFeed feed, uint toChainID, address token, uint nativeTokenAmount)
         external
         view
-        returns (bool ok, uint amountB, uint updatedAt)
+        returns (bool ok, uint tokenAmount, uint updatedAt)
     {
         uint nativeTokenPrice;
         (ok, nativeTokenPrice, updatedAt) = feed.getNativeTokenPrice(toChainID);
@@ -35,7 +35,7 @@ library CalcGasFeeLib {
         (ok, price, updatedAt) = feed.getTokenPriceInDollars(token);
         if (!ok) return (false, 0, 0);
 
-        amountB = calculateAmountBWithPrice(nativeTokenAmount, nativeTokenPrice, price, 18, decimals(feed, token));
+        tokenAmount = calculateAmountBWithPrice(nativeTokenAmount, nativeTokenPrice, price, 18, decimals(feed, token));
     }
 
     /// @notice Calculates an amount of token A to an equivalent amount of token B using provided price data.

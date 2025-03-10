@@ -63,7 +63,7 @@ contract BaseBridge is
     error BaseBridgeCanNotZeroAddress();
     error BaseBridgeNotExistIndex(uint index);
     error BaseBridgeNotExistToken(address token);
-    error BaseBridgeNotExpired(uint safeDeadline, uint timestamp);
+    error BaseBridgeNotExpired(uint delayExpiration, uint timestamp);
     error BaseBridgeBurnFailed(IERC20 token, address from, uint value);
     error BaseBridgeNotMatchLength();
     error BaseBridgeFailedCall(string reason);
@@ -129,7 +129,7 @@ contract BaseBridge is
      * @param fromChainID The ID of the source chain
      * @param index Unique identifier for the locked bridge operation
      */
-    event VerificationDeadlineSet(uint indexed fromChainID, uint indexed index, uint deadline);
+    event VerificationDelaySet(uint indexed fromChainID, uint indexed index, uint delay);
 
     /// @dev Native token representation address
     address internal constant NATIVE_TOKEN = address(1);
@@ -413,25 +413,11 @@ contract BaseBridge is
         TokenPair memory tokenPair = _tokenPairs[remoteChainID][address(pending.args.toToken)];
         require(!tokenPair.paused, RegistryTokenPaused(address(pending.args.toToken)));
         require(
-            pending.safeDeadline == 0 || pending.safeDeadline < block.timestamp,
-            BaseBridgeNotExpired(pending.safeDeadline, block.timestamp)
+            pending.delayExpiration == 0 || pending.delayExpiration < block.timestamp,
+            BaseBridgeNotExpired(pending.delayExpiration, block.timestamp)
         );
 
         return _releasePending(remoteChainID, index);
-    }
-
-    /**
-     * @notice Retries finalizing multiple bridges on the local chain in a batch
-     * @dev Processes multiple pending operations in a single transaction
-     * @param remoteChainID The ID of the remote chain
-     * @param indexes An array of indexes of the bridges to retry
-     * @return Boolean indicating whether all bridges were retried successfully
-     */
-    function releasePendingBatch(uint remoteChainID, uint[] memory indexes) external returns (bool) {
-        for (uint i = 0; i < indexes.length; ++i) {
-            releasePending(remoteChainID, indexes[i]);
-        }
-        return true;
     }
 
     /**
@@ -466,7 +452,7 @@ contract BaseBridge is
                 // 3. The safety deadline has passed
                 if (
                     !_tokenPairs[pending.args.fromChainID][address(pending.args.toToken)].paused
-                        && pending.safeDeadline != 0 && pending.safeDeadline < block.timestamp
+                        && pending.delayExpiration != 0 && pending.delayExpiration < block.timestamp
                 ) {
                     // Process the pending operation
                     _releasePending(chainID, index);
@@ -485,10 +471,10 @@ contract BaseBridge is
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
      */
-    function setVerificationDeadline(uint remoteChainID, uint index, uint deadline) external onlyAdmin {
+    function setVerificationDelay(uint remoteChainID, uint index, uint delay) external onlyAdmin {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
-        _pendingData[remoteChainID][index].safeDeadline = deadline;
-        emit VerificationDeadlineSet(remoteChainID, index, deadline);
+        _pendingData[remoteChainID][index].delayExpiration = block.timestamp + delay;
+        emit VerificationDelaySet(remoteChainID, index, delay);
     }
 
     /**

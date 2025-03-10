@@ -34,7 +34,7 @@ interface IBridgeRegistry is IRoleManager {
 
     struct PendingData {
         FinalizeArguments args;
-        uint safeDeadline;
+        uint delayExpiration;
         bytes reason;
     }
 

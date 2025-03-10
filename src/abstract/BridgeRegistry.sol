@@ -40,7 +40,7 @@ import {RoleManager} from "./RoleManager.sol";
  * PendingData {
  *   args: FinalizeArguments struct with operation details
  *   reason: Error message explaining pending status
- *   safeDeadline: Timestamp after which pending operation can be processed
+ *   delayExpiration: Timestamp after which pending operation can be processed
  * }
  */
 abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
@@ -310,10 +310,22 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param token Token address to update
      * @param verificationAmountThreshold New safety limit value
      */
-    function setSafetyLimit(uint remoteChainID, address token, uint verificationAmountThreshold) external onlyAdmin {
+    function setVerificationAmountThreshold(uint remoteChainID, address token, uint verificationAmountThreshold)
+        external
+        onlyAdmin
+    {
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
         _tokenPairs[remoteChainID][token].verificationAmountThreshold = verificationAmountThreshold;
         emit SafetyLimitSet(remoteChainID, token, verificationAmountThreshold);
+    }
+
+    /**
+     * @notice Sets the verification delay
+     * @dev Updates the delay period for verification
+     * @param delay New delay value in seconds
+     */
+    function setVerificationDelay(uint delay) external onlyAdmin {
+        _verificationDelay = delay;
     }
 
     /**
@@ -525,7 +537,8 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
             _latestExpiredPendingTime = block.timestamp + _verificationDelay;
         }
 
-        _pendingData[args.fromChainID][args.index] = PendingData({args: args, reason: reason, safeDeadline: deadline});
+        _pendingData[args.fromChainID][args.index] =
+            PendingData({args: args, reason: reason, delayExpiration: deadline});
 
         TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
         if (tokenPair.isOrigin) tokenPair.pendingAmount += args.value;

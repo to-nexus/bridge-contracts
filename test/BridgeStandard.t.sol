@@ -141,7 +141,7 @@ contract BaseBridgeTest is BridgeTest {
 
             vm.selectFork(ethereumForkID);
             IBaseBridge.PendingData memory pendingArgs = bridgeEthereum.getPendingArguments(CROSS_CHAIN_ID, index);
-            assertEq(pendingArgs.safeDeadline, 0);
+            assertEq(pendingArgs.delayExpiration, 0);
             assertEq(pendingArgs.args.index, index);
             assertEq(address(pendingArgs.args.toToken), address(testTokenEthereum));
             assertEq(pendingArgs.args.to, USER);

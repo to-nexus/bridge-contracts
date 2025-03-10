@@ -121,7 +121,7 @@ contract BridgeExceptionTest is BridgeTest {
 
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setSafetyLimit(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount - 1);
+        bridgeCross.setVerificationAmountThreshold(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount - 1);
 
         vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
@@ -146,7 +146,7 @@ contract BridgeExceptionTest is BridgeTest {
 
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setSafetyLimit(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount - 1);
+        bridgeCross.setVerificationAmountThreshold(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount - 1);
 
         vm.selectFork(ethereumForkID);
         vm.prank(OWNER);
