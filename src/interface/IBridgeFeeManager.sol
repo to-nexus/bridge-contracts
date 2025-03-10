@@ -1,25 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {ITokenStorage} from "../interface/ITokenStorage.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IBridgeFeeManager is ITokenStorage {
-    struct FeeInfo {
-        address token;
-        uint gasFee; // fixed
-        uint serviceFee; // rate
+interface IBridgeFeeManager {
+    struct TokenFee {
+        IERC20 token;
+        uint minimumValue;
+        uint exFeeRate;
     }
 
-    function addFeeInfo(address token, uint gasFee, uint serviceFee) external;
-    function removeFeeInfo(address token) external;
-    function addFeeInfoMany(FeeInfo[] memory feeInfoList) external;
-    function updateFeeInfoMany(FeeInfo[] memory feeInfoList) external;
-    function removeFeeInfoMany(address[] memory token) external;
-
-    function denominator() external view returns (uint);
-    function calculateFee(address token, uint value) external view returns (uint gas, uint service);
-    function getTokenFee(address token) external view returns (FeeInfo memory);
-    function getTokenFeeList(address[] memory tokens) external view returns (FeeInfo[] memory);
-    function allFeeInfo() external view returns (FeeInfo[] memory);
-    function feeInfoByIndex(uint index) external view returns (FeeInfo memory);
+    function denominator() external pure returns (uint);
+    function getGasPrice(uint remoteChainID) external view returns (uint);
+    function getTokenFee(uint remoteChainID, IERC20 token)
+        external
+        view
+        returns (uint minimumValue, uint gasFee, uint exFeeRate);
+    function calculateFee(uint remoteChainID, IERC20 token, uint value)
+        external
+        view
+        returns (uint minimumValue, uint gasFee, uint exFee);
 }
