@@ -15,9 +15,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
  * @notice Oracle contract that manages price data for tokens across different chains
  * @dev Provides token price data management with the following features:
  * - Price storage and retrieval for ERC20 and native tokens
- * - Validator-managed price updates with timestamp tracking
- * - Exchange rate calculation between different tokens
- * - Security features for protecting against stale or invalid data
+ * - Price updates with timestamp tracking
  */
 contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     using EnumerableSet for EnumerableSet.AddressSet;

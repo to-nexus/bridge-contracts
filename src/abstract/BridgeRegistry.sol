@@ -135,7 +135,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     mapping(uint => mapping(uint => PendingData)) internal _pendingData;
 
     /// @dev Storage gap for future upgradessetCrossMintableERC20Code
-    uint[38] private __gap;
+    uint[40] private __gap;
 
     /**
      * @notice Initializes the BridgeRegistry

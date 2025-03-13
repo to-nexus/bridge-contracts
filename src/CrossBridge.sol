@@ -13,10 +13,9 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
  * @dev Extends BaseBridge with deterministic deployment features
  * - Uses predefined implementation address for easier verification
  * - Implements proxy security checks
- * - Ensures contract is only called through valid proxies
  */
 contract CrossBridge is BaseBridge {
-    /// @dev Fixed address for deterministic deployment
+    /// @dev Predefined address for the predeployed implementation
     address private constant PREDEPLOYED_IMPLEMENTATION_ADDRESS = address(0xb81d6e000000000000000000000000000000C0de);
 
     /// @dev Storage gap for future upgrades

@@ -9,18 +9,19 @@ interface IBridgeManager {
         external
         view
         returns (uint minimumValue, uint gasFee, uint exFee);
+    function getTokenPrice(IERC20 token) external view returns (bool exist, uint price);
+    function getTokenPriceWithValue(IERC20 token, uint value) external view returns (bool exist, uint price);
     function getGasPrice(uint remoteChainID) external view returns (uint);
     function getTokenConfig(uint remoteChainID, IERC20 token)
         external
         view
         returns (uint minimumValue, uint gasFee, uint exFeeRate);
-    function getTokenPrice(IERC20 token) external view returns (bool exist, uint price);
-    function getTokenPriceWithValue(IERC20 token, uint value) external view returns (bool exist, uint price);
+    function getMinimumTokenValue() external view returns (uint);
+    function getVerificationAmountThreshold() external view returns (uint);
     function getTimeWindow() external view returns (uint);
     function getPeriodTotalValueThreshold() external view returns (uint);
-    function getVerificationAmountThreshold() external view returns (uint);
-    function getMinimumTokenValue() external view returns (uint);
     function getTokenCurrentScore(IERC20 token) external view returns (uint);
     function getTokenMovementHistory(IERC20 token) external view returns (bytes32[] memory history);
     function denominator() external pure returns (uint);
 }
+

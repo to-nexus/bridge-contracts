@@ -18,6 +18,8 @@ abstract contract RoleManager is AccessControlUpgradeable {
 
     mapping(bytes32 role => EnumerableSet.AddressSet) private _roles;
 
+    uint[49] private __gap;
+
     function __RoleManager_init(address owner) internal onlyInitializing {
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, owner);

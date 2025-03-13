@@ -166,7 +166,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
         _tokenCurrentVolume[token] += score;
 
         if (_periodTotalValueThreshold != 0 && _tokenCurrentVolume[token] > _periodTotalValueThreshold) {
-            return (false, "token volume threshold exceeded");
+            return (false, "period total value threshold exceeded");
         }
         return (true, "");
     }
@@ -400,7 +400,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * @param token Token to configure
      * @param exFeeRate Exchange fee rate
      */
-    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(UPDATOR_ROLE) {
+    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(ADMIN_ROLE) {
         require(address(token) != address(0), BridgeManagerCanNotZeroValue("token"));
         _exFeeRate[token] = exFeeRate;
         emit BridgeManagerExchangeFeeUpdated(address(token), exFeeRate);
@@ -414,10 +414,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * @param tokenList Array of token addresses
      * @param exFeeRateList Array of exchange fee rates
      */
-    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList)
-        external
-        onlyRole(UPDATOR_ROLE)
-    {
+    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList) external onlyRole(ADMIN_ROLE) {
         require(tokenList.length == exFeeRateList.length, BridgeManagerInvalidLength());
         for (uint i = 0; i < tokenList.length; ++i) {
             setExFeeRate(tokenList[i], exFeeRateList[i]);

@@ -127,7 +127,7 @@ contract BaseBridge is
     /// @dev Fee management contract
     IBridgeManager public bridgeManager;
 
-    /// @dev Reward wallet for collecting fees
+    /// @dev dev walelt
     address payable private _dev;
 
     /// @dev Block number when contract was initialized
@@ -239,22 +239,15 @@ contract BaseBridge is
             permitArgs.value >= value + gasFee + exFee, BaseBridgeInvalidValue(value + gasFee + exFee, permitArgs.value)
         );
 
-        {
-            bytes memory data = abi.encodeCall(
-                IERC20Permit.permit,
-                (
-                    permitArgs.account,
-                    address(this),
-                    permitArgs.value,
-                    permitArgs.deadline,
-                    permitArgs.v,
-                    permitArgs.r,
-                    permitArgs.s
-                )
-            );
-            (bool success, bytes memory reason) = _safeCall(payable(address(permitArgs.token)), 0, data);
-            require(success, BaseBridgeFailedCall(string(reason)));
-        }
+        IERC20Permit(address(fromToken)).permit(
+            permitArgs.account,
+            address(this),
+            permitArgs.value,
+            permitArgs.deadline,
+            permitArgs.v,
+            permitArgs.r,
+            permitArgs.s
+        );
 
         _executeBridge(toChainID, fromToken, permitArgs.account, to, value, gasFee, exFee, true, extraData);
         return true;
