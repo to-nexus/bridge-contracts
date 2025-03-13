@@ -19,7 +19,6 @@ contract SettingTest is Test {
     bytes32 public constant ADMIN_ROLE = bytes32("ADMIN");
     bytes32 public constant UPDATOR_ROLE = bytes32("UPDATOR");
 
-    uint internal constant EX_RATE = 100;
     uint internal constant OWNER_PK = uint(bytes32("owner"));
     uint internal constant CrossOWNER_PK = uint(bytes32("cross_owner"));
     uint internal constant USER_PK = uint(bytes32("user"));

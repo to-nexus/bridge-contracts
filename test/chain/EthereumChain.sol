@@ -36,14 +36,14 @@ contract EthereumChainTest is CrossChainTest {
             bridgeEthereum.grantRole(ADMIN_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(OPERATOR_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(UPDATOR_ROLE, OWNER); // for test
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), -(int(EX_RATE)));
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN));
             bridgeEthereum.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
         }
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth), 0);
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross), 0);
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth));
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross));
 
             TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY);
             TestToken(address(testTokenEthereum)).mint(OWNER, INITIAL_SUPPLY);

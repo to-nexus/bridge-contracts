@@ -48,7 +48,7 @@ contract CrossChainTest is SettingTest {
             bridgeCross.grantRole(ADMIN_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(OPERATOR_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(UPDATOR_ROLE, CrossOWNER); // for test
-            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross), int(EX_RATE));
+            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross));
             bridgeCross.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
 
             vm.label(address(bridgeCross), "CrossBridge");
@@ -57,11 +57,11 @@ contract CrossChainTest is SettingTest {
         // add token to bridge (cross chain)
         {
             // test token
-            address ttAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), 0, "TT", 18);
+            address ttAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(testTokenEthereum), "TT", 18);
             testTokenCross = IERC20(ttAddress);
 
             // weth
-            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), 0, "ETH", 18);
+            address wethAddress = bridgeCross.createToken(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), "ETH", 18);
             weth = IERC20(wethAddress);
         }
 
@@ -81,7 +81,7 @@ contract CrossChainTest is SettingTest {
 
         bridgeCross.setBridgeManager(bridgeManagerCross);
 
-        vm.deal(address(bridgeCross), INITIAL_SUPPLY * EX_RATE);
+        vm.deal(address(bridgeCross), INITIAL_SUPPLY);
         vm.stopPrank();
 
         address[] memory tokens = new address[](2);

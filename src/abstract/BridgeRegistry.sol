@@ -67,15 +67,10 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param remoteChainID ID of the remote chain
      * @param localToken Address of token on this chain
      * @param remoteToken Address of corresponding token on remote chain
-     * @param conversionRatio Exchange rate for local token
      * @param isOrigin Whether this is the origin chain for the token
      */
     event TokenPairRegistered(
-        uint indexed remoteChainID,
-        address indexed localToken,
-        address indexed remoteToken,
-        int conversionRatio,
-        bool isOrigin
+        uint indexed remoteChainID, address indexed localToken, address indexed remoteToken, bool isOrigin
     );
 
     /**
@@ -133,9 +128,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /// @dev Mapping from chain ID and token address to TokenPair struct
     mapping(uint => mapping(address => TokenPair)) internal _tokenPairs;
 
-    /// @dev Mapping from chain ID and token address to exchange rate
-    mapping(uint => mapping(address => int)) internal _conversionRatio;
-
     /// @dev Mapping from chain ID to set of pending operation indices
     mapping(uint => EnumerableSet.UintSet) internal _pendingIndex;
 
@@ -174,21 +166,17 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Registers token pair automatically
      * @param remoteChainID Chain ID where the original token exists
      * @param remoteToken Address of the original token
-     * @param conversionRatio Exchange rate for local token
      * @param symbol Token symbol
      * @param decimals Token decimals
      * @return tokenAddress Address of the newly created token
      */
-    function createToken(
-        uint remoteChainID,
-        address remoteToken,
-        int conversionRatio,
-        string memory symbol,
-        uint8 decimals
-    ) external returns (address tokenAddress) {
+    function createToken(uint remoteChainID, address remoteToken, string memory symbol, uint8 decimals)
+        external
+        returns (address tokenAddress)
+    {
         require(address(crossMintableERC20Code) != address(0), RegistryFactoryNotSet());
         tokenAddress = crossMintableERC20Code.createCrossMintableERC20(remoteChainID, remoteToken, symbol, decimals);
-        registerToken(remoteChainID, false, tokenAddress, remoteToken, conversionRatio);
+        registerToken(remoteChainID, false, tokenAddress, remoteToken);
     }
 
     /**
@@ -201,15 +189,11 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param isOrigin Whether this is the origin chain for the token
      * @param localToken Local token address
      * @param remoteToken Remote token address
-     * @param conversionRatio Exchange rate for local token
      */
-    function registerToken(
-        uint remoteChainID,
-        bool isOrigin,
-        address localToken,
-        address remoteToken,
-        int conversionRatio
-    ) public onlyRole(ADMIN_ROLE) {
+    function registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken)
+        public
+        onlyRole(ADMIN_ROLE)
+    {
         if (_chains.add(remoteChainID)) {
             _chainData[remoteChainID] =
                 Chain({remoteChainID: remoteChainID, initiateIndex: 0, finalizeIndex: 0, paused: false});
@@ -226,9 +210,8 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
             deposited: 0,
             pendingAmount: 0
         });
-        if (conversionRatio > 1 || conversionRatio < -1) _conversionRatio[remoteChainID][localToken] = conversionRatio;
 
-        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, conversionRatio, isOrigin);
+        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, isOrigin);
     }
 
     /**
@@ -243,7 +226,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     function unregisterToken(uint remoteChainID, address token) external onlyRole(ADMIN_ROLE) {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
         delete (_tokenPairs[remoteChainID][token]);
-        delete (_conversionRatio[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
     }
 

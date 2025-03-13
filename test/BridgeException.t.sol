@@ -113,59 +113,6 @@ contract BridgeExceptionTest is BridgeTest {
         vm.prank(CrossOWNER);
         bridgeCross.setTokenPause(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), false);
 
-        withdraw(false, amount * 10, 5);
+        withdraw(false, amount, 5);
     }
-
-    // function test_deposit_with_over_safety_limit() public {
-    //     uint amount = 1000 ether;
-
-    //     vm.selectFork(crossForkID);
-    //     vm.prank(CrossOWNER);
-    //     bridgeCross.setVerificationAmountThreshold(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount - 1);
-
-    //     vm.selectFork(ethereumForkID);
-    //     vm.prank(OWNER);
-    //     cross.transfer(USER, amount);
-    //     vm.prank(USER);
-    //     cross.approve(address(bridgeEthereum), amount);
-
-    //     uint index = deposit(true, amount, 5);
-
-    //     vm.selectFork(crossForkID);
-    //     vm.prank(CrossOWNER);
-    //     vm.expectRevert();
-    //     bridgeCross.releasePending(ETHEREUM_CHAIN_ID, index);
-
-    //     vm.warp(block.timestamp + 25 hours);
-    //     vm.prank(CrossOWNER);
-    //     bridgeCross.releasePending(ETHEREUM_CHAIN_ID, index);
-    // }
-
-    // function test_deposit_with_over_safety_limit_manual() public {
-    //     uint amount = 1000 ether;
-
-    //     vm.selectFork(crossForkID);
-    //     vm.prank(CrossOWNER);
-    //     bridgeCross.setVerificationAmountThreshold(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN), amount - 1);
-
-    //     vm.selectFork(ethereumForkID);
-    //     vm.prank(OWNER);
-    //     cross.transfer(USER, amount);
-    //     vm.prank(USER);
-    //     cross.approve(address(bridgeEthereum), amount);
-
-    //     uint index = deposit(true, amount, 5);
-
-    //     vm.selectFork(crossForkID);
-    //     vm.prank(CrossOWNER);
-    //     vm.expectRevert();
-    //     bridgeCross.releasePending(ETHEREUM_CHAIN_ID, index);
-
-    //     vm.prank(USER);
-    //     vm.expectRevert();
-    //     bridgeCross.manualProcessPending(ETHEREUM_CHAIN_ID, index);
-
-    //     vm.prank(CrossOWNER);
-    //     bridgeCross.manualProcessPending(ETHEREUM_CHAIN_ID, index);
-    // }
 }

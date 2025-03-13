@@ -37,7 +37,6 @@ contract BaseBridge is
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
-    error BaseBridgeInvalidValueUnit(IERC20 token, uint value);
     error BaseBridgeInvalidValue(uint expected, uint actual);
     error BaseBridgeInvalidIndex(uint expected, uint actual);
     error BaseBridgeInvalidMsgValue(uint expected, uint actual);
@@ -526,10 +525,6 @@ contract BaseBridge is
         internal
         returns (bool ok, bytes memory reason)
     {
-        int conversionRatio = _conversionRatio[fromChainID][address(toToken)];
-        if (conversionRatio > 1) value = value * uint(conversionRatio);
-        else if (conversionRatio < -1) value = value / uint(-conversionRatio);
-
         if (address(toToken) == NATIVE_TOKEN) {
             return _safeCall(payable(to), value, "");
         } else if (value != 0) {
@@ -691,9 +686,6 @@ contract BaseBridge is
      * @param fee Total fees to collect
      */
     function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal virtual {
-        int conversionRatio = _conversionRatio[remoteChainID][address(token)];
-        if (conversionRatio > 1) require(value % uint(conversionRatio) == 0, BaseBridgeInvalidValueUnit(token, value));
-
         if (address(token) == NATIVE_TOKEN) {
             // Handling native token transfers (e.g., CROSS, ETH, BNB)
             require(msg.value == value + fee, BaseBridgeInvalidMsgValue(value + fee, msg.value));
