@@ -38,36 +38,36 @@ type IPriceFeedPriceData struct {
 
 // PriceFeedMetaData contains all meta data concerning the PriceFeed contract.
 var PriceFeedMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allPrices\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"exist\",\"type\":\"bool[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"threshold_\",\"type\":\"uint8\"}],\"name\":\"changeThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dollarDecimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"eip712Domain\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"fields\",\"type\":\"bytes1\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"version\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"chainId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"verifyingContract\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"extensions\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getNativeTokenPrice\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"exist\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenA\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenB\",\"type\":\"address\"}],\"name\":\"getPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdate\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getPriceData\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"exist\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdated\",\"type\":\"uint256\"}],\"internalType\":\"structIPriceFeed.PriceData\",\"name\":\"data\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"}],\"name\":\"getPriceDataList\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"exist\",\"type\":\"bool[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdated\",\"type\":\"uint256\"}],\"internalType\":\"structIPriceFeed.PriceData[]\",\"name\":\"list\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"}],\"name\":\"getPrices\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"exist\",\"type\":\"bool[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleMembers\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getTokenPriceInDollars\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"exist\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"_dollarDecimals\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"ethPrice\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nativeToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"newAccounts\",\"type\":\"address[]\"}],\"name\":\"resetRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"accounts\",\"type\":\"address[]\"},{\"internalType\":\"bool\",\"name\":\"set\",\"type\":\"bool\"}],\"name\":\"setRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"threshold\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"chainIDs\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"pricesAt\",\"type\":\"uint256[]\"}],\"name\":\"updateNativeTokenPrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"pricesAt\",\"type\":\"uint256[]\"}],\"name\":\"updatePrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"updatedAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"EIP712DomainChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"PriceFeedPriceUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"RoleUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"threshold\",\"type\":\"uint8\"}],\"name\":\"ThresholdChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"PriceFeedCanNotZeroValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"PriceFeedInvalidLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"at\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blocktime\",\"type\":\"uint256\"}],\"name\":\"PriceFeedInvalidPriceAt\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"PriceFeedNoSource\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleAlreadyGranted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RoleCanNotZeroAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RoleInvalid\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleNotAuthorized\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"RoleNotGranted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"length\",\"type\":\"uint256\"}],\"name\":\"ValidatorInsufficientSignature\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"v\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"r\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"s\",\"type\":\"uint256\"}],\"name\":\"ValidatorInvalidSignatures\",\"type\":\"error\"}]",
+	ABI: "[{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allPrices\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"exist\",\"type\":\"bool[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"dollarDecimals\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getNativeTokenPrice\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"exist\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"tokenA\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenB\",\"type\":\"address\"}],\"name\":\"getPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdate\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getPriceData\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"exist\",\"type\":\"bool\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdated\",\"type\":\"uint256\"}],\"internalType\":\"structIPriceFeed.PriceData\",\"name\":\"data\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"}],\"name\":\"getPriceDataList\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"exist\",\"type\":\"bool[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastUpdated\",\"type\":\"uint256\"}],\"internalType\":\"structIPriceFeed.PriceData[]\",\"name\":\"list\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"}],\"name\":\"getPrices\",\"outputs\":[{\"internalType\":\"bool[]\",\"name\":\"exist\",\"type\":\"bool[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleMembers\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"getTokenPriceInDollars\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"exist\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"updatedAt_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"accounts\",\"type\":\"address[]\"}],\"name\":\"grantRoleBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"_dollarDecimals\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"ethPrice\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nativeToken\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"callerConfirmation\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"accounts\",\"type\":\"address[]\"}],\"name\":\"revokeRoleBatch\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256[]\",\"name\":\"chainIDs\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"pricesAt\",\"type\":\"uint256[]\"}],\"name\":\"updateNativeTokenPrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"tokens\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"prices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"pricesAt\",\"type\":\"uint256[]\"}],\"name\":\"updatePrice\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"updatedAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"price\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"}],\"name\":\"PriceFeedPriceUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"AccessControlBadConfirmation\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"neededRole\",\"type\":\"bytes32\"}],\"name\":\"AccessControlUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"PriceFeedCanNotZeroValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"PriceFeedInvalidLength\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"at\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blocktime\",\"type\":\"uint256\"}],\"name\":\"PriceFeedInvalidPriceAt\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"PriceFeedNoSource\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"RoleManagerAlreadyHasRole\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"RoleManagerDoesNotHaveRole\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"}]",
 	Sigs: map[string]string{
+		"a217fddf": "DEFAULT_ADMIN_ROLE()",
 		"ad3cb1cc": "UPGRADE_INTERFACE_VERSION()",
 		"ec7221dd": "allPrices()",
-		"b7f3358d": "changeThreshold(uint8)",
 		"2fe3b6cf": "dollarDecimals()",
-		"84b0196e": "eip712Domain()",
 		"3afb1544": "getNativeTokenPrice(uint256)",
 		"ac41865a": "getPrice(address,address)",
 		"72279ba1": "getPriceData(address)",
 		"9761cb22": "getPriceDataList(address[])",
 		"8fb5a482": "getPrices(address[])",
+		"248a9ca3": "getRoleAdmin(bytes32)",
 		"a3246ad3": "getRoleMembers(bytes32)",
 		"e588566f": "getTokenPriceInDollars(address)",
+		"2f2ff15d": "grantRole(bytes32,address)",
+		"fd47852b": "grantRoleBatch(bytes32,address[])",
 		"91d14854": "hasRole(bytes32,address)",
-		"bb65ccbc": "initialize(uint8,uint256)",
+		"fa23bb06": "initialize(address,uint8,uint256)",
 		"e1758bd8": "nativeToken()",
-		"8da5cb5b": "owner()",
 		"52d1902d": "proxiableUUID()",
-		"715018a6": "renounceOwnership()",
-		"2d87b7ee": "resetRole(bytes32,address[])",
-		"d4bf502a": "setRole(bytes32,address[],bool)",
-		"42cde4e8": "threshold()",
-		"f2fde38b": "transferOwnership(address)",
+		"36568abe": "renounceRole(bytes32,address)",
+		"d547741f": "revokeRole(bytes32,address)",
+		"82f51fa6": "revokeRoleBatch(bytes32,address[])",
+		"01ffc9a7": "supportsInterface(bytes4)",
 		"9409f47b": "updateNativeTokenPrice(uint256[],uint256[],uint256[])",
 		"99e6440d": "updatePrice(address[],uint256[],uint256[])",
 		"7519ab50": "updatedAt()",
 		"4f1ef286": "upgradeToAndCall(address,bytes)",
 	},
-	Bin: "0x60a0604052306080523480156012575f5ffd5b506080516128756100395f395f818161134a0152818161137301526114b701526128755ff3fe60806040526004361061017b575f3560e01c80639409f47b116100cd578063b7f3358d11610087578063e1758bd811610062578063e1758bd8146104f9578063e588566f1461050c578063ec7221dd1461052b578063f2fde38b1461053f575f5ffd5b8063b7f3358d1461049c578063bb65ccbc146104bb578063d4bf502a146104da575f5ffd5b80639409f47b146103945780639761cb22146103b357806399e6440d146103e0578063a3246ad3146103ff578063ac41865a1461042b578063ad3cb1cc1461045f575f5ffd5b8063715018a61161013857806384b0196e1161011357806384b0196e146102c05780638da5cb5b146102e75780638fb5a4821461033757806391d1485414610365575f5ffd5b8063715018a61461026a57806372279ba11461027e5780637519ab50146102ab575f5ffd5b80632d87b7ee1461017f5780632fe3b6cf146101a05780633afb1544146101d057806342cde4e81461021e5780634f1ef2861461023557806352d1902d14610248575b5f5ffd5b34801561018a575f5ffd5b5061019e610199366004611f66565b61055e565b005b3480156101ab575f5ffd5b506064546101b99060ff1681565b60405160ff90911681526020015b60405180910390f35b3480156101db575f5ffd5b506102016101ea366004611fa9565b5f9081526069602052604090205460655481151592565b6040805193151584526020840192909252908201526060016101c7565b348015610229575f5ffd5b5060325460ff166101b9565b61019e610243366004611fc0565b610590565b348015610253575f5ffd5b5061025c6105ab565b6040519081526020016101c7565b348015610275575f5ffd5b5061019e6105c6565b348015610289575f5ffd5b5061029d610298366004612063565b6105d9565b6040516101c792919061207c565b3480156102b6575f5ffd5b5061025c60655481565b3480156102cb575f5ffd5b506102d4610661565b6040516101c79796959493929190612117565b3480156102f2575f5ffd5b507f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300546001600160a01b03165b6040516001600160a01b0390911681526020016101c7565b348015610342575f5ffd5b50610356610351366004612186565b61070f565b6040516101c7939291906121f1565b348015610370575f5ffd5b5061038461037f366004612226565b6108a5565b60405190151581526020016101c7565b34801561039f575f5ffd5b5061019e6103ae3660046122ab565b6108c5565b3480156103be575f5ffd5b506103d26103cd366004612186565b6109b1565b6040516101c7929190612336565b3480156103eb575f5ffd5b5061019e6103fa3660046123b6565b610b92565b34801561040a575f5ffd5b5061041e610419366004611fa9565b610c74565b6040516101c791906123e9565b348015610436575f5ffd5b5061044a610445366004612434565b610c8d565b604080519283526020830191909152016101c7565b34801561046a575f5ffd5b5061048f604051806040016040528060058152602001640352e302e360dc1b81525081565b6040516101c7919061245c565b3480156104a7575f5ffd5b5061019e6104b636600461247c565b610fc8565b3480156104c6575f5ffd5b5061019e6104d5366004612497565b611018565b3480156104e5575f5ffd5b5061019e6104f43660046124c1565b611241565b348015610504575f5ffd5b50600161031f565b348015610517575f5ffd5b50610201610526366004612063565b61127e565b348015610536575f5ffd5b506103566112d3565b34801561054a575f5ffd5b5061019e610559366004612063565b6112ef565b6105808261057a5f5f8681526020019081526020015f2061132c565b5f611241565b61058c82826001611241565b5050565b61059861133f565b6105a1826113e3565b61058c82826113eb565b5f6105b46114ac565b505f5160206128205f395f51905f5290565b6105ce6114f5565b6105d75f611550565b565b604080516060810182525f808252602082018190529181018290526001600160a01b038084165f818152606860205260409020549091160361065c5750506001600160a01b038082165f90815260686020908152604091829020825160608101845281549094168452600181810154928501929092526002015491830191909152905b915091565b5f60608082808083815f5160206128005f395f51905f52805490915015801561068c57506001810154155b6106d55760405162461bcd60e51b81526020600482015260156024820152741152540dcc4c8e88155b9a5b9a5d1a585b1a5e9959605a1b60448201526064015b60405180910390fd5b6106dd6115c0565b6106e5611680565b604080515f80825260208201909252600f60f81b9c939b5091995046985030975095509350915050565b6060805f83516001600160401b0381111561072c5761072c611e74565b604051908082528060200260200182016040528015610755578160200160208202803683370190505b50925083516001600160401b0381111561077157610771611e74565b60405190808252806020026020018201604052801561079a578160200160208202803683370190505b5091505f5b8451811015610899578481815181106107ba576107ba61251b565b60200260200101516001600160a01b031660685f8784815181106107e0576107e061251b565b6020908102919091018101516001600160a01b039081168352908201929092526040015f205416036108915760018482815181106108205761082061251b565b60200260200101901515908115158152505060685f8683815181106108475761084761251b565b60200260200101516001600160a01b03166001600160a01b031681526020019081526020015f20600101548382815181106108845761088461251b565b6020026020010181815250505b60010161079f565b50506065549193909250565b5f8281526020819052604081206108bc90836116be565b90505b92915050565b6108db682b20a624a220aa27a960b91b336108a5565b682b20a624a220aa27a960b91b33909161091a5760405163698bd5ff60e01b815260048101929092526001600160a01b031660248201526044016106cc565b5050815183511461093e5760405163282e5b7160e11b815260040160405180910390fd5b5f5b83518110156109a75761099f84828151811061095e5761095e61251b565b60200260200101518483815181106109785761097861251b565b60200260200101518484815181106109925761099261251b565b60200260200101516116df565b600101610940565b5050426065555050565b60608082516001600160401b038111156109cd576109cd611e74565b6040519080825280602002602001820160405280156109f6578160200160208202803683370190505b50915082516001600160401b03811115610a1257610a12611e74565b604051908082528060200260200182016040528015610a6d57816020015b610a5a60405180606001604052805f6001600160a01b031681526020015f81526020015f81525090565b815260200190600190039081610a305790505b5090505f5b8351811015610b8c57838181518110610a8d57610a8d61251b565b60200260200101516001600160a01b031660685f868481518110610ab357610ab361251b565b6020908102919091018101516001600160a01b039081168352908201929092526040015f20541603610b84576001838281518110610af357610af361251b565b60200260200101901515908115158152505060685f858381518110610b1a57610b1a61251b565b6020908102919091018101516001600160a01b0390811683528282019390935260409182015f2082516060810184528154909416845260018101549184019190915260020154908201528251839083908110610b7857610b7861251b565b60200260200101819052505b600101610a72565b50915091565b610ba8682b20a624a220aa27a960b91b336108a5565b682b20a624a220aa27a960b91b339091610be75760405163698bd5ff60e01b815260048101929092526001600160a01b031660248201526044016106cc565b50508151835114610c0b5760405163282e5b7160e11b815260040160405180910390fd5b5f5b83518110156109a757610c6c848281518110610c2b57610c2b61251b565b6020026020010151848381518110610c4557610c4561251b565b6020026020010151848481518110610c5f57610c5f61251b565b6020026020010151611764565b600101610c0d565b5f8181526020819052604090206060906108bf9061132c565b5f5f826001600160a01b0316846001600160a01b031603610cb357506001905043610fc1565b6040805160028082526060820183525f9260208301908036833701905050905084815f81518110610ce657610ce661251b565b60200260200101906001600160a01b031690816001600160a01b0316815250508381600181518110610d1a57610d1a61251b565b60200260200101906001600160a01b031690816001600160a01b031681525050606080610d468361070f565b8251909650919350915082905f90610d6057610d6061251b565b60200260200101518790610d9357604051634ced742360e11b81526001600160a01b0390911660048201526024016106cc565b5081600181518110610da757610da761251b565b60200260200101518690610dda57604051634ced742360e11b81526001600160a01b0390911660048201526024016106cc565b50604051630fe74f3b60e01b81523060048201526001600160a01b03881660248201525f90819073__$c8dc1c3a159d88c2746a5586ef67caa4e3$__90630fe74f3b90604401602060405180830381865af4158015610e3b573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610e5f919061252f565b604051630fe74f3b60e01b81523060048201526001600160a01b038a16602482015273__$c8dc1c3a159d88c2746a5586ef67caa4e3$__90630fe74f3b90604401602060405180830381865af4158015610ebb573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610edf919061252f565b9150915073__$c8dc1c3a159d88c2746a5586ef67caa4e3$__63b1db08d16001855f81518110610f1157610f1161251b565b602002602001015186600181518110610f2c57610f2c61251b565b60209081029190910101516040516001600160e01b031960e086901b16815260048101939093526024830191909152604482015260ff80861660648301528416608482015260a401602060405180830381865af4158015610f8f573d5f5f3e3d5ffd5b505050506040513d601f19601f82011682018060405250810190610fb3919061254a565b606554909750955050505050505b9250929050565b610fd06114f5565b6032805460ff191660ff83169081179091556040519081527f541ae612d90d592d7865e446bfd28eb8c1de1ced93c6f992a6df36c9e7bd33ff9060200160405180910390a150565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a008054600160401b810460ff1615906001600160401b03165f8115801561105c5750825b90505f826001600160401b031660011480156110775750303b155b905081158015611085575080155b156110a35760405163f92ee8a960e01b815260040160405180910390fd5b845467ffffffffffffffff1916600117855583156110cd57845460ff60401b1916600160401b1785555b6110d633611879565b6110df5f61188a565b6110e76118f0565b6064805460ff191660ff8916908117909155426065556040805160608101909152600181529060208201906103e89061112190600a612658565b61112b9190612666565b81524260209182015260015f526068815281517f82eaf0fca2207f91f5027fcf68136c84edb7e928c081c42aa5bbc2a771c7d37680546001600160a01b0319166001600160a01b03909216919091179055818101517f82eaf0fca2207f91f5027fcf68136c84edb7e928c081c42aa5bbc2a771c7d377556040909101517f82eaf0fca2207f91f5027fcf68136c84edb7e928c081c42aa5bbc2a771c7d37855606990527fc073f36c05b6a60b24c30a48974b549770d8fa354751fb3170c9dfd8ca536add869055831561123857845460ff60401b19168555604051600181527fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d29060200160405180910390a15b50505050505050565b5f5b825181101561127857611270848483815181106112625761126261251b565b6020026020010151846118f8565b600101611243565b50505050565b6001600160a01b038082165f81815260686020526040812054909283928392909116146112c8576001600160a01b0384165f90815260686020526040902060019081015490935091505b506065549193909250565b6060805f6112e4610351606661132c565b925092509250909192565b6112f76114f5565b6001600160a01b03811661132057604051631e4fbdf760e01b81525f60048201526024016106cc565b61132981611550565b50565b60605f61133883611a34565b9392505050565b306001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001614806113c557507f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166113b95f5160206128205f395f51905f52546001600160a01b031690565b6001600160a01b031614155b156105d75760405163703e46dd60e11b815260040160405180910390fd5b6113296114f5565b816001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa925050508015611445575060408051601f3d908101601f191682019092526114429181019061254a565b60015b61146d57604051634c9c8ce360e01b81526001600160a01b03831660048201526024016106cc565b5f5160206128205f395f51905f52811461149d57604051632a87526960e21b8152600481018290526024016106cc565b6114a78383611a8d565b505050565b306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146105d75760405163703e46dd60e11b815260040160405180910390fd5b336115277f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300546001600160a01b031690565b6001600160a01b0316146105d75760405163118cdaa760e01b81523360048201526024016106cc565b7f9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c19930080546001600160a01b031981166001600160a01b03848116918217845560405192169182907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a3505050565b7fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d10280546060915f5160206128005f395f51905f52916115fe90612685565b80601f016020809104026020016040519081016040528092919081815260200182805461162a90612685565b80156116755780601f1061164c57610100808354040283529160200191611675565b820191905f5260205f20905b81548152906001019060200180831161165857829003601f168201915b505050505091505090565b7fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d10380546060915f5160206128005f395f51905f52916115fe90612685565b6001600160a01b0381165f90815260018301602052604081205415156108bc565b815f0361171757604051637ae6ed6d60e01b8152602060048201526005602482015264707269636560d81b60448201526064016106cc565b5f198114806117265750428111155b814290916117505760405163248fc98560e11b8152600481019290925260248201526044016106cc565b5050505f9182526069602052604090912055565b815f0361179c57604051637ae6ed6d60e01b8152602060048201526005602482015264707269636560d81b60448201526064016106cc565b5f198114806117ab5750428111155b814290916117d55760405163248fc98560e11b8152600481019290925260248201526044016106cc565b506117e39050606684611ae2565b50604080516060810182526001600160a01b0385811680835260208084018781528486018781525f84815260688452879020955186546001600160a01b03191695169490941785555160018501559151600290930192909255825185815290810184905290917fc4552bb17fb4b7a4ff96683f5fc7545352dafb23ed81de0ac8b12709a82bfde2910160405180910390a2505050565b611881611af6565b61132981611b3f565b611892611af6565b6118da604051806040016040528060098152602001682b30b634b230ba37b960b91b815250604051806040016040528060058152602001640312e302e360dc1b815250611b47565b6032805460ff191660ff92909216919091179055565b6105d7611af6565b6119006114f5565b6001600160a01b03821661192757604051635989b9d360e01b815260040160405180910390fd5b8261194557604051630e1b39f960e31b815260040160405180910390fd5b801561199c575f8381526020819052604090206119629083611ae2565b8383909161199557604051631b753c1b60e21b815260048101929092526001600160a01b031660248201526044016106cc565b50506119e9565b5f8381526020819052604090206119b39083611b59565b838390916119e657604051633a401ef360e21b815260048101929092526001600160a01b031660248201526044016106cc565b50505b82826001600160a01b03167f8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f383604051611a27911515815260200190565b60405180910390a3505050565b6060815f01805480602002602001604051908101604052809291908181526020018280548015611a8157602002820191905f5260205f20905b815481526020019060010190808311611a6d575b50505050509050919050565b611a9682611b6d565b6040516001600160a01b038316907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a2805115611ada576114a78282611bd0565b61058c611c42565b5f6108bc836001600160a01b038416611c61565b7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a0054600160401b900460ff166105d757604051631afcd79f60e31b815260040160405180910390fd5b6112f7611af6565b611b4f611af6565b61058c8282611cad565b5f6108bc836001600160a01b038416611d0c565b806001600160a01b03163b5f03611ba257604051634c9c8ce360e01b81526001600160a01b03821660048201526024016106cc565b5f5160206128205f395f51905f5280546001600160a01b0319166001600160a01b0392909216919091179055565b60605f5f846001600160a01b031684604051611bec91906126bd565b5f60405180830381855af49150503d805f8114611c24576040519150601f19603f3d011682016040523d82523d5f602084013e611c29565b606091505b5091509150611c39858383611def565b95945050505050565b34156105d75760405163b398979f60e01b815260040160405180910390fd5b5f818152600183016020526040812054611ca657508154600181810184555f8481526020808220909301849055845484825282860190935260409020919091556108bf565b505f6108bf565b611cb5611af6565b5f5160206128005f395f51905f527fa16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d102611cee848261271e565b5060038101611cfd838261271e565b505f8082556001909101555050565b5f8181526001830160205260408120548015611de6575f611d2e6001836127d8565b85549091505f90611d41906001906127d8565b9050808214611da0575f865f018281548110611d5f57611d5f61251b565b905f5260205f200154905080875f018481548110611d7f57611d7f61251b565b5f918252602080832090910192909255918252600188019052604090208390555b8554869080611db157611db16127eb565b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f9055600193505050506108bf565b5f9150506108bf565b606082611e0457611dff82611e4b565b611338565b8151158015611e1b57506001600160a01b0384163b155b15611e4457604051639996b31560e01b81526001600160a01b03851660048201526024016106cc565b5092915050565b805115611e5b5780518082602001fd5b60405163d6bda27560e01b815260040160405180910390fd5b634e487b7160e01b5f52604160045260245ffd5b604051601f8201601f191681016001600160401b0381118282101715611eb057611eb0611e74565b604052919050565b5f6001600160401b03821115611ed057611ed0611e74565b5060051b60200190565b80356001600160a01b0381168114611ef0575f5ffd5b919050565b5f82601f830112611f04575f5ffd5b8135611f17611f1282611eb8565b611e88565b8082825260208201915060208360051b860101925085831115611f38575f5ffd5b602085015b83811015611f5c57611f4e81611eda565b835260209283019201611f3d565b5095945050505050565b5f5f60408385031215611f77575f5ffd5b8235915060208301356001600160401b03811115611f93575f5ffd5b611f9f85828601611ef5565b9150509250929050565b5f60208284031215611fb9575f5ffd5b5035919050565b5f5f60408385031215611fd1575f5ffd5b611fda83611eda565b915060208301356001600160401b03811115611ff4575f5ffd5b8301601f81018513612004575f5ffd5b80356001600160401b0381111561201d5761201d611e74565b612030601f8201601f1916602001611e88565b818152866020838501011115612044575f5ffd5b816020840160208301375f602083830101528093505050509250929050565b5f60208284031215612073575f5ffd5b6108bc82611eda565b821515815260808101611338602083018480516001600160a01b0316825260208082015190830152604090810151910152565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b5f8151808452602084019350602083015f5b8281101561210d5781518652602095860195909101906001016120ef565b5093949350505050565b60ff60f81b8816815260e060208201525f61213560e08301896120af565b828103604084015261214781896120af565b606084018890526001600160a01b038716608085015260a0840186905283810360c0850152905061217881856120dd565b9a9950505050505050505050565b5f60208284031215612196575f5ffd5b81356001600160401b038111156121ab575f5ffd5b6121b784828501611ef5565b949350505050565b5f8151808452602084019350602083015f5b8281101561210d57815115158652602095860195909101906001016121d1565b606081525f61220360608301866121bf565b828103602084015261221581866120dd565b915050826040830152949350505050565b5f5f60408385031215612237575f5ffd5b8235915061224760208401611eda565b90509250929050565b5f82601f83011261225f575f5ffd5b813561226d611f1282611eb8565b8082825260208201915060208360051b86010192508583111561228e575f5ffd5b602085015b83811015611f5c578035835260209283019201612293565b5f5f5f606084860312156122bd575f5ffd5b83356001600160401b038111156122d2575f5ffd5b6122de86828701612250565b93505060208401356001600160401b038111156122f9575f5ffd5b61230586828701612250565b92505060408401356001600160401b03811115612320575f5ffd5b61232c86828701612250565b9150509250925092565b604081525f61234860408301856121bf565b82810360208401528084518083526020830191506020860192505f5b818110156123aa5761239483855180516001600160a01b0316825260208082015190830152604090810151910152565b6020939093019260609290920191600101612364565b50909695505050505050565b5f5f5f606084860312156123c8575f5ffd5b83356001600160401b038111156123dd575f5ffd5b6122de86828701611ef5565b602080825282518282018190525f918401906040840190835b818110156124295783516001600160a01b0316835260209384019390920191600101612402565b509095945050505050565b5f5f60408385031215612445575f5ffd5b61244e83611eda565b915061224760208401611eda565b602081525f6108bc60208301846120af565b60ff81168114611329575f5ffd5b5f6020828403121561248c575f5ffd5b81356113388161246e565b5f5f604083850312156124a8575f5ffd5b82356124b38161246e565b946020939093013593505050565b5f5f5f606084860312156124d3575f5ffd5b8335925060208401356001600160401b038111156124ef575f5ffd5b6124fb86828701611ef5565b92505060408401358015158114612510575f5ffd5b809150509250925092565b634e487b7160e01b5f52603260045260245ffd5b5f6020828403121561253f575f5ffd5b81516113388161246e565b5f6020828403121561255a575f5ffd5b5051919050565b634e487b7160e01b5f52601160045260245ffd5b6001815b60018411156125b05780850481111561259457612594612561565b60018416156125a257908102905b60019390931c928002612579565b935093915050565b5f826125c6575060016108bf565b816125d257505f6108bf565b81600181146125e857600281146125f25761260e565b60019150506108bf565b60ff84111561260357612603612561565b50506001821b6108bf565b5060208310610133831016604e8410600b8410161715612631575081810a6108bf565b61263d5f198484612575565b805f190482111561265057612650612561565b029392505050565b5f6108bc60ff8416836125b8565b5f8261268057634e487b7160e01b5f52601260045260245ffd5b500490565b600181811c9082168061269957607f821691505b6020821081036126b757634e487b7160e01b5f52602260045260245ffd5b50919050565b5f82518060208501845e5f920191825250919050565b601f8211156114a757805f5260205f20601f840160051c810160208510156126f85750805b601f840160051c820191505b81811015612717575f8155600101612704565b5050505050565b81516001600160401b0381111561273757612737611e74565b61274b816127458454612685565b846126d3565b6020601f82116001811461277d575f83156127665750848201515b5f19600385901b1c1916600184901b178455612717565b5f84815260208120601f198516915b828110156127ac578785015182556020948501946001909201910161278c565b50848210156127c957868401515f19600387901b60f8161c191681555b50505050600190811b01905550565b818103818111156108bf576108bf612561565b634e487b7160e01b5f52603160045260245ffdfea16a46d94261c7517cc8ff89f61c0ce93598e3c849801011dee649a6a557d100360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbca2646970667358221220963949f20a68a4a581a7aa77df6d33988799951ae1c3d44e02ca554d188304ad64736f6c634300081c0033",
+	Bin: "0x60a06040523073ffffffffffffffffffffffffffffffffffffffff1660809073ffffffffffffffffffffffffffffffffffffffff168152503480156041575f5ffd5b50608051613c836100685f395f8181611b1401528181611b690152611d280152613c835ff3fe608060405260043610610180575f3560e01c80639409f47b116100d0578063ad3cb1cc11610089578063e588566f11610063578063e588566f146105af578063ec7221dd146105ed578063fa23bb0614610619578063fd47852b1461064157610180565b8063ad3cb1cc14610533578063d547741f1461055d578063e1758bd81461058557610180565b80639409f47b146104035780639761cb221461042b57806399e6440d14610468578063a217fddf14610490578063a3246ad3146104ba578063ac41865a146104f657610180565b80634f1ef2861161013d5780637519ab50116101175780637519ab501461033757806382f51fa6146103615780638fb5a4821461038957806391d14854146103c757610180565b80634f1ef286146102b457806352d1902d146102d057806372279ba1146102fa57610180565b806301ffc9a714610184578063248a9ca3146101c05780632f2ff15d146101fc5780632fe3b6cf1461022457806336568abe1461024e5780633afb154414610276575b5f5ffd5b34801561018f575f5ffd5b506101aa60048036038101906101a59190612956565b610669565b6040516101b7919061299b565b60405180910390f35b3480156101cb575f5ffd5b506101e660048036038101906101e191906129e7565b6106e2565b6040516101f39190612a21565b60405180910390f35b348015610207575f5ffd5b50610222600480360381019061021d9190612a94565b61070c565b005b34801561022f575f5ffd5b5061023861072e565b6040516102459190612aed565b60405180910390f35b348015610259575f5ffd5b50610274600480360381019061026f9190612a94565b610740565b005b348015610281575f5ffd5b5061029c60048036038101906102979190612b39565b6107bb565b6040516102ab93929190612b73565b60405180910390f35b6102ce60048036038101906102c99190612ce4565b6107e4565b005b3480156102db575f5ffd5b506102e4610803565b6040516102f19190612a21565b60405180910390f35b348015610305575f5ffd5b50610320600480360381019061031b9190612d3e565b610834565b60405161032e929190612dc7565b60405180910390f35b348015610342575f5ffd5b5061034b61098a565b6040516103589190612dee565b60405180910390f35b34801561036c575f5ffd5b5061038760048036038101906103829190612ecb565b610990565b005b348015610394575f5ffd5b506103af60048036038101906103aa9190612f25565b6109e8565b6040516103be939291906130cb565b60405180910390f35b3480156103d2575f5ffd5b506103ed60048036038101906103e89190612a94565b610c11565b6040516103fa919061299b565b60405180910390f35b34801561040e575f5ffd5b50610429600480360381019061042491906131ce565b610c82565b005b348015610436575f5ffd5b50610451600480360381019061044c9190612f25565b610d67565b60405161045f92919061335a565b60405180910390f35b348015610473575f5ffd5b5061048e6004803603810190610489919061338f565b611001565b005b34801561049b575f5ffd5b506104a46110e6565b6040516104b19190612a21565b60405180910390f35b3480156104c5575f5ffd5b506104e060048036038101906104db91906129e7565b6110ec565b6040516104ed91906134db565b60405180910390f35b348015610501575f5ffd5b5061051c600480360381019061051791906134fb565b61110d565b60405161052a929190613539565b60405180910390f35b34801561053e575f5ffd5b506105476114ce565b60405161055491906135c0565b60405180910390f35b348015610568575f5ffd5b50610583600480360381019061057e9190612a94565b611507565b005b348015610590575f5ffd5b50610599611529565b6040516105a691906135ef565b60405180910390f35b3480156105ba575f5ffd5b506105d560048036038101906105d09190612d3e565b611531565b6040516105e493929190612b73565b60405180910390f35b3480156105f8575f5ffd5b50610601611627565b604051610610939291906130cb565b60405180910390f35b348015610624575f5ffd5b5061063f600480360381019061063a9190613632565b611648565b005b34801561064c575f5ffd5b5061066760048036038101906106629190612ecb565b611909565b005b5f7f7965db0b000000000000000000000000000000000000000000000000000000007bffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916827bffffffffffffffffffffffffffffffffffffffffffffffffffffffff191614806106db57506106da82611961565b5b9050919050565b5f5f6106ec6119ca565b9050805f015f8481526020019081526020015f2060010154915050919050565b610715826106e2565b61071e816119f1565b6107288383611a05565b50505050565b60015f9054906101000a900460ff1681565b610748611a88565b73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16146107ac576040517f6697b23200000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6107b68282611a8f565b505050565b5f5f5f60065f8581526020019081526020015f205491505f821415925060025490509193909250565b6107ec611b12565b6107f582611bf8565b6107ff8282611c08565b5050565b5f61080c611d26565b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5f1b905090565b5f61083d6128bc565b8273ffffffffffffffffffffffffffffffffffffffff1660055f8573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1603610985576001915060055f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f206040518060600160405290815f82015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020016001820154815260200160028201548152505090505b915091565b60025481565b610999826106e2565b6109a2816119f1565b5f5f90505b82518110156109e2576109d4848483815181106109c7576109c6613682565b5b6020026020010151611a8f565b5080806001019150506109a7565b50505050565b6060805f835167ffffffffffffffff811115610a0757610a06612bc0565b5b604051908082528060200260200182016040528015610a355781602001602082028036833780820191505090505b509250835167ffffffffffffffff811115610a5357610a52612bc0565b5b604051908082528060200260200182016040528015610a815781602001602082028036833780820191505090505b5091505f5f90505b8451811015610c0457848181518110610aa557610aa4613682565b5b602002602001015173ffffffffffffffffffffffffffffffffffffffff1660055f878481518110610ad957610ad8613682565b5b602002602001015173ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1603610bf9576001848281518110610b6c57610b6b613682565b5b60200260200101901515908115158152505060055f868381518110610b9457610b93613682565b5b602002602001015173ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f2060010154838281518110610bec57610beb613682565b5b6020026020010181815250505b806001019050610a89565b5060025490509193909250565b5f5f610c1b6119ca565b9050805f015f8581526020019081526020015f205f015f8473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f9054906101000a900460ff1691505092915050565b7f55504441544f5200000000000000000000000000000000000000000000000000610cac816119f1565b8251845114610ce7576040517f505cb6e200000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b5f5f90505b8451811015610d5957610d4e858281518110610d0b57610d0a613682565b5b6020026020010151858381518110610d2657610d25613682565b5b6020026020010151858481518110610d4157610d40613682565b5b6020026020010151611dad565b806001019050610cec565b504260028190555050505050565b606080825167ffffffffffffffff811115610d8557610d84612bc0565b5b604051908082528060200260200182016040528015610db35781602001602082028036833780820191505090505b509150825167ffffffffffffffff811115610dd157610dd0612bc0565b5b604051908082528060200260200182016040528015610e0a57816020015b610df76128bc565b815260200190600190039081610def5790505b5090505f5f90505b8351811015610ffb57838181518110610e2e57610e2d613682565b5b602002602001015173ffffffffffffffffffffffffffffffffffffffff1660055f868481518110610e6257610e61613682565b5b602002602001015173ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1603610ff0576001838281518110610ef557610ef4613682565b5b60200260200101901515908115158152505060055f858381518110610f1d57610f1c613682565b5b602002602001015173ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f206040518060600160405290815f82015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200160018201548152602001600282015481525050828281518110610fe457610fe3613682565b5b60200260200101819052505b806001019050610e12565b50915091565b7f55504441544f520000000000000000000000000000000000000000000000000061102b816119f1565b8251845114611066576040517f505cb6e200000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b5f5f90505b84518110156110d8576110cd85828151811061108a57611089613682565b5b60200260200101518583815181106110a5576110a4613682565b5b60200260200101518584815181106110c0576110bf613682565b5b6020026020010151611e7f565b80600101905061106b565b504260028190555050505050565b5f5f1b81565b60606111065f5f8481526020019081526020015f20612069565b9050919050565b5f5f8273ffffffffffffffffffffffffffffffffffffffff168473ffffffffffffffffffffffffffffffffffffffff160361114e57600143915091506114c7565b5f600267ffffffffffffffff81111561116a57611169612bc0565b5b6040519080825280602002602001820160405280156111985781602001602082028036833780820191505090505b50905084815f815181106111af576111ae613682565b5b602002602001019073ffffffffffffffffffffffffffffffffffffffff16908173ffffffffffffffffffffffffffffffffffffffff168152505083816001815181106111fe576111fd613682565b5b602002602001019073ffffffffffffffffffffffffffffffffffffffff16908173ffffffffffffffffffffffffffffffffffffffff1681525050606080611244836109e8565b809650819350829450505050815f8151811061126357611262613682565b5b602002602001015187906112ad576040517f99dae8460000000000000000000000000000000000000000000000000000000081526004016112a491906135ef565b60405180910390fd5b50816001815181106112c2576112c1613682565b5b6020026020010151869061130c576040517f99dae84600000000000000000000000000000000000000000000000000000000815260040161130391906135ef565b60405180910390fd5b505f5f73__$c8dc1c3a159d88c2746a5586ef67caa4e3$__630fe74f3b308b6040518363ffffffff1660e01b8152600401611348929190613719565b602060405180830381865af4158015611363573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906113879190613754565b73__$c8dc1c3a159d88c2746a5586ef67caa4e3$__630fe74f3b308b6040518363ffffffff1660e01b81526004016113c0929190613719565b602060405180830381865af41580156113db573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906113ff9190613754565b9150915073__$c8dc1c3a159d88c2746a5586ef67caa4e3$__63b1db08d16001855f8151811061143257611431613682565b5b60200260200101518660018151811061144e5761144d613682565b5b602002602001015186866040518663ffffffff1660e01b81526004016114789594939291906137d6565b602060405180830381865af4158015611493573d5f5f3e3d5ffd5b505050506040513d601f19601f820116820180604052508101906114b7919061383b565b9650866002549650965050505050505b9250929050565b6040518060400160405280600581526020017f352e302e3000000000000000000000000000000000000000000000000000000081525081565b611510826106e2565b611519816119f1565b6115238383611a8f565b50505050565b5f6001905090565b5f5f5f8373ffffffffffffffffffffffffffffffffffffffff1660055f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16146115d3575f5f5f925092509250611620565b600160055f8673ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f20600101546002549250925092505b9193909250565b6060805f61163d6116386003612069565b6109e8565b925092509250909192565b5f611651612088565b90505f815f0160089054906101000a900460ff161590505f825f015f9054906101000a900467ffffffffffffffff1690505f5f8267ffffffffffffffff161480156116995750825b90505f60018367ffffffffffffffff161480156116cc57505f3073ffffffffffffffffffffffffffffffffffffffff163b145b9050811580156116da575080155b15611711576040517ff92ee8a900000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b6001855f015f6101000a81548167ffffffffffffffff021916908367ffffffffffffffff160217905550831561175e576001855f0160086101000a81548160ff0219169083151502179055505b6117666120af565b61176e6120b9565b61177a5f5f1b89611a05565b508660015f6101000a81548160ff021916908360ff160217905550426002819055506040518060600160405280600173ffffffffffffffffffffffffffffffffffffffff1681526020016103e860015f9054906101000a900460ff16600a6117e291906139c2565b6117ec9190613a39565b81526020014281525060055f600173ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f820151815f015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060208201518160010155604082015181600201559050508560065f600181526020019081526020015f208190555083156118ff575f855f0160086101000a81548160ff0219169083151502179055507fc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d260016040516118f69190613aac565b60405180910390a15b5050505050505050565b611912826106e2565b61191b816119f1565b5f5f90505b825181101561195b5761194d848483815181106119405761193f613682565b5b6020026020010151611a05565b508080600101915050611920565b50505050565b5f7f01ffc9a7000000000000000000000000000000000000000000000000000000007bffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916827bffffffffffffffffffffffffffffffffffffffffffffffffffffffff1916149050919050565b5f7f02dd7bc7dec4dceedda775e58dd541e08a116c6c53815c0bd028192f7b626800905090565b611a02816119fd611a88565b6120c3565b50565b5f611a108383612114565b90508015611a8257611a3a825f5f8681526020019081526020015f2061220c90919063ffffffff16565b82849091611a7f576040517fd180cb31000000000000000000000000000000000000000000000000000000008152600401611a76929190613ac5565b60405180910390fd5b50505b92915050565b5f33905090565b5f611a9a8383612239565b90508015611b0c57611ac4825f5f8681526020019081526020015f2061233190919063ffffffff16565b82849091611b09576040517f054af8d8000000000000000000000000000000000000000000000000000000008152600401611b00929190613ac5565b60405180910390fd5b50505b92915050565b7f000000000000000000000000000000000000000000000000000000000000000073ffffffffffffffffffffffffffffffffffffffff163073ffffffffffffffffffffffffffffffffffffffff161480611bbf57507f000000000000000000000000000000000000000000000000000000000000000073ffffffffffffffffffffffffffffffffffffffff16611ba661235e565b73ffffffffffffffffffffffffffffffffffffffff1614155b15611bf6576040517fe07c8dba00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b565b5f5f1b611c04816119f1565b5050565b8173ffffffffffffffffffffffffffffffffffffffff166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa925050508015611c7057506040513d601f19601f82011682018060405250810190611c6d9190613b00565b60015b611cb157816040517f4c9c8ce3000000000000000000000000000000000000000000000000000000008152600401611ca891906135ef565b60405180910390fd5b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5f1b8114611d1757806040517faa1d49a4000000000000000000000000000000000000000000000000000000008152600401611d0e9190612a21565b60405180910390fd5b611d2183836123b1565b505050565b7f000000000000000000000000000000000000000000000000000000000000000073ffffffffffffffffffffffffffffffffffffffff163073ffffffffffffffffffffffffffffffffffffffff1614611dab576040517fe07c8dba00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b565b5f8203611def576040517f7ae6ed6d000000000000000000000000000000000000000000000000000000008152600401611de690613b75565b60405180910390fd5b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff811480611e1d5750428111155b81429091611e62576040517f491f930a000000000000000000000000000000000000000000000000000000008152600401611e59929190613539565b60405180910390fd5b50508160065f8581526020019081526020015f2081905550505050565b5f8203611ec1576040517f7ae6ed6d000000000000000000000000000000000000000000000000000000008152600401611eb890613b75565b60405180910390fd5b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff811480611eef5750428111155b81429091611f34576040517f491f930a000000000000000000000000000000000000000000000000000000008152600401611f2b929190613539565b60405180910390fd5b5050611f4a83600361220c90919063ffffffff16565b5060405180606001604052808473ffffffffffffffffffffffffffffffffffffffff1681526020018381526020018281525060055f8573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f820151815f015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555060208201518160010155604082015181600201559050508273ffffffffffffffffffffffffffffffffffffffff167fc4552bb17fb4b7a4ff96683f5fc7545352dafb23ed81de0ac8b12709a82bfde2838360405161205c929190613539565b60405180910390a2505050565b60605f612077835f01612423565b905060608190508092505050919050565b5f7ff0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00905090565b6120b761247c565b565b6120c161247c565b565b6120cd8282610c11565b6121105780826040517fe2517d3f000000000000000000000000000000000000000000000000000000008152600401612107929190613ac5565b60405180910390fd5b5050565b5f5f61211e6119ca565b905061212a8484610c11565b612201576001815f015f8681526020019081526020015f205f015f8573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f6101000a81548160ff02191690831515021790555061219d611a88565b73ffffffffffffffffffffffffffffffffffffffff168373ffffffffffffffffffffffffffffffffffffffff16857f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d60405160405180910390a46001915050612206565b5f9150505b92915050565b5f612231835f018373ffffffffffffffffffffffffffffffffffffffff165f1b6124bc565b905092915050565b5f5f6122436119ca565b905061224f8484610c11565b15612326575f815f015f8681526020019081526020015f205f015f8573ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020015f205f6101000a81548160ff0219169083151502179055506122c2611a88565b73ffffffffffffffffffffffffffffffffffffffff168373ffffffffffffffffffffffffffffffffffffffff16857ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b60405160405180910390a4600191505061232b565b5f9150505b92915050565b5f612356835f018373ffffffffffffffffffffffffffffffffffffffff165f1b612523565b905092915050565b5f61238a7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5f1b61261f565b5f015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b6123ba82612628565b8173ffffffffffffffffffffffffffffffffffffffff167fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b60405160405180910390a25f815111156124165761241082826126f1565b5061241f565b61241e612771565b5b5050565b6060815f0180548060200260200160405190810160405280929190818152602001828054801561247057602002820191905f5260205f20905b81548152602001906001019080831161245c575b50505050509050919050565b6124846127ad565b6124ba576040517fd7e6bcf800000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b565b5f6124c783836127cb565b61251957825f0182908060018154018082558091505060019003905f5260205f20015f9091909190915055825f0180549050836001015f8481526020019081526020015f20819055506001905061251d565b5f90505b92915050565b5f5f836001015f8481526020019081526020015f205490505f8114612614575f6001826125509190613b93565b90505f6001865f01805490506125669190613b93565b90508082146125cc575f865f01828154811061258557612584613682565b5b905f5260205f200154905080875f0184815481106125a6576125a5613682565b5b905f5260205f20018190555083876001015f8381526020019081526020015f2081905550505b855f018054806125df576125de613bc6565b5b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f905560019350505050612619565b5f9150505b92915050565b5f819050919050565b5f8173ffffffffffffffffffffffffffffffffffffffff163b0361268357806040517f4c9c8ce300000000000000000000000000000000000000000000000000000000815260040161267a91906135ef565b60405180910390fd5b806126af7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5f1b61261f565b5f015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050565b60605f5f8473ffffffffffffffffffffffffffffffffffffffff168460405161271a9190613c37565b5f60405180830381855af49150503d805f8114612752576040519150601f19603f3d011682016040523d82523d5f602084013e612757565b606091505b50915091506127678583836127eb565b9250505092915050565b5f3411156127ab576040517fb398979f00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b565b5f6127b6612088565b5f0160089054906101000a900460ff16905090565b5f5f836001015f8481526020019081526020015f20541415905092915050565b606082612800576127fb82612878565b612870565b5f825114801561282657505f8473ffffffffffffffffffffffffffffffffffffffff163b145b1561286857836040517f9996b31500000000000000000000000000000000000000000000000000000000815260040161285f91906135ef565b60405180910390fd5b819050612871565b5b9392505050565b5f8151111561288a5780518082602001fd5b6040517fd6bda27500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60405180606001604052805f73ffffffffffffffffffffffffffffffffffffffff1681526020015f81526020015f81525090565b5f604051905090565b5f5ffd5b5f5ffd5b5f7fffffffff0000000000000000000000000000000000000000000000000000000082169050919050565b61293581612901565b811461293f575f5ffd5b50565b5f813590506129508161292c565b92915050565b5f6020828403121561296b5761296a6128f9565b5b5f61297884828501612942565b91505092915050565b5f8115159050919050565b61299581612981565b82525050565b5f6020820190506129ae5f83018461298c565b92915050565b5f819050919050565b6129c6816129b4565b81146129d0575f5ffd5b50565b5f813590506129e1816129bd565b92915050565b5f602082840312156129fc576129fb6128f9565b5b5f612a09848285016129d3565b91505092915050565b612a1b816129b4565b82525050565b5f602082019050612a345f830184612a12565b92915050565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f612a6382612a3a565b9050919050565b612a7381612a59565b8114612a7d575f5ffd5b50565b5f81359050612a8e81612a6a565b92915050565b5f5f60408385031215612aaa57612aa96128f9565b5b5f612ab7858286016129d3565b9250506020612ac885828601612a80565b9150509250929050565b5f60ff82169050919050565b612ae781612ad2565b82525050565b5f602082019050612b005f830184612ade565b92915050565b5f819050919050565b612b1881612b06565b8114612b22575f5ffd5b50565b5f81359050612b3381612b0f565b92915050565b5f60208284031215612b4e57612b4d6128f9565b5b5f612b5b84828501612b25565b91505092915050565b612b6d81612b06565b82525050565b5f606082019050612b865f83018661298c565b612b936020830185612b64565b612ba06040830184612b64565b949350505050565b5f5ffd5b5f5ffd5b5f601f19601f8301169050919050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52604160045260245ffd5b612bf682612bb0565b810181811067ffffffffffffffff82111715612c1557612c14612bc0565b5b80604052505050565b5f612c276128f0565b9050612c338282612bed565b919050565b5f67ffffffffffffffff821115612c5257612c51612bc0565b5b612c5b82612bb0565b9050602081019050919050565b828183375f83830152505050565b5f612c88612c8384612c38565b612c1e565b905082815260208101848484011115612ca457612ca3612bac565b5b612caf848285612c68565b509392505050565b5f82601f830112612ccb57612cca612ba8565b5b8135612cdb848260208601612c76565b91505092915050565b5f5f60408385031215612cfa57612cf96128f9565b5b5f612d0785828601612a80565b925050602083013567ffffffffffffffff811115612d2857612d276128fd565b5b612d3485828601612cb7565b9150509250929050565b5f60208284031215612d5357612d526128f9565b5b5f612d6084828501612a80565b91505092915050565b612d7281612a59565b82525050565b612d8181612b06565b82525050565b606082015f820151612d9b5f850182612d69565b506020820151612dae6020850182612d78565b506040820151612dc16040850182612d78565b50505050565b5f608082019050612dda5f83018561298c565b612de76020830184612d87565b9392505050565b5f602082019050612e015f830184612b64565b92915050565b5f67ffffffffffffffff821115612e2157612e20612bc0565b5b602082029050602081019050919050565b5f5ffd5b5f612e48612e4384612e07565b612c1e565b90508083825260208201905060208402830185811115612e6b57612e6a612e32565b5b835b81811015612e945780612e808882612a80565b845260208401935050602081019050612e6d565b5050509392505050565b5f82601f830112612eb257612eb1612ba8565b5b8135612ec2848260208601612e36565b91505092915050565b5f5f60408385031215612ee157612ee06128f9565b5b5f612eee858286016129d3565b925050602083013567ffffffffffffffff811115612f0f57612f0e6128fd565b5b612f1b85828601612e9e565b9150509250929050565b5f60208284031215612f3a57612f396128f9565b5b5f82013567ffffffffffffffff811115612f5757612f566128fd565b5b612f6384828501612e9e565b91505092915050565b5f81519050919050565b5f82825260208201905092915050565b5f819050602082019050919050565b612f9e81612981565b82525050565b5f612faf8383612f95565b60208301905092915050565b5f602082019050919050565b5f612fd182612f6c565b612fdb8185612f76565b9350612fe683612f86565b805f5b83811015613016578151612ffd8882612fa4565b975061300883612fbb565b925050600181019050612fe9565b5085935050505092915050565b5f81519050919050565b5f82825260208201905092915050565b5f819050602082019050919050565b5f6130578383612d78565b60208301905092915050565b5f602082019050919050565b5f61307982613023565b613083818561302d565b935061308e8361303d565b805f5b838110156130be5781516130a5888261304c565b97506130b083613063565b925050600181019050613091565b5085935050505092915050565b5f6060820190508181035f8301526130e38186612fc7565b905081810360208301526130f7818561306f565b90506131066040830184612b64565b949350505050565b5f67ffffffffffffffff82111561312857613127612bc0565b5b602082029050602081019050919050565b5f61314b6131468461310e565b612c1e565b9050808382526020820190506020840283018581111561316e5761316d612e32565b5b835b8181101561319757806131838882612b25565b845260208401935050602081019050613170565b5050509392505050565b5f82601f8301126131b5576131b4612ba8565b5b81356131c5848260208601613139565b91505092915050565b5f5f5f606084860312156131e5576131e46128f9565b5b5f84013567ffffffffffffffff811115613202576132016128fd565b5b61320e868287016131a1565b935050602084013567ffffffffffffffff81111561322f5761322e6128fd565b5b61323b868287016131a1565b925050604084013567ffffffffffffffff81111561325c5761325b6128fd565b5b613268868287016131a1565b9150509250925092565b5f81519050919050565b5f82825260208201905092915050565b5f819050602082019050919050565b606082015f8201516132af5f850182612d69565b5060208201516132c26020850182612d78565b5060408201516132d56040850182612d78565b50505050565b5f6132e6838361329b565b60608301905092915050565b5f602082019050919050565b5f61330882613272565b613312818561327c565b935061331d8361328c565b805f5b8381101561334d57815161333488826132db565b975061333f836132f2565b925050600181019050613320565b5085935050505092915050565b5f6040820190508181035f8301526133728185612fc7565b9050818103602083015261338681846132fe565b90509392505050565b5f5f5f606084860312156133a6576133a56128f9565b5b5f84013567ffffffffffffffff8111156133c3576133c26128fd565b5b6133cf86828701612e9e565b935050602084013567ffffffffffffffff8111156133f0576133ef6128fd565b5b6133fc868287016131a1565b925050604084013567ffffffffffffffff81111561341d5761341c6128fd565b5b613429868287016131a1565b9150509250925092565b5f81519050919050565b5f82825260208201905092915050565b5f819050602082019050919050565b5f6134678383612d69565b60208301905092915050565b5f602082019050919050565b5f61348982613433565b613493818561343d565b935061349e8361344d565b805f5b838110156134ce5781516134b5888261345c565b97506134c083613473565b9250506001810190506134a1565b5085935050505092915050565b5f6020820190508181035f8301526134f3818461347f565b905092915050565b5f5f60408385031215613511576135106128f9565b5b5f61351e85828601612a80565b925050602061352f85828601612a80565b9150509250929050565b5f60408201905061354c5f830185612b64565b6135596020830184612b64565b9392505050565b5f81519050919050565b5f82825260208201905092915050565b8281835e5f83830152505050565b5f61359282613560565b61359c818561356a565b93506135ac81856020860161357a565b6135b581612bb0565b840191505092915050565b5f6020820190508181035f8301526135d88184613588565b905092915050565b6135e981612a59565b82525050565b5f6020820190506136025f8301846135e0565b92915050565b61361181612ad2565b811461361b575f5ffd5b50565b5f8135905061362c81613608565b92915050565b5f5f5f60608486031215613649576136486128f9565b5b5f61365686828701612a80565b93505060206136678682870161361e565b925050604061367886828701612b25565b9150509250925092565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603260045260245ffd5b5f819050919050565b5f6136d26136cd6136c884612a3a565b6136af565b612a3a565b9050919050565b5f6136e3826136b8565b9050919050565b5f6136f4826136d9565b9050919050565b613704816136ea565b82525050565b61371381612a59565b82525050565b5f60408201905061372c5f8301856136fb565b613739602083018461370a565b9392505050565b5f8151905061374e81613608565b92915050565b5f60208284031215613769576137686128f9565b5b5f61377684828501613740565b91505092915050565b5f819050919050565b5f6137a261379d6137988461377f565b6136af565b612b06565b9050919050565b6137b281613788565b82525050565b6137c181612b06565b82525050565b6137d081612ad2565b82525050565b5f60a0820190506137e95f8301886137a9565b6137f660208301876137b8565b61380360408301866137b8565b61381060608301856137c7565b61381d60808301846137c7565b9695505050505050565b5f8151905061383581612b0f565b92915050565b5f602082840312156138505761384f6128f9565b5b5f61385d84828501613827565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601160045260245ffd5b5f8160011c9050919050565b5f5f8291508390505b60018511156138e8578086048111156138c4576138c3613866565b5b60018516156138d35780820291505b80810290506138e185613893565b94506138a8565b94509492505050565b5f8261390057600190506139bb565b8161390d575f90506139bb565b8160018114613923576002811461392d5761395c565b60019150506139bb565b60ff84111561393f5761393e613866565b5b8360020a91508482111561395657613955613866565b5b506139bb565b5060208310610133831016604e8410600b84101617156139915782820a90508381111561398c5761398b613866565b5b6139bb565b61399e848484600161389f565b925090508184048111156139b5576139b4613866565b5b81810290505b9392505050565b5f6139cc82612b06565b91506139d783612ad2565b9250613a047fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff84846138f1565b905092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601260045260245ffd5b5f613a4382612b06565b9150613a4e83612b06565b925082613a5e57613a5d613a0c565b5b828204905092915050565b5f67ffffffffffffffff82169050919050565b5f613a96613a91613a8c8461377f565b6136af565b613a69565b9050919050565b613aa681613a7c565b82525050565b5f602082019050613abf5f830184613a9d565b92915050565b5f604082019050613ad85f8301856135e0565b613ae56020830184612a12565b9392505050565b5f81519050613afa816129bd565b92915050565b5f60208284031215613b1557613b146128f9565b5b5f613b2284828501613aec565b91505092915050565b7f70726963650000000000000000000000000000000000000000000000000000005f82015250565b5f613b5f60058361356a565b9150613b6a82613b2b565b602082019050919050565b5f6020820190508181035f830152613b8c81613b53565b9050919050565b5f613b9d82612b06565b9150613ba883612b06565b9250828203905081811115613bc057613bbf613866565b5b92915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52603160045260245ffd5b5f81519050919050565b5f81905092915050565b5f613c1182613bf3565b613c1b8185613bfd565b9350613c2b81856020860161357a565b80840191505092915050565b5f613c428284613c07565b91508190509291505056fea26469706673582212208999ff802f7f5dda54c73a6daa03f20779029c75521a32d0b0601e5e1be1993f64736f6c634300081c0033",
 }
 
 // PriceFeedABI is the input ABI used to generate the binding from.
@@ -241,6 +241,37 @@ func (_PriceFeed *PriceFeedTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _PriceFeed.Contract.contract.Transact(opts, method, params...)
 }
 
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_PriceFeed *PriceFeedCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _PriceFeed.contract.Call(opts, &out, "DEFAULT_ADMIN_ROLE")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_PriceFeed *PriceFeedSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _PriceFeed.Contract.DEFAULTADMINROLE(&_PriceFeed.CallOpts)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_PriceFeed *PriceFeedCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _PriceFeed.Contract.DEFAULTADMINROLE(&_PriceFeed.CallOpts)
+}
+
 // UPGRADEINTERFACEVERSION is a free data retrieval call binding the contract method 0xad3cb1cc.
 //
 // Solidity: function UPGRADE_INTERFACE_VERSION() view returns(string)
@@ -351,76 +382,6 @@ func (_PriceFeed *PriceFeedSession) DollarDecimals() (uint8, error) {
 // Solidity: function dollarDecimals() view returns(uint8)
 func (_PriceFeed *PriceFeedCallerSession) DollarDecimals() (uint8, error) {
 	return _PriceFeed.Contract.DollarDecimals(&_PriceFeed.CallOpts)
-}
-
-// Eip712Domain is a free data retrieval call binding the contract method 0x84b0196e.
-//
-// Solidity: function eip712Domain() view returns(bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)
-func (_PriceFeed *PriceFeedCaller) Eip712Domain(opts *bind.CallOpts) (struct {
-	Fields            [1]byte
-	Name              string
-	Version           string
-	ChainId           *big.Int
-	VerifyingContract common.Address
-	Salt              [32]byte
-	Extensions        []*big.Int
-}, error) {
-	var out []interface{}
-	err := _PriceFeed.contract.Call(opts, &out, "eip712Domain")
-
-	outstruct := new(struct {
-		Fields            [1]byte
-		Name              string
-		Version           string
-		ChainId           *big.Int
-		VerifyingContract common.Address
-		Salt              [32]byte
-		Extensions        []*big.Int
-	})
-	if err != nil {
-		return *outstruct, err
-	}
-
-	outstruct.Fields = *abi.ConvertType(out[0], new([1]byte)).(*[1]byte)
-	outstruct.Name = *abi.ConvertType(out[1], new(string)).(*string)
-	outstruct.Version = *abi.ConvertType(out[2], new(string)).(*string)
-	outstruct.ChainId = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
-	outstruct.VerifyingContract = *abi.ConvertType(out[4], new(common.Address)).(*common.Address)
-	outstruct.Salt = *abi.ConvertType(out[5], new([32]byte)).(*[32]byte)
-	outstruct.Extensions = *abi.ConvertType(out[6], new([]*big.Int)).(*[]*big.Int)
-
-	return *outstruct, err
-
-}
-
-// Eip712Domain is a free data retrieval call binding the contract method 0x84b0196e.
-//
-// Solidity: function eip712Domain() view returns(bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)
-func (_PriceFeed *PriceFeedSession) Eip712Domain() (struct {
-	Fields            [1]byte
-	Name              string
-	Version           string
-	ChainId           *big.Int
-	VerifyingContract common.Address
-	Salt              [32]byte
-	Extensions        []*big.Int
-}, error) {
-	return _PriceFeed.Contract.Eip712Domain(&_PriceFeed.CallOpts)
-}
-
-// Eip712Domain is a free data retrieval call binding the contract method 0x84b0196e.
-//
-// Solidity: function eip712Domain() view returns(bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)
-func (_PriceFeed *PriceFeedCallerSession) Eip712Domain() (struct {
-	Fields            [1]byte
-	Name              string
-	Version           string
-	ChainId           *big.Int
-	VerifyingContract common.Address
-	Salt              [32]byte
-	Extensions        []*big.Int
-}, error) {
-	return _PriceFeed.Contract.Eip712Domain(&_PriceFeed.CallOpts)
 }
 
 // GetNativeTokenPrice is a free data retrieval call binding the contract method 0x3afb1544.
@@ -658,6 +619,37 @@ func (_PriceFeed *PriceFeedCallerSession) GetPrices(tokens []common.Address) (st
 	return _PriceFeed.Contract.GetPrices(&_PriceFeed.CallOpts, tokens)
 }
 
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_PriceFeed *PriceFeedCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
+	var out []interface{}
+	err := _PriceFeed.contract.Call(opts, &out, "getRoleAdmin", role)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_PriceFeed *PriceFeedSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _PriceFeed.Contract.GetRoleAdmin(&_PriceFeed.CallOpts, role)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_PriceFeed *PriceFeedCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _PriceFeed.Contract.GetRoleAdmin(&_PriceFeed.CallOpts, role)
+}
+
 // GetRoleMembers is a free data retrieval call binding the contract method 0xa3246ad3.
 //
 // Solidity: function getRoleMembers(bytes32 role) view returns(address[])
@@ -801,37 +793,6 @@ func (_PriceFeed *PriceFeedCallerSession) NativeToken() (common.Address, error) 
 	return _PriceFeed.Contract.NativeToken(&_PriceFeed.CallOpts)
 }
 
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
-//
-// Solidity: function owner() view returns(address)
-func (_PriceFeed *PriceFeedCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _PriceFeed.contract.Call(opts, &out, "owner")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
-//
-// Solidity: function owner() view returns(address)
-func (_PriceFeed *PriceFeedSession) Owner() (common.Address, error) {
-	return _PriceFeed.Contract.Owner(&_PriceFeed.CallOpts)
-}
-
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
-//
-// Solidity: function owner() view returns(address)
-func (_PriceFeed *PriceFeedCallerSession) Owner() (common.Address, error) {
-	return _PriceFeed.Contract.Owner(&_PriceFeed.CallOpts)
-}
-
 // ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
 //
 // Solidity: function proxiableUUID() view returns(bytes32)
@@ -863,35 +824,35 @@ func (_PriceFeed *PriceFeedCallerSession) ProxiableUUID() ([32]byte, error) {
 	return _PriceFeed.Contract.ProxiableUUID(&_PriceFeed.CallOpts)
 }
 
-// Threshold is a free data retrieval call binding the contract method 0x42cde4e8.
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function threshold() view returns(uint8)
-func (_PriceFeed *PriceFeedCaller) Threshold(opts *bind.CallOpts) (uint8, error) {
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_PriceFeed *PriceFeedCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
-	err := _PriceFeed.contract.Call(opts, &out, "threshold")
+	err := _PriceFeed.contract.Call(opts, &out, "supportsInterface", interfaceId)
 
 	if err != nil {
-		return *new(uint8), err
+		return *new(bool), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
 
 }
 
-// Threshold is a free data retrieval call binding the contract method 0x42cde4e8.
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function threshold() view returns(uint8)
-func (_PriceFeed *PriceFeedSession) Threshold() (uint8, error) {
-	return _PriceFeed.Contract.Threshold(&_PriceFeed.CallOpts)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_PriceFeed *PriceFeedSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _PriceFeed.Contract.SupportsInterface(&_PriceFeed.CallOpts, interfaceId)
 }
 
-// Threshold is a free data retrieval call binding the contract method 0x42cde4e8.
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
-// Solidity: function threshold() view returns(uint8)
-func (_PriceFeed *PriceFeedCallerSession) Threshold() (uint8, error) {
-	return _PriceFeed.Contract.Threshold(&_PriceFeed.CallOpts)
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_PriceFeed *PriceFeedCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _PriceFeed.Contract.SupportsInterface(&_PriceFeed.CallOpts, interfaceId)
 }
 
 // UpdatedAt is a free data retrieval call binding the contract method 0x7519ab50.
@@ -925,130 +886,130 @@ func (_PriceFeed *PriceFeedCallerSession) UpdatedAt() (*big.Int, error) {
 	return _PriceFeed.Contract.UpdatedAt(&_PriceFeed.CallOpts)
 }
 
-// ChangeThreshold is a paid mutator transaction binding the contract method 0xb7f3358d.
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
 //
-// Solidity: function changeThreshold(uint8 threshold_) returns()
-func (_PriceFeed *PriceFeedTransactor) ChangeThreshold(opts *bind.TransactOpts, threshold_ uint8) (*types.Transaction, error) {
-	return _PriceFeed.contract.Transact(opts, "changeThreshold", threshold_)
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_PriceFeed *PriceFeedTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _PriceFeed.contract.Transact(opts, "grantRole", role, account)
 }
 
-// ChangeThreshold is a paid mutator transaction binding the contract method 0xb7f3358d.
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
 //
-// Solidity: function changeThreshold(uint8 threshold_) returns()
-func (_PriceFeed *PriceFeedSession) ChangeThreshold(threshold_ uint8) (*types.Transaction, error) {
-	return _PriceFeed.Contract.ChangeThreshold(&_PriceFeed.TransactOpts, threshold_)
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_PriceFeed *PriceFeedSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.GrantRole(&_PriceFeed.TransactOpts, role, account)
 }
 
-// ChangeThreshold is a paid mutator transaction binding the contract method 0xb7f3358d.
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
 //
-// Solidity: function changeThreshold(uint8 threshold_) returns()
-func (_PriceFeed *PriceFeedTransactorSession) ChangeThreshold(threshold_ uint8) (*types.Transaction, error) {
-	return _PriceFeed.Contract.ChangeThreshold(&_PriceFeed.TransactOpts, threshold_)
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_PriceFeed *PriceFeedTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.GrantRole(&_PriceFeed.TransactOpts, role, account)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xbb65ccbc.
+// GrantRoleBatch is a paid mutator transaction binding the contract method 0xfd47852b.
 //
-// Solidity: function initialize(uint8 _dollarDecimals, uint256 ethPrice) returns()
-func (_PriceFeed *PriceFeedTransactor) Initialize(opts *bind.TransactOpts, _dollarDecimals uint8, ethPrice *big.Int) (*types.Transaction, error) {
-	return _PriceFeed.contract.Transact(opts, "initialize", _dollarDecimals, ethPrice)
+// Solidity: function grantRoleBatch(bytes32 role, address[] accounts) returns()
+func (_PriceFeed *PriceFeedTransactor) GrantRoleBatch(opts *bind.TransactOpts, role [32]byte, accounts []common.Address) (*types.Transaction, error) {
+	return _PriceFeed.contract.Transact(opts, "grantRoleBatch", role, accounts)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xbb65ccbc.
+// GrantRoleBatch is a paid mutator transaction binding the contract method 0xfd47852b.
 //
-// Solidity: function initialize(uint8 _dollarDecimals, uint256 ethPrice) returns()
-func (_PriceFeed *PriceFeedSession) Initialize(_dollarDecimals uint8, ethPrice *big.Int) (*types.Transaction, error) {
-	return _PriceFeed.Contract.Initialize(&_PriceFeed.TransactOpts, _dollarDecimals, ethPrice)
+// Solidity: function grantRoleBatch(bytes32 role, address[] accounts) returns()
+func (_PriceFeed *PriceFeedSession) GrantRoleBatch(role [32]byte, accounts []common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.GrantRoleBatch(&_PriceFeed.TransactOpts, role, accounts)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xbb65ccbc.
+// GrantRoleBatch is a paid mutator transaction binding the contract method 0xfd47852b.
 //
-// Solidity: function initialize(uint8 _dollarDecimals, uint256 ethPrice) returns()
-func (_PriceFeed *PriceFeedTransactorSession) Initialize(_dollarDecimals uint8, ethPrice *big.Int) (*types.Transaction, error) {
-	return _PriceFeed.Contract.Initialize(&_PriceFeed.TransactOpts, _dollarDecimals, ethPrice)
+// Solidity: function grantRoleBatch(bytes32 role, address[] accounts) returns()
+func (_PriceFeed *PriceFeedTransactorSession) GrantRoleBatch(role [32]byte, accounts []common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.GrantRoleBatch(&_PriceFeed.TransactOpts, role, accounts)
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// Initialize is a paid mutator transaction binding the contract method 0xfa23bb06.
 //
-// Solidity: function renounceOwnership() returns()
-func (_PriceFeed *PriceFeedTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _PriceFeed.contract.Transact(opts, "renounceOwnership")
+// Solidity: function initialize(address owner, uint8 _dollarDecimals, uint256 ethPrice) returns()
+func (_PriceFeed *PriceFeedTransactor) Initialize(opts *bind.TransactOpts, owner common.Address, _dollarDecimals uint8, ethPrice *big.Int) (*types.Transaction, error) {
+	return _PriceFeed.contract.Transact(opts, "initialize", owner, _dollarDecimals, ethPrice)
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// Initialize is a paid mutator transaction binding the contract method 0xfa23bb06.
 //
-// Solidity: function renounceOwnership() returns()
-func (_PriceFeed *PriceFeedSession) RenounceOwnership() (*types.Transaction, error) {
-	return _PriceFeed.Contract.RenounceOwnership(&_PriceFeed.TransactOpts)
+// Solidity: function initialize(address owner, uint8 _dollarDecimals, uint256 ethPrice) returns()
+func (_PriceFeed *PriceFeedSession) Initialize(owner common.Address, _dollarDecimals uint8, ethPrice *big.Int) (*types.Transaction, error) {
+	return _PriceFeed.Contract.Initialize(&_PriceFeed.TransactOpts, owner, _dollarDecimals, ethPrice)
 }
 
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+// Initialize is a paid mutator transaction binding the contract method 0xfa23bb06.
 //
-// Solidity: function renounceOwnership() returns()
-func (_PriceFeed *PriceFeedTransactorSession) RenounceOwnership() (*types.Transaction, error) {
-	return _PriceFeed.Contract.RenounceOwnership(&_PriceFeed.TransactOpts)
+// Solidity: function initialize(address owner, uint8 _dollarDecimals, uint256 ethPrice) returns()
+func (_PriceFeed *PriceFeedTransactorSession) Initialize(owner common.Address, _dollarDecimals uint8, ethPrice *big.Int) (*types.Transaction, error) {
+	return _PriceFeed.Contract.Initialize(&_PriceFeed.TransactOpts, owner, _dollarDecimals, ethPrice)
 }
 
-// ResetRole is a paid mutator transaction binding the contract method 0x2d87b7ee.
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
 //
-// Solidity: function resetRole(bytes32 role, address[] newAccounts) returns()
-func (_PriceFeed *PriceFeedTransactor) ResetRole(opts *bind.TransactOpts, role [32]byte, newAccounts []common.Address) (*types.Transaction, error) {
-	return _PriceFeed.contract.Transact(opts, "resetRole", role, newAccounts)
+// Solidity: function renounceRole(bytes32 role, address callerConfirmation) returns()
+func (_PriceFeed *PriceFeedTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, callerConfirmation common.Address) (*types.Transaction, error) {
+	return _PriceFeed.contract.Transact(opts, "renounceRole", role, callerConfirmation)
 }
 
-// ResetRole is a paid mutator transaction binding the contract method 0x2d87b7ee.
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
 //
-// Solidity: function resetRole(bytes32 role, address[] newAccounts) returns()
-func (_PriceFeed *PriceFeedSession) ResetRole(role [32]byte, newAccounts []common.Address) (*types.Transaction, error) {
-	return _PriceFeed.Contract.ResetRole(&_PriceFeed.TransactOpts, role, newAccounts)
+// Solidity: function renounceRole(bytes32 role, address callerConfirmation) returns()
+func (_PriceFeed *PriceFeedSession) RenounceRole(role [32]byte, callerConfirmation common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.RenounceRole(&_PriceFeed.TransactOpts, role, callerConfirmation)
 }
 
-// ResetRole is a paid mutator transaction binding the contract method 0x2d87b7ee.
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
 //
-// Solidity: function resetRole(bytes32 role, address[] newAccounts) returns()
-func (_PriceFeed *PriceFeedTransactorSession) ResetRole(role [32]byte, newAccounts []common.Address) (*types.Transaction, error) {
-	return _PriceFeed.Contract.ResetRole(&_PriceFeed.TransactOpts, role, newAccounts)
+// Solidity: function renounceRole(bytes32 role, address callerConfirmation) returns()
+func (_PriceFeed *PriceFeedTransactorSession) RenounceRole(role [32]byte, callerConfirmation common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.RenounceRole(&_PriceFeed.TransactOpts, role, callerConfirmation)
 }
 
-// SetRole is a paid mutator transaction binding the contract method 0xd4bf502a.
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
 //
-// Solidity: function setRole(bytes32 role, address[] accounts, bool set) returns()
-func (_PriceFeed *PriceFeedTransactor) SetRole(opts *bind.TransactOpts, role [32]byte, accounts []common.Address, set bool) (*types.Transaction, error) {
-	return _PriceFeed.contract.Transact(opts, "setRole", role, accounts, set)
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_PriceFeed *PriceFeedTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _PriceFeed.contract.Transact(opts, "revokeRole", role, account)
 }
 
-// SetRole is a paid mutator transaction binding the contract method 0xd4bf502a.
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
 //
-// Solidity: function setRole(bytes32 role, address[] accounts, bool set) returns()
-func (_PriceFeed *PriceFeedSession) SetRole(role [32]byte, accounts []common.Address, set bool) (*types.Transaction, error) {
-	return _PriceFeed.Contract.SetRole(&_PriceFeed.TransactOpts, role, accounts, set)
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_PriceFeed *PriceFeedSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.RevokeRole(&_PriceFeed.TransactOpts, role, account)
 }
 
-// SetRole is a paid mutator transaction binding the contract method 0xd4bf502a.
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
 //
-// Solidity: function setRole(bytes32 role, address[] accounts, bool set) returns()
-func (_PriceFeed *PriceFeedTransactorSession) SetRole(role [32]byte, accounts []common.Address, set bool) (*types.Transaction, error) {
-	return _PriceFeed.Contract.SetRole(&_PriceFeed.TransactOpts, role, accounts, set)
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_PriceFeed *PriceFeedTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.RevokeRole(&_PriceFeed.TransactOpts, role, account)
 }
 
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+// RevokeRoleBatch is a paid mutator transaction binding the contract method 0x82f51fa6.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_PriceFeed *PriceFeedTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
-	return _PriceFeed.contract.Transact(opts, "transferOwnership", newOwner)
+// Solidity: function revokeRoleBatch(bytes32 role, address[] accounts) returns()
+func (_PriceFeed *PriceFeedTransactor) RevokeRoleBatch(opts *bind.TransactOpts, role [32]byte, accounts []common.Address) (*types.Transaction, error) {
+	return _PriceFeed.contract.Transact(opts, "revokeRoleBatch", role, accounts)
 }
 
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+// RevokeRoleBatch is a paid mutator transaction binding the contract method 0x82f51fa6.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_PriceFeed *PriceFeedSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _PriceFeed.Contract.TransferOwnership(&_PriceFeed.TransactOpts, newOwner)
+// Solidity: function revokeRoleBatch(bytes32 role, address[] accounts) returns()
+func (_PriceFeed *PriceFeedSession) RevokeRoleBatch(role [32]byte, accounts []common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.RevokeRoleBatch(&_PriceFeed.TransactOpts, role, accounts)
 }
 
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+// RevokeRoleBatch is a paid mutator transaction binding the contract method 0x82f51fa6.
 //
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_PriceFeed *PriceFeedTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _PriceFeed.Contract.TransferOwnership(&_PriceFeed.TransactOpts, newOwner)
+// Solidity: function revokeRoleBatch(bytes32 role, address[] accounts) returns()
+func (_PriceFeed *PriceFeedTransactorSession) RevokeRoleBatch(role [32]byte, accounts []common.Address) (*types.Transaction, error) {
+	return _PriceFeed.Contract.RevokeRoleBatch(&_PriceFeed.TransactOpts, role, accounts)
 }
 
 // UpdateNativeTokenPrice is a paid mutator transaction binding the contract method 0x9409f47b.
@@ -1112,139 +1073,6 @@ func (_PriceFeed *PriceFeedSession) UpgradeToAndCall(newImplementation common.Ad
 // Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
 func (_PriceFeed *PriceFeedTransactorSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
 	return _PriceFeed.Contract.UpgradeToAndCall(&_PriceFeed.TransactOpts, newImplementation, data)
-}
-
-// PriceFeedEIP712DomainChangedIterator is returned from FilterEIP712DomainChanged and is used to iterate over the raw logs and unpacked data for EIP712DomainChanged events raised by the PriceFeed contract.
-type PriceFeedEIP712DomainChangedIterator struct {
-	Event *PriceFeedEIP712DomainChanged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *PriceFeedEIP712DomainChangedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(PriceFeedEIP712DomainChanged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(PriceFeedEIP712DomainChanged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *PriceFeedEIP712DomainChangedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *PriceFeedEIP712DomainChangedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// PriceFeedEIP712DomainChanged represents a EIP712DomainChanged event raised by the PriceFeed contract.
-type PriceFeedEIP712DomainChanged struct {
-	Raw types.Log // Blockchain specific contextual infos
-}
-
-// FilterEIP712DomainChanged is a free log retrieval operation binding the contract event 0x0a6387c9ea3628b88a633bb4f3b151770f70085117a15f9bf3787cda53f13d31.
-//
-// Solidity: event EIP712DomainChanged()
-func (_PriceFeed *PriceFeedFilterer) FilterEIP712DomainChanged(opts *bind.FilterOpts) (*PriceFeedEIP712DomainChangedIterator, error) {
-
-	logs, sub, err := _PriceFeed.contract.FilterLogs(opts, "EIP712DomainChanged")
-	if err != nil {
-		return nil, err
-	}
-	return &PriceFeedEIP712DomainChangedIterator{contract: _PriceFeed.contract, event: "EIP712DomainChanged", logs: logs, sub: sub}, nil
-}
-
-// WatchEIP712DomainChanged is a free log subscription operation binding the contract event 0x0a6387c9ea3628b88a633bb4f3b151770f70085117a15f9bf3787cda53f13d31.
-//
-// Solidity: event EIP712DomainChanged()
-func (_PriceFeed *PriceFeedFilterer) WatchEIP712DomainChanged(opts *bind.WatchOpts, sink chan<- *PriceFeedEIP712DomainChanged) (event.Subscription, error) {
-
-	logs, sub, err := _PriceFeed.contract.WatchLogs(opts, "EIP712DomainChanged")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(PriceFeedEIP712DomainChanged)
-				if err := _PriceFeed.contract.UnpackLog(event, "EIP712DomainChanged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseEIP712DomainChanged is a log parse operation binding the contract event 0x0a6387c9ea3628b88a633bb4f3b151770f70085117a15f9bf3787cda53f13d31.
-//
-// Solidity: event EIP712DomainChanged()
-func (_PriceFeed *PriceFeedFilterer) ParseEIP712DomainChanged(log types.Log) (*PriceFeedEIP712DomainChanged, error) {
-	event := new(PriceFeedEIP712DomainChanged)
-	if err := _PriceFeed.contract.UnpackLog(event, "EIP712DomainChanged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // PriceFeedInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the PriceFeed contract.
@@ -1375,159 +1203,6 @@ func (_PriceFeed *PriceFeedFilterer) WatchInitialized(opts *bind.WatchOpts, sink
 func (_PriceFeed *PriceFeedFilterer) ParseInitialized(log types.Log) (*PriceFeedInitialized, error) {
 	event := new(PriceFeedInitialized)
 	if err := _PriceFeed.contract.UnpackLog(event, "Initialized", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// PriceFeedOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the PriceFeed contract.
-type PriceFeedOwnershipTransferredIterator struct {
-	Event *PriceFeedOwnershipTransferred // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *PriceFeedOwnershipTransferredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(PriceFeedOwnershipTransferred)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(PriceFeedOwnershipTransferred)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *PriceFeedOwnershipTransferredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *PriceFeedOwnershipTransferredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// PriceFeedOwnershipTransferred represents a OwnershipTransferred event raised by the PriceFeed contract.
-type PriceFeedOwnershipTransferred struct {
-	PreviousOwner common.Address
-	NewOwner      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
-}
-
-// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_PriceFeed *PriceFeedFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*PriceFeedOwnershipTransferredIterator, error) {
-
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
-	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
-	}
-
-	logs, sub, err := _PriceFeed.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
-	if err != nil {
-		return nil, err
-	}
-	return &PriceFeedOwnershipTransferredIterator{contract: _PriceFeed.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
-}
-
-// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_PriceFeed *PriceFeedFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *PriceFeedOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
-	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
-	}
-
-	logs, sub, err := _PriceFeed.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(PriceFeedOwnershipTransferred)
-				if err := _PriceFeed.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_PriceFeed *PriceFeedFilterer) ParseOwnershipTransferred(log types.Log) (*PriceFeedOwnershipTransferred, error) {
-	event := new(PriceFeedOwnershipTransferred)
-	if err := _PriceFeed.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1680,9 +1355,9 @@ func (_PriceFeed *PriceFeedFilterer) ParsePriceFeedPriceUpdated(log types.Log) (
 	return event, nil
 }
 
-// PriceFeedRoleUpdatedIterator is returned from FilterRoleUpdated and is used to iterate over the raw logs and unpacked data for RoleUpdated events raised by the PriceFeed contract.
-type PriceFeedRoleUpdatedIterator struct {
-	Event *PriceFeedRoleUpdated // Event containing the contract specifics and raw log
+// PriceFeedRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the PriceFeed contract.
+type PriceFeedRoleAdminChangedIterator struct {
+	Event *PriceFeedRoleAdminChanged // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1696,7 +1371,7 @@ type PriceFeedRoleUpdatedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PriceFeedRoleUpdatedIterator) Next() bool {
+func (it *PriceFeedRoleAdminChangedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1705,7 +1380,7 @@ func (it *PriceFeedRoleUpdatedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PriceFeedRoleUpdated)
+			it.Event = new(PriceFeedRoleAdminChanged)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1720,7 +1395,7 @@ func (it *PriceFeedRoleUpdatedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PriceFeedRoleUpdated)
+		it.Event = new(PriceFeedRoleAdminChanged)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1736,61 +1411,69 @@ func (it *PriceFeedRoleUpdatedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PriceFeedRoleUpdatedIterator) Error() error {
+func (it *PriceFeedRoleAdminChangedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PriceFeedRoleUpdatedIterator) Close() error {
+func (it *PriceFeedRoleAdminChangedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PriceFeedRoleUpdated represents a RoleUpdated event raised by the PriceFeed contract.
-type PriceFeedRoleUpdated struct {
-	Account common.Address
-	Role    [32]byte
-	Status  bool
-	Raw     types.Log // Blockchain specific contextual infos
+// PriceFeedRoleAdminChanged represents a RoleAdminChanged event raised by the PriceFeed contract.
+type PriceFeedRoleAdminChanged struct {
+	Role              [32]byte
+	PreviousAdminRole [32]byte
+	NewAdminRole      [32]byte
+	Raw               types.Log // Blockchain specific contextual infos
 }
 
-// FilterRoleUpdated is a free log retrieval operation binding the contract event 0x8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f3.
+// FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
 //
-// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool status)
-func (_PriceFeed *PriceFeedFilterer) FilterRoleUpdated(opts *bind.FilterOpts, account []common.Address, role [][32]byte) (*PriceFeedRoleUpdatedIterator, error) {
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_PriceFeed *PriceFeedFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*PriceFeedRoleAdminChangedIterator, error) {
 
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
 	var roleRule []interface{}
 	for _, roleItem := range role {
 		roleRule = append(roleRule, roleItem)
 	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
 
-	logs, sub, err := _PriceFeed.contract.FilterLogs(opts, "RoleUpdated", accountRule, roleRule)
+	logs, sub, err := _PriceFeed.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PriceFeedRoleUpdatedIterator{contract: _PriceFeed.contract, event: "RoleUpdated", logs: logs, sub: sub}, nil
+	return &PriceFeedRoleAdminChangedIterator{contract: _PriceFeed.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
 }
 
-// WatchRoleUpdated is a free log subscription operation binding the contract event 0x8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f3.
+// WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
 //
-// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool status)
-func (_PriceFeed *PriceFeedFilterer) WatchRoleUpdated(opts *bind.WatchOpts, sink chan<- *PriceFeedRoleUpdated, account []common.Address, role [][32]byte) (event.Subscription, error) {
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_PriceFeed *PriceFeedFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *PriceFeedRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
 
-	var accountRule []interface{}
-	for _, accountItem := range account {
-		accountRule = append(accountRule, accountItem)
-	}
 	var roleRule []interface{}
 	for _, roleItem := range role {
 		roleRule = append(roleRule, roleItem)
 	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
 
-	logs, sub, err := _PriceFeed.contract.WatchLogs(opts, "RoleUpdated", accountRule, roleRule)
+	logs, sub, err := _PriceFeed.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1800,8 +1483,8 @@ func (_PriceFeed *PriceFeedFilterer) WatchRoleUpdated(opts *bind.WatchOpts, sink
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PriceFeedRoleUpdated)
-				if err := _PriceFeed.contract.UnpackLog(event, "RoleUpdated", log); err != nil {
+				event := new(PriceFeedRoleAdminChanged)
+				if err := _PriceFeed.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1822,21 +1505,21 @@ func (_PriceFeed *PriceFeedFilterer) WatchRoleUpdated(opts *bind.WatchOpts, sink
 	}), nil
 }
 
-// ParseRoleUpdated is a log parse operation binding the contract event 0x8737757d0849a3cc97f98ff695ca69b8c01a8e5cb9e21b72d5e776a9dd5b06f3.
+// ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
 //
-// Solidity: event RoleUpdated(address indexed account, bytes32 indexed role, bool status)
-func (_PriceFeed *PriceFeedFilterer) ParseRoleUpdated(log types.Log) (*PriceFeedRoleUpdated, error) {
-	event := new(PriceFeedRoleUpdated)
-	if err := _PriceFeed.contract.UnpackLog(event, "RoleUpdated", log); err != nil {
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_PriceFeed *PriceFeedFilterer) ParseRoleAdminChanged(log types.Log) (*PriceFeedRoleAdminChanged, error) {
+	event := new(PriceFeedRoleAdminChanged)
+	if err := _PriceFeed.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// PriceFeedThresholdChangedIterator is returned from FilterThresholdChanged and is used to iterate over the raw logs and unpacked data for ThresholdChanged events raised by the PriceFeed contract.
-type PriceFeedThresholdChangedIterator struct {
-	Event *PriceFeedThresholdChanged // Event containing the contract specifics and raw log
+// PriceFeedRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the PriceFeed contract.
+type PriceFeedRoleGrantedIterator struct {
+	Event *PriceFeedRoleGranted // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1850,7 +1533,7 @@ type PriceFeedThresholdChangedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *PriceFeedThresholdChangedIterator) Next() bool {
+func (it *PriceFeedRoleGrantedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1859,7 +1542,7 @@ func (it *PriceFeedThresholdChangedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(PriceFeedThresholdChanged)
+			it.Event = new(PriceFeedRoleGranted)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1874,7 +1557,7 @@ func (it *PriceFeedThresholdChangedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(PriceFeedThresholdChanged)
+		it.Event = new(PriceFeedRoleGranted)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1890,41 +1573,69 @@ func (it *PriceFeedThresholdChangedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *PriceFeedThresholdChangedIterator) Error() error {
+func (it *PriceFeedRoleGrantedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *PriceFeedThresholdChangedIterator) Close() error {
+func (it *PriceFeedRoleGrantedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// PriceFeedThresholdChanged represents a ThresholdChanged event raised by the PriceFeed contract.
-type PriceFeedThresholdChanged struct {
-	Threshold uint8
-	Raw       types.Log // Blockchain specific contextual infos
+// PriceFeedRoleGranted represents a RoleGranted event raised by the PriceFeed contract.
+type PriceFeedRoleGranted struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterThresholdChanged is a free log retrieval operation binding the contract event 0x541ae612d90d592d7865e446bfd28eb8c1de1ced93c6f992a6df36c9e7bd33ff.
+// FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
 //
-// Solidity: event ThresholdChanged(uint8 threshold)
-func (_PriceFeed *PriceFeedFilterer) FilterThresholdChanged(opts *bind.FilterOpts) (*PriceFeedThresholdChangedIterator, error) {
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_PriceFeed *PriceFeedFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*PriceFeedRoleGrantedIterator, error) {
 
-	logs, sub, err := _PriceFeed.contract.FilterLogs(opts, "ThresholdChanged")
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _PriceFeed.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
 	if err != nil {
 		return nil, err
 	}
-	return &PriceFeedThresholdChangedIterator{contract: _PriceFeed.contract, event: "ThresholdChanged", logs: logs, sub: sub}, nil
+	return &PriceFeedRoleGrantedIterator{contract: _PriceFeed.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
 }
 
-// WatchThresholdChanged is a free log subscription operation binding the contract event 0x541ae612d90d592d7865e446bfd28eb8c1de1ced93c6f992a6df36c9e7bd33ff.
+// WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
 //
-// Solidity: event ThresholdChanged(uint8 threshold)
-func (_PriceFeed *PriceFeedFilterer) WatchThresholdChanged(opts *bind.WatchOpts, sink chan<- *PriceFeedThresholdChanged) (event.Subscription, error) {
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_PriceFeed *PriceFeedFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *PriceFeedRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _PriceFeed.contract.WatchLogs(opts, "ThresholdChanged")
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _PriceFeed.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1934,8 +1645,8 @@ func (_PriceFeed *PriceFeedFilterer) WatchThresholdChanged(opts *bind.WatchOpts,
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(PriceFeedThresholdChanged)
-				if err := _PriceFeed.contract.UnpackLog(event, "ThresholdChanged", log); err != nil {
+				event := new(PriceFeedRoleGranted)
+				if err := _PriceFeed.contract.UnpackLog(event, "RoleGranted", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1956,12 +1667,174 @@ func (_PriceFeed *PriceFeedFilterer) WatchThresholdChanged(opts *bind.WatchOpts,
 	}), nil
 }
 
-// ParseThresholdChanged is a log parse operation binding the contract event 0x541ae612d90d592d7865e446bfd28eb8c1de1ced93c6f992a6df36c9e7bd33ff.
+// ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
 //
-// Solidity: event ThresholdChanged(uint8 threshold)
-func (_PriceFeed *PriceFeedFilterer) ParseThresholdChanged(log types.Log) (*PriceFeedThresholdChanged, error) {
-	event := new(PriceFeedThresholdChanged)
-	if err := _PriceFeed.contract.UnpackLog(event, "ThresholdChanged", log); err != nil {
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_PriceFeed *PriceFeedFilterer) ParseRoleGranted(log types.Log) (*PriceFeedRoleGranted, error) {
+	event := new(PriceFeedRoleGranted)
+	if err := _PriceFeed.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// PriceFeedRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the PriceFeed contract.
+type PriceFeedRoleRevokedIterator struct {
+	Event *PriceFeedRoleRevoked // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *PriceFeedRoleRevokedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(PriceFeedRoleRevoked)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(PriceFeedRoleRevoked)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *PriceFeedRoleRevokedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *PriceFeedRoleRevokedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// PriceFeedRoleRevoked represents a RoleRevoked event raised by the PriceFeed contract.
+type PriceFeedRoleRevoked struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_PriceFeed *PriceFeedFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*PriceFeedRoleRevokedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _PriceFeed.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &PriceFeedRoleRevokedIterator{contract: _PriceFeed.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_PriceFeed *PriceFeedFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *PriceFeedRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _PriceFeed.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(PriceFeedRoleRevoked)
+				if err := _PriceFeed.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_PriceFeed *PriceFeedFilterer) ParseRoleRevoked(log types.Log) (*PriceFeedRoleRevoked, error) {
+	event := new(PriceFeedRoleRevoked)
+	if err := _PriceFeed.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

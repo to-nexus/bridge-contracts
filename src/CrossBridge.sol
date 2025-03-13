@@ -9,27 +9,24 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
 
 /**
  * @title CrossBridge
- * @notice Implementation of BaseBridge for a specific cross-chain bridge deployment
- * @dev This contract extends BaseBridge with predeploy functionality for specific chain deployments
- * - Uses a predefined address for implementation
- * - Implements proxy verification logic
- * - Ensures contract is only called through a valid proxy
- * - Provides security against direct calls to implementation
+ * @notice Cross-chain bridge with predeploy functionality
+ * @dev Extends BaseBridge with deterministic deployment features
+ * - Uses predefined implementation address for easier verification
+ * - Implements proxy security checks
+ * - Ensures contract is only called through valid proxies
  */
 contract CrossBridge is BaseBridge {
-    /// @dev Predefined address for the predeployed implementation
+    /// @dev Fixed address for deterministic deployment
     address private constant PREDEPLOYED_IMPLEMENTATION_ADDRESS = address(0xb81d6e000000000000000000000000000000C0de);
 
     /// @dev Storage gap for future upgrades
     uint[50] private __gap;
 
     /**
-     * @notice Verifies the contract is called through a valid proxy
-     * @dev Override for predeploy implementation check
-     * - Ensures the contract is called via delegatecall
-     * - Verifies the implementation address matches the predeploy address
-     * - Reverts if called directly or through an invalid proxy
-     * - This prevents unauthorized access to the implementation contract
+     * @notice Verifies proxy delegation
+     * @dev Ensures contract is called via proper proxy
+     * - Prevents direct calls to implementation
+     * - Verifies implementation address matches predeploy address
      */
     function _checkProxy() internal view override {
         if (

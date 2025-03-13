@@ -2,9 +2,8 @@
 pragma solidity 0.8.28;
 
 import {IPriceOracle} from "./IPriceOracle.sol";
-import {IRoleManager} from "./IRoleManager.sol";
 
-interface IPriceFeed is IRoleManager, IPriceOracle {
+interface IPriceFeed is IPriceOracle {
     struct PriceData {
         address token;
         uint price;

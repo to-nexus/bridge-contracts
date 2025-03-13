@@ -73,7 +73,7 @@ contract BaseBridgeTest is BridgeTest {
 
     function test_fuzz_depositWithdraw_eth(uint amount) public {
         (uint minimum, uint gasFee, uint exFeeRate) = crossGetTokenFee(weth);
-        uint denom = bridgeFeeManagerCross.denominator();
+        uint denom = bridgeManagerCross.denominator();
         minimum = minimum + gasFee + (minimum * exFeeRate / denom);
         if (minimum < 10) minimum = 1000;
 

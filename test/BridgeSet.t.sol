@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {IRoleManager} from "../src/interface/IRoleManager.sol";
 import {BridgeTest} from "./Bridge.t.sol";
 
 contract BridgeSetTest is BridgeTest {
@@ -9,20 +8,20 @@ contract BridgeSetTest is BridgeTest {
         vm.startPrank(OWNER);
 
         vm.selectFork(ethereumForkID);
-        bridgeEthereum.setRole(VALIDATOR_ROLE, VALIDATORS, false);
+        bridgeEthereum.revokeRoleBatch(VALIDATOR_ROLE, VALIDATORS);
         bool ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertFalse(ok);
-        bridgeEthereum.setRole(VALIDATOR_ROLE, VALIDATORS, true);
+        bridgeEthereum.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
         ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertTrue(ok);
         vm.stopPrank();
 
         vm.startPrank(CrossOWNER);
         vm.selectFork(crossForkID);
-        bridgeCross.setRole(VALIDATOR_ROLE, VALIDATORS, false);
+        bridgeCross.revokeRoleBatch(VALIDATOR_ROLE, VALIDATORS);
         ok = bridgeCross.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertFalse(ok);
-        bridgeCross.setRole(VALIDATOR_ROLE, VALIDATORS, true);
+        bridgeCross.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
         ok = bridgeCross.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertTrue(ok);
         vm.stopPrank();

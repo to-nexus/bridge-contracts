@@ -2,10 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {BaseBridge} from "../../src/BaseBridge.sol";
-import {BridgeFeeManager, IBridgeFeeManager} from "../../src/BridgeFeeManager.sol";
+import {BridgeManager, IBridgeManager} from "../../src/BridgeManager.sol";
 
 import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
-import {IRoleManager} from "../../src/interface/IRoleManager.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {CrossChainTest} from "./CrossChain.sol";
 
@@ -19,7 +18,7 @@ contract EthereumChainTest is CrossChainTest {
 
     uint internal nextIndexEthereum;
     BaseBridge internal bridgeEthereum;
-    IBridgeFeeManager internal bridgeFeeManagerEthereum;
+    IBridgeManager internal bridgeManagerEthereum;
 
     function setUp() public virtual override {
         super.setUp();
@@ -32,20 +31,19 @@ contract EthereumChainTest is CrossChainTest {
             BaseBridge bridgeEthereumImpl = new BaseBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
             bridgeEthereum = BaseBridge(payable(address(bridgeEthereumProxy)));
-            bridgeEthereum.initialize(threshold, REWARD);
+            bridgeEthereum.initialize(OWNER, threshold, REWARD);
 
-            bridgeEthereum.registerToken(
-                CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), -(int(EX_RATE)), 0
-            );
-            bridgeEthereum.setRole(VALIDATOR_ROLE, VALIDATORS, true);
+            bridgeEthereum.grantRole(ADMIN_ROLE, OWNER); // for test
+            bridgeEthereum.grantRole(OPERATOR_ROLE, OWNER); // for test
+            bridgeEthereum.grantRole(UPDATOR_ROLE, OWNER); // for test
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN), -(int(EX_RATE)));
+            bridgeEthereum.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
         }
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth), 0, 0);
-            bridgeEthereum.registerToken(
-                CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross), 0, 0
-            );
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth), 0);
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross), 0);
 
             TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY);
             TestToken(address(testTokenEthereum)).mint(OWNER, INITIAL_SUPPLY);
@@ -124,9 +122,9 @@ contract EthereumChainTest is CrossChainTest {
     function ethereumCalcFee(IERC20, uint) public pure returns (uint value, uint gas, uint ex) {
         return (value, 0, 0); // no fee
             // vm.selectFork(ethereumForkID);
-            // if (address(bridgeFeeManagerEthereum) == address(0)) return (value, 0, 0);
+            // if (address(bridgeManagerEthereum) == address(0)) return (value, 0, 0);
             // bool ok;
-            // (value, gas, ex, ok) = bridgeFeeManagerEthereum.calculateMax(token, totalValue);
+            // (value, gas, ex, ok) = bridgeManagerEthereum.calculateMax(token, totalValue);
             // assertTrue(ok);
     }
 }
