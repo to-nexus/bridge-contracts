@@ -10,7 +10,7 @@ import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {CrossMintableERC20} from "../../src/token/CrossMintableERC20.sol";
 import {CrossMintableERC20Code} from "../../src/token/CrossMintableERC20Code.sol";
 import {ICrossMintableERC20Code} from "../../src/token/ICrossMintableERC20Code.sol";
-import {SettingTest} from "./Setting.sol";
+import {SettingTest} from "./Setting.t.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -24,7 +24,7 @@ contract CrossChainTest is SettingTest {
     uint internal nextIndexCross;
     CrossBridge internal bridgeCross;
     BridgeVerifier internal bridgeVerifierCross;
-    PriceFeed internal priceFeed;
+    PriceFeed internal priceFeedCross;
     ICrossMintableERC20Code internal crossMintableERC20Code;
 
     function setUp() public virtual override {
@@ -67,10 +67,10 @@ contract CrossChainTest is SettingTest {
 
         // fee table
         {
-            address priceFeedImpl = address(new PriceFeed());
-            ERC1967Proxy priceFeedProxy = new ERC1967Proxy(priceFeedImpl, bytes(""));
-            priceFeed = PriceFeed(address(priceFeedProxy));
-            priceFeed.initialize(CrossOWNER, DOLLAR_DECIMALS);
+            address priceFeedCrossImpl = address(new PriceFeed());
+            ERC1967Proxy priceFeedCrossProxy = new ERC1967Proxy(priceFeedCrossImpl, bytes(""));
+            priceFeedCross = PriceFeed(address(priceFeedCrossProxy));
+            priceFeedCross.initialize(CrossOWNER, DOLLAR_DECIMALS);
 
             {
                 // token price update
@@ -90,7 +90,7 @@ contract CrossChainTest is SettingTest {
                 prices[2] = (10 ** DOLLAR_DECIMALS) / 10;
                 pricesAt[2] = 0;
 
-                priceFeed.updatePrice(tokens, prices, pricesAt);
+                priceFeedCross.updatePrice(tokens, prices, pricesAt);
             }
 
             {
@@ -103,15 +103,16 @@ contract CrossChainTest is SettingTest {
                 prices[0] = 100_000;
                 pricesAt[0] = 0;
 
-                priceFeed.updateNativeTokenPrice(chainIDs, prices, pricesAt);
+                priceFeedCross.updateNativeTokenPrice(chainIDs, prices, pricesAt);
             }
 
-            priceFeed.grantRoleBatch(UPDATOR_ROLE, VALIDATORS);
+            priceFeedCross.grantRoleBatch(UPDATOR_ROLE, VALIDATORS);
 
-            bridgeVerifierCross =
-                new BridgeVerifier(CrossOWNER, address(bridgeCross), 200000, 10000, 10, 10_000, 0, 0, 2 hours);
+            bridgeVerifierCross = new BridgeVerifier(
+                CrossOWNER, address(bridgeCross), address(priceFeedCross), 200000, 10000, 10, 10_000, 0, 0, 2 hours
+            );
             bridgeVerifierCross.grantRole(UPDATOR_ROLE, CrossOWNER);
-            bridgeVerifierCross.setPriceFeed(IPriceFeed(address(priceFeed)));
+            bridgeVerifierCross.updateGasPrice(ETHEREUM_CHAIN_ID, 1 gwei);
         }
 
         bridgeCross.setBridgeVerifier(bridgeVerifierCross);

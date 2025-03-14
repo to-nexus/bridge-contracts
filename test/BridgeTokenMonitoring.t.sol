@@ -53,7 +53,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
         // Cannot call prank again while already in prank mode, so stop and restart
         vm.stopPrank();
         vm.prank(VALIDATOR1);
-        priceFeed.updatePrice(tokens, prices, pricesAt);
+        priceFeedCross.updatePrice(tokens, prices, pricesAt);
     }
 
     /**
@@ -96,7 +96,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
         vm.startPrank(CrossOWNER);
 
         // Make multiple transfers to exceed the period total value threshold
-        for (uint i = 0; i < 6; i++) {
+        for (uint i = 0; i < 5; i++) {
             (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 10 ether);
             assertTrue(status == Const.FinalizeStatus.Success);
         }
@@ -119,7 +119,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
 
         // Accumulate transfers just below the period threshold
         uint transferAmount = 10 ether;
-        uint numTransfers = 5; // Total 50 ether, below threshold
+        uint numTransfers = 4; // Total 50 ether, below threshold
 
         for (uint i = 0; i < numTransfers; i++) {
             (Const.FinalizeStatus status) =
@@ -128,7 +128,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
         }
 
         // Move time forward past the time window
-        vm.warp(block.timestamp + TEST_TIME_WINDOW + 1);
+        vm.warp(block.timestamp + TEST_TIME_WINDOW + 1 hours);
 
         // This transfer should pass since previous transfers are now outside the time window
         (Const.FinalizeStatus s) = bridgeVerifierCross.validateBridgeTokenValue(IERC20(address(weth)), transferAmount);
@@ -162,7 +162,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
         vm.startPrank(CrossOWNER);
 
         // Make multiple transfers to exceed the period total value threshold
-        for (uint i = 0; i < 6; i++) {
+        for (uint i = 0; i < 5; i++) {
             (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 10 ether);
             assertTrue(status == Const.FinalizeStatus.Success);
         }

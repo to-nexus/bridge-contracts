@@ -273,10 +273,6 @@ contract BridgeSetTest is BridgeTest {
 
         vm.prank(CrossOWNER);
         bridgeVerifierCross.setPriceFeed(IPriceFeed(newPriceFeed));
-
-        // Remove price feed
-        vm.prank(CrossOWNER);
-        bridgeVerifierCross.removePriceFeed();
     }
 
     /**

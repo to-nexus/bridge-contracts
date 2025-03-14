@@ -124,6 +124,12 @@ contract BaseBridge is
      */
     event VerificationDelayExpirationSet(uint indexed fromChainID, uint indexed index, uint delay);
 
+    /**
+     * @notice Emitted when the bridge verifier is set
+     * @param bridgeVerifier The address of the new bridge verifier
+     */
+    event BridgeVerifierSet(address indexed bridgeVerifier);
+
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
         "FinalizeBridge(uint256 fromChainID,uint256 index,address toToken,address to,uint256 value,bytes extraData)"
@@ -484,7 +490,6 @@ contract BaseBridge is
     {
         TokenPair memory tokenPair = _tokenPairs[fromChainID][token];
         if (tokenPair.paused) return (Const.FinalizeStatus.TokenPaused, false);
-        if (address(bridgeVerifier) == address(0)) return (Const.FinalizeStatus.Success, false);
 
         status = bridgeVerifier.validateBridgeTokenValue(IERC20(token), value);
         if (Const.FinalizeStatus.Success != status) delay = true;
@@ -651,6 +656,7 @@ contract BaseBridge is
     {
         if (address(bridgeVerifier) == address(0)) return (0, 0);
         uint minimumValue;
+
         (minimumValue, _gasFee, _exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
         require(value >= minimumValue && gasFee >= _gasFee && exFee >= _exFee, BaseBridgeInvalidAmount());
     }
@@ -770,7 +776,9 @@ contract BaseBridge is
      * @param _bridgeVerifier New bridge verifier address
      */
     function setBridgeVerifier(IBridgeVerifier _bridgeVerifier) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(address(_bridgeVerifier) != address(0), BaseBridgeCanNotZeroAddress());
         bridgeVerifier = _bridgeVerifier;
+        emit BridgeVerifierSet(address(_bridgeVerifier));
     }
 
     /**

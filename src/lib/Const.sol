@@ -17,9 +17,10 @@ library Const {
         TokenPaused,
         VerificationAmountThresholdExceeded,
         PeriodTotalValueThresholdExceeded,
-        TokenCurrentVolumeOverflow,
         TransferFailed,
-        MintFailed
+        MintFailed,
+        TokenScoreOverflow,
+        TokenCurrentVolumeOverflow
     }
 
     /**
