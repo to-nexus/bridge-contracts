@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {ValidatorManager} from "./abstract/ValidatorManager.sol";
-import {IPriceFeed} from "./interface/IPriceFeed.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+import {RoleManager} from "./abstract/RoleManager.sol";
+import {IPriceFeed} from "./interface/IPriceFeed.sol";
 import {IPriceOracle} from "./interface/IPriceOracle.sol";
 import {CalcGasFeeLib} from "./lib/CalcGasFeeLib.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Const} from "./lib/Const.sol";
 
 /**
  * @title PriceFeed
  * @notice Oracle contract that manages price data for tokens across different chains
- * @dev Maintains price data for native and ERC20 tokens, allowing validators to update prices
- * and provides functions for other contracts to query current prices
+ * @dev Provides token price data management with the following features:
+ * - Price storage and retrieval for ERC20 and native tokens
+ * - Price updates with timestamp tracking
  */
-contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
+contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     error PriceFeedCanNotZeroValue(string name);
@@ -25,9 +27,6 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
     error PriceFeedNoSource(address token);
 
     event PriceFeedPriceUpdated(address indexed token, uint price, uint timestamp);
-
-    /// @dev Special address representing the native token (e.g., ETH, BNB)
-    address private constant NATIVE_TOKEN = address(1);
 
     /// @dev Decimal places used for dollar price representation
     uint8 public dollarDecimals;
@@ -45,33 +44,24 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
 
     /**
      * @notice Initializes the price feed contract
-     * @dev Sets up initial state including dollar decimals and ETH price
-     * @param _dollarDecimals Decimal places for dollar price representation
-     * @param ethPrice Initial price for ETH in USD (with dollarDecimals precision)
+     * @param owner Admin address with price update privileges
+     * @param _dollarDecimals Precision for price representation
      */
-    function initialize(uint8 _dollarDecimals, uint ethPrice) public initializer {
-        __Ownable_init(_msgSender());
-        __Validator_init(0);
+    function initialize(address owner, uint8 _dollarDecimals) public initializer {
         __UUPSUpgradeable_init();
+        __AccessControl_init();
+        _grantRole(DEFAULT_ADMIN_ROLE, owner);
+        _grantRole(Const.UPDATOR_ROLE, owner);
 
         dollarDecimals = _dollarDecimals;
         updatedAt = block.timestamp;
-
-        // The initial price for NATIVE_TOKEN is set.
-        // lastUpdated is initialized to the maximum possible value, ensuring the initial price is considered valid before any updates.
-        // (1 xcross == 0.001 dollar)
-        _priceData[NATIVE_TOKEN] =
-            PriceData({token: NATIVE_TOKEN, price: (10 ** dollarDecimals) / 1000, lastUpdated: block.timestamp});
-        // set eth price (price decimal 6)
-        _nativeTokenPrice[1] = ethPrice;
     }
 
     /**
      * @notice Returns prices for all tracked tokens
-     * @dev Returns arrays of existence flags, prices, and the last update timestamp
-     * @return exist Array of booleans indicating if price data exists for each token
-     * @return prices Array of prices for each token
-     * @return updatedAt_ Timestamp when prices were last updated
+     * @return exist Array of price existence flags
+     * @return prices Array of token prices
+     * @return updatedAt_ Last price update timestamp
      */
     function allPrices() external view returns (bool[] memory exist, uint[] memory prices, uint updatedAt_) {
         return getPrices(_tokens.values());
@@ -79,11 +69,11 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
 
     /**
      * @notice Gets the exchange rate between two tokens
-     * @dev Calculates token A to token B exchange rate using their dollar prices
+     * @dev Calculates relative value using dollar prices of both tokens
      * @param tokenA Source token address
      * @param tokenB Target token address
-     * @return price Exchange rate (how much of tokenB you get for 1 tokenA)
-     * @return lastUpdate Timestamp when prices were last updated
+     * @return price How much of tokenB equals 1 tokenA
+     * @return lastUpdate Last price update time
      */
     function getPrice(address tokenA, address tokenB) external view returns (uint price, uint lastUpdate) {
         if (tokenA == tokenB) return (1, block.number);
@@ -98,34 +88,29 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
         require(exist[0], PriceFeedNoSource(tokenA));
         require(exist[1], PriceFeedNoSource(tokenB));
 
-        (uint8 decimalA, uint8 decimalB) = (CalcGasFeeLib.decimals(this, tokenA), CalcGasFeeLib.decimals(this, tokenB));
+        (uint8 decimalA, uint8 decimalB) = (CalcGasFeeLib.decimals(tokenA), CalcGasFeeLib.decimals(tokenB));
         price = CalcGasFeeLib.calculateAmountBWithPrice(1, prices[0], prices[1], decimalA, decimalB);
         return (price, updatedAt);
     }
 
     /**
      * @notice Gets the dollar price for a specific token
-     * @dev Returns the stored price data and existence flag
-     * @param token Address of the token to query
-     * @return exist Boolean indicating if price data exists
+     * @param token Token address
+     * @return exist Whether price data exists
      * @return price Dollar price of the token
-     * @return updatedAt_ Timestamp when prices were last updated
+     * @return updatedAt_ Last price update timestamp
      */
     function getTokenPriceInDollars(address token) external view returns (bool exist, uint price, uint updatedAt_) {
-        if (!(_priceData[token].token == token)) {
-            exist = true;
-            price = _priceData[token].price;
-        }
-        updatedAt_ = updatedAt;
+        if (_priceData[token].token != token) return (false, 0, 0);
+        return (true, _priceData[token].price, updatedAt);
     }
 
     /**
      * @notice Gets the native token price for a specific chain
-     * @dev Returns the stored native token price and existence flag
-     * @param chainID ID of the chain to query
-     * @return exist Boolean indicating if price data exists
+     * @param chainID Chain identifier
+     * @return exist Whether price data exists
      * @return price Dollar price of the native token
-     * @return updatedAt_ Timestamp when prices were last updated
+     * @return updatedAt_ Last price update timestamp
      */
     function getNativeTokenPrice(uint chainID) external view returns (bool exist, uint price, uint updatedAt_) {
         price = _nativeTokenPrice[chainID];
@@ -134,12 +119,11 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
     }
 
     /**
-     * @notice Gets prices for a list of tokens
-     * @dev Returns arrays of existence flags, prices, and the last update timestamp
-     * @param tokens Array of token addresses to query
-     * @return exist Array of booleans indicating if price data exists for each token
-     * @return prices Array of prices for each token
-     * @return updatedAt_ Timestamp when prices were last updated
+     * @notice Gets prices for a list of tokens in dollars
+     * @param tokens Array of token addresses
+     * @return exist Array of existence flags
+     * @return prices Array of token prices
+     * @return updatedAt_ Last price update timestamp
      */
     function getPrices(address[] memory tokens)
         public
@@ -208,10 +192,11 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
      */
     function updatePrice(address[] memory tokens, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyValidator
+        onlyRole(Const.UPDATOR_ROLE)
     {
-        require(tokens.length == prices.length, PriceFeedInvalidLength());
-        for (uint i = 0; i < tokens.length;) {
+        uint tokensLen = tokens.length;
+        require(tokensLen == prices.length && tokensLen == pricesAt.length, PriceFeedInvalidLength());
+        for (uint i = 0; i < tokensLen;) {
             _updatePrice(tokens[i], prices[i], pricesAt[i]);
             unchecked {
                 ++i;
@@ -229,25 +214,17 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
      */
     function updateNativeTokenPrice(uint[] memory chainIDs, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyValidator
+        onlyRole(Const.UPDATOR_ROLE)
     {
-        require(chainIDs.length == prices.length, PriceFeedInvalidLength());
-        for (uint i = 0; i < chainIDs.length;) {
+        uint chainsLen = chainIDs.length;
+        require(chainsLen == prices.length && chainsLen == pricesAt.length, PriceFeedInvalidLength());
+        for (uint i = 0; i < chainsLen;) {
             _updateNativeTokenPrice(chainIDs[i], prices[i], pricesAt[i]);
             unchecked {
                 ++i;
             }
         }
         updatedAt = block.timestamp;
-    }
-
-    /**
-     * @notice Returns the native token address constant
-     * @dev Used to identify the native token in the system
-     * @return Address constant representing the native token
-     */
-    function nativeToken() public pure returns (address) {
-        return NATIVE_TOKEN;
     }
 
     /**
@@ -259,9 +236,7 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
      */
     function _updatePrice(address token, uint price, uint priceAt) private {
         require(price != 0, PriceFeedCanNotZeroValue("price"));
-        require(
-            priceAt == type(uint).max || priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp)
-        );
+        require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _tokens.add(token);
         _priceData[token] = PriceData({token: token, price: price, lastUpdated: priceAt});
         emit PriceFeedPriceUpdated(token, price, priceAt);
@@ -276,9 +251,7 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
      */
     function _updateNativeTokenPrice(uint chainID, uint price, uint priceAt) private {
         require(price != 0, PriceFeedCanNotZeroValue("price"));
-        require(
-            priceAt == type(uint).max || priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp)
-        );
+        require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _nativeTokenPrice[chainID] = price;
     }
 
@@ -286,5 +259,5 @@ contract PriceFeed is UUPSUpgradeable, ValidatorManager, IPriceFeed {
      * @notice Authorizes an upgrade to a new implementation.
      * @param _newImplementation The address of the new implementation.
      */
-    function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(address _newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }

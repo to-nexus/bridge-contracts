@@ -5,6 +5,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IPriceFeed} from "../interface/IPriceFeed.sol";
+import {Const} from "./Const.sol";
 
 library CalcGasFeeLib {
     using Math for uint;
@@ -35,7 +36,7 @@ library CalcGasFeeLib {
         (ok, price, updatedAt) = feed.getTokenPriceInDollars(token);
         if (!ok) return (false, 0, 0);
 
-        tokenAmount = calculateAmountBWithPrice(nativeTokenAmount, nativeTokenPrice, price, 18, decimals(feed, token));
+        tokenAmount = calculateAmountBWithPrice(nativeTokenAmount, nativeTokenPrice, price, 18, decimals(token));
     }
 
     /// @notice Calculates an amount of token A to an equivalent amount of token B using provided price data.
@@ -61,7 +62,7 @@ library CalcGasFeeLib {
     /// @notice Retrieves the number of decimals for a given token.
     /// @param token The address of the token.
     /// @return _decimals The number of decimals.
-    function decimals(IPriceFeed feed, address token) public view returns (uint8 _decimals) {
-        _decimals = token == feed.nativeToken() ? uint8(18) : IERC20Metadata(token).decimals();
+    function decimals(address token) public view returns (uint8 _decimals) {
+        _decimals = token == Const.NATIVE_TOKEN ? uint8(18) : IERC20Metadata(token).decimals();
     }
 }

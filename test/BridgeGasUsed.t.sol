@@ -25,17 +25,17 @@ contract BridgeGasUsedTest is BridgeTest {
         // cycle1
         if (enableGasUsedLog) console.log("bridge coin cycle1");
         deposit(false, amount, 5);
-        withdraw(false, amount * 10, 5);
+        withdraw(false, amount, 5);
 
         // cycle2
         if (enableGasUsedLog) console.log("\nbridge coin cycle2");
         deposit(false, amount, 5);
-        withdraw(false, amount * 10, 5);
+        withdraw(false, amount, 5);
 
         // cycle3
         if (enableGasUsedLog) console.log("\nbridge coin cycle3");
         deposit(false, amount, 5);
-        withdraw(false, amount * 10, 5);
+        withdraw(false, amount, 5);
 
         // owner key bridge
         (uint index, bool ok) = ethereumBridge(address(cross), OWNER, OWNER, amount, 0, 0);
@@ -48,7 +48,7 @@ contract BridgeGasUsedTest is BridgeTest {
 
         (uint value, uint gas, uint ex) = crossCalcFee(NATIVE_TOKEN, amount);
         assertTrue(value + gas + ex <= amount);
-        value = (value / EX_RATE) * EX_RATE;
+
         assertTrue(value > 0);
         (index, ok) = crossBridge(address(NATIVE_TOKEN), OWNER, OWNER, value, gas, ex);
         if (ok) {

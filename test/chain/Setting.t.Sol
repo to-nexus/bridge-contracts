@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeFeeManager} from "../../src/BridgeFeeManager.sol";
+import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -15,9 +15,10 @@ contract SettingTest is Test {
     );
 
     bytes32 public constant VALIDATOR_ROLE = bytes32("VALIDATOR");
+    bytes32 public constant OPERATOR_ROLE = bytes32("OPERATOR");
     bytes32 public constant ADMIN_ROLE = bytes32("ADMIN");
+    bytes32 public constant UPDATOR_ROLE = bytes32("UPDATOR");
 
-    uint internal constant EX_RATE = 100;
     uint internal constant OWNER_PK = uint(bytes32("owner"));
     uint internal constant CrossOWNER_PK = uint(bytes32("cross_owner"));
     uint internal constant USER_PK = uint(bytes32("user"));
@@ -31,6 +32,7 @@ contract SettingTest is Test {
     uint internal constant CROSS_CHAIN_ID = 612055;
     IERC20 internal constant NATIVE_TOKEN = IERC20(address(1));
     uint internal constant INITIAL_SUPPLY = 1000000000 * 1e18;
+    uint8 internal constant DOLLAR_DECIMALS = 6;
 
     uint internal ethereumForkID;
     uint internal crossForkID;
@@ -96,17 +98,17 @@ contract SettingTest is Test {
         vm.stopPrank();
     }
 
-    function estimateMaxValue(BridgeFeeManager feeStation, uint remoteChainID, IERC20 token, uint totalValue)
+    function estimateMaxValue(BridgeVerifier bridgeVerifier, uint remoteChainID, IERC20 token, uint totalValue)
         internal
         view
         returns (bool ok, uint value, uint gasFee, uint exFee)
     {
         uint minimumAmount;
         uint exFeeRate;
-        (minimumAmount, gasFee, exFeeRate) = feeStation.getTokenFee(remoteChainID, token);
+        (minimumAmount, gasFee, exFeeRate) = bridgeVerifier.getTokenConfig(remoteChainID, token);
         if (totalValue <= gasFee) return (false, 0, 0, 0);
 
-        uint denominator = feeStation.denominator();
+        uint denominator = bridgeVerifier.denominator();
         uint v = totalValue - gasFee;
         value = v.mulDiv(denominator, (denominator + exFeeRate));
         exFee = value.mulDiv(exFeeRate, denominator);

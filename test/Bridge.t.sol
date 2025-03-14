@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {EthereumChainTest} from "./chain/EthereumChain.sol";
+import {EthereumChainTest} from "./chain/EthereumChain.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -38,14 +38,13 @@ contract BridgeTest is EthereumChainTest {
             assertEq(userTokenBalance - amount, cross.balanceOf(USER));
             assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeEthereum)));
             vm.selectFork(crossForkID);
-            assertEq(userCoinBalance + (amount * EX_RATE), USER.balance);
-            assertEq(bridgeCoinBalance - (amount * EX_RATE), address(bridgeCross).balance);
+            assertEq(userCoinBalance + amount, USER.balance);
+            assertEq(bridgeCoinBalance - amount, address(bridgeCross).balance);
         }
     }
 
     // xcross bridge (cross chain -> ethereum chain)
     function withdraw(bool isRevert, uint amount, uint validatorNum) public returns (uint index) {
-        assertTrue(amount > EX_RATE);
         (uint value, uint gas, uint ex) = crossCalcFee(NATIVE_TOKEN, amount);
         assertTrue(value + gas + ex <= amount);
 
@@ -57,7 +56,6 @@ contract BridgeTest is EthereumChainTest {
         uint bridgeCoinBalance = address(bridgeCross).balance;
         uint rewardWalletBalance = REWARD.balance;
 
-        value = (value / EX_RATE) * EX_RATE;
         assertTrue(value > 0);
 
         bool ok;
@@ -71,8 +69,8 @@ contract BridgeTest is EthereumChainTest {
 
         if (!isRevert) {
             vm.selectFork(ethereumForkID);
-            assertEq(userTokenBalance + (value / EX_RATE), cross.balanceOf(USER));
-            assertEq(bridgeTokenBalance - (value / EX_RATE), cross.balanceOf(address(bridgeEthereum)));
+            assertEq(userTokenBalance + value, cross.balanceOf(USER));
+            assertEq(bridgeTokenBalance - value, cross.balanceOf(address(bridgeEthereum)));
             vm.selectFork(crossForkID);
             assertEq(userCoinBalance - (value + gas + ex), USER.balance);
             assertEq(bridgeCoinBalance + value, address(bridgeCross).balance);

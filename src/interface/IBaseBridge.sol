@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-import {IBridgeFeeManager} from "./IBridgeFeeManager.sol";
 import {IBridgeRegistry} from "./IBridgeRegistry.sol";
-import {IRoleManager} from "./IRoleManager.sol";
+import {IBridgeVerifier} from "./IBridgeVerifier.sol";
 
 interface IBaseBridge is IBridgeRegistry {
     struct BridgeTokenArguments {
@@ -27,6 +26,11 @@ interface IBaseBridge is IBridgeRegistry {
         uint8 v;
         bytes32 r;
         bytes32 s;
+    }
+
+    struct TokenMovement {
+        uint timestamp;
+        uint amount;
     }
 
     function bridgeToken(
@@ -61,7 +65,7 @@ interface IBaseBridge is IBridgeRegistry {
         bytes32[][] memory r,
         bytes32[][] memory s
     ) external payable returns (bool);
-    function bridgeFeeManager() external view returns (IBridgeFeeManager);
+    function bridgeVerifier() external view returns (IBridgeVerifier);
     function releasePending(uint remoteChainID, uint index) external returns (bool);
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
