@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IPriceFeed} from "./interface/IPriceFeed.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {RoleManager} from "./abstract/RoleManager.sol";
+import {IPriceFeed} from "./interface/IPriceFeed.sol";
 import {IPriceOracle} from "./interface/IPriceOracle.sol";
 import {CalcGasFeeLib} from "./lib/CalcGasFeeLib.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Const} from "./lib/Const.sol";
 
 /**
  * @title PriceFeed
@@ -26,9 +27,6 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     error PriceFeedNoSource(address token);
 
     event PriceFeedPriceUpdated(address indexed token, uint price, uint timestamp);
-
-    /// @dev Special address representing the native token (e.g., ETH, BNB)
-    address private constant NATIVE_TOKEN = address(1);
 
     /// @dev Decimal places used for dollar price representation
     uint8 public dollarDecimals;
@@ -48,21 +46,15 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      * @notice Initializes the price feed contract
      * @param owner Admin address with price update privileges
      * @param _dollarDecimals Precision for price representation
-     * @param ethPrice Initial ETH price in USD (with dollarDecimals precision)
      */
-    function initialize(address owner, uint8 _dollarDecimals, uint ethPrice) public initializer {
+    function initialize(address owner, uint8 _dollarDecimals) public initializer {
         __UUPSUpgradeable_init();
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
+        _grantRole(Const.UPDATOR_ROLE, owner);
 
         dollarDecimals = _dollarDecimals;
         updatedAt = block.timestamp;
-
-        // Initialize NATIVE_TOKEN with default price
-        _priceData[NATIVE_TOKEN] =
-            PriceData({token: NATIVE_TOKEN, price: (10 ** dollarDecimals) / 1000, lastUpdated: block.timestamp});
-        // Set initial ETH price
-        _nativeTokenPrice[1] = ethPrice;
     }
 
     /**
@@ -96,7 +88,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
         require(exist[0], PriceFeedNoSource(tokenA));
         require(exist[1], PriceFeedNoSource(tokenB));
 
-        (uint8 decimalA, uint8 decimalB) = (CalcGasFeeLib.decimals(this, tokenA), CalcGasFeeLib.decimals(this, tokenB));
+        (uint8 decimalA, uint8 decimalB) = (CalcGasFeeLib.decimals(tokenA), CalcGasFeeLib.decimals(tokenB));
         price = CalcGasFeeLib.calculateAmountBWithPrice(1, prices[0], prices[1], decimalA, decimalB);
         return (price, updatedAt);
     }
@@ -200,10 +192,11 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function updatePrice(address[] memory tokens, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyRole(UPDATOR_ROLE)
+        onlyRole(Const.UPDATOR_ROLE)
     {
-        require(tokens.length == prices.length, PriceFeedInvalidLength());
-        for (uint i = 0; i < tokens.length;) {
+        uint tokensLen = tokens.length;
+        require(tokensLen == prices.length && tokensLen == pricesAt.length, PriceFeedInvalidLength());
+        for (uint i = 0; i < tokensLen;) {
             _updatePrice(tokens[i], prices[i], pricesAt[i]);
             unchecked {
                 ++i;
@@ -221,25 +214,17 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function updateNativeTokenPrice(uint[] memory chainIDs, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyRole(UPDATOR_ROLE)
+        onlyRole(Const.UPDATOR_ROLE)
     {
-        require(chainIDs.length == prices.length, PriceFeedInvalidLength());
-        for (uint i = 0; i < chainIDs.length;) {
+        uint chainsLen = chainIDs.length;
+        require(chainsLen == prices.length && chainsLen == pricesAt.length, PriceFeedInvalidLength());
+        for (uint i = 0; i < chainsLen;) {
             _updateNativeTokenPrice(chainIDs[i], prices[i], pricesAt[i]);
             unchecked {
                 ++i;
             }
         }
         updatedAt = block.timestamp;
-    }
-
-    /**
-     * @notice Returns the native token address constant
-     * @dev Used to identify the native token in the system
-     * @return Address constant representing the native token
-     */
-    function nativeToken() public pure returns (address) {
-        return NATIVE_TOKEN;
     }
 
     /**
@@ -251,9 +236,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function _updatePrice(address token, uint price, uint priceAt) private {
         require(price != 0, PriceFeedCanNotZeroValue("price"));
-        require(
-            priceAt == type(uint).max || priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp)
-        );
+        require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _tokens.add(token);
         _priceData[token] = PriceData({token: token, price: price, lastUpdated: priceAt});
         emit PriceFeedPriceUpdated(token, price, priceAt);
@@ -268,9 +251,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function _updateNativeTokenPrice(uint chainID, uint price, uint priceAt) private {
         require(price != 0, PriceFeedCanNotZeroValue("price"));
-        require(
-            priceAt == type(uint).max || priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp)
-        );
+        require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _nativeTokenPrice[chainID] = price;
     }
 

@@ -10,12 +10,6 @@ abstract contract RoleManager is AccessControlUpgradeable {
     error RoleManagerAlreadyHasRole(address account, bytes32 role);
     error RoleManagerDoesNotHaveRole(address account, bytes32 role);
 
-    bytes32 internal constant ADMIN_ROLE = ("ADMIN");
-    bytes32 internal constant OPERATOR_ROLE = ("OPERATOR");
-    bytes32 internal constant VALIDATOR_ROLE = ("VALIDATOR");
-    bytes32 internal constant UPDATOR_ROLE = ("UPDATOR");
-    bytes32 internal constant BRIDGE_ROLE = ("BRIDGE");
-
     mapping(bytes32 role => EnumerableSet.AddressSet) private _roles;
 
     uint[49] private __gap;
@@ -30,13 +24,13 @@ abstract contract RoleManager is AccessControlUpgradeable {
     }
 
     function grantRoleBatch(bytes32 role, address[] memory accounts) external onlyRole(getRoleAdmin(role)) {
-        for (uint i = 0; i < accounts.length; i++) {
+        for (uint i = 0; i < accounts.length; ++i) {
             _grantRole(role, accounts[i]);
         }
     }
 
     function revokeRoleBatch(bytes32 role, address[] memory accounts) external onlyRole(getRoleAdmin(role)) {
-        for (uint i = 0; i < accounts.length; i++) {
+        for (uint i = 0; i < accounts.length; ++i) {
             _revokeRole(role, accounts[i]);
         }
     }

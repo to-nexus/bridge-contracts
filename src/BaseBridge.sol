@@ -12,7 +12,8 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {BridgeRegistry} from "./abstract/BridgeRegistry.sol";
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IBaseBridge} from "./interface/IBaseBridge.sol";
-import {IBridgeManager} from "./interface/IBridgeManager.sol";
+import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
+import {Const} from "./lib/Const.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
 
 /**
@@ -103,9 +104,16 @@ contract BaseBridge is
      * @param to Recipient address
      * @param value Amount of tokens to be received
      * @param time Timestamp when operation entered pending state
+     * @param status Status of the pending operation
      */
     event BridgePending(
-        uint indexed fromChainID, uint indexed index, IERC20 indexed toToken, address to, uint value, uint time
+        uint indexed fromChainID,
+        uint indexed index,
+        IERC20 indexed toToken,
+        address to,
+        uint value,
+        uint time,
+        Const.FinalizeStatus status
     );
 
     /**
@@ -116,16 +124,13 @@ contract BaseBridge is
      */
     event VerificationDelayExpirationSet(uint indexed fromChainID, uint indexed index, uint delay);
 
-    /// @dev Native token representation address
-    address internal constant NATIVE_TOKEN = address(1);
-
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
         "FinalizeBridge(uint256 fromChainID,uint256 index,address toToken,address to,uint256 value,bytes extraData)"
     );
 
     /// @dev Fee management contract
-    IBridgeManager public bridgeManager;
+    IBridgeVerifier public bridgeVerifier;
 
     /// @dev dev walelt
     address payable private _dev;
@@ -300,28 +305,26 @@ contract BaseBridge is
         uint index = _useFinalizeIndex(args.fromChainID);
         require(args.index == index, BaseBridgeInvalidIndex(index, args.index));
 
-        _validateSignature(
-            keccak256(
-                abi.encode(FINALIZE_TYPEHASH, args.index, address(args.toToken), args.to, args.value, args.extraData)
-            ),
-            v,
-            r,
-            s
+        bytes32 messageHash = keccak256(
+            abi.encode(FINALIZE_TYPEHASH, args.index, address(args.toToken), args.to, args.value, args.extraData)
         );
+        _validateSignature(messageHash, v, r, s);
 
-        bool ok;
+        Const.FinalizeStatus status;
         bytes memory reason;
         bool delay;
         {
-            (ok, reason, delay) = _checkFinalizeAmount(args.fromChainID, address(args.toToken), args.value);
-            if (ok) (ok, reason) = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+            (status, delay) = _checkFinalizeAmount(args.fromChainID, address(args.toToken), args.value);
+            if (status == Const.FinalizeStatus.Success) {
+                (status, reason) = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+            }
         }
 
-        if (ok) {
+        if (status == Const.FinalizeStatus.Success) {
             emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
         } else {
-            _setPendingArguments(args, reason, delay);
-            emit BridgePending(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
+            _setPendingArguments(args, status, reason, delay);
+            emit BridgePending(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp, status);
         }
         return true;
     }
@@ -371,58 +374,40 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Processes pending operations that have exceeded their safety deadline
-     * @dev Automatically processes expired pending operations up to a maximum count
-     * - Checks if any pending operations have expired
-     * - Iterates through all chains and their pending operations
-     * - Processes operations that have exceeded their safety deadline
-     * - Stops after processing maxCount operations
-     * - Skips paused chains and tokens
-     * @param maxCount Maximum number of operations to process
+     * @notice Attempts to process a pending bridge finalization
+     * @dev Retries a previously failed finalization
+     * - Validates pending operation exists
+     * - Verifies token is not paused
+     * - Checks verification delay has expired
+     * - Updates pending amounts
+     * - Processes token transfer/minting
+     * @param remoteChainIDs Chain IDs of the source chains
+     * @param indexes Indexes of the pending operations
+     * @return success Boolean indicating successful retry
      */
-    function releaseExpiredPending(uint maxCount) external whenNotPaused nonReentrant {
-        // Skip if no pending operations have expired
-        if (_latestExpiredPendingTime < block.timestamp) return;
-
-        uint count = 0;
-        uint[] memory chainIDs = _chains.values();
-        for (uint i = 0; i < chainIDs.length; ++i) {
-            uint chainID = chainIDs[i];
-            // Skip paused chains
-            if (_chainData[chainID].paused) continue;
-
-            uint[] memory indexes = _pendingIndex[chainID].values();
-            for (uint j = 0; j < indexes.length; j++) {
-                uint index = indexes[j];
-
-                PendingData memory pending = _pendingData[chainID][index];
-                // Process operations where:
-                // 1. The token is not paused
-                // 2. The operation has a safety deadline (not manually locked)
-                // 3. The safety deadline has passed
-                if (
-                    !_tokenPairs[pending.args.fromChainID][address(pending.args.toToken)].paused
-                        && pending.delayExpiration != 0 && pending.delayExpiration < block.timestamp
-                ) {
-                    // Process the pending operation
-                    _releasePending(chainID, index);
-                    if (++count >= maxCount) return;
-                }
-            }
+    function releasePendingBatch(uint[] memory remoteChainIDs, uint[] memory indexes) external returns (bool) {
+        require(remoteChainIDs.length == indexes.length, BaseBridgeNotMatchLength());
+        for (uint i = 0; i < indexes.length; ++i) {
+            releasePending(remoteChainIDs[i], indexes[i]);
         }
+        return true;
     }
 
     /**
      * @notice Manually processes a pending operation regardless of pause or safety deadline
      * @dev Admin-only function to force process a pending operation
      * - Bypasses token pause and safety deadline checks
-     * - Requires Admin role (ADMIN_ROLE)
+     * - Requires Admin role (Const.ADMIN_ROLE)
      * - Verifies pending operation exists
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
      * @return success Boolean indicating successful processing
      */
-    function manualProcessPending(uint remoteChainID, uint index) external onlyRole(ADMIN_ROLE) returns (bool) {
+    function manualProcessPending(uint remoteChainID, uint index)
+        external
+        onlyRole(Const.VERIFIER_ROLE)
+        returns (bool)
+    {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
         return _releasePending(remoteChainID, index);
     }
@@ -430,13 +415,16 @@ contract BaseBridge is
     /**
      * @notice Locks a pending operation to prevent automatic processing
      * @dev Sets the safety deadline to maximum uint value
-     * - Requires Admin role (ADMIN_ROLE)
+     * - Requires Admin role (Const.ADMIN_ROLE)
      * - Verifies pending operation exists
      * - Emits PendingDataLocked event
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
      */
-    function setVerificationDelayExpiration(uint remoteChainID, uint index, uint delay) external onlyRole(ADMIN_ROLE) {
+    function setVerificationDelayExpiration(uint remoteChainID, uint index, uint delay)
+        external
+        onlyRole(Const.VERIFIER_ROLE)
+    {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
         uint expiration = block.timestamp + delay;
         _pendingData[remoteChainID][index].delayExpiration = expiration;
@@ -487,21 +475,19 @@ contract BaseBridge is
      * @param fromChainID Source chain ID
      * @param token Token address
      * @param value Amount to verify
-     * @return ok Whether amount passed validation
-     * @return reason Error message if validation failed
+     * @return status Success status
      * @return delay Whether verification delay should be applied
      */
     function _checkFinalizeAmount(uint fromChainID, address token, uint value)
         internal
-        returns (bool ok, bytes memory reason, bool delay)
+        returns (Const.FinalizeStatus status, bool delay)
     {
         TokenPair memory tokenPair = _tokenPairs[fromChainID][token];
-        if (tokenPair.paused) return (false, "token paused", false);
-        if (address(bridgeManager) == address(0)) return (true, "", false);
+        if (tokenPair.paused) return (Const.FinalizeStatus.TokenPaused, false);
+        if (address(bridgeVerifier) == address(0)) return (Const.FinalizeStatus.Success, false);
 
-        (ok, reason) = bridgeManager.validateBridgeTokenValue(IERC20(token), value);
-        if (!ok) return (false, reason, true);
-        return (true, "", false);
+        status = bridgeVerifier.validateBridgeTokenValue(IERC20(token), value);
+        if (Const.FinalizeStatus.Success != status) delay = true;
     }
 
     /**
@@ -511,15 +497,17 @@ contract BaseBridge is
      * @param toToken Destination token
      * @param to Recipient address
      * @param value Amount to transfer/mint
-     * @return ok Whether operation succeeded
+     * @return status Success status
      * @return reason Error message if operation failed
      */
     function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value)
         internal
-        returns (bool ok, bytes memory reason)
+        returns (Const.FinalizeStatus status, bytes memory reason)
     {
-        if (address(toToken) == NATIVE_TOKEN) {
-            return _safeCall(payable(to), value, "");
+        if (address(toToken) == Const.NATIVE_TOKEN) {
+            bool ok;
+            (ok, reason) = _safeCall(payable(to), value, "");
+            status = ok ? Const.FinalizeStatus.Success : Const.FinalizeStatus.Reverted;
         } else if (value != 0) {
             if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
                 return _transferERC20(fromChainID, toToken, to, value);
@@ -542,8 +530,9 @@ contract BaseBridge is
     function _releasePending(uint remoteChainID, uint index) private returns (bool) {
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
 
-        (bool ok, bytes memory reason) = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
-        require(ok, string(reason));
+        (Const.FinalizeStatus status, bytes memory reason) =
+            _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+        require(status == Const.FinalizeStatus.Success, string(abi.encode(status, reason)));
 
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
         return true;
@@ -615,7 +604,7 @@ contract BaseBridge is
 
     /**
      * @notice Estimates the fee for bridging a token
-     * @dev Queries the fee manager for calculated fee values
+     * @dev Queries the bridge verifier for calculated fee values
      * @param remoteChainID Target chain identifier
      * @param token Token to bridge
      * @param value Amount to bridge
@@ -628,7 +617,7 @@ contract BaseBridge is
         view
         returns (uint minimumValue, uint gasFee, uint exFee)
     {
-        (minimumValue, gasFee, exFee) = bridgeManager.calculateFee(remoteChainID, token, value);
+        (minimumValue, gasFee, exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
     }
 
     /**
@@ -660,9 +649,9 @@ contract BaseBridge is
         view
         returns (uint _gasFee, uint _exFee)
     {
-        if (address(bridgeManager) == address(0)) return (0, 0);
+        if (address(bridgeVerifier) == address(0)) return (0, 0);
         uint minimumValue;
-        (minimumValue, _gasFee, _exFee) = bridgeManager.calculateFee(remoteChainID, token, value);
+        (minimumValue, _gasFee, _exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
         require(value >= minimumValue && gasFee >= _gasFee && exFee >= _exFee, BaseBridgeInvalidAmount());
     }
 
@@ -679,7 +668,7 @@ contract BaseBridge is
      * @param fee Total fees to collect
      */
     function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal virtual {
-        if (address(token) == NATIVE_TOKEN) {
+        if (address(token) == Const.NATIVE_TOKEN) {
             // Handling native token transfers (e.g., CROSS, ETH, BNB)
             require(msg.value == value + fee, BaseBridgeInvalidMsgValue(value + fee, msg.value));
             if (fee != 0) {
@@ -712,18 +701,18 @@ contract BaseBridge is
      * @param token Token to transfer
      * @param to Recipient address
      * @param value Amount to transfer
-     * @return ok Success status
+     * @return status Success status
      * @return reason Error message if failed
      */
     function _transferERC20(uint remoteChainID, IERC20 token, address to, uint value)
         private
-        returns (bool ok, bytes memory reason)
+        returns (Const.FinalizeStatus status, bytes memory reason)
     {
         try IERC20(token).transfer(to, value) returns (bool success) {
-            ok = success;
+            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.TransferFailed;
             if (success) _withdrawToken(remoteChainID, address(token), value);
-            else reason = "transfer failed";
         } catch (bytes memory lowLevelData) {
+            status = Const.FinalizeStatus.TransferFailed;
             reason = lowLevelData;
         }
     }
@@ -734,17 +723,17 @@ contract BaseBridge is
      * @param token Token to mint
      * @param to Recipient address
      * @param value Amount to mint
-     * @return ok Success status
+     * @return status Success status
      * @return reason Error message if failed
      */
     function _mintCrossMintableERC20(IERC20 token, address to, uint value)
         private
-        returns (bool ok, bytes memory reason)
+        returns (Const.FinalizeStatus status, bytes memory reason)
     {
         try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
-            ok = success;
-            if (!success) reason = "mint failed";
+            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.MintFailed;
         } catch (bytes memory lowLevelData) {
+            status = Const.FinalizeStatus.MintFailed;
             reason = lowLevelData;
         }
     }
@@ -760,7 +749,7 @@ contract BaseBridge is
      * @dev Controls whether bridge operations can be executed
      * @param set True to pause, false to unpause
      */
-    function setPause(bool set) external onlyRole(OPERATOR_ROLE) {
+    function setPause(bool set) external onlyRole(Const.OPERATOR_ROLE) {
         if (set) _pause();
         else _unpause();
     }
@@ -776,12 +765,12 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Sets the fee manager contract
-     * @dev Updates the contract used for fee calculations
-     * @param _bridgeManager New fee manager address
+     * @notice Sets the bridge verifier contract
+     * @dev Updates the contract used for bridge verification
+     * @param _bridgeVerifier New bridge verifier address
      */
-    function setBridgeManager(IBridgeManager _bridgeManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        bridgeManager = _bridgeManager;
+    function setBridgeVerifier(IBridgeVerifier _bridgeVerifier) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        bridgeVerifier = _bridgeVerifier;
     }
 
     /**

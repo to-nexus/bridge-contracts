@@ -6,9 +6,10 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IBridgeRegistry} from "../interface/IBridgeRegistry.sol";
+
+import {Const} from "../lib/Const.sol";
 import {ICrossMintableERC20Code} from "../token/ICrossMintableERC20Code.sol";
 import {RoleManager} from "./RoleManager.sol";
-
 /**
  * @title BridgeRegistry
  * @notice Registry managing token pairs and chain information for the bridge
@@ -43,6 +44,7 @@ import {RoleManager} from "./RoleManager.sol";
  *   delayExpiration: Timestamp after which pending operation can be processed
  * }
  */
+
 abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -57,8 +59,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryZeroAddress();
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
-    error RegistryChainPauseNotChanged(uint remoteChainID);
-    error RegistryTokenPauseNotChanged(address token);
     error RegistryBalanceLow(uint remoteChainID, address token, uint value, uint deposited, uint pendingAmount);
     error RegistryFactoryNotSet();
 
@@ -110,9 +110,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /// @dev Factory contract for creating new CrossMintable tokens
     ICrossMintableERC20Code public crossMintableERC20Code;
 
-    /// @dev Timestamp of the latest pending operation that will expire
-    uint internal _latestExpiredPendingTime;
-
     /// @dev Delay period for verification (24 hours)
     uint private _verificationDelay;
 
@@ -135,12 +132,12 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     mapping(uint => mapping(uint => PendingData)) internal _pendingData;
 
     /// @dev Storage gap for future upgradessetCrossMintableERC20Code
-    uint[40] private __gap;
+    uint[41] private __gap;
 
     /**
      * @notice Initializes the BridgeRegistry
      * @dev Sets up initial state
-     * - Grants Admin role to contract owner using ADMIN_ROLE identifier
+     * - Grants Admin role to contract owner using Const.ADMIN_ROLE identifier
      * - Sets verification delay to 24 hours
      */
     function __BridgeRegistry_init() internal onlyInitializing {
@@ -192,7 +189,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken)
         public
-        onlyRole(ADMIN_ROLE)
+        onlyRole(Const.ADMIN_ROLE)
     {
         if (_chains.add(remoteChainID)) {
             _chainData[remoteChainID] =
@@ -223,7 +220,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param remoteChainID Chain ID to unregister from
      * @param token Token address to unregister
      */
-    function unregisterToken(uint remoteChainID, address token) external onlyRole(ADMIN_ROLE) {
+    function unregisterToken(uint remoteChainID, address token) external onlyRole(Const.ADMIN_ROLE) {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
         delete (_tokenPairs[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
@@ -257,7 +254,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param remoteChainID Chain ID to pause
      * @param pause Whether to pause (true) or unpause (false)
      */
-    function setChainPause(uint remoteChainID, bool pause) external onlyRole(OPERATOR_ROLE) {
+    function setChainPause(uint remoteChainID, bool pause) external onlyRole(Const.OPERATOR_ROLE) {
         require(_chains.contains(remoteChainID), RegistryNotExistChain(remoteChainID));
         _chainData[remoteChainID].paused = pause;
         emit ChainPauseSet(remoteChainID, pause);
@@ -273,7 +270,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param token Token address to pause
      * @param pause Whether to pause (true) or unpause (false)
      */
-    function setTokenPause(uint remoteChainID, address token, bool pause) external onlyRole(OPERATOR_ROLE) {
+    function setTokenPause(uint remoteChainID, address token, bool pause) external onlyRole(Const.OPERATOR_ROLE) {
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
         _tokenPairs[remoteChainID][token].paused = pause;
         emit TokenPauseSet(remoteChainID, token, pause);
@@ -284,7 +281,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @dev Updates the delay period for verification
      * @param delay New delay value in seconds
      */
-    function setVerificationDelay(uint delay) external onlyRole(ADMIN_ROLE) {
+    function setVerificationDelay(uint delay) external onlyRole(Const.ADMIN_ROLE) {
         _verificationDelay = delay;
         emit VerificationDelaySet(delay);
     }
@@ -372,15 +369,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     }
 
     /**
-     * @notice Checks if there are any expired pending operations
-     * @dev Iterates through all chains and checks if any pending operations have expired
-     * @return true if there are expired pending operations, false otherwise
-     */
-    function hasExpiredPending() external view returns (bool) {
-        return _latestExpiredPendingTime >= block.timestamp;
-    }
-
-    /**
      * @notice Validates token registration and status
      * @dev Internal function to check token can be used for bridging
      * - Verifies token is registered
@@ -459,20 +447,24 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Updates pending amounts for origin tokens
      * - Updates verification delay expiration for delayed processing
      * @param args Finalization arguments to store
+     * @param status Status of the pending operation
      * @param reason Error message explaining pending status
      * @param delay Whether to delay processing (verification delay)
      */
-    function _setPendingArguments(FinalizeArguments calldata args, bytes memory reason, bool delay) internal {
+    function _setPendingArguments(
+        FinalizeArguments calldata args,
+        Const.FinalizeStatus status,
+        bytes memory reason,
+        bool delay
+    ) internal {
         require(_pendingIndex[args.fromChainID].add(args.index), RegistryExistIndex(args.index));
 
-        uint expiration = 0;
-        if (delay) {
-            expiration = block.timestamp + _verificationDelay;
-            _latestExpiredPendingTime = block.timestamp + _verificationDelay;
-        }
-
-        _pendingData[args.fromChainID][args.index] =
-            PendingData({args: args, reason: reason, delayExpiration: expiration});
+        _pendingData[args.fromChainID][args.index] = PendingData({
+            args: args,
+            status: status,
+            reason: reason,
+            delayExpiration: delay ? block.timestamp + _verificationDelay : 0
+        });
 
         TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
         if (tokenPair.isOrigin) tokenPair.pendingAmount += args.value;

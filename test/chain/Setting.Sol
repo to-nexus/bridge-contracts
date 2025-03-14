@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeManager} from "../../src/BridgeManager.sol";
+import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -32,6 +32,7 @@ contract SettingTest is Test {
     uint internal constant CROSS_CHAIN_ID = 612055;
     IERC20 internal constant NATIVE_TOKEN = IERC20(address(1));
     uint internal constant INITIAL_SUPPLY = 1000000000 * 1e18;
+    uint8 internal constant DOLLAR_DECIMALS = 6;
 
     uint internal ethereumForkID;
     uint internal crossForkID;
@@ -97,17 +98,17 @@ contract SettingTest is Test {
         vm.stopPrank();
     }
 
-    function estimateMaxValue(BridgeManager bridgeManager, uint remoteChainID, IERC20 token, uint totalValue)
+    function estimateMaxValue(BridgeVerifier bridgeVerifier, uint remoteChainID, IERC20 token, uint totalValue)
         internal
         view
         returns (bool ok, uint value, uint gasFee, uint exFee)
     {
         uint minimumAmount;
         uint exFeeRate;
-        (minimumAmount, gasFee, exFeeRate) = bridgeManager.getTokenConfig(remoteChainID, token);
+        (minimumAmount, gasFee, exFeeRate) = bridgeVerifier.getTokenConfig(remoteChainID, token);
         if (totalValue <= gasFee) return (false, 0, 0, 0);
 
-        uint denominator = bridgeManager.denominator();
+        uint denominator = bridgeVerifier.denominator();
         uint v = totalValue - gasFee;
         value = v.mulDiv(denominator, (denominator + exFeeRate));
         exFee = value.mulDiv(exFeeRate, denominator);

@@ -9,12 +9,12 @@ import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEnde
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {IPriceFeed} from "./PriceFeed.sol";
+import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
 import {CalcGasFeeLib} from "./lib/CalcGasFeeLib.sol";
-
-import {IBridgeManager} from "./interface/IBridgeManager.sol";
+import {Const} from "./lib/Const.sol";
 
 /**
- * @title BridgeManager
+ * @title BridgeVerifier
  * @notice Contract for calculating and managing bridge operation fees
  * @dev Provides fee calculations, token monitoring, and safety threshold management
  * Key features:
@@ -22,20 +22,20 @@ import {IBridgeManager} from "./interface/IBridgeManager.sol";
  * - Token volume monitoring for security threshold enforcement
  * - Time-window based transfer volume restrictions
  */
-contract BridgeManager is AccessControl, IBridgeManager {
+contract BridgeVerifier is AccessControl, IBridgeVerifier {
     using Math for uint;
     using EnumerableSet for EnumerableSet.AddressSet;
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
     using CalcGasFeeLib for IPriceFeed;
 
-    error BridgeManagerChainAleadyExist(uint chainID);
-    error BridgeManagerCanNotZeroValue(string name);
-    error BridgeManagerInvalidLength();
+    error BridgeVerifierChainAleadyExist(uint chainID);
+    error BridgeVerifierCanNotZeroValue(string name);
+    error BridgeVerifierInvalidLength();
 
-    event BridgeManagerFinalizeBridgeGasSet(uint finalizeBridgeGas);
-    event BridgeManagerGasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
-    event BridgeManagerExchangeFeeUpdated(address indexed token, uint exFeeRate);
-    event BridgeManagerPriceFeedUpdated(IPriceFeed indexed priceFeed);
+    event BridgeVerifierFinalizeBridgeGasSet(uint finalizeBridgeGas);
+    event BridgeVerifierGasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
+    event BridgeVerifierExchangeFeeUpdated(address indexed token, uint exFeeRate);
+    event BridgeVerifierPriceFeedUpdated(IPriceFeed indexed priceFeed);
     event VerificationAmountThresholdSet(uint verificationAmountThreshold);
     event DefaultTokenPriceSet(uint defaultTokenPrice);
     event TimeWindowSet(uint timeWindow);
@@ -44,9 +44,6 @@ contract BridgeManager is AccessControl, IBridgeManager {
 
     /// @dev Base denominator for fee calculations (1000 = 100%)
     uint private constant DENOMINATOR = 1000;
-    bytes32 private constant ADMIN_ROLE = bytes32("ADMIN");
-    bytes32 private constant UPDATOR_ROLE = bytes32("UPDATOR");
-    bytes32 private constant BRIDGE_ROLE = bytes32("BRIDGE");
     uint private constant TOKEN_SCORE_MASK = type(uint).max >> 64;
 
     /// @dev Price feed contract for token price information
@@ -77,7 +74,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
     mapping(IERC20 => DoubleEndedQueue.Bytes32Deque) private _tokenMovementHistory;
 
     /**
-     * @notice Initializes the BridgeManager contract
+     * @notice Initializes the BridgeVerifier contract
      * @param initialOwner Admin address
      * @param _bridge Bridge contract address
      * @param finalizeBridgeGas Gas amount for finalization
@@ -99,12 +96,12 @@ contract BridgeManager is AccessControl, IBridgeManager {
         uint periodTotalValueThreshold,
         uint timeWindow
     ) {
-        require(finalizeBridgeGas != 0, BridgeManagerCanNotZeroValue("finalizeBridgeGas"));
-        require(initialOwner != address(0), BridgeManagerCanNotZeroValue("initialOwner"));
-        require(_bridge != address(0), BridgeManagerCanNotZeroValue("_bridge"));
+        require(finalizeBridgeGas != 0, BridgeVerifierCanNotZeroValue("finalizeBridgeGas"));
+        require(initialOwner != address(0), BridgeVerifierCanNotZeroValue("initialOwner"));
+        require(_bridge != address(0), BridgeVerifierCanNotZeroValue("_bridge"));
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
-        _grantRole(ADMIN_ROLE, initialOwner);
-        _grantRole(BRIDGE_ROLE, _bridge);
+        _grantRole(Const.ADMIN_ROLE, initialOwner);
+        _grantRole(Const.BRIDGE_ROLE, _bridge);
 
         _finalizeBridgeGas = finalizeBridgeGas;
         _defaultTokenPrice = defaultTokenPrice;
@@ -127,30 +124,34 @@ contract BridgeManager is AccessControl, IBridgeManager {
      *
      * @param token The token to verify
      * @param value The amount of tokens
-     * @return ok Boolean indicating verification passed
-     * @return reason Error message if verification failed
+     * @return status Success status
      */
     function validateBridgeTokenValue(IERC20 token, uint value)
         external
-        onlyRole(BRIDGE_ROLE)
-        returns (bool ok, bytes memory reason)
+        onlyRole(Const.BRIDGE_ROLE)
+        returns (Const.FinalizeStatus status)
     {
         // Verify token price and threshold
         (, uint score) = getTokenPriceWithValue(token, value);
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
-            return (false, "verification amount threshold exceeded");
+            return Const.FinalizeStatus.VerificationAmountThresholdExceeded;
         }
 
         // Manage history and verify thresholds
         DoubleEndedQueue.Bytes32Deque storage deque = _tokenMovementHistory[token];
-        uint currentTime = block.timestamp;
-        uint windowStartTime = currentTime - _timeWindow;
+        // Calculate current time period and the beginning of the monitoring window
+        uint currentTime = block.timestamp / Const.PERIOD_INTERVAL;
+        uint windowStartTime = (currentTime - _timeWindow) / Const.PERIOD_INTERVAL;
 
+        // Remove expired records (older than the window start time)
+        // and subtract their values from the current token volume tracking
         while (deque.length() > 0) {
             bytes32 frontRecord = deque.front();
+            // Extract timestamp from the upper 64 bits of the packed record
             uint recordTime = uint(frontRecord >> 192);
 
             if (recordTime < windowStartTime) {
+                // Extract score value from the lower 192 bits using bitmask
                 uint oldScore = uint(frontRecord) & TOKEN_SCORE_MASK;
                 uint currentScore = _tokenCurrentVolume[token];
                 _tokenCurrentVolume[token] = currentScore > oldScore ? currentScore - oldScore : 0;
@@ -160,15 +161,28 @@ contract BridgeManager is AccessControl, IBridgeManager {
             }
         }
 
-        bytes32 packedMovement = bytes32((currentTime << 192) | score);
-        deque.pushBack(packedMovement);
+        // Check for potential overflow before adding new score to the current volume
+        if (type(uint192).max - score < _tokenCurrentVolume[token]) {
+            return Const.FinalizeStatus.TokenCurrentVolumeOverflow;
+        }
+
+        if (_periodTotalValueThreshold != 0 && _tokenCurrentVolume[token] > _periodTotalValueThreshold) {
+            return Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
+        }
 
         _tokenCurrentVolume[token] += score;
 
-        if (_periodTotalValueThreshold != 0 && _tokenCurrentVolume[token] > _periodTotalValueThreshold) {
-            return (false, "period total value threshold exceeded");
+        // If there's already a record for the current time period,
+        // update it by combining with the new score rather than creating a duplicate entry
+        if (deque.length() != 0 && uint(deque.back() >> 192) == currentTime) {
+            score = uint(deque.popBack()) & TOKEN_SCORE_MASK;
         }
-        return (true, "");
+
+        // Create a new movement record by packing time (upper 64 bits) and score (lower 192 bits)
+        bytes32 packedMovement = bytes32((currentTime << 192) | score);
+        deque.pushBack(packedMovement);
+
+        return Const.FinalizeStatus.Success;
     }
 
     /**
@@ -201,7 +215,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * @return price Dollar price for a standard token unit
      */
     function getTokenPrice(IERC20 token) external view returns (bool exist, uint price) {
-        return getTokenPriceWithValue(token, (10 ** _priceFeed.decimals(address(token))));
+        return getTokenPriceWithValue(token, (10 ** CalcGasFeeLib.decimals(address(token))));
     }
 
     /**
@@ -219,7 +233,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
         if (address(_priceFeed) == address(0)) exist = false;
         else (exist, price,) = _priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) price = _defaultTokenPrice;
-        price = price.mulDiv(value, (10 ** _priceFeed.decimals(address(token))));
+        price = price.mulDiv(value, (10 ** CalcGasFeeLib.decimals(address(token))));
     }
 
     /**
@@ -267,7 +281,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
         if (tokenPrice == 0) {
             minimumValue = 1e18; // Default to 1 token with 18 decimals if price is unknown
         } else {
-            uint tokenDecimals = 10 ** _priceFeed.decimals(address(token));
+            uint tokenDecimals = 10 ** CalcGasFeeLib.decimals(address(token));
             minimumValue = _minimumTokenValue * tokenDecimals / tokenPrice;
         }
 
@@ -368,9 +382,9 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * @param remoteChainID Chain ID to update
      * @param gasPrice New gas price value
      */
-    function updateGasPrice(uint remoteChainID, uint gasPrice) external onlyRole(UPDATOR_ROLE) {
+    function updateGasPrice(uint remoteChainID, uint gasPrice) external onlyRole(Const.UPDATOR_ROLE) {
         _gasPrice[remoteChainID] = gasPrice;
-        emit BridgeManagerGasPriceUpdated(remoteChainID, gasPrice);
+        emit BridgeVerifierGasPriceUpdated(remoteChainID, gasPrice);
     }
 
     /**
@@ -383,12 +397,12 @@ contract BridgeManager is AccessControl, IBridgeManager {
      */
     function updateGasPriceBatch(uint[] memory remoteChainIDs, uint[] memory gasPrices)
         external
-        onlyRole(UPDATOR_ROLE)
+        onlyRole(Const.UPDATOR_ROLE)
     {
-        require(remoteChainIDs.length == gasPrices.length, BridgeManagerInvalidLength());
+        require(remoteChainIDs.length == gasPrices.length, BridgeVerifierInvalidLength());
         for (uint i = 0; i < remoteChainIDs.length; ++i) {
             _gasPrice[remoteChainIDs[i]] = gasPrices[i];
-            emit BridgeManagerGasPriceUpdated(remoteChainIDs[i], gasPrices[i]);
+            emit BridgeVerifierGasPriceUpdated(remoteChainIDs[i], gasPrices[i]);
         }
     }
 
@@ -400,10 +414,10 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * @param token Token to configure
      * @param exFeeRate Exchange fee rate
      */
-    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(ADMIN_ROLE) {
-        require(address(token) != address(0), BridgeManagerCanNotZeroValue("token"));
+    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(Const.ADMIN_ROLE) {
+        require(address(token) != address(0), BridgeVerifierCanNotZeroValue("token"));
         _exFeeRate[token] = exFeeRate;
-        emit BridgeManagerExchangeFeeUpdated(address(token), exFeeRate);
+        emit BridgeVerifierExchangeFeeUpdated(address(token), exFeeRate);
     }
 
     /**
@@ -414,8 +428,11 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * @param tokenList Array of token addresses
      * @param exFeeRateList Array of exchange fee rates
      */
-    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList) external onlyRole(ADMIN_ROLE) {
-        require(tokenList.length == exFeeRateList.length, BridgeManagerInvalidLength());
+    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList)
+        external
+        onlyRole(Const.ADMIN_ROLE)
+    {
+        require(tokenList.length == exFeeRateList.length, BridgeVerifierInvalidLength());
         for (uint i = 0; i < tokenList.length; ++i) {
             setExFeeRate(tokenList[i], exFeeRateList[i]);
         }
@@ -429,10 +446,10 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Emits update event
      * @param finalizeBridgeGas New gas amount
      */
-    function setFinalizeBridgeGas(uint finalizeBridgeGas) external onlyRole(ADMIN_ROLE) {
-        require(finalizeBridgeGas != 0, BridgeManagerCanNotZeroValue("finalizeBridgeGas"));
+    function setFinalizeBridgeGas(uint finalizeBridgeGas) external onlyRole(Const.ADMIN_ROLE) {
+        require(finalizeBridgeGas != 0, BridgeVerifierCanNotZeroValue("finalizeBridgeGas"));
         _finalizeBridgeGas = finalizeBridgeGas;
-        emit BridgeManagerFinalizeBridgeGasSet(_finalizeBridgeGas);
+        emit BridgeVerifierFinalizeBridgeGasSet(_finalizeBridgeGas);
     }
 
     /**
@@ -442,7 +459,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Emits update event
      * @param defaultTokenPrice New default token price value
      */
-    function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(ADMIN_ROLE) {
+    function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(Const.ADMIN_ROLE) {
         _defaultTokenPrice = defaultTokenPrice;
         emit DefaultTokenPriceSet(defaultTokenPrice);
     }
@@ -454,16 +471,16 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Emits update event
      * @param exFeeRate New exchange fee rate
      */
-    function setDefaultExFeeRate(uint exFeeRate) external onlyRole(ADMIN_ROLE) {
+    function setDefaultExFeeRate(uint exFeeRate) external onlyRole(Const.ADMIN_ROLE) {
         _defaultExFeeRate = exFeeRate;
-        emit BridgeManagerExchangeFeeUpdated(address(0), _defaultExFeeRate);
+        emit BridgeVerifierExchangeFeeUpdated(address(0), _defaultExFeeRate);
     }
 
     /**
      * @notice Sets the minimum token value in USD
      * @param minimumTokenValue New minimum token value
      */
-    function setMinimumTokenValue(uint minimumTokenValue) external onlyRole(ADMIN_ROLE) {
+    function setMinimumTokenValue(uint minimumTokenValue) external onlyRole(Const.ADMIN_ROLE) {
         _minimumTokenValue = minimumTokenValue;
         emit MinimumTokenValueSet(minimumTokenValue);
     }
@@ -475,7 +492,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Updates verification amount threshold value
      * @param verificationAmountThreshold New verification amount threshold value
      */
-    function setVerificationAmountThreshold(uint verificationAmountThreshold) external onlyRole(ADMIN_ROLE) {
+    function setVerificationAmountThreshold(uint verificationAmountThreshold) external onlyRole(Const.ADMIN_ROLE) {
         _verificationAmountThreshold = verificationAmountThreshold;
         emit VerificationAmountThresholdSet(verificationAmountThreshold);
     }
@@ -488,7 +505,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Emits update event
      * @param timeWindow New time window duration in seconds
      */
-    function setTimeWindow(uint timeWindow) external onlyRole(ADMIN_ROLE) {
+    function setTimeWindow(uint timeWindow) external onlyRole(Const.ADMIN_ROLE) {
         _timeWindow = timeWindow;
         emit TimeWindowSet(timeWindow);
     }
@@ -501,7 +518,7 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Emits update event
      * @param periodTotalValueThreshold New period total value threshold
      */
-    function setPeriodTotalValueThreshold(uint periodTotalValueThreshold) external onlyRole(ADMIN_ROLE) {
+    function setPeriodTotalValueThreshold(uint periodTotalValueThreshold) external onlyRole(Const.ADMIN_ROLE) {
         _periodTotalValueThreshold = periodTotalValueThreshold;
         emit PeriodTotalValueThresholdSet(periodTotalValueThreshold);
     }
@@ -514,10 +531,10 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Emits update event
      * @param priceFeed New price feed contract
      */
-    function setPriceFeed(IPriceFeed priceFeed) external onlyRole(ADMIN_ROLE) {
-        require(address(priceFeed) != address(0), BridgeManagerCanNotZeroValue("priceFeed")); // allow zero address
+    function setPriceFeed(IPriceFeed priceFeed) external onlyRole(Const.ADMIN_ROLE) {
+        require(address(priceFeed) != address(0), BridgeVerifierCanNotZeroValue("priceFeed")); // allow zero address
         _priceFeed = priceFeed;
-        emit BridgeManagerPriceFeedUpdated(_priceFeed);
+        emit BridgeVerifierPriceFeedUpdated(_priceFeed);
     }
 
     /**
@@ -526,8 +543,8 @@ contract BridgeManager is AccessControl, IBridgeManager {
      * - Sets price feed to zero address
      * - Emits update event
      */
-    function removePriceFeed() external onlyRole(ADMIN_ROLE) {
+    function removePriceFeed() external onlyRole(Const.ADMIN_ROLE) {
         _priceFeed = IPriceFeed(address(0));
-        emit BridgeManagerPriceFeedUpdated(_priceFeed);
+        emit BridgeVerifierPriceFeedUpdated(_priceFeed);
     }
 }

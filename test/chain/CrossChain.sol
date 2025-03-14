@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeManager} from "../../src/BridgeManager.sol";
+import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
 import {CrossBridge} from "../../src/CrossBridge.sol";
 
 import {IPriceFeed, PriceFeed} from "../../src/PriceFeed.sol";
@@ -23,7 +23,7 @@ contract CrossChainTest is SettingTest {
 
     uint internal nextIndexCross;
     CrossBridge internal bridgeCross;
-    BridgeManager internal bridgeManagerCross;
+    BridgeVerifier internal bridgeVerifierCross;
     PriceFeed internal priceFeed;
     ICrossMintableERC20Code internal crossMintableERC20Code;
 
@@ -70,34 +70,54 @@ contract CrossChainTest is SettingTest {
             address priceFeedImpl = address(new PriceFeed());
             ERC1967Proxy priceFeedProxy = new ERC1967Proxy(priceFeedImpl, bytes(""));
             priceFeed = PriceFeed(address(priceFeedProxy));
-            priceFeed.initialize(CrossOWNER, uint8(6), 100000);
+            priceFeed.initialize(CrossOWNER, DOLLAR_DECIMALS);
+
+            {
+                // token price update
+                address[] memory tokens = new address[](3);
+                uint[] memory prices = new uint[](3);
+                uint[] memory pricesAt = new uint[](3);
+
+                tokens[0] = address(weth);
+                prices[0] = 10 * (10 ** 6);
+                pricesAt[0] = 0;
+
+                tokens[1] = address(testTokenCross);
+                prices[1] = 1 * (10 ** 6);
+                pricesAt[1] = 0;
+
+                tokens[2] = address(NATIVE_TOKEN);
+                prices[2] = (10 ** DOLLAR_DECIMALS) / 10;
+                pricesAt[2] = 0;
+
+                priceFeed.updatePrice(tokens, prices, pricesAt);
+            }
+
+            {
+                // native token price update
+                uint[] memory chainIDs = new uint[](1);
+                uint[] memory prices = new uint[](1);
+                uint[] memory pricesAt = new uint[](1);
+
+                chainIDs[0] = ETHEREUM_CHAIN_ID;
+                prices[0] = 100_000;
+                pricesAt[0] = 0;
+
+                priceFeed.updateNativeTokenPrice(chainIDs, prices, pricesAt);
+            }
+
             priceFeed.grantRoleBatch(UPDATOR_ROLE, VALIDATORS);
 
-            bridgeManagerCross =
-                new BridgeManager(CrossOWNER, address(bridgeCross), 200000, 10000, 10, 10_000, 0, 0, 2 hours);
-            bridgeManagerCross.grantRole(UPDATOR_ROLE, CrossOWNER);
-            bridgeManagerCross.setPriceFeed(IPriceFeed(address(priceFeed)));
+            bridgeVerifierCross =
+                new BridgeVerifier(CrossOWNER, address(bridgeCross), 200000, 10000, 10, 10_000, 0, 0, 2 hours);
+            bridgeVerifierCross.grantRole(UPDATOR_ROLE, CrossOWNER);
+            bridgeVerifierCross.setPriceFeed(IPriceFeed(address(priceFeed)));
         }
 
-        bridgeCross.setBridgeManager(bridgeManagerCross);
+        bridgeCross.setBridgeVerifier(bridgeVerifierCross);
 
         vm.deal(address(bridgeCross), INITIAL_SUPPLY);
         vm.stopPrank();
-
-        address[] memory tokens = new address[](2);
-        uint[] memory prices = new uint[](2);
-        uint[] memory pricesAt = new uint[](2);
-
-        tokens[0] = address(weth);
-        prices[0] = 10 * (10 ** 6);
-        pricesAt[0] = type(uint).max;
-
-        tokens[1] = address(testTokenCross);
-        prices[1] = 1 * (10 ** 6);
-        pricesAt[1] = type(uint).max;
-
-        vm.prank(VALIDATOR1);
-        priceFeed.updatePrice(tokens, prices, pricesAt);
     }
 
     function crossIncrementIndex() public {
@@ -167,16 +187,16 @@ contract CrossChainTest is SettingTest {
 
     function crossCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
         vm.selectFork(crossForkID);
-        if (address(bridgeManagerCross) == address(0)) return (totalValue, 0, 0);
+        if (address(bridgeVerifierCross) == address(0)) return (totalValue, 0, 0);
 
         bool ok;
-        (ok, value, gas, ex) = estimateMaxValue(bridgeManagerCross, ETHEREUM_CHAIN_ID, token, totalValue);
+        (ok, value, gas, ex) = estimateMaxValue(bridgeVerifierCross, ETHEREUM_CHAIN_ID, token, totalValue);
         assertTrue(ok);
     }
 
     function crossGetTokenFee(IERC20 token) public returns (uint minimum, uint gasFee, uint exFeeRate) {
         vm.selectFork(crossForkID);
-        if (address(bridgeManagerCross) == address(0)) return (0, 0, 0);
-        (minimum, gasFee, exFeeRate) = bridgeManagerCross.getTokenConfig(ETHEREUM_CHAIN_ID, token);
+        if (address(bridgeVerifierCross) == address(0)) return (0, 0, 0);
+        (minimum, gasFee, exFeeRate) = bridgeVerifierCross.getTokenConfig(ETHEREUM_CHAIN_ID, token);
     }
 }

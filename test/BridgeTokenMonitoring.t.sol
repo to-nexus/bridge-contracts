@@ -1,27 +1,26 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeManager, IBridgeManager} from "../src/BridgeManager.sol";
+import {BridgeVerifier, IBridgeVerifier} from "../src/BridgeVerifier.sol";
 import {IPriceFeed, PriceFeed} from "../src/PriceFeed.sol";
+
+import {Const} from "../src/lib/Const.sol";
 import {BridgeTest} from "./Bridge.t.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {console} from "forge-std/Test.sol";
-
 /**
- * @title BridgeManagerTokenValueTest
- * @notice Test contract for the validateBridgeTokenValue function of BridgeManager
+ * @title BridgeVerifierTokenValueTest
+ * @notice Test contract for the validateBridgeTokenValue function of BridgeVerifier
  * @dev Tests various scenarios for token value validation including thresholds and time windows
  */
-contract BridgeManagerTokenValueTest is BridgeTest {
+
+contract BridgeVerifierTokenValueTest is BridgeTest {
     // Test variables
     uint private constant HIGH_TOKEN_PRICE = 10000 * (10 ** 6); // High token price (10000 USD)
     uint private constant TEST_VERIFICATION_AMOUNT_THRESHOLD = 100_000 * 1e6; // Verification threshold (set lower than token price)
     uint private constant TEST_PERIOD_TOTAL_VALUE_THRESHOLD = 500_000 * 1e6; // Period total value threshold
     uint private constant TEST_TIME_WINDOW = 1 hours; // Time window
-
-    // BridgeManager's BRIDGE_ROLE constant
-    bytes32 private constant BRIDGE_ROLE = bytes32("BRIDGE");
 
     function setUp() public override {
         super.setUp();
@@ -30,13 +29,13 @@ contract BridgeManagerTokenValueTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
-        // Modify existing bridgeManagerCross settings
-        bridgeManagerCross.setVerificationAmountThreshold(TEST_VERIFICATION_AMOUNT_THRESHOLD);
-        bridgeManagerCross.setPeriodTotalValueThreshold(TEST_PERIOD_TOTAL_VALUE_THRESHOLD);
-        bridgeManagerCross.setTimeWindow(TEST_TIME_WINDOW);
+        // Modify existing bridgeVerifierCross settings
+        bridgeVerifierCross.setVerificationAmountThreshold(TEST_VERIFICATION_AMOUNT_THRESHOLD);
+        bridgeVerifierCross.setPeriodTotalValueThreshold(TEST_PERIOD_TOTAL_VALUE_THRESHOLD);
+        bridgeVerifierCross.setTimeWindow(TEST_TIME_WINDOW);
 
-        // Grant BRIDGE_ROLE to CrossOWNER for testing
-        bridgeManagerCross.grantRole(BRIDGE_ROLE, CrossOWNER);
+        // Grant Const.BRIDGE_ROLE to CrossOWNER for testing
+        bridgeVerifierCross.grantRole(Const.BRIDGE_ROLE, CrossOWNER);
 
         // Set token price very high
         address[] memory tokens = new address[](2);
@@ -45,11 +44,11 @@ contract BridgeManagerTokenValueTest is BridgeTest {
 
         tokens[0] = address(weth);
         prices[0] = HIGH_TOKEN_PRICE;
-        pricesAt[0] = type(uint).max;
+        pricesAt[0] = 0;
 
         tokens[1] = address(testTokenCross);
         prices[1] = HIGH_TOKEN_PRICE;
-        pricesAt[1] = type(uint).max;
+        pricesAt[1] = 0;
 
         // Cannot call prank again while already in prank mode, so stop and restart
         vm.stopPrank();
@@ -66,10 +65,9 @@ contract BridgeManagerTokenValueTest is BridgeTest {
         vm.startPrank(CrossOWNER);
 
         uint smallAmount = 1 ether;
-        (bool ok, bytes memory reason) = bridgeManagerCross.validateBridgeTokenValue(IERC20(address(weth)), smallAmount);
+        (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(IERC20(address(weth)), smallAmount);
 
-        assertTrue(ok);
-        assertEq(reason, "");
+        assertTrue(status == Const.FinalizeStatus.Success);
 
         vm.stopPrank();
     }
@@ -83,9 +81,9 @@ contract BridgeManagerTokenValueTest is BridgeTest {
         vm.startPrank(CrossOWNER);
 
         // Perform the rest of the test
-        (bool success,) = bridgeManagerCross.validateBridgeTokenValue(testTokenCross, 20 ether);
+        (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 20 ether);
 
-        vm.assertFalse(success, "Token transfer should be rejected as it exceeds verification threshold");
+        assertTrue(status == Const.FinalizeStatus.VerificationAmountThresholdExceeded);
         vm.stopPrank();
     }
 
@@ -98,16 +96,15 @@ contract BridgeManagerTokenValueTest is BridgeTest {
         vm.startPrank(CrossOWNER);
 
         // Make multiple transfers to exceed the period total value threshold
-        for (uint i = 0; i < 5; i++) {
-            (bool ok,) = bridgeManagerCross.validateBridgeTokenValue(testTokenCross, 10 ether);
-            assertTrue(ok, "Token transfer should be accepted");
+        for (uint i = 0; i < 6; i++) {
+            (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 10 ether);
+            assertTrue(status == Const.FinalizeStatus.Success);
         }
 
         // The last transfer should fail as it exceeds the period total value threshold
-        (bool success, bytes memory reason) = bridgeManagerCross.validateBridgeTokenValue(testTokenCross, 10 ether);
+        (Const.FinalizeStatus s) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 10 ether);
 
-        assertFalse(success);
-        assertEq(reason, "period total value threshold exceeded");
+        assertTrue(s == Const.FinalizeStatus.PeriodTotalValueThresholdExceeded);
 
         vm.stopPrank();
     }
@@ -125,19 +122,18 @@ contract BridgeManagerTokenValueTest is BridgeTest {
         uint numTransfers = 5; // Total 50 ether, below threshold
 
         for (uint i = 0; i < numTransfers; i++) {
-            (bool success,) = bridgeManagerCross.validateBridgeTokenValue(IERC20(address(weth)), transferAmount);
-            assertTrue(success);
+            (Const.FinalizeStatus status) =
+                bridgeVerifierCross.validateBridgeTokenValue(IERC20(address(weth)), transferAmount);
+            assertTrue(status == Const.FinalizeStatus.Success);
         }
 
         // Move time forward past the time window
         vm.warp(block.timestamp + TEST_TIME_WINDOW + 1);
 
         // This transfer should pass since previous transfers are now outside the time window
-        (bool ok, bytes memory reason) =
-            bridgeManagerCross.validateBridgeTokenValue(IERC20(address(weth)), transferAmount);
+        (Const.FinalizeStatus s) = bridgeVerifierCross.validateBridgeTokenValue(IERC20(address(weth)), transferAmount);
 
-        assertTrue(ok);
-        assertEq(reason, "");
+        assertTrue(s == Const.FinalizeStatus.Success);
 
         vm.stopPrank();
     }
@@ -150,10 +146,9 @@ contract BridgeManagerTokenValueTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
-        (bool ok, bytes memory reason) = bridgeManagerCross.validateBridgeTokenValue(IERC20(address(weth)), 0);
+        (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(IERC20(address(weth)), 0);
 
-        assertTrue(ok);
-        assertEq(reason, "");
+        assertTrue(status == Const.FinalizeStatus.Success);
 
         vm.stopPrank();
     }
@@ -167,16 +162,15 @@ contract BridgeManagerTokenValueTest is BridgeTest {
         vm.startPrank(CrossOWNER);
 
         // Make multiple transfers to exceed the period total value threshold
-        for (uint i = 0; i < 5; i++) {
-            (bool ok,) = bridgeManagerCross.validateBridgeTokenValue(testTokenCross, 10 ether);
-            assertTrue(ok, "Token transfer should be accepted");
+        for (uint i = 0; i < 6; i++) {
+            (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 10 ether);
+            assertTrue(status == Const.FinalizeStatus.Success);
         }
 
         // The last transfer should fail as it exceeds the period total value threshold
-        (bool success, bytes memory reason) = bridgeManagerCross.validateBridgeTokenValue(testTokenCross, 10 ether);
+        (Const.FinalizeStatus s) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 10 ether);
 
-        assertFalse(success);
-        assertEq(reason, "period total value threshold exceeded");
+        assertTrue(s == Const.FinalizeStatus.PeriodTotalValueThresholdExceeded);
 
         vm.stopPrank();
     }

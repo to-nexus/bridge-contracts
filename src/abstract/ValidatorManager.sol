@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+import {Const} from "../lib/Const.sol";
 import {RoleManager} from "./RoleManager.sol";
-
 /**
  * @title ValidatorManager
  * @notice Abstract contract for managing bridge validators and signature verification
@@ -15,9 +15,11 @@ import {RoleManager} from "./RoleManager.sol";
  * - Duplicate signature detection
  * - Validator role management using bytes32 role identifiers
  */
+
 abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
     using ECDSA for bytes32;
 
+    error ValidatorThresholdCanNotZero();
     error ValidatorInsufficientSignature(uint length);
     error ValidatorInvalidSignatures(uint vLength, uint rLength, uint sLength);
     error ValidatorNotAuthorized(address account);
@@ -42,6 +44,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * @param threshold_ Required number of validator signatures
      */
     function __Validator_init(uint8 threshold_) internal onlyInitializing {
+        require(threshold_ != 0, ValidatorThresholdCanNotZero());
         __EIP712_init("Validator", "1.0.0");
         _threshold = threshold_;
     }
@@ -60,6 +63,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * @param threshold_ New threshold value
      */
     function changeThreshold(uint8 threshold_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(threshold_ != 0, ValidatorThresholdCanNotZero());
         _threshold = threshold_;
         emit ThresholdChanged(threshold_);
     }
@@ -70,7 +74,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * - Checks signature array lengths match
      * - Verifies minimum threshold of signatures
      * - Recovers signer addresses from signatures
-     * - Validates signers have Validator role using VALIDATOR_ROLE identifier
+     * - Validates signers have Validator role using Const.VALIDATOR_ROLE identifier
      * - Detects and ignores duplicate signatures
      * - Ensures final valid signature count meets threshold
      * @param messageHash Message hash to verify
@@ -95,11 +99,11 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
             address validator = _hashTypedDataV4(messageHash).recover(v[i], r[i], s[i]);
 
             // Verify signer has Validator role
-            require(hasRole(VALIDATOR_ROLE, validator), ValidatorNotAuthorized(validator));
+            require(hasRole(Const.VALIDATOR_ROLE, validator), ValidatorNotAuthorized(validator));
 
             // Check for duplicate signatures
             bool dup = false;
-            for (uint j = 0; j < valid; j++) {
+            for (uint j = 0; j < valid; ++j) {
                 if (validator == signed[j]) {
                     dup = true;
                     break;

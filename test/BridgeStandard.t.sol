@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
 
+import {Const} from "../src/lib/Const.sol";
 import {BridgeTest} from "./Bridge.t.sol";
 import {TestToken} from "./token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -73,7 +74,7 @@ contract BaseBridgeTest is BridgeTest {
 
     function test_fuzz_depositWithdraw_eth(uint amount) public {
         (uint minimum, uint gasFee, uint exFeeRate) = crossGetTokenFee(weth);
-        uint denom = bridgeManagerCross.denominator();
+        uint denom = bridgeVerifierCross.denominator();
         minimum = minimum + gasFee + (minimum * exFeeRate / denom);
         if (minimum < 10) minimum = 1000;
 
@@ -146,7 +147,7 @@ contract BaseBridgeTest is BridgeTest {
             assertEq(address(pendingArgs.args.toToken), address(testTokenEthereum));
             assertEq(pendingArgs.args.to, USER);
             assertEq(pendingArgs.args.value, value);
-            assertNotEq("", pendingArgs.reason);
+            assertTrue(Const.FinalizeStatus.Success != pendingArgs.status);
 
             // token start
             vm.prank(OWNER);
@@ -334,13 +335,6 @@ contract BaseBridgeTest is BridgeTest {
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         assertTrue(cross.allowance(USER, address(bridgeEthereum)) == 0);
-
-        // initiate
-        uint userTokenBalance = cross.balanceOf(USER);
-        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum));
-        vm.selectFork(crossForkID);
-        uint userCoinBalance = USER.balance;
-        uint bridgeCoinBalance = address(bridgeCross).balance;
 
         IBaseBridge.PermitArguments memory permitArgs;
         {

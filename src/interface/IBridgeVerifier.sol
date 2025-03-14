@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Const} from "../lib/Const.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IBridgeManager {
-    function validateBridgeTokenValue(IERC20 token, uint value) external returns (bool ok, bytes memory reason);
+interface IBridgeVerifier {
+    function validateBridgeTokenValue(IERC20 token, uint value) external returns (Const.FinalizeStatus status);
     function calculateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view
@@ -24,4 +25,3 @@ interface IBridgeManager {
     function getTokenMovementHistory(IERC20 token) external view returns (bytes32[] memory history);
     function denominator() external pure returns (uint);
 }
-

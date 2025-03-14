@@ -1,10 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Const} from "../lib/Const.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 interface IBridgeRegistry {
+    enum PendingType {
+        TokenPaused,
+        VerificationAmountThresholdExceeded,
+        PeriodTotalValueThresholdExceeded,
+        TokenCurrentVolumeOverflow,
+        TransferFailed,
+        MintFailed
+    }
+
     struct FinalizeArguments {
         uint fromChainID;
         uint index;
@@ -32,6 +42,7 @@ interface IBridgeRegistry {
 
     struct PendingData {
         FinalizeArguments args;
+        Const.FinalizeStatus status;
         uint delayExpiration;
         bytes reason;
     }
@@ -44,5 +55,4 @@ interface IBridgeRegistry {
     function getNextFinalizeIndex(uint remoteChainID) external view returns (uint);
     function isPending(uint remoteChainID, uint index) external view returns (bool);
     function getPendingArguments(uint remoteChainID, uint index) external view returns (PendingData memory);
-    function hasExpiredPending() external view returns (bool);
 }

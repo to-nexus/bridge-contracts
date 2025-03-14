@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {BaseBridge} from "../../src/BaseBridge.sol";
-import {BridgeManager, IBridgeManager} from "../../src/BridgeManager.sol";
+import {BridgeVerifier, IBridgeVerifier} from "../../src/BridgeVerifier.sol";
 
 import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {TestToken} from "../token/TestToken.sol";
@@ -18,7 +18,7 @@ contract EthereumChainTest is CrossChainTest {
 
     uint internal nextIndexEthereum;
     BaseBridge internal bridgeEthereum;
-    IBridgeManager internal bridgeManagerEthereum;
+    IBridgeVerifier internal bridgeVerifierEthereum;
 
     function setUp() public virtual override {
         super.setUp();
@@ -122,9 +122,9 @@ contract EthereumChainTest is CrossChainTest {
     function ethereumCalcFee(IERC20, uint) public pure returns (uint value, uint gas, uint ex) {
         return (value, 0, 0); // no fee
             // vm.selectFork(ethereumForkID);
-            // if (address(bridgeManagerEthereum) == address(0)) return (value, 0, 0);
+            // if (address(bridgeVerifierEthereum) == address(0)) return (value, 0, 0);
             // bool ok;
-            // (value, gas, ex, ok) = bridgeManagerEthereum.calculateMax(token, totalValue);
+            // (value, gas, ex, ok) = bridgeVerifierEthereum.calculateMax(token, totalValue);
             // assertTrue(ok);
     }
 }

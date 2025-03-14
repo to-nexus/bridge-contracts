@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeManager, IBridgeManager} from "../src/BridgeManager.sol";
+import {BridgeVerifier, IBridgeVerifier} from "../src/BridgeVerifier.sol";
 import {IPriceFeed} from "../src/PriceFeed.sol";
 import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
 import {BridgeTest} from "./Bridge.t.sol";
@@ -136,11 +136,11 @@ contract BridgeSetTest is BridgeTest {
 
         // Get bridge manager from the Cross bridge
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         // Set exchange fee rate for a token
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setExFeeRate(IERC20(address(weth)), exFeeRate);
+        bridgeVerifierCross.setExFeeRate(IERC20(address(weth)), exFeeRate);
 
         // Test setting exchange fee rates in batch
         IERC20[] memory tokens = new IERC20[](2);
@@ -152,7 +152,7 @@ contract BridgeSetTest is BridgeTest {
         rates[1] = 20; // 2%
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setExFeeRateBatch(tokens, rates);
+        bridgeVerifierCross.setExFeeRateBatch(tokens, rates);
     }
 
     /**
@@ -164,10 +164,10 @@ contract BridgeSetTest is BridgeTest {
 
         // Set finalize bridge gas on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setFinalizeBridgeGas(finalizeBridgeGas);
+        bridgeVerifierCross.setFinalizeBridgeGas(finalizeBridgeGas);
     }
 
     /**
@@ -179,10 +179,10 @@ contract BridgeSetTest is BridgeTest {
 
         // Set default token price on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setDefaultTokenPrice(defaultPrice);
+        bridgeVerifierCross.setDefaultTokenPrice(defaultPrice);
     }
 
     /**
@@ -194,10 +194,10 @@ contract BridgeSetTest is BridgeTest {
 
         // Set default exchange fee rate on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setDefaultExFeeRate(defaultExFeeRate);
+        bridgeVerifierCross.setDefaultExFeeRate(defaultExFeeRate);
     }
 
     /**
@@ -209,10 +209,10 @@ contract BridgeSetTest is BridgeTest {
 
         // Set minimum token value on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setMinimumTokenValue(minimumValue);
+        bridgeVerifierCross.setMinimumTokenValue(minimumValue);
     }
 
     /**
@@ -224,10 +224,10 @@ contract BridgeSetTest is BridgeTest {
 
         // Set verification amount threshold on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setVerificationAmountThreshold(threshold);
+        bridgeVerifierCross.setVerificationAmountThreshold(threshold);
     }
 
     /**
@@ -239,10 +239,10 @@ contract BridgeSetTest is BridgeTest {
 
         // Set time window on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setTimeWindow(timeWindow);
+        bridgeVerifierCross.setTimeWindow(timeWindow);
     }
 
     /**
@@ -254,10 +254,10 @@ contract BridgeSetTest is BridgeTest {
 
         // Set period total value threshold on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setPeriodTotalValueThreshold(threshold);
+        bridgeVerifierCross.setPeriodTotalValueThreshold(threshold);
     }
 
     /**
@@ -269,14 +269,14 @@ contract BridgeSetTest is BridgeTest {
 
         // Set price feed on Cross chain
         vm.selectFork(crossForkID);
-        BridgeManager bridgeManagerCross = BridgeManager(address(bridgeCross.bridgeManager()));
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
 
         vm.prank(CrossOWNER);
-        bridgeManagerCross.setPriceFeed(IPriceFeed(newPriceFeed));
+        bridgeVerifierCross.setPriceFeed(IPriceFeed(newPriceFeed));
 
         // Remove price feed
         vm.prank(CrossOWNER);
-        bridgeManagerCross.removePriceFeed();
+        bridgeVerifierCross.removePriceFeed();
     }
 
     /**
