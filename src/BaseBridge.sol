@@ -312,7 +312,15 @@ contract BaseBridge is
         require(args.index == index, BaseBridgeInvalidIndex(index, args.index));
 
         bytes32 messageHash = keccak256(
-            abi.encode(FINALIZE_TYPEHASH, args.index, address(args.toToken), args.to, args.value, args.extraData)
+            abi.encode(
+                FINALIZE_TYPEHASH,
+                args.fromChainID,
+                args.index,
+                address(args.toToken),
+                args.to,
+                args.value,
+                args.extraData
+            )
         );
         _validateSignature(messageHash, v, r, s);
 
