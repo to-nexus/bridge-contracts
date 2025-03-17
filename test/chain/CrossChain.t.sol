@@ -155,7 +155,7 @@ contract CrossChainTest is SettingTest {
         if (sigCount > threshold) sigCount = threshold;
 
         // create finalize validator signature
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, token, to, value, NULLDATA));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, ETHEREUM_CHAIN_ID, index, token, to, value, NULLDATA));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
