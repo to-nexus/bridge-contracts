@@ -12,15 +12,16 @@ library Const {
      * @dev Values indicating reasons why a bridge operation cannot be executed immediately
      */
     enum FinalizeStatus {
-        Success,
         Reverted,
+        Success,
         TokenPaused,
         VerificationAmountThresholdExceeded,
         PeriodTotalValueThresholdExceeded,
         TransferFailed,
         MintFailed,
         TokenScoreOverflow,
-        TokenCurrentVolumeOverflow
+        TokenCurrentVolumeOverflow,
+        CrossSupplyLimitExceeded
     }
 
     /**

@@ -57,11 +57,18 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     /// @dev Minimum token value for transfer (in dollars)
     uint private _minimumTokenValue;
     /// @dev Maximum dollar value for a single transaction before verification
+    /// @notice Limits the dollar value of a single bridge request. Amounts exceeding this threshold
+    /// @notice require additional verification procedures to ensure security for unusual large transfers.
     uint private _verificationAmountThreshold;
-    /// @dev Time window for monitoring token volume (in seconds)
-    uint private _timeWindow;
     /// @dev Maximum dollar value of tokens that can be processed within the time window
+    /// @notice Sets the maximum dollar value that can be transferred within the specified time window
+    /// @notice without additional verification. If this threshold is exceeded, additional security
+    /// @notice checks are triggered to protect against unusual transfer volume spikes.
     uint private _periodTotalValueThreshold;
+    /// @dev Time window for monitoring token volume (in seconds)
+    /// @notice Defines the duration for which token volume is monitored. The system tracks all
+    /// @notice token movements within this rolling time window to enforce the period total value threshold.
+    uint private _timeWindow;
 
     /// @dev Token-specific exchange fee rates
     mapping(IERC20 => uint) private _exFeeRate;

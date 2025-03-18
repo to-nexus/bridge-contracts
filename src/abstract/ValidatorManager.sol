@@ -98,9 +98,6 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
             // Recover signer address using EIP-712 typed data hash
             address validator = _hashTypedDataV4(messageHash).recover(v[i], r[i], s[i]);
 
-            // Verify signer has Validator role
-            require(hasRole(Const.VALIDATOR_ROLE, validator), ValidatorNotAuthorized(validator));
-
             // Check for duplicate signatures
             bool dup = false;
             for (uint j = 0; j < valid; ++j) {
@@ -111,7 +108,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
             }
 
             // Count unique valid signatures
-            if (!dup) {
+            if (!dup && hasRole(Const.VALIDATOR_ROLE, validator)) {
                 signed[valid] = validator;
                 unchecked {
                     ++valid;
