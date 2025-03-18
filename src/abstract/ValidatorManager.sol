@@ -31,10 +31,20 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
     event ThresholdChanged(uint8 threshold);
 
     /// @dev Minimum number of validator signatures required
-    uint8 private _threshold;
+    /// @custom:storage-location erc7201:cross.bridge.ValidatorManager
+    struct ValidatorManagerStorage {
+        uint8 _threshold;
+    }
 
-    /// @dev Storage gap for future upgrades
-    uint[49] private __gap;
+    // keccak256(abi.encode(uint256(keccak256("erc7201:cross.bridge.ValidatorManager")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ValidatorManagerStorageLocation =
+        0x303ad04a409295f82fe653ea0c2830faa7f9686cca19dded40cb6b9dfd913200;
+
+    function _getValidatorManagerStorage() private pure returns (ValidatorManagerStorage storage $) {
+        assembly {
+            $.slot := ValidatorManagerStorageLocation
+        }
+    }
 
     /**
      * @notice Initializes the ValidatorManager
@@ -46,7 +56,9 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
     function __Validator_init(uint8 threshold_) internal onlyInitializing {
         require(threshold_ != 0, ValidatorThresholdCanNotZero());
         __EIP712_init("Validator", "1.0.0");
-        _threshold = threshold_;
+
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        $._threshold = threshold_;
     }
 
     /**
@@ -54,7 +66,8 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * @return Current threshold value
      */
     function threshold() external view returns (uint8) {
-        return _threshold;
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        return $._threshold;
     }
 
     /**
@@ -64,7 +77,8 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      */
     function changeThreshold(uint8 threshold_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(threshold_ != 0, ValidatorThresholdCanNotZero());
-        _threshold = threshold_;
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        $._threshold = threshold_;
         emit ThresholdChanged(threshold_);
     }
 
@@ -82,15 +96,20 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * @param r Array of signature r values
      * @param s Array of signature s values
      */
-    function _validateSignature(bytes32 messageHash, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
-        internal
-        view
-    {
+    function _validateSignature(
+        bytes32 messageHash,
+        uint8[] memory v,
+        bytes32[] memory r,
+        bytes32[] memory s
+    ) internal view {
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+
         uint sigsLength = v.length;
         require(
-            sigsLength == r.length && sigsLength == s.length, ValidatorInvalidSignatures(sigsLength, r.length, s.length)
+            sigsLength == r.length && sigsLength == s.length,
+            ValidatorInvalidSignatures(sigsLength, r.length, s.length)
         );
-        require(sigsLength >= _threshold, ValidatorInsufficientSignature(sigsLength));
+        require(sigsLength >= $._threshold, ValidatorInsufficientSignature(sigsLength));
 
         uint valid = 0;
         address[] memory signed = new address[](sigsLength);
@@ -117,6 +136,6 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
         }
 
         // Ensure enough unique valid signatures
-        require(valid >= _threshold, ValidatorInsufficientSignature(valid));
+        require(valid >= $._threshold, ValidatorInsufficientSignature(valid));
     }
 }
