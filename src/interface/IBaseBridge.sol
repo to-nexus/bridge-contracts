@@ -28,11 +28,6 @@ interface IBaseBridge is IBridgeRegistry {
         bytes32 s;
     }
 
-    struct TokenMovement {
-        uint timestamp;
-        uint amount;
-    }
-
     function bridgeToken(
         uint toChainID,
         IERC20 fromToken,

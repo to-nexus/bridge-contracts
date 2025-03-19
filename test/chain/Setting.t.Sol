@@ -2,6 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
+
+import {Const} from "../../src/lib/Const.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -14,10 +16,10 @@ contract SettingTest is Test {
         "FinalizeBridge(uint256 fromChainID,uint256 index,address toToken,address to,uint256 value,bytes extraData)"
     );
 
-    bytes32 public constant VALIDATOR_ROLE = bytes32("VALIDATOR");
-    bytes32 public constant OPERATOR_ROLE = bytes32("OPERATOR");
-    bytes32 public constant ADMIN_ROLE = bytes32("ADMIN");
-    bytes32 public constant UPDATOR_ROLE = bytes32("UPDATOR");
+    bytes32 public constant VALIDATOR_ROLE = Const.VALIDATOR_ROLE;
+    bytes32 public constant OPERATOR_ROLE = Const.OPERATOR_ROLE;
+    bytes32 public constant ADMIN_ROLE = Const.ADMIN_ROLE;
+    bytes32 public constant UPDATOR_ROLE = Const.UPDATOR_ROLE;
 
     uint internal constant OWNER_PK = uint(bytes32("owner"));
     uint internal constant CrossOWNER_PK = uint(bytes32("cross_owner"));
@@ -80,6 +82,22 @@ contract SettingTest is Test {
         VALIDATOR5 = vm.addr(VALIDATOR_PK5);
 
         VALIDATORS = [VALIDATOR1, VALIDATOR2, VALIDATOR3, VALIDATOR4, VALIDATOR5];
+
+        // Sort VALIDATORS array in ascending order based on address values
+        for (uint i = 0; i < VALIDATORS.length - 1; i++) {
+            for (uint j = 0; j < VALIDATORS.length - i - 1; j++) {
+                if (uint160(VALIDATORS[j]) > uint160(VALIDATORS[j + 1])) {
+                    address temp = VALIDATORS[j];
+                    VALIDATORS[j] = VALIDATORS[j + 1];
+                    VALIDATORS[j + 1] = temp;
+
+                    // Also sort VALIDATOR_PKs in the same order
+                    uint tempPK = VALIDATOR_PKs[j];
+                    VALIDATOR_PKs[j] = VALIDATOR_PKs[j + 1];
+                    VALIDATOR_PKs[j + 1] = tempPK;
+                }
+            }
+        }
 
         vm.label(OWNER, "owner");
         vm.label(CrossOWNER, "cross_owner");

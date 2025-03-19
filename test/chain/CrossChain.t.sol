@@ -40,6 +40,7 @@ contract CrossChainTest is SettingTest {
             CrossBridge bridgeCrossImpl = new CrossBridge();
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
+            vm.deal(address(bridgeCross), INITIAL_SUPPLY);
             bridgeCross.initialize(CrossOWNER, threshold, REWARD);
 
             crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
@@ -50,6 +51,8 @@ contract CrossChainTest is SettingTest {
             bridgeCross.grantRole(UPDATOR_ROLE, CrossOWNER); // for test
             bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross));
             bridgeCross.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
+
+            bridgeCross.setCrossSupplyLimit(INITIAL_SUPPLY); // Set maximum supply limit for testing purposes
 
             vm.label(address(bridgeCross), "CrossBridge");
         }
@@ -117,7 +120,6 @@ contract CrossChainTest is SettingTest {
 
         bridgeCross.setBridgeVerifier(bridgeVerifierCross);
 
-        vm.deal(address(bridgeCross), INITIAL_SUPPLY);
         vm.stopPrank();
     }
 
