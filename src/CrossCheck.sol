@@ -12,9 +12,9 @@ import {CrossCheckStorage} from "./abstract/CrossCheckStorage.sol";
 
 /**
  * @title CrossCheck
- * @notice Contract responsible for validating and storing checkpoints for the Cross chain block verification
- * @dev This contract implements EIP-1967 proxy pattern for upgradability and uses signature validation
- *      from validators to ensure security of checkpoint submissions
+ * @notice Contract responsible for validating and storing check blocks for the Cross chain block verification
+ * @dev This contract extends the RoleManager and ValidatorManager contracts to provide access control and
+ *      signature validation for check blocks
  */
 contract CrossCheck is
     Initializable,
@@ -35,8 +35,8 @@ contract CrossCheck is
     /**
      * @notice Emitted when the contract is initialized
      * @param chainID The ID of the Cross chain being monitored
-     * @param blocksPerCheck Number of blocks covered by each checkpoint
-     * @param validatorThreshold Number of validator signatures required for checkpoint validation
+     * @param blocksPerCheck Number of blocks covered by each check block
+     * @param validatorThreshold Number of validator signatures required for data validation
      */
     event CrossCheckInitialized(uint256 chainID, uint256 blocksPerCheck, uint8 validatorThreshold);
 
@@ -58,10 +58,14 @@ contract CrossCheck is
 
     // see {CrossCheckStorage}
 
-    /// @notice The number of blocks included in each verification checkpoint
+    /**
+     * @notice The number of blocks included in each check block
+     */
     uint256 public blocksPerCheck;
 
-    /// @notice Chain ID of the Cross chain
+    /**
+     * @dev Chain ID of the Cross chain
+     */
     uint256 internal _crossChainID;
 
     /**
@@ -78,9 +82,9 @@ contract CrossCheck is
 
     /**
      * @notice Contract initializer
-     * @param chainID ID of the cross-chain being monitored (not this chain)
-     * @param blocksPerCheck_ Number of blocks that each checkpoint covers
-     * @param validatorThreshold Number of validator signatures required for checkpoint validation
+     * @param chainID The ID of the Cross chain being monitored
+     * @param blocksPerCheck_ Number of blocks covered by each check block
+     * @param validatorThreshold Number of validator signatures required for data validation
      */
     function initialize(uint256 chainID, uint256 blocksPerCheck_, uint8 validatorThreshold) external initializer {
         __UUPSUpgradeable_init();

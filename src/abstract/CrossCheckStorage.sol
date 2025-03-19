@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 /**
  * @title CrossCheckBlock
- * @notice Contract that defines the structure and events for the Cross chain verification
+ * @notice Contract that defines the structure and events for the Cross chain verification checkpoint
  */
 abstract contract CrossCheckBlock {
     /**
@@ -24,7 +24,7 @@ abstract contract CrossCheckBlock {
 
     /**
      * @notice Structure representing a Cross chain verification checkpoint
-     * @dev Optimized for gas usage using uint64 for numeric values
+     * @dev Optimized for gas usage using uint64 for numeric values (3 slots)
      */
     struct CheckBlock {
         uint64 nonce;
@@ -44,23 +44,29 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
     error CrossCheckInvalidData();
     error CrossCheckBlockExists(uint256 start);
 
-    /// @notice The starting block number of the latest checkpoint
+    /**
+     * @notice The starting block number of the latest check block
+     */
     uint256 public latestBlock;
 
-    /// @notice The number of submitted check blocks
+    /**
+     * @notice The number of submitted check blocks
+     */
     uint256 public numCheckBlocks;
 
-    /// @notice Mapping from start block number to corresponding check block data
-    /// @dev Key is the starting block number of the check range
+    /**
+     * @notice Mapping from start block number to corresponding check block
+     * @dev Key is the starting block number of the check range
+     */
     mapping(uint256 => CheckBlock) internal _checkBlocks;
 
     /**
      * @notice Retrieves check block for a specific block number
      * @param blockNumber The starting block number to query
-     * @return nonce Sequential identifier of the check block
-     * @return start The starting block number this check covers
-     * @return end The ending block number this check covers
-     * @return createdAt The block timestamp when this check was created
+     * @return nonce Sequential identifier of this check block
+     * @return start The starting block number this check block covers
+     * @return end The ending block number this check block covers
+     * @return createdAt The block timestamp when this check block was created
      * @return rootHash The hash representing the root of the block data
      * @return proposer The address that proposed this check block
      */
@@ -82,8 +88,10 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
         );
     }
 
-    /// @notice Calculates the next block number to be processed
-    /// @dev Returns the next nonce and starting block number
+    /**
+     * @notice Calculates the next block number to be processed
+     * @dev Returns the next nonce and starting block number
+     */
     function getNextBlockInfo() public view returns (uint256 nextNonce, uint256 nextStart) {
         CheckBlock memory _block = _checkBlocks[latestBlock];
         if (_block.createdAt > 0) {
@@ -95,13 +103,12 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
     }
 
     /**
-     * @notice Validates and adds a new checkpoint
-     * @dev Ensures checkpoint data is valid and maintains sequence integrity
-     * @param proposer Address of the checkpoint proposer
-     * @param nonce Sequential number that must match the expected next nonce
-     * @param start Starting block number for this checkpoint
-     * @param end Ending block number for this checkpoint
-     * @param rootHash Hash of the block data for the checkpoint range
+     * @notice Validates and adds a new check block
+     * @param proposer Address of the check block proposer
+     * @param nonce Sequential number of this check block
+     * @param start Starting block number for this check block
+     * @param end Ending block number for this check block
+     * @param rootHash Hash of the block data in the check range
      */
     function _addCheckBlock(
         address proposer,
