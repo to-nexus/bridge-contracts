@@ -18,6 +18,9 @@ docs/
 # Image file
 *.png
 
-
 # forge script
 script/
+
+# forge outputs
+.gas-snapshot
+lcov.info
