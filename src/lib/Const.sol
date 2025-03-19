@@ -36,10 +36,10 @@ library Const {
      * @notice Constants for contract role definitions
      * @dev Role identifiers used for access control
      */
-    bytes32 internal constant ADMIN_ROLE = ("ADMIN");
-    bytes32 internal constant OPERATOR_ROLE = ("OPERATOR");
-    bytes32 internal constant VALIDATOR_ROLE = ("VALIDATOR");
-    bytes32 internal constant UPDATOR_ROLE = ("UPDATOR");
-    bytes32 internal constant VERIFIER_ROLE = ("VERIFIER");
-    bytes32 internal constant BRIDGE_ROLE = ("BRIDGE");
+    bytes32 internal constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 internal constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 internal constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
+    bytes32 internal constant UPDATOR_ROLE = keccak256("UPDATOR_ROLE");
+    bytes32 internal constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    bytes32 internal constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
 }

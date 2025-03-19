@@ -89,49 +89,40 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * - Verifies minimum threshold of signatures
      * - Recovers signer addresses from signatures
      * - Validates signers have Validator role using Const.VALIDATOR_ROLE identifier
-     * - Detects and ignores duplicate signatures
+     * - Detects and ignores duplicate signatures by comparing validator addresses
+     * - Optimizes duplicate checking by requiring signatures to be sorted in ascending order by validator address
      * - Ensures final valid signature count meets threshold
      * @param messageHash Message hash to verify
      * @param v Array of signature v values
      * @param r Array of signature r values
      * @param s Array of signature s values
+     * @notice The signatures must be sorted in ascending order by validator address for proper duplicate detection
      */
-    function _validateSignature(
-        bytes32 messageHash,
-        uint8[] memory v,
-        bytes32[] memory r,
-        bytes32[] memory s
-    ) internal view {
+    function _validateSignature(bytes32 messageHash, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
+        internal
+        view
+    {
         ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
 
         uint sigsLength = v.length;
         require(
-            sigsLength == r.length && sigsLength == s.length,
-            ValidatorInvalidSignatures(sigsLength, r.length, s.length)
+            sigsLength == r.length && sigsLength == s.length, ValidatorInvalidSignatures(sigsLength, r.length, s.length)
         );
         require(sigsLength >= $._threshold, ValidatorInsufficientSignature(sigsLength));
 
         uint valid = 0;
-        address[] memory signed = new address[](sigsLength);
+        address before = address(0);
         for (uint i = 0; i < sigsLength; ++i) {
             // Recover signer address using EIP-712 typed data hash
             address validator = _hashTypedDataV4(messageHash).recover(v[i], r[i], s[i]);
 
-            // Check for duplicate signatures
-            bool dup = false;
-            for (uint j = 0; j < valid; ++j) {
-                if (validator == signed[j]) {
-                    dup = true;
-                    break;
-                }
-            }
-
-            // Count unique valid signatures
-            if (!dup && hasRole(Const.VALIDATOR_ROLE, validator)) {
-                signed[valid] = validator;
+            // Optimize duplicate detection by comparing with the previous validator address
+            // Note: Signatures MUST be sorted in ascending order by validator address for this to work correctly
+            if (before < validator && hasRole(Const.VALIDATOR_ROLE, validator)) {
                 unchecked {
                     ++valid;
                 }
+                before = validator;
             }
         }
 
