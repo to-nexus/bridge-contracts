@@ -14,13 +14,7 @@ abstract contract CrossCheckBlock {
      * @param end The ending block number this check covers
      * @param rootHash The hash representing the root of the block data
      */
-    event NewCheckBlock(
-        address indexed proposer,
-        uint256 indexed nonce,
-        uint256 indexed start,
-        uint256 end,
-        bytes32 rootHash
-    );
+    event NewCheckBlock(address indexed proposer, uint256 indexed nonce, uint256 indexed start, uint256 end, bytes32 rootHash);
 
     /**
      * @notice Structure representing a Cross chain verification checkpoint
@@ -61,6 +55,11 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
     mapping(uint256 => CheckBlock) internal _checkBlocks;
 
     /**
+     * @dev storage gap
+     */
+    uint[47] private __gap;
+
+    /**
      * @notice Retrieves check block for a specific block number
      * @param blockNumber The starting block number to query
      * @return nonce Sequential identifier of this check block
@@ -72,11 +71,7 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
      */
     function getCheckBlock(
         uint256 blockNumber
-    )
-        external
-        view
-        returns (uint256 nonce, uint256 start, uint256 end, uint256 createdAt, bytes32 rootHash, address proposer)
-    {
+    ) external view returns (uint256 nonce, uint256 start, uint256 end, uint256 createdAt, bytes32 rootHash, address proposer) {
         CheckBlock storage _block = _checkBlocks[blockNumber];
         (nonce, start, end, createdAt, rootHash, proposer) = (
             uint256(_block.nonce),
@@ -103,20 +98,14 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
     }
 
     /**
-     * @notice Validates and adds a new check block
+     * @dev Validates and adds a new check block
      * @param proposer Address of the check block proposer
      * @param nonce Sequential number of this check block
      * @param start Starting block number for this check block
      * @param end Ending block number for this check block
      * @param rootHash Hash of the block data in the check range
      */
-    function _addCheckBlock(
-        address proposer,
-        uint256 nonce,
-        uint256 start,
-        uint256 end,
-        bytes32 rootHash
-    ) internal virtual {
+    function _addCheckBlock(address proposer, uint256 nonce, uint256 start, uint256 end, bytes32 rootHash) internal virtual {
         // check validity
         if (end <= start || rootHash == bytes32(0)) {
             revert CrossCheckInvalidData();

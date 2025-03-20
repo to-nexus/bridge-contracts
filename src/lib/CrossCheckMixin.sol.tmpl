@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+pragma solidity 0.8.28;
+
+library CrossCheckMixin {
+    /**
+     * @dev Chain ID of the Cross chain
+     */
+    uint256 public constant crossChainID = ${CROSS_CHAIN_ID};
+
+    /**
+     * @dev Number of blocks covered by each check block
+     */
+    uint256 public constant blocksPerCheck = 3600 * 24;
+}

@@ -11,17 +11,17 @@ import {ValidatorManager} from "../src/abstract/ValidatorManager.sol";
 import {CrossCheckBlock, CrossCheckStorage} from "../src/abstract/CrossCheckStorage.sol";
 import {ICrossCheck} from "../src/interface/ICrossCheck.sol";
 import {CrossCheck} from "../src/CrossCheck.sol";
+import {CrossCheckMixin} from "../src/lib/CrossCheckMixin.sol";
 import {Const} from "../src/lib/Const.sol";
 
 // forge coverage --match-contract CrossCheck --report lcov
 
 contract CrossCheckTest is Test {
     uint256 constant N_VALIDATORS = 3;
-    uint256 constant N_BLOCKS = 1000;
-    uint256 constant CHAIN_ID = 612044;
+    uint256 constant N_BLOCKS = CrossCheckMixin.blocksPerCheck;
+    uint256 constant CHAIN_ID = CrossCheckMixin.crossChainID;
 
-    bytes32 constant SUBMIT_TYPEHASH =
-        keccak256("CheckBlockArg(uint256 nonce,uint256 start,uint256 end,bytes32 rootHash,uint256 chainID)");
+    bytes32 constant SUBMIT_TYPEHASH = keccak256("CheckBlockArg(uint256 nonce,uint256 start,uint256 end,bytes32 rootHash,uint256 chainID)");
 
     address depl;
     address[] vals;
@@ -48,7 +48,7 @@ contract CrossCheckTest is Test {
         CrossCheck impl = new CrossCheck();
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
         crossCheck = CrossCheck(address(proxy));
-        crossCheck.initialize(CHAIN_ID, N_BLOCKS, uint8(N_VALIDATORS));
+        crossCheck.initialize(uint8(N_VALIDATORS));
 
         // setup validators
         crossCheck.grantRoleBatch(Const.VALIDATOR_ROLE, vals);
@@ -189,10 +189,7 @@ contract CrossCheckTest is Test {
         return vals[vm.randomUint() % N_VALIDATORS];
     }
 
-    function createBlockArg(
-        uint256 nonce,
-        uint256 start
-    ) internal view returns (ICrossCheck.CheckBlockArg memory _block) {
+    function createBlockArg(uint256 nonce, uint256 start) internal view returns (ICrossCheck.CheckBlockArg memory _block) {
         _block = ICrossCheck.CheckBlockArg({
             nonce: nonce,
             start: start,
@@ -202,9 +199,7 @@ contract CrossCheckTest is Test {
         });
     }
 
-    function signBlock(
-        ICrossCheck.CheckBlockArg memory _block
-    ) internal view returns (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) {
+    function signBlock(ICrossCheck.CheckBlockArg memory _block) internal view returns (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) {
         (vs, rs, ss) = signBlock(_block, valKeys);
     }
 
@@ -214,9 +209,7 @@ contract CrossCheckTest is Test {
     ) internal view returns (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) {
         bytes32 dataHash = MessageHashUtils.toTypedDataHash(
             crossCheck.domainSeparator(),
-            keccak256(
-                abi.encode(SUBMIT_TYPEHASH, _block.nonce, _block.start, _block.end, _block.rootHash, _block.chainID)
-            )
+            keccak256(abi.encode(SUBMIT_TYPEHASH, _block.nonce, _block.start, _block.end, _block.rootHash, _block.chainID))
         );
 
         (vs, rs, ss) = (new uint8[](keys.length), new bytes32[](keys.length), new bytes32[](keys.length));
@@ -229,8 +222,7 @@ contract CrossCheckTest is Test {
     }
 
     function verifyBlock(ICrossCheck.CheckBlockArg memory _block, address _proposer, uint256 timestamp) internal view {
-        (uint256 nonce, uint256 start, uint256 end, uint256 createdAt, bytes32 rootHash, address proposer) = crossCheck
-            .getCheckBlock(_block.start);
+        (uint256 nonce, uint256 start, uint256 end, uint256 createdAt, bytes32 rootHash, address proposer) = crossCheck.getCheckBlock(_block.start);
         assertEq(nonce, _block.nonce);
         assertEq(start, _block.start);
         assertEq(end, _block.end);

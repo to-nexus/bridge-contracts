@@ -1,0 +1,31 @@
+#!/bin/bash
+
+ENV_NAME=devnet
+CROSS_CHAIN_ID=612066
+
+case $1 in
+    "mainnet")
+        ENV_NAME=mainnet
+        CROSS_CHAIN_ID=612055
+        shift
+        ;;
+    "testnet")
+        ENV_NAME=testnet
+        CROSS_CHAIN_ID=612044
+        shift
+        ;;
+    "devnet3")
+        ENV_NAME=devnet3
+        CROSS_CHAIN_ID=612088
+        shift
+        ;;
+    "devnet")
+        shift
+        ;;
+esac
+
+echo "Setting environment to $ENV_NAME: chainID = $CROSS_CHAIN_ID"
+echo
+
+export CROSS_CHAIN_ID
+envsubst < ./src/abstract/CrossCheckMixin.sol.tmpl > ./src/abstract/CrossCheckMixin.sol

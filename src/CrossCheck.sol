@@ -8,6 +8,7 @@ import {ICrossCheck} from "./interface/ICrossCheck.sol";
 import {RoleManager} from "./abstract/RoleManager.sol";
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {Const} from "./lib/Const.sol";
+import {CrossCheckMixin} from "./lib/CrossCheckMixin.sol";
 import {CrossCheckStorage} from "./abstract/CrossCheckStorage.sol";
 
 /**
@@ -16,17 +17,8 @@ import {CrossCheckStorage} from "./abstract/CrossCheckStorage.sol";
  * @dev This contract extends the RoleManager and ValidatorManager contracts to provide access control and
  *      signature validation for check blocks
  */
-contract CrossCheck is
-    Initializable,
-    UUPSUpgradeable,
-    PausableUpgradeable,
-    RoleManager,
-    ValidatorManager,
-    CrossCheckStorage,
-    ICrossCheck
-{
+contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, RoleManager, ValidatorManager, CrossCheckStorage, ICrossCheck {
     // ////////// errors //////////
-    error CrossCheckInvalidInitParameter(uint256 chainID, uint256 blocksPerCheck);
     error CrossCheckInvalidChainID(uint256 chainID);
     error CrossCheckNotNextBlock(uint256 nonce, uint256 start);
 
@@ -45,8 +37,7 @@ contract CrossCheck is
     /**
      * @dev TypeHash used for EIP-712 signature verification
      */
-    bytes32 internal constant SUBMIT_TYPEHASH =
-        keccak256("CheckBlockArg(uint256 nonce,uint256 start,uint256 end,bytes32 rootHash,uint256 chainID)");
+    bytes32 internal constant SUBMIT_TYPEHASH = keccak256("CheckBlockArg(uint256 nonce,uint256 start,uint256 end,bytes32 rootHash,uint256 chainID)");
 
     /**
      * @dev Role identifiers used for access control
@@ -54,24 +45,19 @@ contract CrossCheck is
     bytes32 public constant OPERATOR_ROLE = Const.OPERATOR_ROLE;
     bytes32 public constant VALIDATOR_ROLE = Const.VALIDATOR_ROLE;
 
-    // ////////// storage variables //////////
-
-    // see {CrossCheckStorage}
-
-    /**
-     * @notice The number of blocks included in each check block
-     */
-    uint256 public blocksPerCheck;
-
     /**
      * @dev Chain ID of the Cross chain
      */
-    uint256 internal _crossChainID;
+    uint256 private constant _crossChainID = CrossCheckMixin.crossChainID;
 
     /**
-     * @dev storage gap
+     * @dev Number of blocks covered by each check block
      */
-    uint[45] private __gap;
+    uint256 private constant _blocksPerCheck = CrossCheckMixin.blocksPerCheck;
+
+    // ////////// storage variables //////////
+
+    // see {CrossCheckStorage}
 
     /**
      * @dev Direct initialization is disabled
@@ -82,26 +68,15 @@ contract CrossCheck is
 
     /**
      * @notice Contract initializer
-     * @param chainID The ID of the Cross chain being monitored
-     * @param blocksPerCheck_ Number of blocks covered by each check block
      * @param validatorThreshold Number of validator signatures required for data validation
      */
-    function initialize(uint256 chainID, uint256 blocksPerCheck_, uint8 validatorThreshold) external initializer {
+    function initialize(uint8 validatorThreshold) external initializer {
         __UUPSUpgradeable_init();
         __Pausable_init();
         __RoleManager_init(msg.sender);
         __Validator_init(validatorThreshold);
 
-        // validatorThreshold is already checked in __Validator_init()
-        // TODO: check upper boundary of blocksPerCheck_
-        if (chainID == 0 || blocksPerCheck_ <= 10) {
-            revert CrossCheckInvalidInitParameter(chainID, blocksPerCheck_);
-        }
-
-        blocksPerCheck = blocksPerCheck_;
-        _crossChainID = chainID;
-
-        emit CrossCheckInitialized(chainID, blocksPerCheck_, validatorThreshold);
+        emit CrossCheckInitialized(_crossChainID, _blocksPerCheck, validatorThreshold);
     }
 
     /**
@@ -123,14 +98,16 @@ contract CrossCheck is
 
         // check next nonce and start block number
         (uint256 nextNonce, uint256 nextStart) = getNextBlockInfo();
-        if (nextNonce != _block.nonce || nextStart != _block.start || nextStart + blocksPerCheck - 1 != _block.end) {
+        uint256 nextEnd = 0;
+        unchecked {
+            nextEnd = nextStart + _blocksPerCheck - 1;
+        }
+        if (nextNonce != _block.nonce || nextStart != _block.start || nextEnd != _block.end) {
             revert CrossCheckNotNextBlock(_block.nonce, _block.start);
         }
 
         // check signature
-        bytes32 typeHash = keccak256(
-            abi.encode(SUBMIT_TYPEHASH, _block.nonce, _block.start, _block.end, _block.rootHash, _block.chainID)
-        );
+        bytes32 typeHash = keccak256(abi.encode(SUBMIT_TYPEHASH, _block.nonce, _block.start, _block.end, _block.rootHash, _block.chainID));
         _validateSignature(typeHash, v, r, s);
 
         // add new check block
