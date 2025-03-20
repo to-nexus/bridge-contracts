@@ -68,4 +68,8 @@ interface IBaseBridge is IBridgeRegistry {
         external
         view
         returns (uint minimumValue, uint gasFee, uint exFee);
+    function getTokenConfig(uint remoteChainID, IERC20 token)
+        external
+        view
+        returns (uint minimumValue, uint gasFee, uint exFeeRate);
 }
