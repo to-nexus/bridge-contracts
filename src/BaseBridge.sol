@@ -46,12 +46,14 @@ contract BaseBridge is
     error BaseBridgeInvalidPermitToken(address expected, address actual);
     error BaseBridgeCanNotZeroMsgValue();
     error BaseBridgeCanNotZeroAddress();
+    error BaseBridgeVerifierNotSet();
     error BaseBridgeNotExistIndex(uint index);
     error BaseBridgeNotExistToken(address token);
     error BaseBridgeNotExpired(uint delayExpiration, uint timestamp);
     error BaseBridgeBurnFailed(IERC20 token, address from, uint value);
     error BaseBridgeNotMatchLength();
     error BaseBridgeFailedCall(string reason);
+    error BaseBridgeInsufficientDeposit();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -213,7 +215,7 @@ contract BaseBridge is
         uint exFee,
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
-        (gasFee, exFee) = _checkAmount(toChainID, fromToken, value, gasFee, exFee);
+        (gasFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, gasFee, exFee);
         _executeBridge(toChainID, fromToken, _msgSender(), to, value, gasFee, exFee, false, extraData);
         return true;
     }
@@ -244,7 +246,7 @@ contract BaseBridge is
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
         );
-        (gasFee, exFee) = _checkAmount(toChainID, fromToken, value, gasFee, exFee);
+        (gasFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, gasFee, exFee);
 
         require(
             permitArgs.value >= value + gasFee + exFee, BaseBridgeInvalidValue(value + gasFee + exFee, permitArgs.value)
@@ -423,6 +425,7 @@ contract BaseBridge is
     function manualProcessPending(uint remoteChainID, uint index)
         external
         onlyRole(Const.VERIFIER_ROLE)
+        nonReentrant
         returns (bool)
     {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
@@ -487,59 +490,6 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Validates finalization amount against thresholds
-     * @dev Checks if amount requires extra verification
-     * @param fromChainID Source chain ID
-     * @param token Token address
-     * @param value Amount to verify
-     * @return status Success status
-     * @return delay Whether verification delay should be applied
-     */
-    function _checkFinalizeAmount(uint fromChainID, address token, uint value, bool retry)
-        internal
-        virtual
-        returns (Const.FinalizeStatus status, bool delay)
-    {
-        TokenPair memory tokenPair = _tokenPairs[fromChainID][token];
-        if (tokenPair.paused) return (Const.FinalizeStatus.TokenPaused, false);
-
-        // Skip validation if this is a retry - validation was already completed in the initial attempt
-        if (!retry) {
-            status = bridgeVerifier.validateBridgeTokenValue(IERC20(token), value);
-            if (Const.FinalizeStatus.Success != status) delay = true;
-        }
-
-        return (Const.FinalizeStatus.Success, false);
-    }
-
-    /**
-     * @notice Executes token transfer or minting for bridge finalization
-     * @dev Handles different token types (native, mintable, regular)
-     * @param fromChainID Source chain ID
-     * @param toToken Destination token
-     * @param to Recipient address
-     * @param value Amount to transfer/mint
-     * @return status Success status
-     * @return reason Error message if operation failed
-     */
-    function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value)
-        internal
-        returns (Const.FinalizeStatus status, bytes memory reason)
-    {
-        if (address(toToken) == Const.NATIVE_TOKEN) {
-            bool ok;
-            (ok, reason) = _safeCall(payable(to), value, "");
-            status = ok ? Const.FinalizeStatus.Success : Const.FinalizeStatus.Reverted;
-        } else if (value != 0) {
-            if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
-                return _transferERC20(fromChainID, toToken, to, value);
-            } else {
-                return _mintCrossMintableERC20(toToken, to, value);
-            }
-        }
-    }
-
-    /**
      * @notice Processes a pending bridge operation
      * @dev Internal function to complete pending operations
      * - Removes pending data
@@ -558,6 +508,191 @@ contract BaseBridge is
 
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
         return true;
+    }
+
+    /**
+     * @notice Validates and adjusts fee amounts for bridge operations
+     * @dev Checks if provided fees meet minimum requirements
+     * - Verifies minimum token amount
+     * - Validates gas fee is sufficient
+     * - Validates exchange fee is sufficient
+     * - Returns adjusted fee values
+     * @param remoteChainID Chain ID for fee calculation
+     * @param token Token being bridged
+     * @param value Amount being bridged
+     * @param gasFee Provided gas fee
+     * @param exFee Provided exchange fee
+     * @return _gasFee Adjusted gas fee
+     * @return _exFee Adjusted exchange fee
+     */
+    function _checkInitiateAmount(uint remoteChainID, IERC20 token, uint value, uint gasFee, uint exFee)
+        private
+        view
+        returns (uint _gasFee, uint _exFee)
+    {
+        require(address(bridgeVerifier) != address(0), BaseBridgeVerifierNotSet());
+
+        uint minimumValue;
+        (minimumValue, _gasFee, _exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
+        require(value >= minimumValue && gasFee >= _gasFee && exFee >= _exFee, BaseBridgeInvalidAmount());
+    }
+
+    /**
+     * @notice Validates finalization amount against thresholds
+     * @dev Checks if amount requires extra verification
+     * @param fromChainID Source chain ID
+     * @param token Token address
+     * @param value Amount to verify
+     * @return status Success status
+     * @return delay Whether verification delay should be applied
+     */
+    function _checkFinalizeAmount(uint fromChainID, address token, uint value, bool retry)
+        internal
+        virtual
+        returns (Const.FinalizeStatus status, bool delay)
+    {
+        require(address(bridgeVerifier) != address(0), BaseBridgeVerifierNotSet());
+
+        TokenPair memory tokenPair = _tokenPairs[fromChainID][token];
+        if (tokenPair.paused) return (Const.FinalizeStatus.TokenPaused, false);
+
+        // Skip validation if this is a retry - validation was already completed in the initial attempt
+        if (!retry) {
+            status = bridgeVerifier.validateBridgeTokenValue(IERC20(token), value);
+            if (Const.FinalizeStatus.Success != status) delay = true;
+        }
+
+        return (Const.FinalizeStatus.Success, false);
+    }
+
+    /**
+     * @notice Internal function to handle bridge initiation
+     * @dev Processes token deposit or burn for bridging
+     * - Handles native token transfers
+     * - Manages ERC20 token transfers
+     * - Updates deposit tracking
+     * @param remoteChainID Target chain identifier
+     * @param token Token being bridged
+     * @param from Source address
+     * @param value Amount being bridged
+     * @param fee Total fees to collect
+     */
+    function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal virtual {
+        if (address(token) == Const.NATIVE_TOKEN) {
+            // Handling native token transfers (e.g., CROSS, ETH, BNB)
+            require(msg.value == value + fee, BaseBridgeInvalidMsgValue(value + fee, msg.value));
+            _depositToken(remoteChainID, Const.NATIVE_TOKEN, value);
+            if (fee != 0) {
+                (bool success, bytes memory reason) = _safeCall(_dev, fee, "");
+                require(success, BaseBridgeFailedCall(string(reason)));
+            }
+        } else {
+            require(msg.value == 0, BaseBridgeInvalidMsgValue(0, msg.value));
+
+            token.safeTransferFrom(from, address(this), value + fee);
+            if (fee != 0) token.safeTransfer(_dev, fee);
+
+            if (_tokenPairs[remoteChainID][address(token)].isOrigin) {
+                _depositToken(remoteChainID, address(token), value);
+            } else {
+                require(
+                    ICrossMintableERC20(address(token)).burn(address(this), value), // Burn the wrapped tokens on the source chain
+                    BaseBridgeBurnFailed(token, from, value)
+                );
+            }
+        }
+    }
+
+    /**
+     * @notice Executes token transfer or minting for bridge finalization
+     * @dev Handles different token types (native, mintable, regular)
+     * @param fromChainID Source chain ID
+     * @param toToken Destination token
+     * @param to Recipient address
+     * @param value Amount to transfer/mint
+     * @return status Success status
+     * @return reason Error message if operation failed
+     */
+    function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value)
+        internal
+        returns (Const.FinalizeStatus status, bytes memory reason)
+    {
+        if (address(toToken) == Const.NATIVE_TOKEN) {
+            return _transferNativeToken(fromChainID, payable(to), value);
+        } else if (value != 0) {
+            if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
+                return _transferERC20(fromChainID, toToken, to, value);
+            } else {
+                return _mintCrossMintableERC20(toToken, to, value);
+            }
+        }
+    }
+
+    /**
+     * @notice Transfers native tokens during bridge finalization
+     * @dev Handles transfer of native tokens on destination chain
+     * - Updates withdrawal tracking
+     * - Transfers tokens to recipient
+     * @param remoteChainID Source chain identifier
+     * @param to Recipient address
+     * @param value Amount to transfer
+     * @return status Success status
+     * @return reason Error message if failed
+     */
+    function _transferNativeToken(uint remoteChainID, address payable to, uint value)
+        private
+        returns (Const.FinalizeStatus status, bytes memory reason)
+    {
+        (bool ok, bytes memory _reason) = _safeCall(to, value, "");
+        if (!ok) return (Const.FinalizeStatus.TransferFailed, _reason);
+        _withdrawToken(remoteChainID, Const.NATIVE_TOKEN, value);
+        return (Const.FinalizeStatus.Success, "");
+    }
+
+    /**
+     * @notice Transfers ERC20 tokens during bridge finalization
+     * @dev Handles transfer of original tokens on destination chain
+     * - Updates withdrawal tracking
+     * - Transfers tokens to recipient
+     * @param remoteChainID Source chain identifier
+     * @param token Token to transfer
+     * @param to Recipient address
+     * @param value Amount to transfer
+     * @return status Success status
+     * @return reason Error message if failed
+     */
+    function _transferERC20(uint remoteChainID, IERC20 token, address to, uint value)
+        private
+        returns (Const.FinalizeStatus status, bytes memory reason)
+    {
+        try IERC20(token).transfer(to, value) returns (bool success) {
+            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.TransferFailed;
+            if (success) _withdrawToken(remoteChainID, address(token), value);
+        } catch (bytes memory lowLevelData) {
+            status = Const.FinalizeStatus.TransferFailed;
+            reason = lowLevelData;
+        }
+    }
+
+    /**
+     * @notice Mints wrapped tokens during bridge finalization
+     * @dev Handles minting of CrossMintable tokens on destination chain
+     * @param token Token to mint
+     * @param to Recipient address
+     * @param value Amount to mint
+     * @return status Success status
+     * @return reason Error message if failed
+     */
+    function _mintCrossMintableERC20(IERC20 token, address to, uint value)
+        private
+        returns (Const.FinalizeStatus status, bytes memory reason)
+    {
+        try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
+            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.MintFailed;
+        } catch (bytes memory lowLevelData) {
+            status = Const.FinalizeStatus.MintFailed;
+            reason = lowLevelData;
+        }
     }
 
     /**
@@ -643,6 +778,25 @@ contract BaseBridge is
     }
 
     /**
+     * @notice Retrieves token configuration parameters for a specific chain
+     * @dev Gets token-specific configuration values from the bridge verifier
+     * - Provides minimum amount, gas fee, and exchange fee rate
+     * - Used for calculating fees and validating transactions
+     * @param remoteChainID Target chain identifier
+     * @param token Token to get configuration for
+     * @return minimumValue Minimum amount of token required for bridging
+     * @return gasFee Base gas fee for transaction on target chain
+     * @return exFeeRate Exchange fee rate applied to transaction amount
+     */
+    function getTokenConfig(uint remoteChainID, IERC20 token)
+        external
+        view
+        returns (uint minimumValue, uint gasFee, uint exFeeRate)
+    {
+        (minimumValue, gasFee, exFeeRate) = bridgeVerifier.getTokenConfig(remoteChainID, token);
+    }
+
+    /**
      * @notice Returns the reward wallet address
      * @dev Used for fee collection
      * @return Address of the reward wallet
@@ -652,112 +806,21 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Validates and adjusts fee amounts for bridge operations
-     * @dev Checks if provided fees meet minimum requirements
-     * - Verifies minimum token amount
-     * - Validates gas fee is sufficient
-     * - Validates exchange fee is sufficient
-     * - Returns adjusted fee values
-     * @param remoteChainID Chain ID for fee calculation
-     * @param token Token being bridged
-     * @param value Amount being bridged
-     * @param gasFee Provided gas fee
-     * @param exFee Provided exchange fee
-     * @return _gasFee Adjusted gas fee
-     * @return _exFee Adjusted exchange fee
+     * @notice Calculates the total amount of tokens bridged between chains
+     * @dev Returns the available bridge balance based on token type
+     * - For origin tokens: deposited amount minus pending operations
+     * - For wrapped tokens: total supply plus pending amount
+     * @param remoteChainID Chain ID to calculate bridged amount for
+     * @param token Token address to check
+     * @return Total amount of bridged tokens available
      */
-    function _checkAmount(uint remoteChainID, IERC20 token, uint value, uint gasFee, uint exFee)
-        private
-        view
-        returns (uint _gasFee, uint _exFee)
-    {
-        if (address(bridgeVerifier) == address(0)) return (0, 0);
-        uint minimumValue;
-
-        (minimumValue, _gasFee, _exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
-        require(value >= minimumValue && gasFee >= _gasFee && exFee >= _exFee, BaseBridgeInvalidAmount());
-    }
-
-    /**
-     * @notice Internal function to handle bridge initiation
-     * @dev Processes token deposit or burn for bridging
-     * - Handles native token transfers
-     * - Manages ERC20 token transfers
-     * - Updates deposit tracking
-     * @param remoteChainID Target chain identifier
-     * @param token Token being bridged
-     * @param from Source address
-     * @param value Amount being bridged
-     * @param fee Total fees to collect
-     */
-    function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal virtual {
-        if (address(token) == Const.NATIVE_TOKEN) {
-            // Handling native token transfers (e.g., CROSS, ETH, BNB)
-            require(msg.value == value + fee, BaseBridgeInvalidMsgValue(value + fee, msg.value));
-            if (fee != 0) {
-                (bool success, bytes memory reason) = _safeCall(_dev, fee, "");
-                require(success, BaseBridgeFailedCall(string(reason)));
-            }
+    function bridgedAmount(uint remoteChainID, address token) public view virtual returns (uint) {
+        TokenPair memory tokenPair = _tokenPairs[remoteChainID][token];
+        if (tokenPair.isOrigin) {
+            require(tokenPair.deposited >= tokenPair.pendingAmount, BaseBridgeInsufficientDeposit());
+            return tokenPair.deposited - tokenPair.pendingAmount;
         } else {
-            require(msg.value == 0, BaseBridgeInvalidMsgValue(0, msg.value));
-
-            token.safeTransferFrom(from, address(this), value + fee);
-            if (fee != 0) token.safeTransfer(_dev, fee);
-
-            if (_tokenPairs[remoteChainID][address(token)].isOrigin) {
-                _depositToken(remoteChainID, address(token), value);
-            } else {
-                require(
-                    ICrossMintableERC20(address(token)).burn(address(this), value), // Burn the wrapped tokens on the source chain
-                    BaseBridgeBurnFailed(token, from, value)
-                );
-            }
-        }
-    }
-
-    /**
-     * @notice Transfers ERC20 tokens during bridge finalization
-     * @dev Handles transfer of original tokens on destination chain
-     * - Updates withdrawal tracking
-     * - Transfers tokens to recipient
-     * @param remoteChainID Source chain identifier
-     * @param token Token to transfer
-     * @param to Recipient address
-     * @param value Amount to transfer
-     * @return status Success status
-     * @return reason Error message if failed
-     */
-    function _transferERC20(uint remoteChainID, IERC20 token, address to, uint value)
-        private
-        returns (Const.FinalizeStatus status, bytes memory reason)
-    {
-        try IERC20(token).transfer(to, value) returns (bool success) {
-            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.TransferFailed;
-            if (success) _withdrawToken(remoteChainID, address(token), value);
-        } catch (bytes memory lowLevelData) {
-            status = Const.FinalizeStatus.TransferFailed;
-            reason = lowLevelData;
-        }
-    }
-
-    /**
-     * @notice Mints wrapped tokens during bridge finalization
-     * @dev Handles minting of CrossMintable tokens on destination chain
-     * @param token Token to mint
-     * @param to Recipient address
-     * @param value Amount to mint
-     * @return status Success status
-     * @return reason Error message if failed
-     */
-    function _mintCrossMintableERC20(IERC20 token, address to, uint value)
-        private
-        returns (Const.FinalizeStatus status, bytes memory reason)
-    {
-        try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
-            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.MintFailed;
-        } catch (bytes memory lowLevelData) {
-            status = Const.FinalizeStatus.MintFailed;
-            reason = lowLevelData;
+            return IERC20(tokenPair.localToken).totalSupply() + tokenPair.pendingAmount;
         }
     }
 

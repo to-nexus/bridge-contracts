@@ -417,7 +417,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param token Token address
      * @param value Amount deposited
      */
-    function _depositToken(uint remoteChainID, address token, uint value) internal {
+    function _depositToken(uint remoteChainID, address token, uint value) internal virtual {
         _tokenPairs[remoteChainID][token].deposited += value;
     }
 
@@ -430,7 +430,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param token Token address
      * @param value Amount to withdraw
      */
-    function _withdrawToken(uint remoteChainID, address token, uint value) internal {
+    function _withdrawToken(uint remoteChainID, address token, uint value) internal virtual {
         TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
         require(
             tokenPair.deposited >= value + tokenPair.pendingAmount,

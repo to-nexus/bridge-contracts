@@ -10,6 +10,12 @@ interface IPriceFeed is IPriceOracle {
         uint lastUpdated;
     }
 
+    struct NativeTokenPriceData {
+        uint chainID;
+        uint price;
+        uint lastUpdated;
+    }
+
     function allPrices() external view returns (bool[] memory exist, uint[] memory prices, uint updatedAt_);
     function getTokenPriceInDollars(address token) external view returns (bool exist, uint price, uint updatedAt_);
     function getNativeTokenPrice(uint chainID) external view returns (bool exist, uint price, uint updatedAt_);
@@ -23,4 +29,5 @@ interface IPriceFeed is IPriceOracle {
         view
         returns (bool[] memory exist, PriceData[] memory list);
     function updatePrice(address[] memory tokens, uint[] memory _prices, uint[] memory pricesAt) external;
+    function updateNativeTokenPrice(uint[] memory chainIDs, uint[] memory prices, uint[] memory pricesAt) external;
 }

@@ -12,7 +12,7 @@ library Const {
      * @dev Values indicating reasons why a bridge operation cannot be executed immediately
      */
     enum FinalizeStatus {
-        Reverted,
+        None,
         Success,
         TokenPaused,
         VerificationAmountThresholdExceeded,

@@ -47,7 +47,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     uint private constant TOKEN_SCORE_MASK = type(uint).max >> 64;
 
     /// @dev Price feed contract for token price information
-    IPriceFeed private _priceFeed;
+    IPriceFeed public priceFeed;
     /// @dev Gas amount required for finalize bridge operations
     uint private _finalizeBridgeGas;
     /// @dev Global exchange fee rate (default if no token-specific rate)
@@ -84,7 +84,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @notice Initializes the BridgeVerifier contract
      * @param initialOwner Admin address
      * @param bridge Bridge contract address
-     * @param priceFeed Price feed contract address
+     * @param _priceFeed Price feed contract address
      * @param finalizeBridgeGas Gas amount for finalization
      * @param defaultTokenPrice Default price for tokens without price feed
      * @param defaultExFeeRate Default exchange fee rate
@@ -96,7 +96,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     constructor(
         address initialOwner,
         address bridge,
-        address priceFeed,
+        address _priceFeed,
         uint finalizeBridgeGas,
         uint defaultTokenPrice,
         uint defaultExFeeRate,
@@ -108,13 +108,13 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(finalizeBridgeGas != 0, BridgeVerifierCanNotZeroValue("finalizeBridgeGas"));
         require(initialOwner != address(0), BridgeVerifierCanNotZeroValue("initialOwner"));
         require(bridge != address(0), BridgeVerifierCanNotZeroValue("bridge"));
-        require(priceFeed != address(0), BridgeVerifierCanNotZeroValue("priceFeed"));
+        require(_priceFeed != address(0), BridgeVerifierCanNotZeroValue("_priceFeed"));
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(Const.ADMIN_ROLE, initialOwner);
         _grantRole(Const.UPDATOR_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
 
-        _priceFeed = IPriceFeed(priceFeed);
+        priceFeed = IPriceFeed(_priceFeed);
         _finalizeBridgeGas = finalizeBridgeGas;
         _defaultTokenPrice = defaultTokenPrice;
         _defaultExFeeRate = defaultExFeeRate;
@@ -244,7 +244,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @return price Calculated dollar price for the token amount
      */
     function getTokenPriceWithValue(IERC20 token, uint value) public view returns (bool exist, uint price) {
-        (exist, price,) = _priceFeed.getTokenPriceInDollars(address(token));
+        (exist, price,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) price = _defaultTokenPrice;
         price = price.mulDiv(value, (10 ** CalcGasFeeLib.decimals(address(token))));
     }
@@ -277,7 +277,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         returns (uint minimumValue, uint gasFee, uint exFeeRate)
     {
         // Get token price per unit
-        (bool exist, uint tokenPrice,) = _priceFeed.getTokenPriceInDollars(address(token));
+        (bool exist, uint tokenPrice,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) tokenPrice = _defaultTokenPrice;
 
         uint tokenDecimals = 10 ** CalcGasFeeLib.decimals(address(token));
@@ -374,7 +374,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         uint gasPrice = _gasPrice[remoteChainID];
         if (gasPrice == 0) return (0, 0); // If gas price is 0, return 0
         (, gasFee, updatedAt) =
-            _priceFeed.calculateTokenAmountForGasFee(remoteChainID, address(token), _finalizeBridgeGas * gasPrice);
+            priceFeed.calculateTokenAmountForGasFee(remoteChainID, address(token), _finalizeBridgeGas * gasPrice);
     }
 
     /**
@@ -530,11 +530,11 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Validates non-zero address
      * - Updates stored reference
      * - Emits update event
-     * @param priceFeed New price feed contract
+     * @param _priceFeed New price feed contract
      */
-    function setPriceFeed(IPriceFeed priceFeed) external onlyRole(Const.ADMIN_ROLE) {
-        require(address(priceFeed) != address(0), BridgeVerifierCanNotZeroValue("priceFeed")); // allow zero address
-        _priceFeed = priceFeed;
-        emit BridgeVerifierPriceFeedUpdated(_priceFeed);
+    function setPriceFeed(IPriceFeed _priceFeed) external onlyRole(Const.ADMIN_ROLE) {
+        require(address(_priceFeed) != address(0), BridgeVerifierCanNotZeroValue("_priceFeed")); // allow zero address
+        priceFeed = _priceFeed;
+        emit BridgeVerifierPriceFeedUpdated(priceFeed);
     }
 }
