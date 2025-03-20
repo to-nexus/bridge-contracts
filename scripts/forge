@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source $(dirname $0)/_setenv
-cd $(dirname $0)/..
+source $(dirname ${BASH_SOURCE[0]})/gen-mixin
+cd $(dirname ${BASH_SOURCE[0]})/..
 
 forge $@

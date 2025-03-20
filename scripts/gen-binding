@@ -1,0 +1,33 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <contract_name>"
+    exit 1
+fi
+
+check_cmd() {
+    if ! command -v $1 &> /dev/null; then
+        echo "Error: $1 could not be found"
+        exit 1
+    fi
+}
+
+check_cmd forge
+check_cmd abigen
+
+cd $(dirname ${BASH_SOURCE[0]})/..
+
+NAME=$1
+OUT_DIR=./binding/go/src
+
+forge inspect $NAME abi --json > $OUT_DIR/$NAME.abi.json
+forge inspect $NAME bytecode > $OUT_DIR/$NAME.bin
+forge inspect $NAME deployedBytecode > $OUT_DIR/$NAME.deployed.bin
+
+abigen \
+    --abi $OUT_DIR/$NAME.abi.json \
+    --bin $OUT_DIR/$NAME.bin \
+    --binruntime $OUT_DIR/$NAME.deployed.bin \
+    --pkg binding --type $NAME --out $OUT_DIR/$NAME.go
+
+rm $OUT_DIR/$NAME.abi.json $OUT_DIR/$NAME.bin $OUT_DIR/$NAME.deployed.bin

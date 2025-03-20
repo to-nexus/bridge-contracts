@@ -24,8 +24,8 @@ case $1 in
         ;;
 esac
 
-echo "Setting environment to $ENV_NAME: chainID = $CROSS_CHAIN_ID"
+echo "Generating mixin for $ENV_NAME: chainID = $CROSS_CHAIN_ID"
 echo
 
 export CROSS_CHAIN_ID
-envsubst < ./src/abstract/CrossCheckMixin.sol.tmpl > ./src/abstract/CrossCheckMixin.sol
+envsubst < $(dirname ${BASH_SOURCE[0]})/../src/lib/CrossCheckMixin.sol.tmpl > $(dirname ${BASH_SOURCE[0]})/../src/lib/CrossCheckMixin.sol
