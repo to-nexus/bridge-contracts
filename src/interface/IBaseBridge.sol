@@ -11,6 +11,7 @@ interface IBaseBridge is IBridgeRegistry {
     struct BridgeTokenArguments {
         uint toChainID;
         IERC20 fromToken;
+        address from;
         address to;
         uint value;
         uint gasFee;

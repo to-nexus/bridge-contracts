@@ -59,7 +59,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryZeroAddress();
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
-    error RegistryBalanceLow(uint remoteChainID, address token, uint value, uint deposited, uint pendingAmount);
     error RegistryFactoryNotSet();
 
     /**
@@ -431,12 +430,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param value Amount to withdraw
      */
     function _withdrawToken(uint remoteChainID, address token, uint value) internal virtual {
-        TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
-        require(
-            tokenPair.deposited >= value + tokenPair.pendingAmount,
-            RegistryBalanceLow(remoteChainID, token, value, tokenPair.deposited, tokenPair.pendingAmount)
-        );
-        tokenPair.deposited -= value;
+        _tokenPairs[remoteChainID][token].deposited -= value;
     }
 
     /**
@@ -467,7 +461,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         });
 
         TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
-        if (tokenPair.isOrigin) tokenPair.pendingAmount += args.value;
+        tokenPair.pendingAmount += args.value;
     }
 
     /**
@@ -486,7 +480,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         args = _pendingData[remoteChainID][index].args;
         TokenPair storage tokenPair = _tokenPairs[remoteChainID][address(args.toToken)];
 
-        if (tokenPair.isOrigin) tokenPair.pendingAmount -= args.value;
+        tokenPair.pendingAmount -= args.value;
         delete (_pendingData[remoteChainID][index]);
     }
 }

@@ -53,7 +53,6 @@ contract BaseBridge is
     error BaseBridgeBurnFailed(IERC20 token, address from, uint value);
     error BaseBridgeNotMatchLength();
     error BaseBridgeFailedCall(string reason);
-    error BaseBridgeInsufficientDeposit();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -67,7 +66,7 @@ contract BaseBridge is
      * @param gasFee Gas fee for the operation
      * @param exFee Exchange fee for the operation
      * @param time Timestamp of initiation
-     * @param permit Whether permit was used
+     * @param bridgedAmount Total amount of tokens bridged
      * @param extraData Additional operation data
      */
     event BridgeInitiated(
@@ -80,8 +79,8 @@ contract BaseBridge is
         uint value,
         uint gasFee,
         uint exFee,
+        uint bridgedAmount,
         uint time,
-        bool permit,
         bytes extraData
     );
 
@@ -95,7 +94,13 @@ contract BaseBridge is
      * @param time Timestamp of finalization
      */
     event BridgeFinalized(
-        uint indexed fromChainID, uint indexed index, IERC20 indexed toToken, address to, uint value, uint time
+        uint indexed fromChainID,
+        uint indexed index,
+        IERC20 indexed toToken,
+        address to,
+        uint value,
+        uint bridgedAmount,
+        uint time
     );
 
     /**
@@ -114,6 +119,7 @@ contract BaseBridge is
         IERC20 indexed toToken,
         address to,
         uint value,
+        uint bridgedAmount,
         uint time,
         Const.FinalizeStatus status
     );
@@ -216,7 +222,18 @@ contract BaseBridge is
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
         (gasFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, gasFee, exFee);
-        _executeBridge(toChainID, fromToken, _msgSender(), to, value, gasFee, exFee, false, extraData);
+        _executeBridge(
+            BridgeTokenArguments({
+                toChainID: toChainID,
+                fromToken: fromToken,
+                from: _msgSender(),
+                to: to,
+                value: value,
+                gasFee: gasFee,
+                exFee: exFee,
+                extraData: extraData
+            })
+        );
         return true;
     }
 
@@ -262,7 +279,18 @@ contract BaseBridge is
             permitArgs.s
         );
 
-        _executeBridge(toChainID, fromToken, permitArgs.account, to, value, gasFee, exFee, true, extraData);
+        _executeBridge(
+            BridgeTokenArguments({
+                toChainID: toChainID,
+                fromToken: fromToken,
+                from: permitArgs.account,
+                to: to,
+                value: value,
+                gasFee: gasFee,
+                exFee: exFee,
+                extraData: extraData
+            })
+        );
         return true;
     }
 
@@ -336,11 +364,16 @@ contract BaseBridge is
             }
         }
 
+        uint _bridgedAmount = bridgedAmount(args.fromChainID, address(args.toToken));
         if (status == Const.FinalizeStatus.Success) {
-            emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
+            emit BridgeFinalized(
+                args.fromChainID, args.index, args.toToken, args.to, args.value, _bridgedAmount, block.timestamp
+            );
         } else {
             _setPendingArguments(args, status, reason, delay);
-            emit BridgePending(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp, status);
+            emit BridgePending(
+                args.fromChainID, args.index, args.toToken, args.to, args.value, _bridgedAmount, block.timestamp, status
+            );
         }
         return true;
     }
@@ -432,6 +465,16 @@ contract BaseBridge is
         return _releasePending(remoteChainID, index);
     }
 
+    function removePending(uint remoteChainID, uint index)
+        external
+        onlyRole(Const.VERIFIER_ROLE)
+        nonReentrant
+        returns (bool)
+    {
+        _removePendingArguments(remoteChainID, index);
+        return true;
+    }
+
     /**
      * @notice Locks a pending operation to prevent automatic processing
      * @dev Sets the safety deadline to maximum uint value
@@ -454,38 +497,32 @@ contract BaseBridge is
     /**
      * @notice Internal function to execute a bridge operation
      * @dev Handles token deposit/burn and fee collection
-     * @param toChainID Target chain ID
-     * @param fromToken Source token
-     * @param from Source address
-     * @param to Destination address
-     * @param value Amount being bridged
-     * @param gasFee Gas fee amount
-     * @param exFee Exchange fee amount
-     * @param permit Whether permit was used
-     * @param extraData Additional operation data
+     * @param args Bridge operation details
      */
-    function _executeBridge(
-        uint toChainID,
-        IERC20 fromToken,
-        address from,
-        address to,
-        uint value,
-        uint gasFee,
-        uint exFee,
-        bool permit,
-        bytes calldata extraData
-    ) internal {
-        _initiateBridge(toChainID, fromToken, from, value, gasFee + exFee);
+    function _executeBridge(BridgeTokenArguments memory args) internal {
+        _initiateBridge(args.toChainID, args.fromToken, args.from, args.value, args.gasFee + args.exFee);
 
         uint index;
         IERC20 remoteToken;
         {
-            index = _useInitiateIndex(toChainID);
-            remoteToken = IERC20(_tokenPairs[toChainID][address(fromToken)].remoteToken);
+            index = _useInitiateIndex(args.toChainID);
+            remoteToken = IERC20(_tokenPairs[args.toChainID][address(args.fromToken)].remoteToken);
         }
 
+        uint _bridgedAmount = bridgedAmount(args.toChainID, address(args.fromToken));
         emit BridgeInitiated(
-            toChainID, index, fromToken, remoteToken, from, to, value, gasFee, exFee, block.timestamp, permit, extraData
+            args.toChainID,
+            index,
+            args.fromToken,
+            remoteToken,
+            args.from,
+            args.to,
+            args.value,
+            args.gasFee,
+            args.exFee,
+            _bridgedAmount,
+            block.timestamp,
+            args.extraData
         );
     }
 
@@ -506,7 +543,15 @@ contract BaseBridge is
             _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
         require(status == Const.FinalizeStatus.Success, string(abi.encode(status, reason)));
 
-        emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
+        emit BridgeFinalized(
+            args.fromChainID,
+            args.index,
+            args.toToken,
+            args.to,
+            args.value,
+            bridgedAmount(args.fromChainID, address(args.toToken)),
+            block.timestamp
+        );
         return true;
     }
 
@@ -816,12 +861,8 @@ contract BaseBridge is
      */
     function bridgedAmount(uint remoteChainID, address token) public view virtual returns (uint) {
         TokenPair memory tokenPair = _tokenPairs[remoteChainID][token];
-        if (tokenPair.isOrigin) {
-            require(tokenPair.deposited >= tokenPair.pendingAmount, BaseBridgeInsufficientDeposit());
-            return tokenPair.deposited - tokenPair.pendingAmount;
-        } else {
-            return IERC20(tokenPair.localToken).totalSupply() + tokenPair.pendingAmount;
-        }
+        if (tokenPair.isOrigin) return tokenPair.deposited - tokenPair.pendingAmount;
+        else return IERC20(tokenPair.localToken).totalSupply() + tokenPair.pendingAmount;
     }
 
     /**
