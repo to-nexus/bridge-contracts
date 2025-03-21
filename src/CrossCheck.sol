@@ -125,10 +125,10 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
      * @dev see {ICrossCheck-verifyBlock}
      * @dev The merkle tree which created the proof must has its leaves sorted
      */
-    function verifyBlock(uint256 blockNumber, bytes32[] calldata proof, bytes32 blockHash) external view returns (bool) {
-        CheckBlock storage _block = _checkBlocks[blockNumber];
+    function verifyBlock(uint256 startBlockNumber, bytes32[] calldata proof, bytes32 blockHash) external view returns (bool) {
+        CheckBlock storage _block = _checkBlocks[startBlockNumber];
         if (_block.createdAt == 0) {
-            revert CrossCheckBlockNotFound(blockNumber);
+            revert CrossCheckBlockNotFound(startBlockNumber);
         }
         return MerkleProof.verifyCalldata(proof, _block.rootHash, blockHash);
     }

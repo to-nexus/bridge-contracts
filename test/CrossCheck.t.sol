@@ -224,6 +224,89 @@ contract CrossCheckTest is Test {
         crossCheck.verifyBlock(0, proof, blockHash);
     }
 
+    function test_getCheckBlock() public {
+        uint256 blockNumber = vm.randomUint() % (N_BLOCKS * 3);
+        if (blockNumber % N_BLOCKS == 0) {
+            blockNumber += 1;
+        }
+
+        address proposer = getProposer();
+        vm.startPrank(proposer);
+
+        // submit 3 check blocks
+        for (uint256 i = 0; i < 3; ++i) {
+            uint256 timestamp = 1641080000 + i * 60 * N_BLOCKS;
+            vm.warp(timestamp);
+
+            ICrossCheck.CheckBlockArg memory _block = createBlockArg(i, i * N_BLOCKS);
+            (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
+            crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
+        }
+
+        // getCheckBlockByNonce
+        for (uint256 i = 0; i < 3; ++i) {
+            ICrossCheck.CheckBlockArg memory _block;
+            uint256 timestamp;
+            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByNonce(i);
+            verifyCheckBlock(_block, proposer, timestamp);
+        }
+
+        // getCheckBlockByBlockNumber
+        {
+            ICrossCheck.CheckBlockArg memory _block;
+            uint256 timestamp;
+            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(blockNumber);
+            verifyCheckBlock(_block, proposer, timestamp);
+        }
+
+        // edge cases
+        {
+            // nonce = 0
+            ICrossCheck.CheckBlockArg memory _block;
+            uint256 timestamp;
+            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByNonce(0);
+            verifyCheckBlock(_block, proposer, timestamp);
+
+            // block number = 0
+            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(0);
+            verifyCheckBlock(_block, proposer, timestamp);
+
+            // block number = _block.start
+            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 2);
+            verifyCheckBlock(_block, proposer, timestamp);
+
+            // block number = _block.end
+            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 2 - 1);
+            verifyCheckBlock(_block, proposer, timestamp);
+        }
+
+        // not found
+        {
+            uint256 nonce;
+            uint256 start;
+            uint256 end;
+            uint256 timestamp;
+            bytes32 rootHash;
+            address _proposer;
+
+            (nonce, start, end, timestamp, rootHash, _proposer) = crossCheck.getCheckBlockByNonce(N_BLOCKS + 5);
+            assertEq(nonce, 0);
+            assertEq(start, 0);
+            assertEq(end, 0);
+            assertEq(timestamp, 0);
+            assertEq(rootHash, bytes32(0));
+            assertEq(_proposer, address(0));
+
+            (nonce, start, end, timestamp, rootHash, _proposer) = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 5);
+            assertEq(nonce, 0);
+            assertEq(start, 0);
+            assertEq(end, 0);
+            assertEq(timestamp, 0);
+            assertEq(rootHash, bytes32(0));
+            assertEq(_proposer, address(0));
+        }
+    }
+
     // utility functions
 
     function sortValidators() internal {
