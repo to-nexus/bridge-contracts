@@ -39,7 +39,11 @@ contract EthereumChainTest is CrossChainTest {
             bridgeEthereum.grantRole(OPERATOR_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(UPDATOR_ROLE, OWNER); // for test
             bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN));
-            bridgeEthereum.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
+            bytes32[] memory roles = new bytes32[](5);
+            for (uint i = 0; i < 5; i++) {
+                roles[i] = VALIDATOR_ROLE;
+            }
+            bridgeEthereum.grantRoleBatch(roles, VALIDATORS);
         }
 
         {
@@ -77,7 +81,11 @@ contract EthereumChainTest is CrossChainTest {
             bridgeVerifierEthereum.grantRole(UPDATOR_ROLE, OWNER);
             bridgeEthereum.setBridgeVerifier(bridgeVerifierEthereum);
 
-            priceFeedEthereum.grantRoleBatch(UPDATOR_ROLE, VALIDATORS);
+            bytes32[] memory roles = new bytes32[](5);
+            for (uint i = 0; i < 5; i++) {
+                roles[i] = VALIDATOR_ROLE;
+            }
+            priceFeedEthereum.grantRoleBatch(roles, VALIDATORS);
         }
 
         // add token to bridge (ethereum chain)

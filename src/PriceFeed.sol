@@ -8,7 +8,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {RoleManager} from "./abstract/RoleManager.sol";
 import {IPriceFeed} from "./interface/IPriceFeed.sol";
 import {IPriceOracle} from "./interface/IPriceOracle.sol";
-import {CalcGasFeeLib} from "./lib/CalcGasFeeLib.sol";
+import {CalcAmountLib} from "./lib/CalcAmountLib.sol";
 import {Const} from "./lib/Const.sol";
 
 /**
@@ -41,7 +41,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     /// @dev Mapping from chain ID to native token price for that chain
     mapping(uint => NativeTokenPriceData) private _nativeTokenPrice;
 
-    uint[46] private __gap;
+    uint[44] private __gap;
 
     /**
      * @notice Initializes the price feed contract
@@ -89,8 +89,8 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
         require(exist[0], PriceFeedNoSource(tokenA));
         require(exist[1], PriceFeedNoSource(tokenB));
 
-        (uint8 decimalA, uint8 decimalB) = (CalcGasFeeLib.decimals(tokenA), CalcGasFeeLib.decimals(tokenB));
-        price = CalcGasFeeLib.calculateAmountBWithPrice(1, prices[0], prices[1], decimalA, decimalB);
+        (uint8 decimalA, uint8 decimalB) = (CalcAmountLib.decimals(tokenA), CalcAmountLib.decimals(tokenB));
+        price = CalcAmountLib.calculateAmountBWithPrice(1, prices[0], prices[1], decimalA, decimalB);
         return (price, updatedAt);
     }
 

@@ -9,6 +9,7 @@ abstract contract RoleManager is AccessControlUpgradeable {
 
     error RoleManagerAlreadyHasRole(address account, bytes32 role);
     error RoleManagerDoesNotHaveRole(address account, bytes32 role);
+    error RoleManagerMissmatchLength();
 
     /// @custom:storage-location erc7201:cross.bridge.RoleManager
     struct RoleManagerStorage {
@@ -39,15 +40,17 @@ abstract contract RoleManager is AccessControlUpgradeable {
         return $._roles[role].values();
     }
 
-    function grantRoleBatch(bytes32 role, address[] memory accounts) external onlyRole(getRoleAdmin(role)) {
+    function grantRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
+        require(roles.length == accounts.length, RoleManagerMissmatchLength());
         for (uint i = 0; i < accounts.length; ++i) {
-            _grantRole(role, accounts[i]);
+            grantRole(roles[i], accounts[i]);
         }
     }
 
-    function revokeRoleBatch(bytes32 role, address[] memory accounts) external onlyRole(getRoleAdmin(role)) {
+    function revokeRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
+        require(roles.length == accounts.length, RoleManagerMissmatchLength());
         for (uint i = 0; i < accounts.length; ++i) {
-            _revokeRole(role, accounts[i]);
+            revokeRole(roles[i], accounts[i]);
         }
     }
 

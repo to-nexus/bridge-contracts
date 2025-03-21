@@ -10,7 +10,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 import {IPriceFeed} from "./PriceFeed.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
-import {CalcGasFeeLib} from "./lib/CalcGasFeeLib.sol";
+import {CalcAmountLib} from "./lib/CalcAmountLib.sol";
 import {Const} from "./lib/Const.sol";
 
 /**
@@ -18,7 +18,7 @@ import {Const} from "./lib/Const.sol";
  * @notice Contract for calculating and managing bridge operation fees
  * @dev Provides fee calculations, token monitoring, and safety threshold management
  * Key features:
- * - Gas and exchange fee calculations based on token type and chain
+ * - Network and exchange fee calculations based on token type and chain
  * - Token volume monitoring for security threshold enforcement
  * - Time-window based transfer volume restrictions
  */
@@ -26,7 +26,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     using Math for uint;
     using EnumerableSet for EnumerableSet.AddressSet;
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
-    using CalcGasFeeLib for IPriceFeed;
+    using CalcAmountLib for IPriceFeed;
 
     error BridgeVerifierChainAleadyExist(uint chainID);
     error BridgeVerifierCanNotZeroValue(string name);
@@ -205,16 +205,16 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param token Token being bridged
      * @param value Amount being bridged
      * @return minimumValue Minimum amount required
-     * @return gasFee Gas fee for target chain
+     * @return networkFee Network fee for target chain
      * @return exFee Exchange fee
      */
     function calculateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view
-        returns (uint minimumValue, uint gasFee, uint exFee)
+        returns (uint minimumValue, uint networkFee, uint exFee)
     {
         uint exFeeRate;
-        (minimumValue, gasFee, exFeeRate) = getTokenConfig(remoteChainID, token);
+        (minimumValue, networkFee, exFeeRate) = getTokenConfig(remoteChainID, token);
 
         exFee = value * exFeeRate / DENOMINATOR;
     }
@@ -229,7 +229,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @return price Dollar price for a standard token unit
      */
     function getTokenPrice(IERC20 token) external view returns (bool exist, uint price) {
-        return getTokenPriceWithValue(token, (10 ** CalcGasFeeLib.decimals(address(token))));
+        return getTokenPriceWithValue(token, (10 ** CalcAmountLib.decimals(address(token))));
     }
 
     /**
@@ -246,7 +246,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     function getTokenPriceWithValue(IERC20 token, uint value) public view returns (bool exist, uint price) {
         (exist, price,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) price = _defaultTokenPrice;
-        price = price.mulDiv(value, (10 ** CalcGasFeeLib.decimals(address(token))));
+        price = price.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
     }
 
     /**
@@ -263,24 +263,24 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @notice Calculates fees for a token
      * @dev Determines minimum amount and fees
      * - Gets token-specific or default fee rates
-     * - Calculates gas fee using price feed
+     * - Calculates network fee using price feed
      * - Handles fee exemptions
      * @param remoteChainID Chain ID for fee calculation
      * @param token Token to calculate fees for
      * @return minimumValue Minimum required amount
-     * @return gasFee Gas fee in token amount
+     * @return networkFee Network fee in token amount
      * @return exFeeRate Exchange fee rate
      */
     function getTokenConfig(uint remoteChainID, IERC20 token)
         public
         view
-        returns (uint minimumValue, uint gasFee, uint exFeeRate)
+        returns (uint minimumValue, uint networkFee, uint exFeeRate)
     {
         // Get token price per unit
         (bool exist, uint tokenPrice,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) tokenPrice = _defaultTokenPrice;
 
-        uint tokenDecimals = 10 ** CalcGasFeeLib.decimals(address(token));
+        uint tokenDecimals = 10 ** CalcAmountLib.decimals(address(token));
         // Calculate how many tokens are required to meet the minimum dollar value
         // If token price is 0, set a default minimum value to prevent division by zero
         if (tokenPrice == 0) minimumValue = tokenDecimals; // Default to 1 token with decimals if price is unknown
@@ -293,8 +293,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (exFeeRate == type(uint).max) exFeeRate = 0;
         else if (exFeeRate == 0) exFeeRate = _defaultExFeeRate;
 
-        // Calculate gas fee
-        (gasFee,) = _calculateGasFee(remoteChainID, token);
+        // Calculate network fee
+        (networkFee,) = _calculateNetworkFee(remoteChainID, token);
     }
 
     /**
@@ -351,6 +351,10 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         }
     }
 
+    function dollarDecimals() external view returns (uint) {
+        return priceFeed.dollarDecimals();
+    }
+
     /**
      * @notice Returns the fee denominator
      * @dev Used for fee calculations (1000 = 100%)
@@ -361,20 +365,24 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     }
 
     /**
-     * @notice Calculates gas fee in token amount
+     * @notice Calculates network fee in token amount
      * @dev Uses price feed for conversion
      * - Validates price feed availability
      * - Converts gas cost to token amount
      * @param remoteChainID Chain ID for gas price
      * @param token Token to calculate fee in
-     * @return gasFee Calculated gas fee
+     * @return networkFee Calculated network fee
      * @return updatedAt Timestamp of price data
      */
-    function _calculateGasFee(uint remoteChainID, IERC20 token) private view returns (uint gasFee, uint updatedAt) {
+    function _calculateNetworkFee(uint remoteChainID, IERC20 token)
+        private
+        view
+        returns (uint networkFee, uint updatedAt)
+    {
         uint gasPrice = _gasPrice[remoteChainID];
         if (gasPrice == 0) return (0, 0); // If gas price is 0, return 0
-        (, gasFee, updatedAt) =
-            priceFeed.calculateTokenAmountForGasFee(remoteChainID, address(token), _finalizeBridgeGas * gasPrice);
+        (, networkFee, updatedAt) =
+            priceFeed.calculateTokenAmountForNetworkFee(remoteChainID, address(token), _finalizeBridgeGas * gasPrice);
     }
 
     /**

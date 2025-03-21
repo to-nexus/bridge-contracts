@@ -34,8 +34,8 @@ interface IBridgeRegistry {
     struct TokenPair {
         address localToken; // local token address
         address remoteToken; // remote token address
-        bool paused; // whether the token is paused
         bool isOrigin; // whether the token is origin token
+        bool paused; // whether the token is paused
         uint deposited; // deposited amount of the token
         uint pendingAmount; // pending amount of the token
     }

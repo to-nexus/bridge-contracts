@@ -16,6 +16,7 @@ interface IPriceFeed is IPriceOracle {
         uint lastUpdated;
     }
 
+    function dollarDecimals() external view returns (uint8);
     function allPrices() external view returns (bool[] memory exist, uint[] memory prices, uint updatedAt_);
     function getTokenPriceInDollars(address token) external view returns (bool exist, uint price, uint updatedAt_);
     function getNativeTokenPrice(uint chainID) external view returns (bool exist, uint price, uint updatedAt_);

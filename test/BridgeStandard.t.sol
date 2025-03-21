@@ -150,9 +150,9 @@ contract BaseBridgeTest is BridgeTest {
             assertTrue(Const.FinalizeStatus.Success != pendingArgs.status);
 
             vm.selectFork(crossForkID);
-            uint crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
+            uint crossBridged = bridgeCross.bridgeNetQty(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
             vm.selectFork(ethereumForkID);
-            uint ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(cross));
+            uint ethereumBridged = bridgeEthereum.bridgeNetQty(CROSS_CHAIN_ID, address(cross));
             assertEq(crossBridged, ethereumBridged);
 
             // token start
@@ -166,9 +166,9 @@ contract BaseBridgeTest is BridgeTest {
             bridgeEthereum.releasePending(CROSS_CHAIN_ID, index);
 
             vm.selectFork(crossForkID);
-            crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
+            crossBridged = bridgeCross.bridgeNetQty(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
             vm.selectFork(ethereumForkID);
-            ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(cross));
+            ethereumBridged = bridgeEthereum.bridgeNetQty(CROSS_CHAIN_ID, address(cross));
             assertEq(crossBridged, ethereumBridged);
 
             assertEq(before + value, testTokenEthereum.balanceOf(USER));

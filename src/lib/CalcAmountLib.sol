@@ -7,11 +7,11 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IPriceFeed} from "../interface/IPriceFeed.sol";
 import {Const} from "./Const.sol";
 
-library CalcGasFeeLib {
+library CalcAmountLib {
     using Math for uint;
 
-    error CalcGasFeeLibCanNotZeroValue(string name);
-    error CalcGasFeeLibOverflow();
+    error CalcAmountLibCanNotZeroValue(string name);
+    error CalcAmountLibOverflow();
 
     /**
      * @notice Calculates the equivalent amount of token based on the native token amount.
@@ -23,7 +23,7 @@ library CalcGasFeeLib {
      * @return tokenAmount The equivalent amount of token.
      * @return updatedAt The updated time.
      */
-    function calculateTokenAmountForGasFee(IPriceFeed feed, uint toChainID, address token, uint nativeTokenAmount)
+    function calculateTokenAmountForNetworkFee(IPriceFeed feed, uint toChainID, address token, uint nativeTokenAmount)
         external
         view
         returns (bool ok, uint tokenAmount, uint updatedAt)
@@ -51,12 +51,12 @@ library CalcGasFeeLib {
         pure
         returns (uint amountB)
     {
-        require(priceA != 0, CalcGasFeeLibCanNotZeroValue("priceA"));
+        require(priceA != 0, CalcAmountLibCanNotZeroValue("priceA"));
         bool ok;
         (ok, amountB) = decimalB >= decimalA
             ? amountA.tryMul(priceB.mulDiv(10 ** (decimalB - decimalA), priceA))
             : amountA.tryMul(priceB / (10 ** (decimalA - decimalB)) / priceA);
-        require(ok, CalcGasFeeLibOverflow());
+        require(ok, CalcAmountLibOverflow());
     }
 
     /// @notice Retrieves the number of decimals for a given token.
