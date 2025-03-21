@@ -27,4 +27,13 @@ interface ICrossCheck {
      * @param s Signature s values array
      */
     function submitCheckpoint(bytes calldata data, uint8[] memory v, bytes32[] memory r, bytes32[] memory s) external;
+
+    /**
+     * @notice Checks if the given blockHash can be proved to be part of a check block
+     * @param blockNumber The starting block number to query the check block
+     * @param proof The merkle proof
+     * @param blockHash The hash of the block to be verified
+     * @return isProved True if it is successfully proved
+     */
+    function verifyBlock(uint256 blockNumber, bytes32[] calldata proof, bytes32 blockHash) external view returns (bool);
 }

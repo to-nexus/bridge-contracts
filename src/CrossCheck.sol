@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 import {ICrossCheck} from "./interface/ICrossCheck.sol";
 import {RoleManager} from "./abstract/RoleManager.sol";
@@ -21,6 +22,7 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
     // ////////// errors //////////
     error CrossCheckInvalidChainID(uint256 chainID);
     error CrossCheckNotNextBlock(uint256 nonce, uint256 start);
+    error CrossCheckBlockNotFound(uint256 blockNumber);
 
     // ////////// events //////////
 
@@ -117,6 +119,18 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
         latestBlock = _block.start;
 
         emit NewCheckBlock(proposer, _block.nonce, _block.start, _block.end, _block.rootHash);
+    }
+
+    /**
+     * @dev see {ICrossCheck-verifyBlock}
+     * @dev The merkle tree which created the proof must has its leaves sorted
+     */
+    function verifyBlock(uint256 blockNumber, bytes32[] calldata proof, bytes32 blockHash) external view returns (bool) {
+        CheckBlock storage _block = _checkBlocks[blockNumber];
+        if (_block.createdAt == 0) {
+            revert CrossCheckBlockNotFound(blockNumber);
+        }
+        return MerkleProof.verifyCalldata(proof, _block.rootHash, blockHash);
     }
 
     // ////////// view functions //////////

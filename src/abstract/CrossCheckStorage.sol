@@ -88,7 +88,7 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
      * @dev Returns the next nonce and starting block number
      */
     function getNextBlockInfo() public view returns (uint256 nextNonce, uint256 nextStart) {
-        CheckBlock memory _block = _checkBlocks[latestBlock];
+        CheckBlock storage _block = _checkBlocks[latestBlock];
         if (_block.createdAt > 0) {
             unchecked {
                 nextNonce = uint256(_block.nonce) + 1;
