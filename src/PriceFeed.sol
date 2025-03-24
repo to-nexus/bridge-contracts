@@ -26,8 +26,8 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     error PriceFeedInvalidPriceAt(uint at, uint blocktime);
     error PriceFeedNoSource(address token);
 
-    event PriceFeedPriceUpdated(address indexed token, uint price, uint priceAt);
-    event PriceFeedNativeTokenPriceUpdated(uint indexed chainID, uint price, uint priceAt);
+    event PriceUpdated(address indexed token, uint price, uint priceAt);
+    event NativeTokenPriceUpdated(uint indexed chainID, uint price, uint priceAt);
 
     /// @dev Decimal places used for dollar price representation
     uint8 public dollarDecimals;
@@ -50,9 +50,8 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function initialize(address owner, uint8 _dollarDecimals) public initializer {
         __UUPSUpgradeable_init();
-        __AccessControl_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, owner);
-        _grantRole(Const.UPDATOR_ROLE, owner);
+        __RoleManager_init(owner);
+        _grantRole(Const.PRICER_ROLE, owner);
 
         dollarDecimals = _dollarDecimals;
         updatedAt = block.timestamp;
@@ -193,7 +192,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function updatePrice(address[] memory tokens, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyRole(Const.UPDATOR_ROLE)
+        onlyRole(Const.PRICER_ROLE)
     {
         uint tokensLen = tokens.length;
         require(tokensLen == prices.length && tokensLen == pricesAt.length, PriceFeedInvalidLength());
@@ -215,7 +214,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function updateNativeTokenPrice(uint[] memory chainIDs, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyRole(Const.UPDATOR_ROLE)
+        onlyRole(Const.PRICER_ROLE)
     {
         uint chainsLen = chainIDs.length;
         require(chainsLen == prices.length && chainsLen == pricesAt.length, PriceFeedInvalidLength());
@@ -240,7 +239,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
         require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _tokens.add(token);
         _priceData[token] = PriceData({token: token, price: price, lastUpdated: priceAt});
-        emit PriceFeedPriceUpdated(token, price, priceAt);
+        emit PriceUpdated(token, price, priceAt);
     }
 
     /**
@@ -254,7 +253,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
         require(price != 0, PriceFeedCanNotZeroValue("price"));
         require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _nativeTokenPrice[chainID] = NativeTokenPriceData({chainID: chainID, price: price, lastUpdated: priceAt});
-        emit PriceFeedNativeTokenPriceUpdated(chainID, price, priceAt);
+        emit NativeTokenPriceUpdated(chainID, price, priceAt);
     }
 
     /**

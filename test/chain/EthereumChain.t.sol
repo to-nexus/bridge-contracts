@@ -35,9 +35,9 @@ contract EthereumChainTest is CrossChainTest {
             bridgeEthereum = BaseBridge(payable(address(bridgeEthereumProxy)));
             bridgeEthereum.initialize(OWNER, threshold, REWARD);
 
-            bridgeEthereum.grantRole(ADMIN_ROLE, OWNER); // for test
+            bridgeEthereum.grantRole(EDITOR_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(OPERATOR_ROLE, OWNER); // for test
-            bridgeEthereum.grantRole(UPDATOR_ROLE, OWNER); // for test
+            bridgeEthereum.grantRole(PRICER_ROLE, OWNER); // for test
             bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN));
             bytes32[] memory roles = new bytes32[](5);
             for (uint i = 0; i < 5; i++) {
@@ -78,7 +78,7 @@ contract EthereumChainTest is CrossChainTest {
             bridgeVerifierEthereum = new BridgeVerifier(
                 OWNER, address(bridgeEthereum), address(priceFeedEthereum), 200000, 0, 0, 0, 0, 0, 2 hours
             );
-            bridgeVerifierEthereum.grantRole(UPDATOR_ROLE, OWNER);
+            bridgeVerifierEthereum.grantRole(PRICER_ROLE, OWNER);
             bridgeEthereum.setBridgeVerifier(bridgeVerifierEthereum);
 
             bytes32[] memory roles = new bytes32[](5);

@@ -136,7 +136,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /**
      * @notice Initializes the BridgeRegistry
      * @dev Sets up initial state
-     * - Grants Admin role to contract owner using Const.ADMIN_ROLE identifier
+     * - Grants Admin role to contract owner using Const.EDITOR_ROLE identifier
      * - Sets verification delay to 24 hours
      */
     function __BridgeRegistry_init() internal onlyInitializing {
@@ -188,7 +188,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken)
         public
-        onlyRole(Const.ADMIN_ROLE)
+        onlyRole(Const.EDITOR_ROLE)
     {
         if (_chains.add(remoteChainID)) {
             _chainData[remoteChainID] =
@@ -219,7 +219,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param remoteChainID Chain ID to unregister from
      * @param token Token address to unregister
      */
-    function unregisterToken(uint remoteChainID, address token) external onlyRole(Const.ADMIN_ROLE) {
+    function unregisterToken(uint remoteChainID, address token) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
         delete (_tokenPairs[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
@@ -280,7 +280,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @dev Updates the delay period for verification
      * @param delay New delay value in seconds
      */
-    function setVerificationDelay(uint delay) external onlyRole(Const.ADMIN_ROLE) {
+    function setVerificationDelay(uint delay) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _verificationDelay = delay;
         emit VerificationDelaySet(delay);
     }

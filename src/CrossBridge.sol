@@ -70,23 +70,9 @@ contract CrossBridge is BaseBridge {
      * - Emits CrossSupplyLimitSet event upon successful update
      * @param _crossSupplyLimit New maximum issuance limit for CROSS native token
      */
-    function setCrossSupplyLimit(uint _crossSupplyLimit) external onlyRole(Const.ADMIN_ROLE) {
+    function setCrossSupplyLimit(uint _crossSupplyLimit) external onlyRole(DEFAULT_ADMIN_ROLE) {
         crossSupplyLimit = _crossSupplyLimit;
         emit CrossSupplyLimitSet(crossSupplyLimit);
-    }
-
-    /**
-     * @notice Override of bridgeNetQty to provide specialized tracking for CROSS native token
-     * @dev Returns the current bridged amount for a specific token
-     * - For CROSS native token, returns the tracked _crossSupply
-     * - For other tokens, calls the parent implementation
-     * @param remoteChainID Chain ID to calculate bridged amount for
-     * @param token Token address to check
-     * @return The total amount of bridged tokens available
-     */
-    function bridgeNetQty(uint remoteChainID, address token) public view override returns (uint) {
-        if (token != Const.NATIVE_TOKEN) return super.bridgeNetQty(remoteChainID, token);
-        return _crossSupply;
     }
 
     /**

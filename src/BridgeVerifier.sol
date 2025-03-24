@@ -31,11 +31,14 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     error BridgeVerifierChainAleadyExist(uint chainID);
     error BridgeVerifierCanNotZeroValue(string name);
     error BridgeVerifierInvalidLength();
+    error BridgeVerifierAlreadyHasRole(address account, bytes32 role);
+    error BridgeVerifierDoesNotHaveRole(address account, bytes32 role);
+    error BridgeVerifierMissmatchLength();
 
-    event BridgeVerifierFinalizeBridgeGasSet(uint finalizeBridgeGas);
-    event BridgeVerifierGasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
-    event BridgeVerifierExchangeFeeUpdated(address indexed token, uint exFeeRate);
-    event BridgeVerifierPriceFeedUpdated(IPriceFeed indexed priceFeed);
+    event FinalizeBridgeGasSet(uint finalizeBridgeGas);
+    event GasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
+    event ExchangeFeeUpdated(address indexed token, uint exFeeRate);
+    event PriceFeedUpdated(IPriceFeed indexed priceFeed);
     event VerificationAmountThresholdSet(uint verificationAmountThreshold);
     event DefaultTokenPriceSet(uint defaultTokenPrice);
     event TimeWindowSet(uint timeWindow);
@@ -80,6 +83,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     /// @dev History of token movements for volume tracking
     mapping(IERC20 => DoubleEndedQueue.Bytes32Deque) private _tokenMovementHistory;
 
+    mapping(bytes32 role => EnumerableSet.AddressSet) _roles;
+
     /**
      * @notice Initializes the BridgeVerifier contract
      * @param initialOwner Admin address
@@ -110,8 +115,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(bridge != address(0), BridgeVerifierCanNotZeroValue("bridge"));
         require(_priceFeed != address(0), BridgeVerifierCanNotZeroValue("_priceFeed"));
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
-        _grantRole(Const.ADMIN_ROLE, initialOwner);
-        _grantRole(Const.UPDATOR_ROLE, initialOwner);
+        _grantRole(Const.EDITOR_ROLE, initialOwner);
+        _grantRole(Const.PRICER_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
 
         priceFeed = IPriceFeed(_priceFeed);
@@ -391,9 +396,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param remoteChainID Chain ID to update
      * @param gasPrice New gas price value
      */
-    function updateGasPrice(uint remoteChainID, uint gasPrice) external onlyRole(Const.UPDATOR_ROLE) {
+    function updateGasPrice(uint remoteChainID, uint gasPrice) external onlyRole(Const.PRICER_ROLE) {
         _gasPrice[remoteChainID] = gasPrice;
-        emit BridgeVerifierGasPriceUpdated(remoteChainID, gasPrice);
+        emit GasPriceUpdated(remoteChainID, gasPrice);
     }
 
     /**
@@ -406,12 +411,12 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      */
     function updateGasPriceBatch(uint[] memory remoteChainIDs, uint[] memory gasPrices)
         external
-        onlyRole(Const.UPDATOR_ROLE)
+        onlyRole(Const.PRICER_ROLE)
     {
         require(remoteChainIDs.length == gasPrices.length, BridgeVerifierInvalidLength());
         for (uint i = 0; i < remoteChainIDs.length; ++i) {
             _gasPrice[remoteChainIDs[i]] = gasPrices[i];
-            emit BridgeVerifierGasPriceUpdated(remoteChainIDs[i], gasPrices[i]);
+            emit GasPriceUpdated(remoteChainIDs[i], gasPrices[i]);
         }
     }
 
@@ -423,10 +428,10 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param token Token to configure
      * @param exFeeRate Exchange fee rate
      */
-    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(Const.ADMIN_ROLE) {
+    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(Const.EDITOR_ROLE) {
         require(address(token) != address(0), BridgeVerifierCanNotZeroValue("token"));
         _exFeeRate[token] = exFeeRate;
-        emit BridgeVerifierExchangeFeeUpdated(address(token), exFeeRate);
+        emit ExchangeFeeUpdated(address(token), exFeeRate);
     }
 
     /**
@@ -437,10 +442,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param tokenList Array of token addresses
      * @param exFeeRateList Array of exchange fee rates
      */
-    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList)
-        external
-        onlyRole(Const.ADMIN_ROLE)
-    {
+    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList) external {
         require(tokenList.length == exFeeRateList.length, BridgeVerifierInvalidLength());
         for (uint i = 0; i < tokenList.length; ++i) {
             setExFeeRate(tokenList[i], exFeeRateList[i]);
@@ -455,10 +457,10 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param finalizeBridgeGas New gas amount
      */
-    function setFinalizeBridgeGas(uint finalizeBridgeGas) external onlyRole(Const.ADMIN_ROLE) {
+    function setFinalizeBridgeGas(uint finalizeBridgeGas) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(finalizeBridgeGas != 0, BridgeVerifierCanNotZeroValue("finalizeBridgeGas"));
         _finalizeBridgeGas = finalizeBridgeGas;
-        emit BridgeVerifierFinalizeBridgeGasSet(_finalizeBridgeGas);
+        emit FinalizeBridgeGasSet(_finalizeBridgeGas);
     }
 
     /**
@@ -468,7 +470,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param defaultTokenPrice New default token price value
      */
-    function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(Const.ADMIN_ROLE) {
+    function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(Const.EDITOR_ROLE) {
         _defaultTokenPrice = defaultTokenPrice;
         emit DefaultTokenPriceSet(defaultTokenPrice);
     }
@@ -480,16 +482,16 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param exFeeRate New exchange fee rate
      */
-    function setDefaultExFeeRate(uint exFeeRate) external onlyRole(Const.ADMIN_ROLE) {
+    function setDefaultExFeeRate(uint exFeeRate) external onlyRole(Const.EDITOR_ROLE) {
         _defaultExFeeRate = exFeeRate;
-        emit BridgeVerifierExchangeFeeUpdated(address(0), _defaultExFeeRate);
+        emit ExchangeFeeUpdated(address(0), _defaultExFeeRate);
     }
 
     /**
      * @notice Sets the minimum token value in USD
      * @param minimumTokenValue New minimum token value
      */
-    function setMinimumTokenValue(uint minimumTokenValue) external onlyRole(Const.ADMIN_ROLE) {
+    function setMinimumTokenValue(uint minimumTokenValue) external onlyRole(Const.EDITOR_ROLE) {
         _minimumTokenValue = minimumTokenValue;
         emit MinimumTokenValueSet(minimumTokenValue);
     }
@@ -501,7 +503,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Updates verification amount threshold value
      * @param verificationAmountThreshold New verification amount threshold value
      */
-    function setVerificationAmountThreshold(uint verificationAmountThreshold) external onlyRole(Const.ADMIN_ROLE) {
+    function setVerificationAmountThreshold(uint verificationAmountThreshold) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _verificationAmountThreshold = verificationAmountThreshold;
         emit VerificationAmountThresholdSet(verificationAmountThreshold);
     }
@@ -514,7 +516,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param timeWindow New time window duration in seconds
      */
-    function setTimeWindow(uint timeWindow) external onlyRole(Const.ADMIN_ROLE) {
+    function setTimeWindow(uint timeWindow) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _timeWindow = timeWindow;
         emit TimeWindowSet(timeWindow);
     }
@@ -527,7 +529,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param periodTotalValueThreshold New period total value threshold
      */
-    function setPeriodTotalValueThreshold(uint periodTotalValueThreshold) external onlyRole(Const.ADMIN_ROLE) {
+    function setPeriodTotalValueThreshold(uint periodTotalValueThreshold) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _periodTotalValueThreshold = periodTotalValueThreshold;
         emit PeriodTotalValueThresholdSet(periodTotalValueThreshold);
     }
@@ -540,9 +542,56 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param _priceFeed New price feed contract
      */
-    function setPriceFeed(IPriceFeed _priceFeed) external onlyRole(Const.ADMIN_ROLE) {
+    function setPriceFeed(IPriceFeed _priceFeed) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(address(_priceFeed) != address(0), BridgeVerifierCanNotZeroValue("_priceFeed")); // allow zero address
         priceFeed = _priceFeed;
-        emit BridgeVerifierPriceFeedUpdated(priceFeed);
+        emit PriceFeedUpdated(priceFeed);
+    }
+
+    /**
+     * @notice Returns all members of a specific role
+     * @param role The role to query
+     * @return members Array of addresses that have the specified role
+     */
+    function getRoleMembers(bytes32 role) external view returns (address[] memory) {
+        return _roles[role].values();
+    }
+
+    /**
+     * @notice Grants multiple roles to a list of accounts
+     * @dev Validates input array lengths match
+     * - Grants each role to the corresponding account
+     * @param roles Array of roles to grant
+     * @param accounts Array of accounts to grant roles to
+     */
+    function grantRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
+        require(roles.length == accounts.length, BridgeVerifierMissmatchLength());
+        for (uint i = 0; i < accounts.length; ++i) {
+            grantRole(roles[i], accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Revokes multiple roles from a list of accounts
+     * @dev Validates input array lengths match
+     * - Revokes each role from the corresponding account
+     * @param roles Array of roles to revoke
+     * @param accounts Array of accounts to revoke roles from
+     */
+    function revokeRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
+        require(roles.length == accounts.length, BridgeVerifierMissmatchLength());
+        for (uint i = 0; i < accounts.length; ++i) {
+            revokeRole(roles[i], accounts[i]);
+        }
+    }
+
+    function _grantRole(bytes32 role, address account) internal override returns (bool ok) {
+        ok = super._grantRole(role, account);
+        if (ok) require(_roles[role].add(account), BridgeVerifierAlreadyHasRole(account, role));
+    }
+
+    function _revokeRole(bytes32 role, address account) internal override returns (bool ok) {
+        ok = super._revokeRole(role, account);
+        if (ok) require(_roles[role].remove(account), BridgeVerifierDoesNotHaveRole(account, role));
     }
 }

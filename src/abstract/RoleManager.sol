@@ -35,11 +35,23 @@ abstract contract RoleManager is AccessControlUpgradeable {
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
     }
 
+    /**
+     * @notice Returns all members of a specific role
+     * @param role The role to query
+     * @return members Array of addresses that have the specified role
+     */
     function getRoleMembers(bytes32 role) external view returns (address[] memory) {
         RoleManagerStorage storage $ = _getRoleManagerStorage();
         return $._roles[role].values();
     }
 
+    /**
+     * @notice Grants multiple roles to a list of accounts
+     * @dev Validates input array lengths match
+     * - Grants each role to the corresponding account
+     * @param roles Array of roles to grant
+     * @param accounts Array of accounts to grant roles to
+     */
     function grantRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
         require(roles.length == accounts.length, RoleManagerMissmatchLength());
         for (uint i = 0; i < accounts.length; ++i) {
@@ -47,6 +59,13 @@ abstract contract RoleManager is AccessControlUpgradeable {
         }
     }
 
+    /**
+     * @notice Revokes multiple roles from a list of accounts
+     * @dev Validates input array lengths match
+     * - Revokes each role from the corresponding account
+     * @param roles Array of roles to revoke
+     * @param accounts Array of accounts to revoke roles from
+     */
     function revokeRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
         require(roles.length == accounts.length, RoleManagerMissmatchLength());
         for (uint i = 0; i < accounts.length; ++i) {

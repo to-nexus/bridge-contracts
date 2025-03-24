@@ -65,7 +65,6 @@ contract BaseBridge is
      * @param networkFee Network fee for the operation
      * @param exFee Exchange fee for the operation
      * @param time Timestamp of initiation
-     * @param bridgeNetQty Total amount of tokens bridged
      * @param extraData Additional operation data
      */
     event BridgeInitiated(
@@ -78,9 +77,8 @@ contract BaseBridge is
         uint value,
         uint networkFee,
         uint exFee,
-        uint bridgeNetQty,
-        uint time,
-        bytes extraData
+        bytes extraData,
+        uint time
     );
 
     /**
@@ -93,13 +91,7 @@ contract BaseBridge is
      * @param time Timestamp of finalization
      */
     event BridgeFinalized(
-        uint indexed fromChainID,
-        uint indexed index,
-        IERC20 indexed toToken,
-        address to,
-        uint value,
-        uint bridgeNetQty,
-        uint time
+        uint indexed fromChainID, uint indexed index, IERC20 indexed toToken, address to, uint value, uint time
     );
 
     /**
@@ -118,7 +110,6 @@ contract BaseBridge is
         IERC20 indexed toToken,
         address to,
         uint value,
-        uint bridgeNetQty,
         uint time,
         Const.FinalizeStatus status
     );
@@ -364,16 +355,11 @@ contract BaseBridge is
             }
         }
 
-        uint _bridgeNetQty = bridgeNetQty(args.fromChainID, address(args.toToken));
         if (status == Const.FinalizeStatus.Success) {
-            emit BridgeFinalized(
-                args.fromChainID, args.index, args.toToken, args.to, args.value, _bridgeNetQty, block.timestamp
-            );
+            emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
         } else {
             _setPendingArguments(args, status, reason, delay);
-            emit BridgePending(
-                args.fromChainID, args.index, args.toToken, args.to, args.value, _bridgeNetQty, block.timestamp, status
-            );
+            emit BridgePending(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp, status);
         }
         return true;
     }
@@ -499,7 +485,6 @@ contract BaseBridge is
 
         _initiateBridge(args.toChainID, args.fromToken, args.from, args.value, args.networkFee + args.exFee);
 
-        uint _bridgeNetQty = bridgeNetQty(args.toChainID, address(args.fromToken));
         emit BridgeInitiated(
             args.toChainID,
             index,
@@ -510,9 +495,8 @@ contract BaseBridge is
             args.value,
             args.networkFee,
             args.exFee,
-            _bridgeNetQty,
-            block.timestamp,
-            args.extraData
+            args.extraData,
+            block.timestamp
         );
     }
 
@@ -532,15 +516,7 @@ contract BaseBridge is
             _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
         require(status == Const.FinalizeStatus.Success, string(abi.encode(status, reason)));
 
-        emit BridgeFinalized(
-            args.fromChainID,
-            args.index,
-            args.toToken,
-            args.to,
-            args.value,
-            bridgeNetQty(args.fromChainID, address(args.toToken)),
-            block.timestamp
-        );
+        emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
     }
 
     /**
@@ -781,21 +757,6 @@ contract BaseBridge is
      */
     function dev() external view returns (address) {
         return _dev;
-    }
-
-    /**
-     * @notice Calculates the total amount of tokens bridged between chains
-     * @dev Returns the available bridge balance based on token type
-     * - For origin tokens: deposited amount minus pending operations
-     * - For wrapped tokens: total supply plus pending amount
-     * @param remoteChainID Chain ID to calculate bridged amount for
-     * @param token Token address to check
-     * @return Total amount of bridged tokens available
-     */
-    function bridgeNetQty(uint remoteChainID, address token) public view virtual returns (uint) {
-        TokenPair memory tokenPair = _tokenPairs[remoteChainID][token];
-        if (tokenPair.isOrigin) return tokenPair.deposited - tokenPair.pendingAmount;
-        else return IERC20(tokenPair.localToken).totalSupply() + tokenPair.pendingAmount;
     }
 
     /**

@@ -18,8 +18,8 @@ contract SettingTest is Test {
 
     bytes32 public constant VALIDATOR_ROLE = Const.VALIDATOR_ROLE;
     bytes32 public constant OPERATOR_ROLE = Const.OPERATOR_ROLE;
-    bytes32 public constant ADMIN_ROLE = Const.ADMIN_ROLE;
-    bytes32 public constant UPDATOR_ROLE = Const.UPDATOR_ROLE;
+    bytes32 public constant EDITOR_ROLE = Const.EDITOR_ROLE;
+    bytes32 public constant PRICER_ROLE = Const.PRICER_ROLE;
 
     uint internal constant OWNER_PK = uint(bytes32("owner"));
     uint internal constant CrossOWNER_PK = uint(bytes32("cross_owner"));
