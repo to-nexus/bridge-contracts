@@ -21,7 +21,7 @@ contract CrossCheckTest is Test {
     uint256 constant N_VALIDATORS = 3;
     uint256 constant N_BLOCKS = CrossCheckMixin.blocksPerCheck;
     uint256 constant CHAIN_ID = CrossCheckMixin.crossChainID;
-
+    uint256 constant MAX_CHECK_BLOCKS = 10;
     bytes32 constant SUBMIT_TYPEHASH = keccak256("CheckBlockArg(uint256 nonce,uint256 start,uint256 end,bytes32 rootHash,uint256 chainID)");
 
     address depl;
@@ -49,7 +49,7 @@ contract CrossCheckTest is Test {
         CrossCheck impl = new CrossCheck();
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
         crossCheck = CrossCheck(address(proxy));
-        crossCheck.initialize(uint8(N_VALIDATORS));
+        crossCheck.initialize(MAX_CHECK_BLOCKS, uint8(N_VALIDATORS));
 
         // setup validators
         crossCheck.grantRoleBatch(Const.VALIDATOR_ROLE, vals);
@@ -57,7 +57,11 @@ contract CrossCheckTest is Test {
     }
 
     function test_initialize_Initialized() public view {
-        assertEq(crossCheck.latestBlock(), 0);
+        assertEq(crossCheck.firstNonce(), 0);
+        assertEq(crossCheck.lastNonce(), 0);
+        assertEq(crossCheck.maxCheckBlocks(), 10);
+        assertEq(crossCheck.threshold(), uint8(N_VALIDATORS));
+        assertEq(crossCheck.numCheckBlocks(), 0);
 
         (uint256 nextNonce, uint256 nextStart) = crossCheck.getNextBlockInfo();
         assertEq(nextNonce, 0);
@@ -65,32 +69,72 @@ contract CrossCheckTest is Test {
 
         CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(0);
         assertEq(_block.createdAt, 0);
+
+        _block = crossCheck.getCheckBlockByBlockNumber(0);
+        assertEq(_block.createdAt, 0);
     }
 
-    function testFuzz_submitCheckpoint(uint256 timemod) public {
-        uint256 timestamp = 1641080000 + (timemod % 100000);
+    function testFuzz_submitCheckpoint(uint256 count) public {
+        count = count % 20;
+
+        uint256 timestamp = 1641080000 + (vm.randomUint() % 100000);
         vm.warp(timestamp);
 
         // proposer will submit a checkpoint
         address proposer = getProposer();
         vm.startPrank(proposer);
 
-        ICrossCheck.CheckBlockArg memory _block = createBlockArg(0, 0);
+        for (uint256 i = 0; i < count; ++i) {
+            ICrossCheck.CheckBlockArg memory _block = createBlockArg(i, i * N_BLOCKS);
 
-        // NewCheckBlock should be emitted
-        vm.expectEmit(true, true, true, true);
-        emit CrossCheckBlock.NewCheckBlock(proposer, _block.nonce, _block.start, _block.end, _block.rootHash);
+            // CheckBlockAdded should be emitted
+            vm.expectEmit(true, true, true, true);
+            emit CrossCheckBlock.CheckBlockAdded(proposer, _block.nonce, _block.start, _block.end, _block.rootHash);
 
-        (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
-        crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
+            (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
+            crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
 
-        assertEq(crossCheck.latestBlock(), 0);
+            assertEq(crossCheck.lastNonce(), i);
 
-        (uint256 nextNonce, uint256 nextStart) = crossCheck.getNextBlockInfo();
-        assertEq(nextNonce, 1);
-        assertEq(nextStart, N_BLOCKS);
+            (uint256 nextNonce, uint256 nextStart) = crossCheck.getNextBlockInfo();
+            assertEq(nextNonce, i + 1);
+            assertEq(nextStart, (i + 1) * N_BLOCKS);
 
-        verifyCheckBlock(_block, proposer, timestamp);
+            verifyCheckBlock(_block, proposer, timestamp);
+        }
+    }
+
+    function test_submitCheckpoint_Prune() public {
+        address proposer = getProposer();
+        vm.startPrank(proposer);
+
+        for (uint256 nonce = 0; nonce < MAX_CHECK_BLOCKS; ++nonce) {
+            ICrossCheck.CheckBlockArg memory _block = createBlockArg(nonce, nonce * N_BLOCKS);
+            (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
+            crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
+        }
+
+        assertEq(crossCheck.firstNonce(), 0);
+        assertEq(crossCheck.lastNonce(), MAX_CHECK_BLOCKS - 1);
+        assertEq(crossCheck.numCheckBlocks(), MAX_CHECK_BLOCKS);
+
+        // should be pruned
+        for (uint256 i = 0; i < MAX_CHECK_BLOCKS; ++i) {
+            uint256 nonce = i + MAX_CHECK_BLOCKS;
+            ICrossCheck.CheckBlockArg memory _block = createBlockArg(nonce, nonce * N_BLOCKS);
+
+            vm.expectEmit(true, true, true, true);
+            emit CrossCheckBlock.CheckBlockAdded(proposer, _block.nonce, _block.start, _block.end, _block.rootHash);
+            vm.expectEmit(true, false, false, true);
+            emit CrossCheckBlock.CheckBlockPruned(i, 1);
+
+            (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
+            crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
+        }
+
+        assertEq(crossCheck.firstNonce(), MAX_CHECK_BLOCKS);
+        assertEq(crossCheck.lastNonce(), MAX_CHECK_BLOCKS * 2 - 1);
+        assertEq(crossCheck.numCheckBlocks(), MAX_CHECK_BLOCKS);
     }
 
     function test_submitCheckpoint_RevertIf_BlockIsNotNext() public {
@@ -202,8 +246,6 @@ contract CrossCheckTest is Test {
         (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
         crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
 
-        assertEq(crossCheck.latestBlock(), 0);
-
         // the leaf should be proved
         bool result = crossCheck.verifyBlock(1, proof, blockHash);
         assertTrue(result);
@@ -243,9 +285,9 @@ contract CrossCheckTest is Test {
             crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
         }
 
-        // getCheckBlockByNonce
+        // getCheckBlock
         for (uint256 i = 0; i < 3; ++i) {
-            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByNonce(i);
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(i);
             verifyCheckBlock(
                 ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
                 proposer,
@@ -266,7 +308,7 @@ contract CrossCheckTest is Test {
         // edge cases
         {
             // nonce = 0
-            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByNonce(0);
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(0);
             verifyCheckBlock(
                 ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
                 proposer,
@@ -300,7 +342,7 @@ contract CrossCheckTest is Test {
 
         // not found
         {
-            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByNonce(N_BLOCKS + 5);
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(N_BLOCKS + 5);
             assertEq(_block.nonce, 0);
             assertEq(_block.start, 0);
             assertEq(_block.end, 0);
@@ -319,6 +361,10 @@ contract CrossCheckTest is Test {
     }
 
     function test_getCheckBlockByBlockNumber() public {
+        vm.startPrank(depl);
+        crossCheck.grantRole(crossCheck.OPERATOR_ROLE(), depl);
+        crossCheck.setMaxCheckBlocks(400000);
+
         // test with huge number of check blocks
         uint256 N_TESTS = 4000;
         address proposer = getProposer();
@@ -339,6 +385,22 @@ contract CrossCheckTest is Test {
                 _block.createdAt
             );
         }
+    }
+
+    function test_setMaxCheckBlocks() public {
+        vm.startPrank(depl);
+        crossCheck.grantRole(crossCheck.OPERATOR_ROLE(), depl);
+
+        // should succeed
+        vm.expectEmit(true, false, false, false);
+        emit CrossCheck.CrossCheckMaxCheckBlocksUpdated(1000);
+        crossCheck.setMaxCheckBlocks(1000);
+
+        assertEq(crossCheck.maxCheckBlocks(), 1000);
+
+        // should revert
+        vm.expectPartialRevert(CrossCheck.CrossCheckInvalidMaxCheckBlocks.selector);
+        crossCheck.setMaxCheckBlocks(5);
     }
 
     // utility functions
@@ -394,7 +456,7 @@ contract CrossCheckTest is Test {
     }
 
     function verifyCheckBlock(ICrossCheck.CheckBlockArg memory _arg, address _proposer, uint256 timestamp) internal view {
-        CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(_arg.start);
+        CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(_arg.nonce);
         assertEq(_block.nonce, _arg.nonce);
         assertEq(_block.start, _arg.start);
         assertEq(_block.end, _arg.end);

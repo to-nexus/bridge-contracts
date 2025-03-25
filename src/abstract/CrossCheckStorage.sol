@@ -14,7 +14,14 @@ abstract contract CrossCheckBlock {
      * @param end The ending block number this check covers
      * @param rootHash The hash representing the root of the block data
      */
-    event NewCheckBlock(address indexed proposer, uint256 indexed nonce, uint256 indexed start, uint256 end, bytes32 rootHash);
+    event CheckBlockAdded(address indexed proposer, uint256 indexed nonce, uint256 indexed start, uint256 end, bytes32 rootHash);
+
+    /**
+     * @notice Emitted when a check block is pruned
+     * @param nonce The nonce of the first check block that is pruned
+     * @param count The number of check blocks pruned
+     */
+    event CheckBlockPruned(uint256 indexed nonce, uint256 count);
 
     /**
      * @notice Structure representing a Cross chain verification checkpoint
@@ -36,29 +43,29 @@ abstract contract CrossCheckBlock {
  */
 abstract contract CrossCheckStorage is CrossCheckBlock {
     error CrossCheckInvalidData();
-    error CrossCheckBlockExists(uint256 start);
+    error CrossCheckBlockExists(uint256 nonce);
+    error CrossCheckNonceNotFound(uint256 nonce);
 
     /**
-     * @notice Mapping from start block number to corresponding check block
-     * @dev Key is the starting block number of the check range
+     * @notice Mapping from check block nonce to corresponding check block
+     * @dev Key is the nonce of the check block
      */
     mapping(uint256 => CheckBlock) internal _checkBlocks;
 
     /**
-     * @notice Mapping from nonce to corresponding check block's start block number
-     * @dev Key is the nonce of the check block
+     * @notice Nonce of the first check block
      */
-    mapping(uint256 => uint256) internal _nonceToCheckBlocks;
+    uint256 public firstNonce;
 
     /**
-     * @notice The starting block number of the latest check block
+     * @notice Nonce of the last check block
      */
-    uint256 public latestBlock;
+    uint256 public lastNonce;
 
     /**
-     * @notice The number of submitted check blocks
+     * @notice Maximum number of check blocks that can be stored
      */
-    uint256 public numCheckBlocks;
+    uint256 public maxCheckBlocks = 100;
 
     /**
      * @dev storage gap
@@ -66,12 +73,16 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
     uint[46] private __gap;
 
     /**
-     * @notice Retrieves check block of a specific starting block number
-     * @param startBlockNumber The starting block number to query
-     * @return _block The check block
+     * @notice Returns the number of check blocks
+     * @return The number of check blocks
      */
-    function getCheckBlock(uint256 startBlockNumber) external view returns (CheckBlock memory) {
-        return _checkBlocks[startBlockNumber];
+    function numCheckBlocks() external view returns (uint256) {
+        if (lastNonce == firstNonce) {
+            if (_checkBlocks[lastNonce].createdAt == 0) {
+                return 0;
+            }
+        }
+        return lastNonce - firstNonce + 1;
     }
 
     /**
@@ -79,17 +90,8 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
      * @param nonce The nonce of the check block to query
      * @return block The check block
      */
-    function getCheckBlockByNonce(uint256 nonce) external view returns (CheckBlock memory) {
-        // short cut
-        if (nonce == 0) {
-            return _checkBlocks[0];
-        }
-        uint256 start = _nonceToCheckBlocks[nonce];
-        if (start == 0) {
-            // start == 0 means that the nonce does not exist
-            return CheckBlock(0, 0, 0, 0, bytes32(0), address(0));
-        }
-        return _checkBlocks[start];
+    function getCheckBlock(uint256 nonce) external view returns (CheckBlock memory) {
+        return _checkBlocks[nonce];
     }
 
     /**
@@ -99,21 +101,18 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
      */
     function getCheckBlockByBlockNumber(uint256 blockNumber) public view returns (CheckBlock memory) {
         // short cut
-        if (_checkBlocks[blockNumber].createdAt > 0) {
-            return _checkBlocks[blockNumber];
-        }
         if (blockNumber == 0) {
             return _checkBlocks[0];
         }
 
         // binary search using nonce
-        uint256 low = 0;
-        uint256 high = numCheckBlocks - 1;
+        uint256 low = firstNonce;
+        uint256 high = lastNonce;
         while (low <= high) {
             uint256 mid = (low + high) / 2;
-            CheckBlock storage _block = _checkBlocks[_nonceToCheckBlocks[mid]];
+            CheckBlock storage _block = _checkBlocks[mid];
             if (_block.start <= blockNumber && blockNumber <= _block.end) {
-                return _checkBlocks[_block.start];
+                return _block;
             } else if (blockNumber < _block.start) {
                 unchecked {
                     high = mid - 1;
@@ -132,10 +131,10 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
      * @dev Returns the next nonce and starting block number
      */
     function getNextBlockInfo() public view returns (uint256 nextNonce, uint256 nextStart) {
-        CheckBlock storage _block = _checkBlocks[latestBlock];
+        CheckBlock storage _block = _checkBlocks[lastNonce];
         if (_block.createdAt > 0) {
             unchecked {
-                nextNonce = uint256(_block.nonce) + 1;
+                nextNonce = lastNonce + 1;
                 nextStart = uint256(_block.end) + 1;
             }
         }
@@ -143,6 +142,8 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
 
     /**
      * @dev Validates and adds a new check block
+     * This function does not check if the check block is the last one
+     * The caller is responsible to check it
      * @param proposer Address of the check block proposer
      * @param nonce Sequential number of this check block
      * @param start Starting block number for this check block
@@ -155,12 +156,12 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
             revert CrossCheckInvalidData();
         }
         // check boundary
-        if (nonce > type(uint64).max || start > type(uint64).max || end > type(uint64).max) {
+        if (nonce > type(uint64).max || end > type(uint64).max) {
             revert CrossCheckInvalidData();
         }
         // check if the block is already added
-        if (_checkBlocks[start].createdAt > 0) {
-            revert CrossCheckBlockExists(start);
+        if (_checkBlocks[nonce].createdAt > 0) {
+            revert CrossCheckBlockExists(nonce);
         }
 
         CheckBlock memory nextBlock = CheckBlock({
@@ -173,12 +174,19 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
         });
 
         // insert new check block
-        _checkBlocks[start] = nextBlock;
-        _nonceToCheckBlocks[nonce] = start;
-        unchecked {
-            ++numCheckBlocks;
+        _checkBlocks[nonce] = nextBlock;
+    }
+
+    /**
+     * @dev Removes a check block from the storage
+     * This function does not check if the check block is the first one
+     * The caller is responsible to check it
+     * @param nonce The nonce of the check block to remove
+     */
+    function _removeCheckBlock(uint256 nonce) internal virtual {
+        if (_checkBlocks[nonce].createdAt == 0) {
+            revert CrossCheckNonceNotFound(nonce);
         }
-        // set the latest block number to the new one
-        latestBlock = start;
+        delete _checkBlocks[nonce];
     }
 }
