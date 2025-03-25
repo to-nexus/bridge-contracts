@@ -10,7 +10,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 import {IPriceFeed} from "./PriceFeed.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
-import {CalcGasFeeLib} from "./lib/CalcGasFeeLib.sol";
+import {CalcAmountLib} from "./lib/CalcAmountLib.sol";
 import {Const} from "./lib/Const.sol";
 
 /**
@@ -18,7 +18,7 @@ import {Const} from "./lib/Const.sol";
  * @notice Contract for calculating and managing bridge operation fees
  * @dev Provides fee calculations, token monitoring, and safety threshold management
  * Key features:
- * - Gas and exchange fee calculations based on token type and chain
+ * - Network and exchange fee calculations based on token type and chain
  * - Token volume monitoring for security threshold enforcement
  * - Time-window based transfer volume restrictions
  */
@@ -26,16 +26,20 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     using Math for uint;
     using EnumerableSet for EnumerableSet.AddressSet;
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
-    using CalcGasFeeLib for IPriceFeed;
+    using CalcAmountLib for IPriceFeed;
 
     error BridgeVerifierChainAleadyExist(uint chainID);
     error BridgeVerifierCanNotZeroValue(string name);
     error BridgeVerifierInvalidLength();
+    error BridgeVerifierAlreadyHasRole(address account, bytes32 role);
+    error BridgeVerifierDoesNotHaveRole(address account, bytes32 role);
+    error BridgeVerifierMissmatchLength();
+    error BridgeVerifierInvalidTimeWindow();
 
-    event BridgeVerifierFinalizeBridgeGasSet(uint finalizeBridgeGas);
-    event BridgeVerifierGasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
-    event BridgeVerifierExchangeFeeUpdated(address indexed token, uint exFeeRate);
-    event BridgeVerifierPriceFeedUpdated(IPriceFeed indexed priceFeed);
+    event FinalizeBridgeGasSet(uint finalizeBridgeGas);
+    event GasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
+    event ExchangeFeeUpdated(address indexed token, uint exFeeRate);
+    event PriceFeedUpdated(IPriceFeed indexed priceFeed);
     event VerificationAmountThresholdSet(uint verificationAmountThreshold);
     event DefaultTokenPriceSet(uint defaultTokenPrice);
     event TimeWindowSet(uint timeWindow);
@@ -80,6 +84,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     /// @dev History of token movements for volume tracking
     mapping(IERC20 => DoubleEndedQueue.Bytes32Deque) private _tokenMovementHistory;
 
+    mapping(bytes32 role => EnumerableSet.AddressSet) _roles;
+
     /**
      * @notice Initializes the BridgeVerifier contract
      * @param initialOwner Admin address
@@ -109,9 +115,11 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(initialOwner != address(0), BridgeVerifierCanNotZeroValue("initialOwner"));
         require(bridge != address(0), BridgeVerifierCanNotZeroValue("bridge"));
         require(_priceFeed != address(0), BridgeVerifierCanNotZeroValue("_priceFeed"));
+        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(Const.ADMIN_ROLE, initialOwner);
-        _grantRole(Const.UPDATOR_ROLE, initialOwner);
+        _grantRole(Const.EDITOR_ROLE, initialOwner);
+        _grantRole(Const.PRICER_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
 
         priceFeed = IPriceFeed(_priceFeed);
@@ -150,12 +158,13 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
             return Const.FinalizeStatus.VerificationAmountThresholdExceeded;
         }
+        if (_timeWindow == 0 || _periodTotalValueThreshold == 0) return Const.FinalizeStatus.Success;
 
         // Manage history and verify thresholds
         DoubleEndedQueue.Bytes32Deque storage deque = _tokenMovementHistory[token];
         // Calculate current time period and the beginning of the monitoring window
-        uint currentTime = block.timestamp / Const.PERIOD_INTERVAL;
-        uint windowStartTime = (currentTime - _timeWindow) / Const.PERIOD_INTERVAL;
+        uint currentTime = (block.timestamp / Const.PERIOD_INTERVAL) * Const.PERIOD_INTERVAL;
+        uint windowStartTime = currentTime - _timeWindow;
 
         // Remove expired records (older than the window start time)
         // and subtract their values from the current token volume tracking
@@ -180,16 +189,14 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
             return Const.FinalizeStatus.TokenCurrentVolumeOverflow;
         }
 
-        _tokenCurrentVolume[token] += score;
-
-        if (_periodTotalValueThreshold != 0 && _tokenCurrentVolume[token] > _periodTotalValueThreshold) {
-            return Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
-        }
+        uint currentVolume = _tokenCurrentVolume[token] + score;
+        if (currentVolume > _periodTotalValueThreshold) return Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
+        _tokenCurrentVolume[token] = currentVolume;
 
         // If there's already a record for the current time period,
         // update it by combining with the new score rather than creating a duplicate entry
         if (deque.length() != 0 && uint(deque.back() >> 192) == currentTime) {
-            score = uint(deque.popBack()) & TOKEN_SCORE_MASK;
+            score = (uint(deque.popBack()) & TOKEN_SCORE_MASK) + score;
         }
 
         // Create a new movement record by packing time (upper 64 bits) and score (lower 192 bits)
@@ -205,16 +212,16 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param token Token being bridged
      * @param value Amount being bridged
      * @return minimumValue Minimum amount required
-     * @return gasFee Gas fee for target chain
+     * @return networkFee Network fee for target chain
      * @return exFee Exchange fee
      */
     function calculateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view
-        returns (uint minimumValue, uint gasFee, uint exFee)
+        returns (uint minimumValue, uint networkFee, uint exFee)
     {
         uint exFeeRate;
-        (minimumValue, gasFee, exFeeRate) = getTokenConfig(remoteChainID, token);
+        (minimumValue, networkFee, exFeeRate) = getTokenConfig(remoteChainID, token);
 
         exFee = value * exFeeRate / DENOMINATOR;
     }
@@ -229,7 +236,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @return price Dollar price for a standard token unit
      */
     function getTokenPrice(IERC20 token) external view returns (bool exist, uint price) {
-        return getTokenPriceWithValue(token, (10 ** CalcGasFeeLib.decimals(address(token))));
+        return getTokenPriceWithValue(token, (10 ** CalcAmountLib.decimals(address(token))));
     }
 
     /**
@@ -246,7 +253,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     function getTokenPriceWithValue(IERC20 token, uint value) public view returns (bool exist, uint price) {
         (exist, price,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) price = _defaultTokenPrice;
-        price = price.mulDiv(value, (10 ** CalcGasFeeLib.decimals(address(token))));
+        price = price.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
     }
 
     /**
@@ -263,24 +270,24 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @notice Calculates fees for a token
      * @dev Determines minimum amount and fees
      * - Gets token-specific or default fee rates
-     * - Calculates gas fee using price feed
+     * - Calculates network fee using price feed
      * - Handles fee exemptions
      * @param remoteChainID Chain ID for fee calculation
      * @param token Token to calculate fees for
      * @return minimumValue Minimum required amount
-     * @return gasFee Gas fee in token amount
+     * @return networkFee Network fee in token amount
      * @return exFeeRate Exchange fee rate
      */
     function getTokenConfig(uint remoteChainID, IERC20 token)
         public
         view
-        returns (uint minimumValue, uint gasFee, uint exFeeRate)
+        returns (uint minimumValue, uint networkFee, uint exFeeRate)
     {
         // Get token price per unit
         (bool exist, uint tokenPrice,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) tokenPrice = _defaultTokenPrice;
 
-        uint tokenDecimals = 10 ** CalcGasFeeLib.decimals(address(token));
+        uint tokenDecimals = 10 ** CalcAmountLib.decimals(address(token));
         // Calculate how many tokens are required to meet the minimum dollar value
         // If token price is 0, set a default minimum value to prevent division by zero
         if (tokenPrice == 0) minimumValue = tokenDecimals; // Default to 1 token with decimals if price is unknown
@@ -293,8 +300,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (exFeeRate == type(uint).max) exFeeRate = 0;
         else if (exFeeRate == 0) exFeeRate = _defaultExFeeRate;
 
-        // Calculate gas fee
-        (gasFee,) = _calculateGasFee(remoteChainID, token);
+        // Calculate network fee
+        (networkFee,) = _calculateNetworkFee(remoteChainID, token);
     }
 
     /**
@@ -351,6 +358,10 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         }
     }
 
+    function dollarDecimals() external view returns (uint) {
+        return priceFeed.dollarDecimals();
+    }
+
     /**
      * @notice Returns the fee denominator
      * @dev Used for fee calculations (1000 = 100%)
@@ -361,20 +372,24 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     }
 
     /**
-     * @notice Calculates gas fee in token amount
+     * @notice Calculates network fee in token amount
      * @dev Uses price feed for conversion
      * - Validates price feed availability
      * - Converts gas cost to token amount
      * @param remoteChainID Chain ID for gas price
      * @param token Token to calculate fee in
-     * @return gasFee Calculated gas fee
+     * @return networkFee Calculated network fee
      * @return updatedAt Timestamp of price data
      */
-    function _calculateGasFee(uint remoteChainID, IERC20 token) private view returns (uint gasFee, uint updatedAt) {
+    function _calculateNetworkFee(uint remoteChainID, IERC20 token)
+        private
+        view
+        returns (uint networkFee, uint updatedAt)
+    {
         uint gasPrice = _gasPrice[remoteChainID];
         if (gasPrice == 0) return (0, 0); // If gas price is 0, return 0
-        (, gasFee, updatedAt) =
-            priceFeed.calculateTokenAmountForGasFee(remoteChainID, address(token), _finalizeBridgeGas * gasPrice);
+        (, networkFee, updatedAt) =
+            priceFeed.calculateTokenAmountForNetworkFee(remoteChainID, address(token), _finalizeBridgeGas * gasPrice);
     }
 
     /**
@@ -383,9 +398,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param remoteChainID Chain ID to update
      * @param gasPrice New gas price value
      */
-    function updateGasPrice(uint remoteChainID, uint gasPrice) external onlyRole(Const.UPDATOR_ROLE) {
+    function updateGasPrice(uint remoteChainID, uint gasPrice) external onlyRole(Const.PRICER_ROLE) {
         _gasPrice[remoteChainID] = gasPrice;
-        emit BridgeVerifierGasPriceUpdated(remoteChainID, gasPrice);
+        emit GasPriceUpdated(remoteChainID, gasPrice);
     }
 
     /**
@@ -398,12 +413,12 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      */
     function updateGasPriceBatch(uint[] memory remoteChainIDs, uint[] memory gasPrices)
         external
-        onlyRole(Const.UPDATOR_ROLE)
+        onlyRole(Const.PRICER_ROLE)
     {
         require(remoteChainIDs.length == gasPrices.length, BridgeVerifierInvalidLength());
         for (uint i = 0; i < remoteChainIDs.length; ++i) {
             _gasPrice[remoteChainIDs[i]] = gasPrices[i];
-            emit BridgeVerifierGasPriceUpdated(remoteChainIDs[i], gasPrices[i]);
+            emit GasPriceUpdated(remoteChainIDs[i], gasPrices[i]);
         }
     }
 
@@ -415,10 +430,10 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param token Token to configure
      * @param exFeeRate Exchange fee rate
      */
-    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(Const.ADMIN_ROLE) {
+    function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(Const.EDITOR_ROLE) {
         require(address(token) != address(0), BridgeVerifierCanNotZeroValue("token"));
         _exFeeRate[token] = exFeeRate;
-        emit BridgeVerifierExchangeFeeUpdated(address(token), exFeeRate);
+        emit ExchangeFeeUpdated(address(token), exFeeRate);
     }
 
     /**
@@ -429,10 +444,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param tokenList Array of token addresses
      * @param exFeeRateList Array of exchange fee rates
      */
-    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList)
-        external
-        onlyRole(Const.ADMIN_ROLE)
-    {
+    function setExFeeRateBatch(IERC20[] memory tokenList, uint[] memory exFeeRateList) external {
         require(tokenList.length == exFeeRateList.length, BridgeVerifierInvalidLength());
         for (uint i = 0; i < tokenList.length; ++i) {
             setExFeeRate(tokenList[i], exFeeRateList[i]);
@@ -450,7 +462,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     function setFinalizeBridgeGas(uint finalizeBridgeGas) external onlyRole(Const.ADMIN_ROLE) {
         require(finalizeBridgeGas != 0, BridgeVerifierCanNotZeroValue("finalizeBridgeGas"));
         _finalizeBridgeGas = finalizeBridgeGas;
-        emit BridgeVerifierFinalizeBridgeGasSet(_finalizeBridgeGas);
+        emit FinalizeBridgeGasSet(_finalizeBridgeGas);
     }
 
     /**
@@ -460,7 +472,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param defaultTokenPrice New default token price value
      */
-    function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(Const.ADMIN_ROLE) {
+    function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(Const.EDITOR_ROLE) {
         _defaultTokenPrice = defaultTokenPrice;
         emit DefaultTokenPriceSet(defaultTokenPrice);
     }
@@ -472,16 +484,16 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param exFeeRate New exchange fee rate
      */
-    function setDefaultExFeeRate(uint exFeeRate) external onlyRole(Const.ADMIN_ROLE) {
+    function setDefaultExFeeRate(uint exFeeRate) external onlyRole(Const.EDITOR_ROLE) {
         _defaultExFeeRate = exFeeRate;
-        emit BridgeVerifierExchangeFeeUpdated(address(0), _defaultExFeeRate);
+        emit ExchangeFeeUpdated(address(0), _defaultExFeeRate);
     }
 
     /**
      * @notice Sets the minimum token value in USD
      * @param minimumTokenValue New minimum token value
      */
-    function setMinimumTokenValue(uint minimumTokenValue) external onlyRole(Const.ADMIN_ROLE) {
+    function setMinimumTokenValue(uint minimumTokenValue) external onlyRole(Const.EDITOR_ROLE) {
         _minimumTokenValue = minimumTokenValue;
         emit MinimumTokenValueSet(minimumTokenValue);
     }
@@ -507,6 +519,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param timeWindow New time window duration in seconds
      */
     function setTimeWindow(uint timeWindow) external onlyRole(Const.ADMIN_ROLE) {
+        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
         _timeWindow = timeWindow;
         emit TimeWindowSet(timeWindow);
     }
@@ -535,6 +548,53 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     function setPriceFeed(IPriceFeed _priceFeed) external onlyRole(Const.ADMIN_ROLE) {
         require(address(_priceFeed) != address(0), BridgeVerifierCanNotZeroValue("_priceFeed")); // allow zero address
         priceFeed = _priceFeed;
-        emit BridgeVerifierPriceFeedUpdated(priceFeed);
+        emit PriceFeedUpdated(priceFeed);
+    }
+
+    /**
+     * @notice Returns all members of a specific role
+     * @param role The role to query
+     * @return members Array of addresses that have the specified role
+     */
+    function getRoleMembers(bytes32 role) external view returns (address[] memory) {
+        return _roles[role].values();
+    }
+
+    /**
+     * @notice Grants multiple roles to a list of accounts
+     * @dev Validates input array lengths match
+     * - Grants each role to the corresponding account
+     * @param roles Array of roles to grant
+     * @param accounts Array of accounts to grant roles to
+     */
+    function grantRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
+        require(roles.length == accounts.length, BridgeVerifierMissmatchLength());
+        for (uint i = 0; i < accounts.length; ++i) {
+            grantRole(roles[i], accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Revokes multiple roles from a list of accounts
+     * @dev Validates input array lengths match
+     * - Revokes each role from the corresponding account
+     * @param roles Array of roles to revoke
+     * @param accounts Array of accounts to revoke roles from
+     */
+    function revokeRoleBatch(bytes32[] memory roles, address[] memory accounts) external {
+        require(roles.length == accounts.length, BridgeVerifierMissmatchLength());
+        for (uint i = 0; i < accounts.length; ++i) {
+            revokeRole(roles[i], accounts[i]);
+        }
+    }
+
+    function _grantRole(bytes32 role, address account) internal override returns (bool ok) {
+        ok = super._grantRole(role, account);
+        if (ok) require(_roles[role].add(account), BridgeVerifierAlreadyHasRole(account, role));
+    }
+
+    function _revokeRole(bytes32 role, address account) internal override returns (bool ok) {
+        ok = super._revokeRole(role, account);
+        if (ok) require(_roles[role].remove(account), BridgeVerifierDoesNotHaveRole(account, role));
     }
 }

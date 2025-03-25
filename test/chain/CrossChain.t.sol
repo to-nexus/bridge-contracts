@@ -46,11 +46,17 @@ contract CrossChainTest is SettingTest {
             crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
             bridgeCross.setCrossMintableERC20Code(crossMintableERC20Code);
 
-            bridgeCross.grantRole(ADMIN_ROLE, CrossOWNER); // for test
+            bridgeCross.grantRole(EDITOR_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(OPERATOR_ROLE, CrossOWNER); // for test
-            bridgeCross.grantRole(UPDATOR_ROLE, CrossOWNER); // for test
+            bridgeCross.grantRole(PRICER_ROLE, CrossOWNER); // for test
             bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross));
-            bridgeCross.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
+
+            bytes32[] memory roles = new bytes32[](5);
+            for (uint i = 0; i < 5; i++) {
+                roles[i] = VALIDATOR_ROLE;
+            }
+
+            bridgeCross.grantRoleBatch(roles, VALIDATORS);
 
             bridgeCross.setCrossSupplyLimit(INITIAL_SUPPLY); // Set maximum supply limit for testing purposes
 
@@ -109,12 +115,17 @@ contract CrossChainTest is SettingTest {
                 priceFeedCross.updateNativeTokenPrice(chainIDs, prices, pricesAt);
             }
 
-            priceFeedCross.grantRoleBatch(UPDATOR_ROLE, VALIDATORS);
+            bytes32[] memory roles = new bytes32[](5);
+            for (uint i = 0; i < 5; i++) {
+                roles[i] = PRICER_ROLE;
+            }
+
+            priceFeedCross.grantRoleBatch(roles, VALIDATORS);
 
             bridgeVerifierCross = new BridgeVerifier(
                 CrossOWNER, address(bridgeCross), address(priceFeedCross), 200000, 10000, 10, 10_000, 0, 0, 2 hours
             );
-            bridgeVerifierCross.grantRole(UPDATOR_ROLE, CrossOWNER);
+            bridgeVerifierCross.grantRole(PRICER_ROLE, CrossOWNER);
             bridgeVerifierCross.updateGasPrice(ETHEREUM_CHAIN_ID, 1 gwei);
         }
 

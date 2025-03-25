@@ -21,7 +21,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
 
     error ValidatorThresholdCanNotZero();
     error ValidatorInsufficientSignature(uint length);
-    error ValidatorInvalidSignatures(uint vLength, uint rLength, uint sLength);
+    error ValidatorInvalidSignatures();
     error ValidatorNotAuthorized(address account);
 
     /**
@@ -75,7 +75,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * @dev Updates minimum required signatures and emits event
      * @param threshold_ New threshold value
      */
-    function changeThreshold(uint8 threshold_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function changeThreshold(uint8 threshold_) external onlyRole(Const.ADMIN_ROLE) {
         require(threshold_ != 0, ValidatorThresholdCanNotZero());
         ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
         $._threshold = threshold_;
@@ -105,9 +105,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
         ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
 
         uint sigsLength = v.length;
-        require(
-            sigsLength == r.length && sigsLength == s.length, ValidatorInvalidSignatures(sigsLength, r.length, s.length)
-        );
+        require(sigsLength == r.length && sigsLength == s.length, ValidatorInvalidSignatures());
         require(sigsLength >= $._threshold, ValidatorInsufficientSignature(sigsLength));
 
         uint valid = 0;

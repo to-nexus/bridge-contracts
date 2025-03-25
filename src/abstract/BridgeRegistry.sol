@@ -59,7 +59,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryZeroAddress();
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
-    error RegistryBalanceLow(uint remoteChainID, address token, uint value, uint deposited, uint pendingAmount);
     error RegistryFactoryNotSet();
 
     /**
@@ -137,7 +136,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /**
      * @notice Initializes the BridgeRegistry
      * @dev Sets up initial state
-     * - Grants Admin role to contract owner using Const.ADMIN_ROLE identifier
+     * - Grants Admin role to contract owner using Const.EDITOR_ROLE identifier
      * - Sets verification delay to 24 hours
      */
     function __BridgeRegistry_init() internal onlyInitializing {
@@ -189,7 +188,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken)
         public
-        onlyRole(Const.ADMIN_ROLE)
+        onlyRole(Const.EDITOR_ROLE)
     {
         if (_chains.add(remoteChainID)) {
             _chainData[remoteChainID] =
@@ -236,7 +235,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function setCrossMintableERC20Code(ICrossMintableERC20Code _crossMintableERC20Code)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(Const.ADMIN_ROLE)
     {
         require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
         require(address(_crossMintableERC20Code) != address(0), RegistryZeroAddress());
@@ -431,12 +430,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param value Amount to withdraw
      */
     function _withdrawToken(uint remoteChainID, address token, uint value) internal virtual {
-        TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
-        require(
-            tokenPair.deposited >= value + tokenPair.pendingAmount,
-            RegistryBalanceLow(remoteChainID, token, value, tokenPair.deposited, tokenPair.pendingAmount)
-        );
-        tokenPair.deposited -= value;
+        _tokenPairs[remoteChainID][token].deposited -= value;
     }
 
     /**
@@ -467,7 +461,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         });
 
         TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
-        if (tokenPair.isOrigin) tokenPair.pendingAmount += args.value;
+        tokenPair.pendingAmount += args.value;
     }
 
     /**
@@ -486,7 +480,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         args = _pendingData[remoteChainID][index].args;
         TokenPair storage tokenPair = _tokenPairs[remoteChainID][address(args.toToken)];
 
-        if (tokenPair.isOrigin) tokenPair.pendingAmount -= args.value;
+        tokenPair.pendingAmount -= args.value;
         delete (_pendingData[remoteChainID][index]);
     }
 }

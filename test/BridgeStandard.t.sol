@@ -298,10 +298,10 @@ contract BaseBridgeTest is BridgeTest {
 
         IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](2);
         {
-            args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA);
+            args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, NULLDATA);
         }
         {
-            args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, amount, 0, 0, NULLDATA);
+            args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, OWNER, amount, 0, 0, NULLDATA);
         }
         IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](2);
         {
@@ -365,10 +365,10 @@ contract BaseBridgeTest is BridgeTest {
 
         IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](2);
         {
-            args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA);
+            args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, NULLDATA);
         }
         {
-            args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, amount, 0, 0, NULLDATA);
+            args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, OWNER, amount, 0, 0, NULLDATA);
         }
         IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](2);
         {

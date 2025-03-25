@@ -12,14 +12,14 @@ interface IBridgeVerifier {
     function calculateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view
-        returns (uint minimumValue, uint gasFee, uint exFee);
+        returns (uint minimumValue, uint networkFee, uint exFee);
     function getTokenPrice(IERC20 token) external view returns (bool exist, uint price);
     function getTokenPriceWithValue(IERC20 token, uint value) external view returns (bool exist, uint price);
     function getGasPrice(uint remoteChainID) external view returns (uint);
     function getTokenConfig(uint remoteChainID, IERC20 token)
         external
         view
-        returns (uint minimumValue, uint gasFee, uint exFeeRate);
+        returns (uint minimumValue, uint networkFee, uint exFeeRate);
     function getMinimumTokenValue() external view returns (uint);
     function getVerificationAmountThreshold() external view returns (uint);
     function getTimeWindow() external view returns (uint);

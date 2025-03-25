@@ -40,8 +40,7 @@ contract BaseBridge is
 
     error BaseBridgeInvalidValue(uint expected, uint actual);
     error BaseBridgeInvalidIndex(uint expected, uint actual);
-    error BaseBridgeInvalidMsgValue(uint expected, uint actual);
-    error BaseBridgeInvalidBalance(uint expected, uint actual);
+    error BaseBridgeInvalidBalance();
     error BaseBridgeInvalidAmount();
     error BaseBridgeInvalidPermitToken(address expected, address actual);
     error BaseBridgeCanNotZeroMsgValue();
@@ -53,7 +52,6 @@ contract BaseBridge is
     error BaseBridgeBurnFailed(IERC20 token, address from, uint value);
     error BaseBridgeNotMatchLength();
     error BaseBridgeFailedCall(string reason);
-    error BaseBridgeInsufficientDeposit();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -64,10 +62,9 @@ contract BaseBridge is
      * @param from Address initiating the bridge
      * @param to Recipient address on destination chain
      * @param value Amount of tokens being bridged
-     * @param gasFee Gas fee for the operation
+     * @param networkFee Network fee for the operation
      * @param exFee Exchange fee for the operation
      * @param time Timestamp of initiation
-     * @param permit Whether permit was used
      * @param extraData Additional operation data
      */
     event BridgeInitiated(
@@ -78,11 +75,10 @@ contract BaseBridge is
         address indexed from,
         address to,
         uint value,
-        uint gasFee,
+        uint networkFee,
         uint exFee,
-        uint time,
-        bool permit,
-        bytes extraData
+        bytes extraData,
+        uint time
     );
 
     /**
@@ -157,13 +153,13 @@ contract BaseBridge is
         _disableInitializers();
     }
 
-    /**
-     * @notice Allows contract to receive native tokens
-     * @dev Reverts if sent value is zero
-     */
-    receive() external payable {
-        require(msg.value != 0, BaseBridgeCanNotZeroMsgValue());
-    }
+    // /**
+    //  * @notice Allows contract to receive native tokens for development
+    //  * @dev Reverts if sent value is zero
+    //  */
+    // receive() external payable {
+    //     require(msg.value != 0, BaseBridgeCanNotZeroMsgValue());
+    // }
 
     /**
      * @notice Initializes the bridge contract
@@ -171,7 +167,7 @@ contract BaseBridge is
      * @param _threshold Required validator signatures
      * @param dev_ Reward wallet address
      */
-    function initialize(address owner_, uint8 _threshold, address dev_) external virtual initializer {
+    function initialize(address owner_, uint8 _threshold, address payable dev_) external virtual initializer {
         __BaseBridge_init(owner_, _threshold, dev_);
     }
 
@@ -181,7 +177,10 @@ contract BaseBridge is
      * @param _threshold Required validator signatures
      * @param dev_ Reward wallet address
      */
-    function __BaseBridge_init(address owner_, uint8 _threshold, address dev_) internal onlyInitializing {
+    function __BaseBridge_init(address owner_, uint8 _threshold, address payable dev_) internal onlyInitializing {
+        require(owner_ != address(0), BaseBridgeCanNotZeroAddress());
+        require(dev_ != address(0), BaseBridgeCanNotZeroAddress());
+
         __UUPSUpgradeable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -189,9 +188,7 @@ contract BaseBridge is
         __Validator_init(_threshold);
         __BridgeRegistry_init();
 
-        require(address(dev_) != address(0), BaseBridgeCanNotZeroAddress());
-        _dev = payable(dev_);
-
+        _dev = dev_;
         _initializedAt = block.number;
     }
 
@@ -201,7 +198,7 @@ contract BaseBridge is
      * @param fromToken Token to bridge
      * @param to Recipient address
      * @param value Amount to bridge
-     * @param gasFee Gas fee for transaction
+     * @param networkFee Network fee for transaction
      * @param exFee Exchange fee
      * @param extraData Additional data
      * @return success Operation status
@@ -211,12 +208,23 @@ contract BaseBridge is
         IERC20 fromToken,
         address to,
         uint value,
-        uint gasFee,
+        uint networkFee,
         uint exFee,
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
-        (gasFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, gasFee, exFee);
-        _executeBridge(toChainID, fromToken, _msgSender(), to, value, gasFee, exFee, false, extraData);
+        (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
+        _executeBridge(
+            BridgeTokenArguments({
+                toChainID: toChainID,
+                fromToken: fromToken,
+                from: _msgSender(),
+                to: to,
+                value: value,
+                networkFee: networkFee,
+                exFee: exFee,
+                extraData: extraData
+            })
+        );
         return true;
     }
 
@@ -226,7 +234,7 @@ contract BaseBridge is
      * @param fromToken Token to bridge
      * @param to Recipient address
      * @param value Amount to bridge
-     * @param gasFee Gas fee
+     * @param networkFee Network fee
      * @param exFee Exchange fee
      * @param extraData Additional data
      * @param permitArgs Permit signature parameters
@@ -237,7 +245,7 @@ contract BaseBridge is
         IERC20 fromToken,
         address to,
         uint value,
-        uint gasFee,
+        uint networkFee,
         uint exFee,
         bytes calldata extraData,
         PermitArguments calldata permitArgs
@@ -246,10 +254,11 @@ contract BaseBridge is
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
         );
-        (gasFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, gasFee, exFee);
+        (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
 
         require(
-            permitArgs.value >= value + gasFee + exFee, BaseBridgeInvalidValue(value + gasFee + exFee, permitArgs.value)
+            permitArgs.value >= value + networkFee + exFee,
+            BaseBridgeInvalidValue(value + networkFee + exFee, permitArgs.value)
         );
 
         IERC20Permit(address(fromToken)).permit(
@@ -262,7 +271,18 @@ contract BaseBridge is
             permitArgs.s
         );
 
-        _executeBridge(toChainID, fromToken, permitArgs.account, to, value, gasFee, exFee, true, extraData);
+        _executeBridge(
+            BridgeTokenArguments({
+                toChainID: toChainID,
+                fromToken: fromToken,
+                from: permitArgs.account,
+                to: to,
+                value: value,
+                networkFee: networkFee,
+                exFee: exFee,
+                extraData: extraData
+            })
+        );
         return true;
     }
 
@@ -282,7 +302,7 @@ contract BaseBridge is
                 args[i].fromToken,
                 args[i].to,
                 args[i].value,
-                args[i].gasFee,
+                args[i].networkFee,
                 args[i].exFee,
                 args[i].extraData,
                 permitArgs[i]
@@ -308,7 +328,7 @@ contract BaseBridge is
         require(
             _tokens[args.fromChainID].contains(address(args.toToken)), BaseBridgeNotExistToken(address(args.toToken))
         );
-        require(msg.value == 0, BaseBridgeInvalidMsgValue(0, msg.value));
+        require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
 
         uint index = _useFinalizeIndex(args.fromChainID);
         require(args.index == index, BaseBridgeInvalidIndex(index, args.index));
@@ -359,7 +379,10 @@ contract BaseBridge is
         bytes32[][] memory r,
         bytes32[][] memory s
     ) external payable returns (bool) {
-        for (uint i = 0; i < args.length; ++i) {
+        uint length = args.length;
+        require(v.length == length && r.length == length && s.length == length, BaseBridgeNotMatchLength());
+
+        for (uint i = 0; i < length; ++i) {
             finalizeBridge(args[i], v[i], r[i], s[i]);
         }
         return true;
@@ -373,9 +396,8 @@ contract BaseBridge is
      * - Processes token transfer/minting
      * @param remoteChainID Chain ID of the source chain
      * @param index Index of the pending operation
-     * @return success Boolean indicating successful retry
      */
-    function releasePending(uint remoteChainID, uint index) public whenNotPaused nonReentrant returns (bool) {
+    function releasePending(uint remoteChainID, uint index) public whenNotPaused nonReentrant {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
 
         PendingData memory pending = _pendingData[remoteChainID][index];
@@ -389,7 +411,7 @@ contract BaseBridge is
             BaseBridgeNotExpired(pending.delayExpiration, block.timestamp)
         );
 
-        return _releasePending(remoteChainID, index);
+        _releasePending(remoteChainID, index);
     }
 
     /**
@@ -402,40 +424,41 @@ contract BaseBridge is
      * - Processes token transfer/minting
      * @param remoteChainIDs Chain IDs of the source chains
      * @param indexes Indexes of the pending operations
-     * @return success Boolean indicating successful retry
      */
-    function releasePendingBatch(uint[] memory remoteChainIDs, uint[] memory indexes) external returns (bool) {
+    function releasePendingBatch(uint[] memory remoteChainIDs, uint[] memory indexes) external {
         require(remoteChainIDs.length == indexes.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < indexes.length; ++i) {
             releasePending(remoteChainIDs[i], indexes[i]);
         }
-        return true;
     }
 
     /**
      * @notice Manually processes a pending operation regardless of pause or safety deadline
-     * @dev Admin-only function to force process a pending operation
+     * @dev Verifier-only function to force process a pending operation
      * - Bypasses token pause and safety deadline checks
-     * - Requires Admin role (Const.ADMIN_ROLE)
      * - Verifies pending operation exists
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
-     * @return success Boolean indicating successful processing
      */
-    function manualProcessPending(uint remoteChainID, uint index)
-        external
-        onlyRole(Const.VERIFIER_ROLE)
-        nonReentrant
-        returns (bool)
-    {
+    function manualProcessPending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) nonReentrant {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
-        return _releasePending(remoteChainID, index);
+        _releasePending(remoteChainID, index);
+    }
+
+    /**
+     * @notice Removes a pending operation
+     * @dev Only callable by the verifier role
+     * @param remoteChainID Chain ID of the pending operation
+     * @param index Index of the pending operation
+     */
+    function removePending(uint remoteChainID, uint index) external onlyRole(Const.ADMIN_ROLE) nonReentrant {
+        _removePendingArguments(remoteChainID, index);
     }
 
     /**
      * @notice Locks a pending operation to prevent automatic processing
      * @dev Sets the safety deadline to maximum uint value
-     * - Requires Admin role (Const.ADMIN_ROLE)
+     * - Requires Verifier role (Const.VERIFIER_ROLE)
      * - Verifies pending operation exists
      * - Emits PendingDataLocked event
      * @param remoteChainID Chain ID of the pending operation
@@ -454,38 +477,30 @@ contract BaseBridge is
     /**
      * @notice Internal function to execute a bridge operation
      * @dev Handles token deposit/burn and fee collection
-     * @param toChainID Target chain ID
-     * @param fromToken Source token
-     * @param from Source address
-     * @param to Destination address
-     * @param value Amount being bridged
-     * @param gasFee Gas fee amount
-     * @param exFee Exchange fee amount
-     * @param permit Whether permit was used
-     * @param extraData Additional operation data
+     * @param args Bridge operation details
      */
-    function _executeBridge(
-        uint toChainID,
-        IERC20 fromToken,
-        address from,
-        address to,
-        uint value,
-        uint gasFee,
-        uint exFee,
-        bool permit,
-        bytes calldata extraData
-    ) internal {
-        _initiateBridge(toChainID, fromToken, from, value, gasFee + exFee);
-
+    function _executeBridge(BridgeTokenArguments memory args) internal {
         uint index;
         IERC20 remoteToken;
         {
-            index = _useInitiateIndex(toChainID);
-            remoteToken = IERC20(_tokenPairs[toChainID][address(fromToken)].remoteToken);
+            index = _useInitiateIndex(args.toChainID);
+            remoteToken = IERC20(_tokenPairs[args.toChainID][address(args.fromToken)].remoteToken);
         }
 
+        _initiateBridge(args.toChainID, args.fromToken, args.from, args.value, args.networkFee + args.exFee);
+
         emit BridgeInitiated(
-            toChainID, index, fromToken, remoteToken, from, to, value, gasFee, exFee, block.timestamp, permit, extraData
+            args.toChainID,
+            index,
+            args.fromToken,
+            remoteToken,
+            args.from,
+            args.to,
+            args.value,
+            args.networkFee,
+            args.exFee,
+            args.extraData,
+            block.timestamp
         );
     }
 
@@ -497,9 +512,8 @@ contract BaseBridge is
      * - Emits finalization event
      * @param remoteChainID Source chain identifier
      * @param index Index of the pending operation
-     * @return success Boolean indicating successful processing
      */
-    function _releasePending(uint remoteChainID, uint index) private returns (bool) {
+    function _releasePending(uint remoteChainID, uint index) private {
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
 
         (Const.FinalizeStatus status, bytes memory reason) =
@@ -507,34 +521,33 @@ contract BaseBridge is
         require(status == Const.FinalizeStatus.Success, string(abi.encode(status, reason)));
 
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
-        return true;
     }
 
     /**
      * @notice Validates and adjusts fee amounts for bridge operations
      * @dev Checks if provided fees meet minimum requirements
      * - Verifies minimum token amount
-     * - Validates gas fee is sufficient
+     * - Validates network fee is sufficient
      * - Validates exchange fee is sufficient
      * - Returns adjusted fee values
      * @param remoteChainID Chain ID for fee calculation
      * @param token Token being bridged
      * @param value Amount being bridged
-     * @param gasFee Provided gas fee
+     * @param networkFee Provided network fee
      * @param exFee Provided exchange fee
-     * @return _gasFee Adjusted gas fee
+     * @return _networkFee Adjusted network fee
      * @return _exFee Adjusted exchange fee
      */
-    function _checkInitiateAmount(uint remoteChainID, IERC20 token, uint value, uint gasFee, uint exFee)
+    function _checkInitiateAmount(uint remoteChainID, IERC20 token, uint value, uint networkFee, uint exFee)
         private
         view
-        returns (uint _gasFee, uint _exFee)
+        returns (uint _networkFee, uint _exFee)
     {
         require(address(bridgeVerifier) != address(0), BaseBridgeVerifierNotSet());
 
         uint minimumValue;
-        (minimumValue, _gasFee, _exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
-        require(value >= minimumValue && gasFee >= _gasFee && exFee >= _exFee, BaseBridgeInvalidAmount());
+        (minimumValue, _networkFee, _exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
+        require(value >= minimumValue && networkFee >= _networkFee && exFee >= _exFee, BaseBridgeInvalidAmount());
     }
 
     /**
@@ -580,14 +593,14 @@ contract BaseBridge is
     function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal virtual {
         if (address(token) == Const.NATIVE_TOKEN) {
             // Handling native token transfers (e.g., CROSS, ETH, BNB)
-            require(msg.value == value + fee, BaseBridgeInvalidMsgValue(value + fee, msg.value));
+            require(msg.value == value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
             _depositToken(remoteChainID, Const.NATIVE_TOKEN, value);
             if (fee != 0) {
                 (bool success, bytes memory reason) = _safeCall(_dev, fee, "");
                 require(success, BaseBridgeFailedCall(string(reason)));
             }
         } else {
-            require(msg.value == 0, BaseBridgeInvalidMsgValue(0, msg.value));
+            require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
 
             token.safeTransferFrom(from, address(this), value + fee);
             if (fee != 0) token.safeTransfer(_dev, fee);
@@ -618,7 +631,10 @@ contract BaseBridge is
         returns (Const.FinalizeStatus status, bytes memory reason)
     {
         if (address(toToken) == Const.NATIVE_TOKEN) {
-            return _transferNativeToken(fromChainID, payable(to), value);
+            (bool ok, bytes memory _reason) = _safeCall(payable(to), value, "");
+            if (!ok) return (Const.FinalizeStatus.TransferFailed, _reason);
+            _withdrawToken(fromChainID, Const.NATIVE_TOKEN, value);
+            return (Const.FinalizeStatus.Success, "");
         } else if (value != 0) {
             if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
                 return _transferERC20(fromChainID, toToken, to, value);
@@ -626,27 +642,6 @@ contract BaseBridge is
                 return _mintCrossMintableERC20(toToken, to, value);
             }
         }
-    }
-
-    /**
-     * @notice Transfers native tokens during bridge finalization
-     * @dev Handles transfer of native tokens on destination chain
-     * - Updates withdrawal tracking
-     * - Transfers tokens to recipient
-     * @param remoteChainID Source chain identifier
-     * @param to Recipient address
-     * @param value Amount to transfer
-     * @return status Success status
-     * @return reason Error message if failed
-     */
-    function _transferNativeToken(uint remoteChainID, address payable to, uint value)
-        private
-        returns (Const.FinalizeStatus status, bytes memory reason)
-    {
-        (bool ok, bytes memory _reason) = _safeCall(to, value, "");
-        if (!ok) return (Const.FinalizeStatus.TransferFailed, _reason);
-        _withdrawToken(remoteChainID, Const.NATIVE_TOKEN, value);
-        return (Const.FinalizeStatus.Success, "");
     }
 
     /**
@@ -711,7 +706,7 @@ contract BaseBridge is
         private
         returns (bool success, bytes memory reason)
     {
-        require(address(this).balance >= amount, BaseBridgeInvalidBalance(amount, address(this).balance));
+        if (amount != 0) require(address(this).balance >= amount, BaseBridgeInvalidBalance());
 
         bytes memory returndata;
         (success, returndata) = recipient.call{value: amount}(data);
@@ -722,13 +717,13 @@ contract BaseBridge is
 
         if (amount == 0) {
             if (returndata.length == 0) {
-                if (address(recipient).code.length == 0) return (false, "not code");
+                if (address(recipient).code.length == 0) return (false, "code");
             } else {
                 bool returnValue;
                 assembly {
                     returnValue := mload(add(returndata, 32))
                 }
-                if (returnValue != true) return (false, "return false");
+                if (returnValue != true) return (false, "false");
             }
         }
 
@@ -760,68 +755,12 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Estimates the fee for bridging a token
-     * @dev Queries the bridge verifier for calculated fee values
-     * @param remoteChainID Target chain identifier
-     * @param token Token to bridge
-     * @param value Amount to bridge
-     * @return minimumValue Minimum amount of token required for bridging
-     * @return gasFee Gas fee for transaction on target chain
-     * @return exFee Exchange fee for the bridge service
-     */
-    function calculateFee(uint remoteChainID, IERC20 token, uint value)
-        external
-        view
-        returns (uint minimumValue, uint gasFee, uint exFee)
-    {
-        (minimumValue, gasFee, exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
-    }
-
-    /**
-     * @notice Retrieves token configuration parameters for a specific chain
-     * @dev Gets token-specific configuration values from the bridge verifier
-     * - Provides minimum amount, gas fee, and exchange fee rate
-     * - Used for calculating fees and validating transactions
-     * @param remoteChainID Target chain identifier
-     * @param token Token to get configuration for
-     * @return minimumValue Minimum amount of token required for bridging
-     * @return gasFee Base gas fee for transaction on target chain
-     * @return exFeeRate Exchange fee rate applied to transaction amount
-     */
-    function getTokenConfig(uint remoteChainID, IERC20 token)
-        external
-        view
-        returns (uint minimumValue, uint gasFee, uint exFeeRate)
-    {
-        (minimumValue, gasFee, exFeeRate) = bridgeVerifier.getTokenConfig(remoteChainID, token);
-    }
-
-    /**
      * @notice Returns the reward wallet address
      * @dev Used for fee collection
      * @return Address of the reward wallet
      */
     function dev() external view returns (address) {
         return _dev;
-    }
-
-    /**
-     * @notice Calculates the total amount of tokens bridged between chains
-     * @dev Returns the available bridge balance based on token type
-     * - For origin tokens: deposited amount minus pending operations
-     * - For wrapped tokens: total supply plus pending amount
-     * @param remoteChainID Chain ID to calculate bridged amount for
-     * @param token Token address to check
-     * @return Total amount of bridged tokens available
-     */
-    function bridgedAmount(uint remoteChainID, address token) public view virtual returns (uint) {
-        TokenPair memory tokenPair = _tokenPairs[remoteChainID][token];
-        if (tokenPair.isOrigin) {
-            require(tokenPair.deposited >= tokenPair.pendingAmount, BaseBridgeInsufficientDeposit());
-            return tokenPair.deposited - tokenPair.pendingAmount;
-        } else {
-            return IERC20(tokenPair.localToken).totalSupply() + tokenPair.pendingAmount;
-        }
     }
 
     /**
@@ -845,7 +784,7 @@ contract BaseBridge is
      * @dev Changes the destination for collected fees
      * @param dev_ New reward wallet address
      */
-    function setDev(address payable dev_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setDev(address payable dev_) external onlyRole(Const.ADMIN_ROLE) {
         require(dev_ != address(0), BaseBridgeCanNotZeroAddress());
         _dev = dev_;
     }
@@ -855,7 +794,7 @@ contract BaseBridge is
      * @dev Updates the contract used for bridge verification
      * @param _bridgeVerifier New bridge verifier address
      */
-    function setBridgeVerifier(IBridgeVerifier _bridgeVerifier) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setBridgeVerifier(IBridgeVerifier _bridgeVerifier) external onlyRole(Const.ADMIN_ROLE) {
         require(address(_bridgeVerifier) != address(0), BaseBridgeCanNotZeroAddress());
         bridgeVerifier = _bridgeVerifier;
         emit BridgeVerifierSet(address(_bridgeVerifier));
@@ -866,5 +805,5 @@ contract BaseBridge is
      * @dev Controls UUPS upgradability
      * @param _newImplementation Address of the new implementation
      */
-    function _authorizeUpgrade(address _newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address _newImplementation) internal override onlyRole(Const.ADMIN_ROLE) {}
 }

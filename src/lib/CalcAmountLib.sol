@@ -7,11 +7,11 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IPriceFeed} from "../interface/IPriceFeed.sol";
 import {Const} from "./Const.sol";
 
-library CalcGasFeeLib {
+library CalcAmountLib {
     using Math for uint;
 
-    error CalcGasFeeLibCanNotZeroValue(string name);
-    error CalcGasFeeLibOverflow();
+    error CalcAmountLibCanNotZeroValue(string name);
+    error CalcAmountLibOverflow();
 
     /**
      * @notice Calculates the equivalent amount of token based on the native token amount.
@@ -23,8 +23,8 @@ library CalcGasFeeLib {
      * @return tokenAmount The equivalent amount of token.
      * @return updatedAt The updated time.
      */
-    function calculateTokenAmountForGasFee(IPriceFeed feed, uint toChainID, address token, uint nativeTokenAmount)
-        external
+    function calculateTokenAmountForNetworkFee(IPriceFeed feed, uint toChainID, address token, uint nativeTokenAmount)
+        internal
         view
         returns (bool ok, uint tokenAmount, uint updatedAt)
     {
@@ -47,22 +47,22 @@ library CalcGasFeeLib {
     /// @param decimalB The number of decimals for token B.
     /// @return amountB The equivalent amount of token B.
     function calculateAmountBWithPrice(uint amountA, uint priceA, uint priceB, uint8 decimalA, uint8 decimalB)
-        public
+        internal
         pure
         returns (uint amountB)
     {
-        require(priceA != 0, CalcGasFeeLibCanNotZeroValue("priceA"));
+        require(priceA != 0, CalcAmountLibCanNotZeroValue("priceA"));
         bool ok;
         (ok, amountB) = decimalB >= decimalA
             ? amountA.tryMul(priceB.mulDiv(10 ** (decimalB - decimalA), priceA))
             : amountA.tryMul(priceB / (10 ** (decimalA - decimalB)) / priceA);
-        require(ok, CalcGasFeeLibOverflow());
+        require(ok, CalcAmountLibOverflow());
     }
 
     /// @notice Retrieves the number of decimals for a given token.
     /// @param token The address of the token.
     /// @return _decimals The number of decimals.
-    function decimals(address token) public view returns (uint8 _decimals) {
+    function decimals(address token) internal view returns (uint8 _decimals) {
         _decimals = token == Const.NATIVE_TOKEN ? uint8(18) : IERC20Metadata(token).decimals();
     }
 }

@@ -34,12 +34,6 @@ contract BridgeTest is EthereumChainTest {
         }
 
         if (!isRevert) {
-            vm.selectFork(crossForkID);
-            uint crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
-            vm.selectFork(ethereumForkID);
-            uint ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(cross));
-            assertEq(crossBridged, ethereumBridged);
-
             vm.selectFork(ethereumForkID);
             assertEq(userTokenBalance - amount, cross.balanceOf(USER));
             assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeEthereum)));
@@ -74,12 +68,6 @@ contract BridgeTest is EthereumChainTest {
         }
 
         if (!isRevert) {
-            vm.selectFork(crossForkID);
-            uint crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(NATIVE_TOKEN));
-            vm.selectFork(ethereumForkID);
-            uint ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(cross));
-            assertEq(crossBridged, ethereumBridged);
-
             vm.selectFork(ethereumForkID);
             assertEq(userTokenBalance + value, cross.balanceOf(USER));
             assertEq(bridgeTokenBalance - value, cross.balanceOf(address(bridgeEthereum)));
@@ -106,12 +94,6 @@ contract BridgeTest is EthereumChainTest {
         }
 
         if (!isRevert) {
-            vm.selectFork(crossForkID);
-            uint crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(testTokenCross));
-            vm.selectFork(ethereumForkID);
-            uint ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(testTokenEthereum));
-            assertEq(crossBridged, ethereumBridged);
-
             vm.selectFork(ethereumForkID);
             assertEq(userEthereumBalance - amount, testTokenEthereum.balanceOf(USER));
             assertEq(bridgeEthereumBalance + amount, testTokenEthereum.balanceOf(address(bridgeEthereum)));
@@ -142,12 +124,6 @@ contract BridgeTest is EthereumChainTest {
         }
 
         if (!isRevert) {
-            vm.selectFork(crossForkID);
-            uint crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(testTokenCross));
-            vm.selectFork(ethereumForkID);
-            uint ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(testTokenEthereum));
-            assertEq(crossBridged, ethereumBridged);
-
             vm.selectFork(ethereumForkID);
             assertEq(userEthereumBalance + value, testTokenEthereum.balanceOf(USER));
             assertEq(bridgeEthereumBalance - value, testTokenEthereum.balanceOf(address(bridgeEthereum)));
@@ -173,12 +149,6 @@ contract BridgeTest is EthereumChainTest {
         }
 
         if (!isRevert) {
-            vm.selectFork(crossForkID);
-            uint crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(weth));
-            vm.selectFork(ethereumForkID);
-            uint ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
-            assertEq(crossBridged, ethereumBridged);
-
             vm.selectFork(crossForkID);
             assertEq(userTokenBalance + amount, weth.balanceOf(USER));
             vm.selectFork(ethereumForkID);
@@ -207,12 +177,6 @@ contract BridgeTest is EthereumChainTest {
         }
 
         if (!isRevert) {
-            vm.selectFork(crossForkID);
-            uint crossBridged = bridgeCross.bridgedAmount(ETHEREUM_CHAIN_ID, address(weth));
-            vm.selectFork(ethereumForkID);
-            uint ethereumBridged = bridgeEthereum.bridgedAmount(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
-            assertEq(crossBridged, ethereumBridged);
-
             vm.selectFork(crossForkID);
             assertEq(userTokenBalance - (value + gas + ex), weth.balanceOf(USER));
             assertEq(rewardWalletBalance + gas + ex, weth.balanceOf(REWARD));

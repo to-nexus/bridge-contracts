@@ -11,9 +11,10 @@ interface IBaseBridge is IBridgeRegistry {
     struct BridgeTokenArguments {
         uint toChainID;
         IERC20 fromToken;
+        address from;
         address to;
         uint value;
-        uint gasFee;
+        uint networkFee;
         uint exFee;
         bytes extraData;
     }
@@ -33,7 +34,7 @@ interface IBaseBridge is IBridgeRegistry {
         IERC20 fromToken,
         address to,
         uint value,
-        uint gasFee,
+        uint networkFee,
         uint exFee,
         bytes calldata extraData
     ) external payable returns (bool);
@@ -42,7 +43,7 @@ interface IBaseBridge is IBridgeRegistry {
         IERC20 fromToken,
         address to,
         uint value,
-        uint gasFee,
+        uint networkFee,
         uint exFee,
         bytes calldata extraData,
         PermitArguments calldata permitArgs
@@ -61,15 +62,8 @@ interface IBaseBridge is IBridgeRegistry {
         bytes32[][] memory s
     ) external payable returns (bool);
     function bridgeVerifier() external view returns (IBridgeVerifier);
-    function releasePending(uint remoteChainID, uint index) external returns (bool);
+    function releasePending(uint remoteChainID, uint index) external;
+    function releasePendingBatch(uint[] memory remoteChainIDs, uint[] memory indexes) external;
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
-    function calculateFee(uint remoteChainID, IERC20 token, uint value)
-        external
-        view
-        returns (uint minimumValue, uint gasFee, uint exFee);
-    function getTokenConfig(uint remoteChainID, IERC20 token)
-        external
-        view
-        returns (uint minimumValue, uint gasFee, uint exFeeRate);
 }

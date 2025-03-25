@@ -8,7 +8,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {RoleManager} from "./abstract/RoleManager.sol";
 import {IPriceFeed} from "./interface/IPriceFeed.sol";
 import {IPriceOracle} from "./interface/IPriceOracle.sol";
-import {CalcGasFeeLib} from "./lib/CalcGasFeeLib.sol";
+import {CalcAmountLib} from "./lib/CalcAmountLib.sol";
 import {Const} from "./lib/Const.sol";
 
 /**
@@ -21,13 +21,14 @@ import {Const} from "./lib/Const.sol";
 contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    error PriceFeedCanNotZeroValue(string name);
+    error PriceFeedCanNotZeroValue();
+    error PriceFeedCanNotZeroAddress(address token);
     error PriceFeedInvalidLength();
     error PriceFeedInvalidPriceAt(uint at, uint blocktime);
     error PriceFeedNoSource(address token);
 
-    event PriceFeedPriceUpdated(address indexed token, uint price, uint priceAt);
-    event PriceFeedNativeTokenPriceUpdated(uint indexed chainID, uint price, uint priceAt);
+    event PriceUpdated(address indexed token, uint price, uint priceAt);
+    event NativeTokenPriceUpdated(uint indexed chainID, uint price, uint priceAt);
 
     /// @dev Decimal places used for dollar price representation
     uint8 public dollarDecimals;
@@ -41,7 +42,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     /// @dev Mapping from chain ID to native token price for that chain
     mapping(uint => NativeTokenPriceData) private _nativeTokenPrice;
 
-    uint[46] private __gap;
+    uint[44] private __gap;
 
     /**
      * @notice Initializes the price feed contract
@@ -49,10 +50,11 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      * @param _dollarDecimals Precision for price representation
      */
     function initialize(address owner, uint8 _dollarDecimals) public initializer {
+        require(owner != address(0), PriceFeedCanNotZeroAddress(owner));
+
         __UUPSUpgradeable_init();
-        __AccessControl_init();
-        _grantRole(DEFAULT_ADMIN_ROLE, owner);
-        _grantRole(Const.UPDATOR_ROLE, owner);
+        __RoleManager_init(owner);
+        _grantRole(Const.PRICER_ROLE, owner);
 
         dollarDecimals = _dollarDecimals;
         updatedAt = block.timestamp;
@@ -89,8 +91,8 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
         require(exist[0], PriceFeedNoSource(tokenA));
         require(exist[1], PriceFeedNoSource(tokenB));
 
-        (uint8 decimalA, uint8 decimalB) = (CalcGasFeeLib.decimals(tokenA), CalcGasFeeLib.decimals(tokenB));
-        price = CalcGasFeeLib.calculateAmountBWithPrice(1, prices[0], prices[1], decimalA, decimalB);
+        (uint8 decimalA, uint8 decimalB) = (CalcAmountLib.decimals(tokenA), CalcAmountLib.decimals(tokenB));
+        price = CalcAmountLib.calculateAmountBWithPrice(1 * (10 ** decimalA), prices[0], prices[1], decimalA, decimalB);
         return (price, updatedAt);
     }
 
@@ -102,8 +104,9 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      * @return updatedAt_ Last price update timestamp
      */
     function getTokenPriceInDollars(address token) external view returns (bool exist, uint price, uint updatedAt_) {
-        if (_priceData[token].token != token) return (false, 0, 0);
-        return (true, _priceData[token].price, updatedAt);
+        PriceData memory priceData = _priceData[token];
+        if (priceData.token != token) return (false, 0, 0);
+        return (true, priceData.price, updatedAt);
     }
 
     /**
@@ -193,7 +196,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function updatePrice(address[] memory tokens, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyRole(Const.UPDATOR_ROLE)
+        onlyRole(Const.PRICER_ROLE)
     {
         uint tokensLen = tokens.length;
         require(tokensLen == prices.length && tokensLen == pricesAt.length, PriceFeedInvalidLength());
@@ -215,7 +218,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function updateNativeTokenPrice(uint[] memory chainIDs, uint[] memory prices, uint[] memory pricesAt)
         external
-        onlyRole(Const.UPDATOR_ROLE)
+        onlyRole(Const.PRICER_ROLE)
     {
         uint chainsLen = chainIDs.length;
         require(chainsLen == prices.length && chainsLen == pricesAt.length, PriceFeedInvalidLength());
@@ -236,11 +239,11 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      * @param priceAt Timestamp when the price was recorded
      */
     function _updatePrice(address token, uint price, uint priceAt) private {
-        require(price != 0, PriceFeedCanNotZeroValue("price"));
+        require(price != 0, PriceFeedCanNotZeroValue());
         require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _tokens.add(token);
         _priceData[token] = PriceData({token: token, price: price, lastUpdated: priceAt});
-        emit PriceFeedPriceUpdated(token, price, priceAt);
+        emit PriceUpdated(token, price, priceAt);
     }
 
     /**
@@ -251,15 +254,15 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      * @param priceAt Timestamp when the price was recorded
      */
     function _updateNativeTokenPrice(uint chainID, uint price, uint priceAt) private {
-        require(price != 0, PriceFeedCanNotZeroValue("price"));
+        require(price != 0, PriceFeedCanNotZeroValue());
         require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
         _nativeTokenPrice[chainID] = NativeTokenPriceData({chainID: chainID, price: price, lastUpdated: priceAt});
-        emit PriceFeedNativeTokenPriceUpdated(chainID, price, priceAt);
+        emit NativeTokenPriceUpdated(chainID, price, priceAt);
     }
 
     /**
      * @notice Authorizes an upgrade to a new implementation.
      * @param _newImplementation The address of the new implementation.
      */
-    function _authorizeUpgrade(address _newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address _newImplementation) internal override onlyRole(Const.ADMIN_ROLE) {}
 }

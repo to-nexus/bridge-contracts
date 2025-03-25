@@ -12,20 +12,25 @@ contract BridgeSetTest is BridgeTest {
         vm.startPrank(OWNER);
 
         vm.selectFork(ethereumForkID);
-        bridgeEthereum.revokeRoleBatch(VALIDATOR_ROLE, VALIDATORS);
+        bytes32[] memory roles = new bytes32[](5);
+        for (uint i = 0; i < 5; i++) {
+            roles[i] = VALIDATOR_ROLE;
+        }
+        bridgeEthereum.revokeRoleBatch(roles, VALIDATORS);
         bool ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertFalse(ok);
-        bridgeEthereum.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
+
+        bridgeEthereum.grantRoleBatch(roles, VALIDATORS);
         ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertTrue(ok);
         vm.stopPrank();
 
         vm.startPrank(CrossOWNER);
         vm.selectFork(crossForkID);
-        bridgeCross.revokeRoleBatch(VALIDATOR_ROLE, VALIDATORS);
+        bridgeCross.revokeRoleBatch(roles, VALIDATORS);
         ok = bridgeCross.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertFalse(ok);
-        bridgeCross.grantRoleBatch(VALIDATOR_ROLE, VALIDATORS);
+        bridgeCross.grantRoleBatch(roles, VALIDATORS);
         ok = bridgeCross.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertTrue(ok);
         vm.stopPrank();

@@ -17,9 +17,6 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
  * - Implements proxy security checks
  */
 contract CrossBridge is BaseBridge {
-    error CrossBridgeSupplyLow(uint currentSupply, uint requestedWithdrawal);
-    error CrossBridgeOverflow(uint supply, uint value);
-
     /**
      * @notice Emitted when the cross-chain supply limit is updated
      * @param crossSupplyLimit The new maximum supply limit for CROSS native token transfers
@@ -29,24 +26,26 @@ contract CrossBridge is BaseBridge {
     /// @dev Predefined address for the predeployed implementation
     address private constant PREDEPLOYED_IMPLEMENTATION_ADDRESS = address(0xb81d6e000000000000000000000000000000C0de);
 
+    /// @dev Tracks the current supply of CROSS native tokens that have been released through the bridge
+    /// @notice This counter keeps track of the CROSS native tokens that are currently in circulation through the bridge
+    /// @notice It is incremented when tokens are unlocked from the bridge and decremented when tokens are locked back
+    uint public crossSupply;
+
     /// @dev Maximum issuance limit for CROSS native token on the Cross chain
     /// @notice Defines the maximum amount of CROSS native tokens that can be unlocked from the bridge contract.
     /// @notice This limit is designed to be dynamically adjustable to mitigate security risks from potential
     /// @notice bridge exploits, as most of the token supply is initially locked in the bridge contract.
     uint public crossSupplyLimit;
+
     /// @dev Initial balance of the contract used for cross-chain supply calculations
     /// @notice Stores the initial balance of the bridge contract to accurately track the amount of tokens
     /// @notice that have been unlocked. Since the Cross chain begins with most of its native token supply
     /// @notice locked in the bridge contract, this initial value is essential for calculating the
     /// @notice circulating supply that has been released through bridging from Ethereum.
     uint private _crossInitializeBalance;
-    /// @dev Tracks the current supply of CROSS native tokens that have been released through the bridge
-    /// @notice This counter keeps track of the CROSS native tokens that are currently in circulation through the bridge
-    /// @notice It is incremented when tokens are unlocked from the bridge and decremented when tokens are locked back
-    uint private _crossSupply;
 
     /// @dev Storage gap for future upgrades
-    uint[48] private __gap;
+    uint[47] private __gap;
 
     /**
      * @notice Initializes the CrossBridge contract
@@ -58,10 +57,9 @@ contract CrossBridge is BaseBridge {
      * @param _threshold Minimum number of validators required for validation
      * @param dev_ Address of the developer account for receiving fees
      */
-    function initialize(address owner_, uint8 _threshold, address dev_) external override initializer {
+    function initialize(address owner_, uint8 _threshold, address payable dev_) external override initializer {
         __BaseBridge_init(owner_, _threshold, dev_);
         _crossInitializeBalance = address(this).balance;
-        crossSupplyLimit = 0;
     }
 
     /**
@@ -74,20 +72,6 @@ contract CrossBridge is BaseBridge {
     function setCrossSupplyLimit(uint _crossSupplyLimit) external onlyRole(Const.ADMIN_ROLE) {
         crossSupplyLimit = _crossSupplyLimit;
         emit CrossSupplyLimitSet(crossSupplyLimit);
-    }
-
-    /**
-     * @notice Override of bridgedAmount to provide specialized tracking for CROSS native token
-     * @dev Returns the current bridged amount for a specific token
-     * - For CROSS native token, returns the tracked _crossSupply
-     * - For other tokens, calls the parent implementation
-     * @param remoteChainID Chain ID to calculate bridged amount for
-     * @param token Token address to check
-     * @return The total amount of bridged tokens available
-     */
-    function bridgedAmount(uint remoteChainID, address token) public view override returns (uint) {
-        if (token != Const.NATIVE_TOKEN) return super.bridgedAmount(remoteChainID, token);
-        return _crossSupply;
     }
 
     /**
@@ -108,28 +92,24 @@ contract CrossBridge is BaseBridge {
         override
         returns (Const.FinalizeStatus status, bool delay)
     {
-        (status, delay) = super._checkFinalizeAmount(fromChainID, token, value, retry);
-        if (status != Const.FinalizeStatus.Success) return (status, delay);
-
         if (token == Const.NATIVE_TOKEN) {
             // Calculate how much CROSS native token has been bridged out (initial balance minus current balance)
             // If current balance is higher than initial (unlikely), default to 0 supply to prevent underflow
             uint supply =
-                _crossInitializeBalance >= address(this).balance ? _crossInitializeBalance - address(this).balance : 0;
+                _crossInitializeBalance > address(this).balance ? _crossInitializeBalance - address(this).balance : 0;
 
             // Check if the new transfer would exceed the configured CROSS token issuance limit
             // If limit is exceeded, return a specific error status and mark for delay
-            require(supply + value >= supply, CrossBridgeOverflow(supply, value));
             if (supply + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
         }
 
-        return (status, delay);
+        return super._checkFinalizeAmount(fromChainID, token, value, retry);
     }
 
     /**
      * @notice Processes token deposits for bridging operations
      * @dev Override of BaseBridge._depositToken with special handling for CROSS native token
-     * - For CROSS native token, decrements the _crossSupply counter
+     * - For CROSS native token, decrements the crossSupply counter
      * - For other tokens, calls the parent implementation
      * - Enforces that CROSS supply is sufficient for withdrawal
      * @param remoteChainID Target chain identifier
@@ -137,18 +117,14 @@ contract CrossBridge is BaseBridge {
      * @param value Amount being deposited
      */
     function _depositToken(uint remoteChainID, address token, uint value) internal override {
-        if (token != Const.NATIVE_TOKEN) {
-            super._depositToken(remoteChainID, token, value);
-        } else {
-            require(_crossSupply >= value, CrossBridgeSupplyLow(_crossSupply, value));
-            _crossSupply -= value;
-        }
+        if (token != Const.NATIVE_TOKEN) super._depositToken(remoteChainID, token, value);
+        else crossSupply -= value;
     }
 
     /**
      * @notice Processes token withdrawals for bridging operations
      * @dev Override of BaseBridge._withdrawToken with special handling for CROSS native token
-     * - For CROSS native token, increments the _crossSupply counter
+     * - For CROSS native token, increments the crossSupply counter
      * - For other tokens, calls the parent implementation
      * @param remoteChainID Source chain identifier
      * @param token Token being withdrawn
@@ -156,7 +132,7 @@ contract CrossBridge is BaseBridge {
      */
     function _withdrawToken(uint remoteChainID, address token, uint value) internal override {
         if (token != Const.NATIVE_TOKEN) super._withdrawToken(remoteChainID, token, value);
-        else _crossSupply += value;
+        else crossSupply += value;
     }
 
     /**
