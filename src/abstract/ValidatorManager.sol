@@ -75,7 +75,7 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
      * @dev Updates minimum required signatures and emits event
      * @param threshold_ New threshold value
      */
-    function changeThreshold(uint8 threshold_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function changeThreshold(uint8 threshold_) external onlyRole(Const.ADMIN_ROLE) {
         require(threshold_ != 0, ValidatorThresholdCanNotZero());
         ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
         $._threshold = threshold_;

@@ -219,7 +219,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param remoteChainID Chain ID to unregister from
      * @param token Token address to unregister
      */
-    function unregisterToken(uint remoteChainID, address token) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unregisterToken(uint remoteChainID, address token) external onlyRole(Const.ADMIN_ROLE) {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
         delete (_tokenPairs[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
@@ -235,7 +235,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function setCrossMintableERC20Code(ICrossMintableERC20Code _crossMintableERC20Code)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(Const.ADMIN_ROLE)
     {
         require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
         require(address(_crossMintableERC20Code) != address(0), RegistryZeroAddress());
@@ -280,7 +280,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @dev Updates the delay period for verification
      * @param delay New delay value in seconds
      */
-    function setVerificationDelay(uint delay) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setVerificationDelay(uint delay) external onlyRole(Const.ADMIN_ROLE) {
         _verificationDelay = delay;
         emit VerificationDelaySet(delay);
     }

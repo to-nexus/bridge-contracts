@@ -167,7 +167,7 @@ contract BaseBridge is
      * @param _threshold Required validator signatures
      * @param dev_ Reward wallet address
      */
-    function initialize(address owner_, uint8 _threshold, address dev_) external virtual initializer {
+    function initialize(address owner_, uint8 _threshold, address payable dev_) external virtual initializer {
         __BaseBridge_init(owner_, _threshold, dev_);
     }
 
@@ -177,7 +177,10 @@ contract BaseBridge is
      * @param _threshold Required validator signatures
      * @param dev_ Reward wallet address
      */
-    function __BaseBridge_init(address owner_, uint8 _threshold, address dev_) internal onlyInitializing {
+    function __BaseBridge_init(address owner_, uint8 _threshold, address payable dev_) internal onlyInitializing {
+        require(owner_ != address(0), BaseBridgeCanNotZeroAddress());
+        require(dev_ != address(0), BaseBridgeCanNotZeroAddress());
+
         __UUPSUpgradeable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
@@ -185,9 +188,7 @@ contract BaseBridge is
         __Validator_init(_threshold);
         __BridgeRegistry_init();
 
-        require(address(dev_) != address(0), BaseBridgeCanNotZeroAddress());
-        _dev = payable(dev_);
-
+        _dev = dev_;
         _initializedAt = block.number;
     }
 
@@ -378,7 +379,10 @@ contract BaseBridge is
         bytes32[][] memory r,
         bytes32[][] memory s
     ) external payable returns (bool) {
-        for (uint i = 0; i < args.length; ++i) {
+        uint length = args.length;
+        require(v.length == length && r.length == length && s.length == length, BaseBridgeNotMatchLength());
+
+        for (uint i = 0; i < length; ++i) {
             finalizeBridge(args[i], v[i], r[i], s[i]);
         }
         return true;
@@ -447,7 +451,7 @@ contract BaseBridge is
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
      */
-    function removePending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) nonReentrant {
+    function removePending(uint remoteChainID, uint index) external onlyRole(Const.ADMIN_ROLE) nonReentrant {
         _removePendingArguments(remoteChainID, index);
     }
 
@@ -780,7 +784,7 @@ contract BaseBridge is
      * @dev Changes the destination for collected fees
      * @param dev_ New reward wallet address
      */
-    function setDev(address payable dev_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setDev(address payable dev_) external onlyRole(Const.ADMIN_ROLE) {
         require(dev_ != address(0), BaseBridgeCanNotZeroAddress());
         _dev = dev_;
     }
@@ -790,7 +794,7 @@ contract BaseBridge is
      * @dev Updates the contract used for bridge verification
      * @param _bridgeVerifier New bridge verifier address
      */
-    function setBridgeVerifier(IBridgeVerifier _bridgeVerifier) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setBridgeVerifier(IBridgeVerifier _bridgeVerifier) external onlyRole(Const.ADMIN_ROLE) {
         require(address(_bridgeVerifier) != address(0), BaseBridgeCanNotZeroAddress());
         bridgeVerifier = _bridgeVerifier;
         emit BridgeVerifierSet(address(_bridgeVerifier));
@@ -801,5 +805,5 @@ contract BaseBridge is
      * @dev Controls UUPS upgradability
      * @param _newImplementation Address of the new implementation
      */
-    function _authorizeUpgrade(address _newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address _newImplementation) internal override onlyRole(Const.ADMIN_ROLE) {}
 }

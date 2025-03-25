@@ -34,6 +34,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     error BridgeVerifierAlreadyHasRole(address account, bytes32 role);
     error BridgeVerifierDoesNotHaveRole(address account, bytes32 role);
     error BridgeVerifierMissmatchLength();
+    error BridgeVerifierInvalidTimeWindow();
 
     event FinalizeBridgeGasSet(uint finalizeBridgeGas);
     event GasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
@@ -114,7 +115,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(initialOwner != address(0), BridgeVerifierCanNotZeroValue("initialOwner"));
         require(bridge != address(0), BridgeVerifierCanNotZeroValue("bridge"));
         require(_priceFeed != address(0), BridgeVerifierCanNotZeroValue("_priceFeed"));
+        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
+        _grantRole(Const.ADMIN_ROLE, initialOwner);
         _grantRole(Const.EDITOR_ROLE, initialOwner);
         _grantRole(Const.PRICER_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
@@ -155,12 +158,13 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
             return Const.FinalizeStatus.VerificationAmountThresholdExceeded;
         }
+        if (_timeWindow == 0 || _periodTotalValueThreshold == 0) return Const.FinalizeStatus.Success;
 
         // Manage history and verify thresholds
         DoubleEndedQueue.Bytes32Deque storage deque = _tokenMovementHistory[token];
         // Calculate current time period and the beginning of the monitoring window
-        uint currentTime = block.timestamp / Const.PERIOD_INTERVAL;
-        uint windowStartTime = (currentTime - _timeWindow) / Const.PERIOD_INTERVAL;
+        uint currentTime = (block.timestamp / Const.PERIOD_INTERVAL) * Const.PERIOD_INTERVAL;
+        uint windowStartTime = currentTime - _timeWindow;
 
         // Remove expired records (older than the window start time)
         // and subtract their values from the current token volume tracking
@@ -185,16 +189,14 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
             return Const.FinalizeStatus.TokenCurrentVolumeOverflow;
         }
 
-        _tokenCurrentVolume[token] += score;
-
-        if (_periodTotalValueThreshold != 0 && _tokenCurrentVolume[token] > _periodTotalValueThreshold) {
-            return Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
-        }
+        uint currentVolume = _tokenCurrentVolume[token] + score;
+        if (currentVolume > _periodTotalValueThreshold) return Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
+        _tokenCurrentVolume[token] = currentVolume;
 
         // If there's already a record for the current time period,
         // update it by combining with the new score rather than creating a duplicate entry
         if (deque.length() != 0 && uint(deque.back() >> 192) == currentTime) {
-            score = uint(deque.popBack()) & TOKEN_SCORE_MASK;
+            score = (uint(deque.popBack()) & TOKEN_SCORE_MASK) + score;
         }
 
         // Create a new movement record by packing time (upper 64 bits) and score (lower 192 bits)
@@ -457,7 +459,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param finalizeBridgeGas New gas amount
      */
-    function setFinalizeBridgeGas(uint finalizeBridgeGas) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setFinalizeBridgeGas(uint finalizeBridgeGas) external onlyRole(Const.ADMIN_ROLE) {
         require(finalizeBridgeGas != 0, BridgeVerifierCanNotZeroValue("finalizeBridgeGas"));
         _finalizeBridgeGas = finalizeBridgeGas;
         emit FinalizeBridgeGasSet(_finalizeBridgeGas);
@@ -503,7 +505,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Updates verification amount threshold value
      * @param verificationAmountThreshold New verification amount threshold value
      */
-    function setVerificationAmountThreshold(uint verificationAmountThreshold) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setVerificationAmountThreshold(uint verificationAmountThreshold) external onlyRole(Const.ADMIN_ROLE) {
         _verificationAmountThreshold = verificationAmountThreshold;
         emit VerificationAmountThresholdSet(verificationAmountThreshold);
     }
@@ -516,7 +518,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param timeWindow New time window duration in seconds
      */
-    function setTimeWindow(uint timeWindow) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setTimeWindow(uint timeWindow) external onlyRole(Const.ADMIN_ROLE) {
+        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
         _timeWindow = timeWindow;
         emit TimeWindowSet(timeWindow);
     }
@@ -529,7 +532,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param periodTotalValueThreshold New period total value threshold
      */
-    function setPeriodTotalValueThreshold(uint periodTotalValueThreshold) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPeriodTotalValueThreshold(uint periodTotalValueThreshold) external onlyRole(Const.ADMIN_ROLE) {
         _periodTotalValueThreshold = periodTotalValueThreshold;
         emit PeriodTotalValueThresholdSet(periodTotalValueThreshold);
     }
@@ -542,7 +545,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * - Emits update event
      * @param _priceFeed New price feed contract
      */
-    function setPriceFeed(IPriceFeed _priceFeed) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPriceFeed(IPriceFeed _priceFeed) external onlyRole(Const.ADMIN_ROLE) {
         require(address(_priceFeed) != address(0), BridgeVerifierCanNotZeroValue("_priceFeed")); // allow zero address
         priceFeed = _priceFeed;
         emit PriceFeedUpdated(priceFeed);

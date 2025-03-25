@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+import {Const} from "../lib/Const.sol";
+
 abstract contract RoleManager is AccessControlUpgradeable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -33,6 +35,7 @@ abstract contract RoleManager is AccessControlUpgradeable {
     function __RoleManager_init_unchained(address owner) internal onlyInitializing {
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
+        _grantRole(Const.ADMIN_ROLE, owner);
     }
 
     /**

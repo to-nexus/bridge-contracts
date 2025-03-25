@@ -24,7 +24,7 @@ library CalcAmountLib {
      * @return updatedAt The updated time.
      */
     function calculateTokenAmountForNetworkFee(IPriceFeed feed, uint toChainID, address token, uint nativeTokenAmount)
-        external
+        internal
         view
         returns (bool ok, uint tokenAmount, uint updatedAt)
     {
@@ -47,7 +47,7 @@ library CalcAmountLib {
     /// @param decimalB The number of decimals for token B.
     /// @return amountB The equivalent amount of token B.
     function calculateAmountBWithPrice(uint amountA, uint priceA, uint priceB, uint8 decimalA, uint8 decimalB)
-        public
+        internal
         pure
         returns (uint amountB)
     {
@@ -62,7 +62,7 @@ library CalcAmountLib {
     /// @notice Retrieves the number of decimals for a given token.
     /// @param token The address of the token.
     /// @return _decimals The number of decimals.
-    function decimals(address token) public view returns (uint8 _decimals) {
+    function decimals(address token) internal view returns (uint8 _decimals) {
         _decimals = token == Const.NATIVE_TOKEN ? uint8(18) : IERC20Metadata(token).decimals();
     }
 }

@@ -30,12 +30,13 @@ library Const {
      */
     address internal constant NATIVE_TOKEN = address(1);
 
-    uint constant PERIOD_INTERVAL = 1 hours;
+    uint internal constant PERIOD_INTERVAL = 1 hours;
 
     /**
      * @notice Constants for contract role definitions
      * @dev Role identifiers used for access control
      */
+    bytes32 internal constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 internal constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
     bytes32 internal constant EDITOR_ROLE = keccak256("EDITOR_ROLE");
     bytes32 internal constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");

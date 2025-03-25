@@ -52,7 +52,7 @@ contract SettingTest is Test {
     address internal OWNER;
     address internal CrossOWNER;
     address internal USER;
-    address internal REWARD;
+    address payable internal REWARD;
     address internal VALIDATOR1;
     address internal VALIDATOR2;
     address internal VALIDATOR3;
@@ -73,7 +73,7 @@ contract SettingTest is Test {
         OWNER = vm.addr(OWNER_PK);
         CrossOWNER = vm.addr(CrossOWNER_PK);
         USER = vm.addr(USER_PK);
-        REWARD = vm.addr(REWARD_PK);
+        REWARD = payable(vm.addr(REWARD_PK));
 
         VALIDATOR1 = vm.addr(VALIDATOR_PK1);
         VALIDATOR2 = vm.addr(VALIDATOR_PK2);
