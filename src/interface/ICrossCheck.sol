@@ -30,10 +30,10 @@ interface ICrossCheck {
 
     /**
      * @notice Checks if the given blockHash can be proved to be part of a check block
-     * @param startBlockNumber The starting block number to query the check block
+     * @param blockNumber The block number to be verified
      * @param proof The merkle proof
      * @param blockHash The hash of the block to be verified
      * @return isProved True if it is successfully proved
      */
-    function verifyBlock(uint256 startBlockNumber, bytes32[] calldata proof, bytes32 blockHash) external view returns (bool);
+    function verifyBlock(uint256 blockNumber, bytes32[] calldata proof, bytes32 blockHash) external view returns (bool);
 }

@@ -63,8 +63,8 @@ contract CrossCheckTest is Test {
         assertEq(nextNonce, 0);
         assertEq(nextStart, 0);
 
-        (, , , uint256 createdAt, , ) = crossCheck.getCheckBlock(0);
-        assertEq(createdAt, 0);
+        CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(0);
+        assertEq(_block.createdAt, 0);
     }
 
     function testFuzz_submitCheckpoint(uint256 timemod) public {
@@ -205,7 +205,7 @@ contract CrossCheckTest is Test {
         assertEq(crossCheck.latestBlock(), 0);
 
         // the leaf should be proved
-        bool result = crossCheck.verifyBlock(0, proof, blockHash);
+        bool result = crossCheck.verifyBlock(1, proof, blockHash);
         assertTrue(result);
 
         // wrong block hash
@@ -245,65 +245,99 @@ contract CrossCheckTest is Test {
 
         // getCheckBlockByNonce
         for (uint256 i = 0; i < 3; ++i) {
-            ICrossCheck.CheckBlockArg memory _block;
-            uint256 timestamp;
-            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByNonce(i);
-            verifyCheckBlock(_block, proposer, timestamp);
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByNonce(i);
+            verifyCheckBlock(
+                ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
+                proposer,
+                _block.createdAt
+            );
         }
 
         // getCheckBlockByBlockNumber
         {
-            ICrossCheck.CheckBlockArg memory _block;
-            uint256 timestamp;
-            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(blockNumber);
-            verifyCheckBlock(_block, proposer, timestamp);
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByBlockNumber(blockNumber);
+            verifyCheckBlock(
+                ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
+                proposer,
+                _block.createdAt
+            );
         }
 
         // edge cases
         {
             // nonce = 0
-            ICrossCheck.CheckBlockArg memory _block;
-            uint256 timestamp;
-            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByNonce(0);
-            verifyCheckBlock(_block, proposer, timestamp);
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByNonce(0);
+            verifyCheckBlock(
+                ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
+                proposer,
+                _block.createdAt
+            );
 
             // block number = 0
-            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(0);
-            verifyCheckBlock(_block, proposer, timestamp);
+            _block = crossCheck.getCheckBlockByBlockNumber(0);
+            verifyCheckBlock(
+                ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
+                proposer,
+                _block.createdAt
+            );
 
             // block number = _block.start
-            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 2);
-            verifyCheckBlock(_block, proposer, timestamp);
+            _block = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 2);
+            verifyCheckBlock(
+                ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
+                proposer,
+                _block.createdAt
+            );
 
             // block number = _block.end
-            (_block.nonce, _block.start, _block.end, timestamp, _block.rootHash, ) = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 2 - 1);
-            verifyCheckBlock(_block, proposer, timestamp);
+            _block = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 2 - 1);
+            verifyCheckBlock(
+                ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
+                proposer,
+                _block.createdAt
+            );
         }
 
         // not found
         {
-            uint256 nonce;
-            uint256 start;
-            uint256 end;
-            uint256 timestamp;
-            bytes32 rootHash;
-            address _proposer;
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByNonce(N_BLOCKS + 5);
+            assertEq(_block.nonce, 0);
+            assertEq(_block.start, 0);
+            assertEq(_block.end, 0);
+            assertEq(_block.createdAt, 0);
+            assertEq(_block.rootHash, bytes32(0));
+            assertEq(_block.proposer, address(0));
 
-            (nonce, start, end, timestamp, rootHash, _proposer) = crossCheck.getCheckBlockByNonce(N_BLOCKS + 5);
-            assertEq(nonce, 0);
-            assertEq(start, 0);
-            assertEq(end, 0);
-            assertEq(timestamp, 0);
-            assertEq(rootHash, bytes32(0));
-            assertEq(_proposer, address(0));
+            _block = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 5);
+            assertEq(_block.nonce, 0);
+            assertEq(_block.start, 0);
+            assertEq(_block.end, 0);
+            assertEq(_block.createdAt, 0);
+            assertEq(_block.rootHash, bytes32(0));
+            assertEq(_block.proposer, address(0));
+        }
+    }
 
-            (nonce, start, end, timestamp, rootHash, _proposer) = crossCheck.getCheckBlockByBlockNumber(N_BLOCKS * 5);
-            assertEq(nonce, 0);
-            assertEq(start, 0);
-            assertEq(end, 0);
-            assertEq(timestamp, 0);
-            assertEq(rootHash, bytes32(0));
-            assertEq(_proposer, address(0));
+    function test_getCheckBlockByBlockNumber() public {
+        // test with huge number of check blocks
+        uint256 N_TESTS = 4000;
+        address proposer = getProposer();
+        vm.startPrank(proposer);
+
+        for (uint256 i = 0; i < N_TESTS; ++i) {
+            ICrossCheck.CheckBlockArg memory _block = createBlockArg(i, i * N_BLOCKS);
+            (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
+            crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
+        }
+
+        for (uint256 i = 0; i < N_TESTS; ++i) {
+            uint256 blockNumber = vm.randomUint() % (N_TESTS * N_BLOCKS);
+            CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlockByBlockNumber(blockNumber);
+            verifyCheckBlock(
+                ICrossCheck.CheckBlockArg({nonce: _block.nonce, start: _block.start, end: _block.end, rootHash: _block.rootHash, chainID: CHAIN_ID}),
+                proposer,
+                _block.createdAt
+            );
         }
     }
 
@@ -359,13 +393,13 @@ contract CrossCheckTest is Test {
         }
     }
 
-    function verifyCheckBlock(ICrossCheck.CheckBlockArg memory _block, address _proposer, uint256 timestamp) internal view {
-        (uint256 nonce, uint256 start, uint256 end, uint256 createdAt, bytes32 rootHash, address proposer) = crossCheck.getCheckBlock(_block.start);
-        assertEq(nonce, _block.nonce);
-        assertEq(start, _block.start);
-        assertEq(end, _block.end);
-        assertEq(createdAt, timestamp);
-        assertEq(rootHash, _block.rootHash);
-        assertEq(proposer, _proposer);
+    function verifyCheckBlock(ICrossCheck.CheckBlockArg memory _arg, address _proposer, uint256 timestamp) internal view {
+        CrossCheckStorage.CheckBlock memory _block = crossCheck.getCheckBlock(_arg.start);
+        assertEq(_block.nonce, _arg.nonce);
+        assertEq(_block.start, _arg.start);
+        assertEq(_block.end, _arg.end);
+        assertEq(_block.createdAt, timestamp);
+        assertEq(_block.rootHash, _arg.rootHash);
+        assertEq(_block.proposer, _proposer);
     }
 }

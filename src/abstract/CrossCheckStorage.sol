@@ -68,67 +68,42 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
     /**
      * @notice Retrieves check block of a specific starting block number
      * @param startBlockNumber The starting block number to query
-     * @return nonce Sequential identifier of this check block
-     * @return start The starting block number this check block covers
-     * @return end The ending block number this check block covers
-     * @return createdAt The block timestamp when this check block was created
-     * @return rootHash The hash representing the root of the block data
-     * @return proposer The address that proposed this check block
+     * @return _block The check block
      */
-    function getCheckBlock(
-        uint256 startBlockNumber
-    ) public view returns (uint256 nonce, uint256 start, uint256 end, uint256 createdAt, bytes32 rootHash, address proposer) {
-        CheckBlock storage _block = _checkBlocks[startBlockNumber];
-        (nonce, start, end, createdAt, rootHash, proposer) = (
-            uint256(_block.nonce),
-            uint256(_block.start),
-            uint256(_block.end),
-            uint256(_block.createdAt),
-            _block.rootHash,
-            _block.proposer
-        );
+    function getCheckBlock(uint256 startBlockNumber) external view returns (CheckBlock memory) {
+        return _checkBlocks[startBlockNumber];
     }
 
     /**
      * @notice Retrieves check block of a specific nonce
      * @param nonce The nonce of the check block to query
-     * @return nonce Sequential identifier of this check block
-     * @return start The starting block number this check block covers
-     * @return end The ending block number this check block covers
-     * @return createdAt The block timestamp when this check block was created
-     * @return rootHash The hash representing the root of the block data
-     * @return proposer The address that proposed this check block
+     * @return block The check block
      */
-    function getCheckBlockByNonce(uint256 nonce) external view returns (uint256, uint256, uint256, uint256, bytes32, address) {
+    function getCheckBlockByNonce(uint256 nonce) external view returns (CheckBlock memory) {
         // short cut
         if (nonce == 0) {
-            return getCheckBlock(0);
+            return _checkBlocks[0];
         }
         uint256 start = _nonceToCheckBlocks[nonce];
         if (start == 0) {
-            // nonce is not found
-            return (0, 0, 0, 0, bytes32(0), address(0));
+            // start == 0 means that the nonce does not exist
+            return CheckBlock(0, 0, 0, 0, bytes32(0), address(0));
         }
-        return getCheckBlock(_nonceToCheckBlocks[nonce]);
+        return _checkBlocks[start];
     }
 
     /**
      * @notice Retrieves check block of a specific block number
      * @param blockNumber The block number to query
-     * @return nonce Sequential identifier of this check block
-     * @return start The starting block number this check block covers
-     * @return end The ending block number this check block covers
-     * @return createdAt The block timestamp when this check block was created
-     * @return rootHash The hash representing the root of the block data
-     * @return proposer The address that proposed this check block
+     * @return block The check block
      */
-    function getCheckBlockByBlockNumber(uint256 blockNumber) external view returns (uint256, uint256, uint256, uint256, bytes32, address) {
+    function getCheckBlockByBlockNumber(uint256 blockNumber) public view returns (CheckBlock memory) {
         // short cut
-        if (blockNumber == 0) {
-            return getCheckBlock(0);
-        }
         if (_checkBlocks[blockNumber].createdAt > 0) {
-            return getCheckBlock(blockNumber);
+            return _checkBlocks[blockNumber];
+        }
+        if (blockNumber == 0) {
+            return _checkBlocks[0];
         }
 
         // binary search using nonce
@@ -138,7 +113,7 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
             uint256 mid = (low + high) / 2;
             CheckBlock storage _block = _checkBlocks[_nonceToCheckBlocks[mid]];
             if (_block.start <= blockNumber && blockNumber <= _block.end) {
-                return getCheckBlock(_block.start);
+                return _checkBlocks[_block.start];
             } else if (blockNumber < _block.start) {
                 unchecked {
                     high = mid - 1;
@@ -149,7 +124,7 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
                 }
             }
         }
-        return (0, 0, 0, 0, bytes32(0), address(0));
+        return CheckBlock(0, 0, 0, 0, bytes32(0), address(0));
     }
 
     /**
@@ -203,5 +178,7 @@ abstract contract CrossCheckStorage is CrossCheckBlock {
         unchecked {
             ++numCheckBlocks;
         }
+        // set the latest block number to the new one
+        latestBlock = start;
     }
 }
