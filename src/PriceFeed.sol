@@ -92,7 +92,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
         require(exist[1], PriceFeedNoSource(tokenB));
 
         (uint8 decimalA, uint8 decimalB) = (CalcAmountLib.decimals(tokenA), CalcAmountLib.decimals(tokenB));
-        price = CalcAmountLib.calculateAmountBWithPrice(1 * (10 ** decimalA), prices[0], prices[1], decimalA, decimalB);
+        price = CalcAmountLib.calculateAmountBWithPrice(10 ** decimalA, prices[0], prices[1], decimalA, decimalB);
         return (price, updatedAt);
     }
 
