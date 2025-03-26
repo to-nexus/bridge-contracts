@@ -1,0 +1,141 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.28;
+
+import {IPriceFeed} from "../src/interface/IPriceFeed.sol";
+import {CalcAmountLib} from "../src/lib/CalcAmountLib.sol";
+import {Const} from "../src/lib/Const.sol";
+
+import {TestToken} from "./token/TestToken.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Test} from "forge-std/Test.sol";
+
+// Wrapper contract for testing CalcAmountLib's calculateAmountBWithPrice function
+contract CalcAmountLibWrapper {
+    function calculateAmountBWithPrice(uint amountA, uint priceA, uint priceB, uint8 decimalA, uint8 decimalB)
+        external
+        pure
+        returns (uint)
+    {
+        return CalcAmountLib.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+    }
+
+    function decimals(address token) external view returns (uint8) {
+        return CalcAmountLib.decimals(token);
+    }
+}
+
+contract CalcAmountLibTest is Test {
+    CalcAmountLibWrapper public wrapper;
+    TestToken public token6; // Token with 6 decimals (e.g., USDC)
+    TestToken public token8; // Token with 8 decimals (e.g., WBTC)
+    TestToken public token18; // Token with 18 decimals (e.g., most ERC20 tokens)
+
+    // Test setup
+    function setUp() public {
+        wrapper = new CalcAmountLibWrapper();
+        token6 = new TestToken("token6", "token6", 6);
+        token8 = new TestToken("token8", "token8", 8);
+        token18 = new TestToken("token18", "token18", 18);
+    }
+
+    // Basic case test: Same decimals (18 -> 18)
+    function testSameDecimals() public view {
+        uint amountA = 1 ether; // 1 ETH (10^18 wei)
+        uint priceA = 1500 * 10 ** 8; // ETH price: $1,500 (8 decimal precision)
+        uint priceB = 1 * 10 ** 8; // Token price: $1 (8 decimal precision)
+        uint8 decimalA = 18;
+        uint8 decimalB = 18;
+
+        uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+        uint expectedAmount = 666666666666666; // Approximately 0.667 * 10^15
+
+        assertApproxEqRel(actualAmount, expectedAmount, 1e9);
+    }
+
+    // Different decimals case: Higher to lower decimals (18 -> 6)
+    function testHigherToLowerDecimals() public view {
+        uint amountA = 1 ether; // 1 ETH (10^18 wei)
+        uint priceA = 1500 * 10 ** 8; // ETH price: $1,500
+        uint priceB = 1 * 10 ** 8; // USDC price: $1
+        uint8 decimalA = 18;
+        uint8 decimalB = 6;
+
+        uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+        uint expectedAmount = 666; // Approximately 666.666... (rounded)
+
+        assertApproxEqRel(actualAmount, expectedAmount, 1e9);
+    }
+
+    // Different decimals case: Lower to higher decimals (6 -> 18)
+    function testLowerToHigherDecimals() public view {
+        uint amountA = 1000 * 10 ** 6; // 1000 USDC
+        uint priceA = 1 * 10 ** 8; // USDC price: $1
+        uint priceB = 1500 * 10 ** 8; // ETH price: $1,500
+        uint8 decimalA = 6;
+        uint8 decimalB = 18;
+
+        uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+        uint expectedAmount = 1500000 * 10 ** 18; // 1,500,000 * 10^18
+
+        assertEq(actualAmount, expectedAmount);
+    }
+
+    // Extreme price difference test
+    function testExtremePriceDifference() public view {
+        uint amountA = 1 ether; // 1 ETH
+        uint priceA = 1500 * 10 ** 8; // ETH price: $1,500
+        uint priceB = 50000 * 10 ** 8; // BTC price: $50,000
+        uint8 decimalA = 18;
+        uint8 decimalB = 8;
+
+        uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+        uint expectedAmount = 3333333333; // Approximately 0.03333... BTC
+
+        assertApproxEqRel(actualAmount, expectedAmount, 1e9);
+    }
+
+    // Zero amount test
+    function testZeroAmount() public view {
+        uint amountA = 0;
+        uint priceA = 1500 * 10 ** 8;
+        uint priceB = 1 * 10 ** 8;
+        uint8 decimalA = 18;
+        uint8 decimalB = 6;
+
+        uint expectedAmount = 0;
+        uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+
+        assertEq(actualAmount, expectedAmount);
+    }
+
+    // Test revert when priceA is zero
+    function testRevertWhenPriceAIsZero() public {
+        uint amountA = 1 ether;
+        uint priceA = 0; // Zero price
+        uint priceB = 1 * 10 ** 8;
+        uint8 decimalA = 18;
+        uint8 decimalB = 6;
+
+        vm.expectRevert(); // Expect revert
+        wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+    }
+
+    // Overflow test
+    function testOverflow() public {
+        uint amountA = type(uint).max; // Maximum uint value
+        uint priceA = 1 * 10 ** 8;
+        uint priceB = 2 * 10 ** 8; // Double price
+        uint8 decimalA = 18;
+        uint8 decimalB = 18;
+
+        vm.expectRevert(); // Expect revert due to overflow
+        wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+    }
+
+    // Decimals function test
+    function testDecimals() public {
+        assertEq(wrapper.decimals(address(token6)), 6);
+        assertEq(wrapper.decimals(address(token8)), 8);
+        assertEq(wrapper.decimals(address(token18)), 18);
+    }
+}
