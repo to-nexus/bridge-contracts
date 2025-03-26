@@ -52,11 +52,11 @@ library CalcAmountLib {
         returns (uint amountB)
     {
         require(priceA != 0, CalcAmountLibCanNotZeroValue("priceA"));
-        bool ok;
-        (ok, amountB) = decimalB >= decimalA
-            ? amountA.tryMul(priceB.mulDiv(10 ** (decimalB - decimalA), priceA))
-            : amountA.tryMul(priceB / (10 ** (decimalA - decimalB)) / priceA);
-        require(ok, CalcAmountLibOverflow());
+        require(priceB != 0, CalcAmountLibCanNotZeroValue("priceB"));
+
+        amountB = decimalB >= decimalA
+            ? amountB = amountA.mulDiv(priceB, priceA) * 10 ** (decimalB - decimalA)
+            : amountB = amountA.mulDiv(priceB, priceA * 10 ** (decimalA - decimalB));
     }
 
     /// @notice Retrieves the number of decimals for a given token.
