@@ -52,6 +52,7 @@ contract BaseBridge is
     error BaseBridgeBurnFailed(IERC20 token, address from, uint value);
     error BaseBridgeNotMatchLength();
     error BaseBridgeFailedCall(string reason);
+    error BaseBridgeMismatchPermitAccount();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -254,8 +255,9 @@ contract BaseBridge is
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
         );
-        (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
+        require(to == permitArgs.account, BaseBridgeMismatchPermitAccount());
 
+        (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         require(
             permitArgs.value >= value + networkFee + exFee,
             BaseBridgeInvalidValue(value + networkFee + exFee, permitArgs.value)
