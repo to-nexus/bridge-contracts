@@ -56,7 +56,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryExistERC20Code(address code);
     error RegistryExistIndex(uint index);
     error RegistryExistToken(address token);
-    error RegistryZeroAddress();
+    error RegistryCanNotZeroValue();
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
     error RegistryFactoryNotSet();
@@ -190,12 +190,15 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         public
         onlyRole(Const.EDITOR_ROLE)
     {
+        require(remoteChainID != 0, RegistryCanNotZeroValue());
+        require(localToken != address(0), RegistryCanNotZeroValue());
+        require(remoteToken != address(0), RegistryCanNotZeroValue());
+
         if (_chains.add(remoteChainID)) {
             _chainData[remoteChainID] =
                 Chain({remoteChainID: remoteChainID, initiateIndex: 0, finalizeIndex: 0, paused: false});
         }
 
-        require(localToken != address(0), RegistryZeroAddress());
         require(_tokens[remoteChainID].add(localToken), RegistryExistToken(localToken));
 
         _tokenPairs[remoteChainID][localToken] = IBridgeRegistry.TokenPair({
@@ -238,7 +241,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         onlyRole(Const.ADMIN_ROLE)
     {
         require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
-        require(address(_crossMintableERC20Code) != address(0), RegistryZeroAddress());
+        require(address(_crossMintableERC20Code) != address(0), RegistryCanNotZeroValue());
 
         crossMintableERC20Code = _crossMintableERC20Code;
         emit CrossMintableERC20CodeSet(address(crossMintableERC20Code));
