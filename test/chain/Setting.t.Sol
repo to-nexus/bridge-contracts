@@ -65,8 +65,8 @@ contract SettingTest is Test {
     bytes NULLDATA;
 
     function setUp() public virtual {
-        ethereumForkID = vm.createFork("http://13.125.40.200:8545"); // ethereum chain sepolia testnet
-        crossForkID = vm.createFork("http://localhost:22001"); // cross chain testnet
+        ethereumForkID = vm.createFork("http://localhost:8545"); // ethereum test chain
+        crossForkID = vm.createFork("http://localhost:8545"); // cross test chain
 
         threshold = uint8(3);
 
