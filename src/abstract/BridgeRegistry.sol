@@ -442,23 +442,13 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Updates verification delay expiration for delayed processing
      * @param args Finalization arguments to store
      * @param status Status of the pending operation
-     * @param reason Error message explaining pending status
      * @param delay Whether to delay processing (verification delay)
      */
-    function _setPendingArguments(
-        FinalizeArguments calldata args,
-        Const.FinalizeStatus status,
-        bytes memory reason,
-        bool delay
-    ) internal {
+    function _setPendingArguments(FinalizeArguments calldata args, Const.FinalizeStatus status, bool delay) internal {
         require(_pendingIndex[args.fromChainID].add(args.index), RegistryExistIndex(args.index));
 
-        _pendingData[args.fromChainID][args.index] = PendingData({
-            args: args,
-            status: status,
-            reason: reason,
-            delayExpiration: delay ? block.timestamp + _verificationDelay : 0
-        });
+        _pendingData[args.fromChainID][args.index] =
+            PendingData({args: args, status: status, delayExpiration: delay ? block.timestamp + _verificationDelay : 0});
 
         TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
         tokenPair.pendingAmount += args.value;
