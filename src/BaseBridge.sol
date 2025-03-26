@@ -571,10 +571,10 @@ contract BaseBridge is
         // Skip validation if this is a retry - validation was already completed in the initial attempt
         if (!retry) {
             status = bridgeVerifier.validateBridgeTokenValue(IERC20(token), value);
-            if (Const.FinalizeStatus.Success != status) delay = true;
+            if (status != Const.FinalizeStatus.Success) delay = true;
+        } else {
+            status = Const.FinalizeStatus.Success;
         }
-
-        return (Const.FinalizeStatus.Success, false);
     }
 
     /**
