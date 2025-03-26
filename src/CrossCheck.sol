@@ -69,6 +69,18 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
     // see {CrossCheckStorage}
 
     /**
+     * @notice Maximum number of check blocks that can be stored
+     */
+    uint256 public maxCheckBlocks = 100;
+
+    /**
+     * @dev storage gap
+     * 3 slots at CrossCheckStorage
+     * 1 slot here
+     */
+    uint[46] private __gap;
+
+    /**
      * @dev Direct initialization is disabled
      */
     constructor() {
@@ -107,14 +119,18 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
         if (_block.chainID != _crossChainID) {
             revert CrossCheckInvalidChainID(_block.chainID);
         }
+        // check validity
+        if (_block.end <= _block.start || _block.rootHash == bytes32(0)) {
+            revert CrossCheckInvalidData();
+        }
 
         // check next nonce and start block number
-        (uint256 nextNonce, uint256 nextStart) = getNextBlockInfo();
-        uint256 nextEnd = 0;
+        (, uint256 _nextStart) = getNextBlockInfo();
+        uint256 _nextEnd = 0;
         unchecked {
-            nextEnd = nextStart + _blocksPerCheck - 1;
+            _nextEnd = _nextStart + _blocksPerCheck - 1;
         }
-        if (nextNonce != _block.nonce || nextStart != _block.start || nextEnd != _block.end) {
+        if (nextNonce != _block.nonce || _nextStart != _block.start || _nextEnd != _block.end) {
             revert CrossCheckNotNextBlock(_block.nonce, _block.start);
         }
 
@@ -125,8 +141,10 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
         // add new check block
         _addCheckBlock(proposer, _block.nonce, _block.start, _block.end, _block.rootHash);
 
-        // set the last nonce to the new one
-        lastNonce = _block.nonce;
+        // set the next nonce to the new one
+        unchecked {
+            ++nextNonce;
+        }
 
         emit CheckBlockAdded(proposer, _block.nonce, _block.start, _block.end, _block.rootHash);
 
@@ -186,7 +204,7 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
      */
     function _pruneCheckBlocks() private {
         uint256 _old = firstNonce;
-        while (lastNonce - firstNonce + 1 > maxCheckBlocks) {
+        while (nextNonce - firstNonce > maxCheckBlocks) {
             _removeCheckBlock(firstNonce);
             unchecked {
                 ++firstNonce;

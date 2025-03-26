@@ -57,8 +57,6 @@ contract CrossCheckTest is Test {
     }
 
     function test_initialize_Initialized() public view {
-        assertEq(crossCheck.firstNonce(), 0);
-        assertEq(crossCheck.lastNonce(), 0);
         assertEq(crossCheck.maxCheckBlocks(), 10);
         assertEq(crossCheck.threshold(), uint8(N_VALIDATORS));
         assertEq(crossCheck.numCheckBlocks(), 0);
@@ -94,8 +92,6 @@ contract CrossCheckTest is Test {
             (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
             crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
 
-            assertEq(crossCheck.lastNonce(), i);
-
             (uint256 nextNonce, uint256 nextStart) = crossCheck.getNextBlockInfo();
             assertEq(nextNonce, i + 1);
             assertEq(nextStart, (i + 1) * N_BLOCKS);
@@ -112,11 +108,9 @@ contract CrossCheckTest is Test {
             ICrossCheck.CheckBlockArg memory _block = createBlockArg(nonce, nonce * N_BLOCKS);
             (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
             crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
-        }
 
-        assertEq(crossCheck.firstNonce(), 0);
-        assertEq(crossCheck.lastNonce(), MAX_CHECK_BLOCKS - 1);
-        assertEq(crossCheck.numCheckBlocks(), MAX_CHECK_BLOCKS);
+            assertEq(crossCheck.numCheckBlocks(), nonce + 1);
+        }
 
         // should be pruned
         for (uint256 i = 0; i < MAX_CHECK_BLOCKS; ++i) {
@@ -130,11 +124,9 @@ contract CrossCheckTest is Test {
 
             (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
             crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
-        }
 
-        assertEq(crossCheck.firstNonce(), MAX_CHECK_BLOCKS);
-        assertEq(crossCheck.lastNonce(), MAX_CHECK_BLOCKS * 2 - 1);
-        assertEq(crossCheck.numCheckBlocks(), MAX_CHECK_BLOCKS);
+            assertEq(crossCheck.numCheckBlocks(), MAX_CHECK_BLOCKS);
+        }
     }
 
     function test_submitCheckpoint_RevertIf_BlockIsNotNext() public {
