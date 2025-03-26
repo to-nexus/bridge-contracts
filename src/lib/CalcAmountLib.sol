@@ -13,6 +13,8 @@ library CalcAmountLib {
     error CalcAmountLibCanNotZeroValue(string name);
     error CalcAmountLibOverflow();
 
+    uint8 constant NATIVE_TOKEN_DECIMALS = 18;
+
     /**
      * @notice Calculates the equivalent amount of token based on the native token amount.
      * @param feed The IPriceFeed contract instance.
@@ -36,7 +38,9 @@ library CalcAmountLib {
         (ok, price, updatedAt) = feed.getTokenPriceInDollars(token);
         if (!ok) return (false, 0, 0);
 
-        tokenAmount = calculateAmountBWithPrice(nativeTokenAmount, nativeTokenPrice, price, 18, decimals(token));
+        tokenAmount = calculateAmountBWithPrice(
+            nativeTokenAmount, nativeTokenPrice, price, NATIVE_TOKEN_DECIMALS, decimals(token)
+        );
     }
 
     /// @notice Calculates an amount of token A to an equivalent amount of token B using provided price data.
@@ -63,6 +67,6 @@ library CalcAmountLib {
     /// @param token The address of the token.
     /// @return _decimals The number of decimals.
     function decimals(address token) internal view returns (uint8 _decimals) {
-        _decimals = token == Const.NATIVE_TOKEN ? uint8(18) : IERC20Metadata(token).decimals();
+        _decimals = token == Const.NATIVE_TOKEN ? uint8(NATIVE_TOKEN_DECIMALS) : IERC20Metadata(token).decimals();
     }
 }

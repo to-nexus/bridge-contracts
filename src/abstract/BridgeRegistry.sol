@@ -24,7 +24,6 @@ import {RoleManager} from "./RoleManager.sol";
  * TokenPair {
  *   localToken: Token address on this chain
  *   remoteToken: Corresponding token on remote chain
- *   verificationAmountThreshold: Maximum amount that can be processed automatically without additional verification
  *   isOrigin: Whether this is the origin chain
  *   paused: Bridge operations paused flag
  *   deposited: Total amount deposited
@@ -40,7 +39,7 @@ import {RoleManager} from "./RoleManager.sol";
  *
  * PendingData {
  *   args: FinalizeArguments struct with operation details
- *   reason: Error message explaining pending status
+ *   status: Status of the pending operation
  *   delayExpiration: Timestamp after which pending operation can be processed
  * }
  */

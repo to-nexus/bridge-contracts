@@ -116,6 +116,20 @@ contract BaseBridge is
     );
 
     /**
+     * @notice Emitted when a manual release is performed
+     * @param remoteChainID The ID of the chain the operation was performed on
+     * @param index The index of the operation
+     */
+    event ManualReleased(uint indexed remoteChainID, uint indexed index);
+
+    /**
+     * @notice Emitted when a pending operation is removed without being processed
+     * @param remoteChainID The ID of the chain the operation was removed from
+     * @param index The index of the operation that was removed without processing
+     */
+    event PendingRemoved(uint indexed remoteChainID, uint indexed index);
+
+    /**
      * @notice Emitted when delay is set for a pending operation
      * @param fromChainID Source chain ID
      * @param index Unique identifier for the operation
@@ -128,6 +142,17 @@ contract BaseBridge is
      * @param bridgeVerifier The address of the new bridge verifier
      */
     event BridgeVerifierSet(address indexed bridgeVerifier);
+
+    /**
+     * @notice Emitted when the dev wallet is set
+     * @param dev The address of the new dev wallet
+     */
+    event DevSet(address indexed dev);
+
+    /**
+     * @notice Emitted when the dev wallet is set
+     * @param dev The address of the new dev wallet
+     */
 
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
@@ -182,6 +207,8 @@ contract BaseBridge is
         __BridgeRegistry_init();
 
         _dev = dev_;
+        emit DevSet(dev_);
+
         _initializedAt = block.number;
     }
 
@@ -426,16 +453,17 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Manually processes a pending operation regardless of pause or safety deadline
+     * @notice Manually releases a pending operation regardless of pause or safety deadline
      * @dev Verifier-only function to force process a pending operation
      * - Bypasses token pause and safety deadline checks
      * - Verifies pending operation exists
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
      */
-    function manualProcessPending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) nonReentrant {
+    function manualReleasePending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) nonReentrant {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
         _releasePending(remoteChainID, index, address(0));
+        emit ManualReleased(remoteChainID, index);
     }
 
     /**
@@ -455,6 +483,7 @@ contract BaseBridge is
     {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
         _releasePending(remoteChainID, index, recipient);
+        emit ManualReleased(remoteChainID, index);
     }
 
     /**
@@ -465,6 +494,7 @@ contract BaseBridge is
      */
     function removePending(uint remoteChainID, uint index) external onlyRole(Const.ADMIN_ROLE) nonReentrant {
         _removePendingArguments(remoteChainID, index);
+        emit PendingRemoved(remoteChainID, index);
     }
 
     /**
@@ -784,6 +814,7 @@ contract BaseBridge is
     function setDev(address payable dev_) external onlyRole(Const.ADMIN_ROLE) {
         require(dev_ != address(0), BaseBridgeCanNotZeroAddress());
         _dev = dev_;
+        emit DevSet(dev_);
     }
 
     /**
