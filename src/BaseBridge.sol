@@ -155,14 +155,6 @@ contract BaseBridge is
         _disableInitializers();
     }
 
-    // /**
-    //  * @notice Allows contract to receive native tokens for development
-    //  * @dev Reverts if sent value is zero
-    //  */
-    // receive() external payable {
-    //     require(msg.value != 0, BaseBridgeCanNotZeroMsgValue());
-    // }
-
     /**
      * @notice Initializes the bridge contract
      * @param owner_ Owner address
