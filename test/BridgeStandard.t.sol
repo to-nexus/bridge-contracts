@@ -163,6 +163,59 @@ contract BaseBridgeTest is BridgeTest {
         }
     }
 
+    function test_pending_finalize_with_revert_transfer() public {
+        uint amount = 1000 * 1e18;
+
+        vm.prank(OWNER);
+        testTokenEthereum.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenEthereum.approve(address(bridgeEthereum), amount);
+
+        depositToken(true, amount, 5); // should finalize revert
+
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), amount);
+
+        {
+            // token set revert transfer
+            vm.selectFork(ethereumForkID);
+            vm.prank(OWNER);
+            TestToken(address(testTokenEthereum)).setRevertTransfer(true);
+
+            (uint value, uint gas, uint service) = crossCalcFee(IERC20(address(testTokenCross)), amount);
+            uint total = value + gas + service;
+            assertTrue(total <= amount);
+            (uint index, bool ok) = crossBridge(address(testTokenCross), USER, USER, value, gas, service);
+            assertTrue(ok);
+            crossIncrementIndex();
+            vm.selectFork(ethereumForkID);
+            uint before = testTokenEthereum.balanceOf(USER);
+            ethereumFinalize(index, address(testTokenEthereum), USER, value, 5);
+            assertEq(before, testTokenEthereum.balanceOf(USER));
+
+            vm.selectFork(ethereumForkID);
+            IBaseBridge.PendingData memory pendingArgs = bridgeEthereum.getPendingArguments(CROSS_CHAIN_ID, index);
+            assertEq(pendingArgs.delayExpiration, 0);
+            assertEq(pendingArgs.args.index, index);
+            assertEq(address(pendingArgs.args.toToken), address(testTokenEthereum));
+            assertEq(pendingArgs.args.to, USER);
+            assertEq(pendingArgs.args.value, value);
+            assertTrue(Const.FinalizeStatus.Success != pendingArgs.status);
+
+            // token unset revert transfer
+            vm.prank(OWNER);
+            vm.selectFork(ethereumForkID);
+            TestToken(address(testTokenEthereum)).setRevertTransfer(false);
+
+            before = testTokenEthereum.balanceOf(USER);
+
+            vm.prank(VALIDATOR1);
+            bridgeEthereum.releasePending(CROSS_CHAIN_ID, index);
+
+            assertEq(before + value, testTokenEthereum.balanceOf(USER));
+        }
+    }
+
     function test_permit_deposit() public {
         uint amount = 1000 * 1e18;
 

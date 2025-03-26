@@ -669,10 +669,11 @@ contract BaseBridge is
         private
         returns (Const.FinalizeStatus status)
     {
-        try IERC20(token).transfer(to, value) returns (bool success) {
-            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.TransferFailed;
-            if (success) _withdrawToken(remoteChainID, address(token), value);
-        } catch {
+        bool success = _safeCall(payable(address(token)), 0, abi.encodeCall(IERC20.transfer, (to, value)));
+        if (success) {
+            status = Const.FinalizeStatus.Success;
+            _withdrawToken(remoteChainID, address(token), value);
+        } else {
             status = Const.FinalizeStatus.TransferFailed;
         }
     }
@@ -689,11 +690,9 @@ contract BaseBridge is
         private
         returns (Const.FinalizeStatus status)
     {
-        try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
-            status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.MintFailed;
-        } catch {
-            status = Const.FinalizeStatus.MintFailed;
-        }
+        bool success = _safeCall(payable(address(token)), 0, abi.encodeCall(ICrossMintableERC20.mint, (to, value)));
+        if (success) status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.MintFailed;
+        else status = Const.FinalizeStatus.MintFailed;
     }
 
     /**
@@ -708,7 +707,7 @@ contract BaseBridge is
      * @return success Success status
      */
     function _safeCall(address payable recipient, uint amount, bytes memory data) private returns (bool success) {
-        if (amount != 0) require(address(this).balance >= amount, BaseBridgeInvalidBalance());
+        require(address(this).balance >= amount, BaseBridgeInvalidBalance());
 
         bytes memory returndata;
         (success, returndata) = recipient.call{value: amount}(data);
@@ -716,17 +715,16 @@ contract BaseBridge is
 
         if (amount == 0) {
             if (returndata.length == 0) {
-                if (address(recipient).code.length == 0) return (false);
+                if (address(recipient).code.length == 0) return false;
             } else {
                 bool returnValue;
                 assembly {
                     returnValue := mload(add(returndata, 32))
                 }
-                if (returnValue != true) return (false);
+                return returnValue;
             }
         }
-
-        return (true);
+        return true;
     }
 
     /**
