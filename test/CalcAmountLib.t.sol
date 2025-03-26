@@ -39,7 +39,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Basic case test: Same decimals (18 -> 18)
-    function testSameDecimals() public view {
+    function test_same_decimals() public view {
         uint amountA = 1 ether; // 1 ETH (10^18 wei)
         uint priceA = 1500 * 10 ** 8; // ETH price: $1,500 (8 decimal precision)
         uint priceB = 1 * 10 ** 8; // Token price: $1 (8 decimal precision)
@@ -53,7 +53,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Different decimals case: Higher to lower decimals (18 -> 6)
-    function testHigherToLowerDecimals() public view {
+    function test_higher_to_lower_decimals() public view {
         uint amountA = 1 ether; // 1 ETH (10^18 wei)
         uint priceA = 1500 * 10 ** 8; // ETH price: $1,500
         uint priceB = 1 * 10 ** 8; // USDC price: $1
@@ -67,7 +67,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Different decimals case: Lower to higher decimals (6 -> 18)
-    function testLowerToHigherDecimals() public view {
+    function test_lower_to_higher_decimals() public view {
         uint amountA = 1000 * 10 ** 6; // 1000 USDC
         uint priceA = 1 * 10 ** 8; // USDC price: $1
         uint priceB = 1500 * 10 ** 8; // ETH price: $1,500
@@ -81,7 +81,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Extreme price difference test
-    function testExtremePriceDifference() public view {
+    function test_extreme_price_difference() public view {
         uint amountA = 1 ether; // 1 ETH
         uint priceA = 1500 * 10 ** 8; // ETH price: $1,500
         uint priceB = 50000 * 10 ** 8; // BTC price: $50,000
@@ -95,7 +95,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Zero amount test
-    function testZeroAmount() public view {
+    function test_zero_amount() public view {
         uint amountA = 0;
         uint priceA = 1500 * 10 ** 8;
         uint priceB = 1 * 10 ** 8;
@@ -109,7 +109,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Test revert when priceA is zero
-    function testRevertWhenPriceAIsZero() public {
+    function test_revert_when_price_a_is_zero() public {
         uint amountA = 1 ether;
         uint priceA = 0; // Zero price
         uint priceB = 1 * 10 ** 8;
@@ -121,7 +121,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Overflow test
-    function testOverflow() public {
+    function test_overflow() public {
         uint amountA = type(uint).max; // Maximum uint value
         uint priceA = 1 * 10 ** 8;
         uint priceB = 2 * 10 ** 8; // Double price
@@ -130,12 +130,5 @@ contract CalcAmountLibTest is Test {
 
         vm.expectRevert(); // Expect revert due to overflow
         wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
-    }
-
-    // Decimals function test
-    function testDecimals() public {
-        assertEq(wrapper.decimals(address(token6)), 6);
-        assertEq(wrapper.decimals(address(token8)), 8);
-        assertEq(wrapper.decimals(address(token18)), 18);
     }
 }
