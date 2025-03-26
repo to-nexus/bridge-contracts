@@ -19,9 +19,9 @@ import {Const} from "../src/lib/Const.sol";
 
 contract CrossCheckTest is Test {
     uint256 constant N_VALIDATORS = 3;
-    uint256 constant N_BLOCKS = CrossCheckMixin.blocksPerCheck;
-    uint256 constant CHAIN_ID = CrossCheckMixin.crossChainID;
-    uint256 constant MAX_CHECK_BLOCKS = 10;
+    uint256 constant N_BLOCKS = 3600 * 24;
+    uint256 constant CHAIN_ID = 612044;
+    uint256 constant MAX_CHECK_BLOCKS = 15;
     bytes32 constant SUBMIT_TYPEHASH = keccak256("CheckBlockArg(uint256 nonce,uint256 start,uint256 end,bytes32 rootHash,uint256 chainID)");
 
     address depl;
@@ -49,7 +49,7 @@ contract CrossCheckTest is Test {
         CrossCheck impl = new CrossCheck();
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
         crossCheck = CrossCheck(address(proxy));
-        crossCheck.initialize(MAX_CHECK_BLOCKS, uint8(N_VALIDATORS));
+        crossCheck.initialize(N_BLOCKS, MAX_CHECK_BLOCKS, uint8(N_VALIDATORS));
 
         // setup validators
         crossCheck.grantRoleBatch(Const.VALIDATOR_ROLE, vals);
@@ -57,7 +57,8 @@ contract CrossCheckTest is Test {
     }
 
     function test_initialize_Initialized() public view {
-        assertEq(crossCheck.maxCheckBlocks(), 10);
+        assertEq(crossCheck.blocksPerCheck(), N_BLOCKS);
+        assertEq(crossCheck.maxCheckBlocks(), MAX_CHECK_BLOCKS);
         assertEq(crossCheck.threshold(), uint8(N_VALIDATORS));
         assertEq(crossCheck.numCheckBlocks(), 0);
 
@@ -127,6 +128,27 @@ contract CrossCheckTest is Test {
 
             assertEq(crossCheck.numCheckBlocks(), MAX_CHECK_BLOCKS);
         }
+
+        // reduce maxCheckBlocks
+        vm.startPrank(depl);
+        crossCheck.grantRole(crossCheck.ADMIN_ROLE(), depl);
+        crossCheck.setMaxCheckBlocks(MAX_CHECK_BLOCKS - 5);
+
+        // 6 blocks should be pruned
+        vm.startPrank(proposer);
+        {
+            (uint256 nextNonce, uint256 nextStart) = crossCheck.getNextBlockInfo();
+
+            ICrossCheck.CheckBlockArg memory _block = createBlockArg(nextNonce, nextStart);
+            (uint8[] memory vs, bytes32[] memory rs, bytes32[] memory ss) = signBlock(_block);
+
+            vm.expectEmit(true, true, true, true);
+            emit CrossCheckBlock.CheckBlockAdded(proposer, _block.nonce, _block.start, _block.end, _block.rootHash);
+            vm.expectEmit(false, false, false, true);
+            emit CrossCheckBlock.CheckBlockPruned(MAX_CHECK_BLOCKS, 6);
+
+            crossCheck.submitCheckpoint(abi.encode(_block), vs, rs, ss);
+        }
     }
 
     function test_submitCheckpoint_RevertIf_BlockIsNotNext() public {
@@ -185,7 +207,7 @@ contract CrossCheckTest is Test {
         // pause
         vm.expectEmit(false, false, false, true);
         emit PausableUpgradeable.Paused(depl);
-        crossCheck.pause();
+        crossCheck.setPause(true);
 
         // should revert
         vm.expectRevert(PausableUpgradeable.EnforcedPause.selector);
@@ -197,7 +219,7 @@ contract CrossCheckTest is Test {
         vm.startPrank(depl);
         vm.expectEmit(false, false, false, true);
         emit PausableUpgradeable.Unpaused(depl);
-        crossCheck.unpause();
+        crossCheck.setPause(false);
 
         // should succeed
         vm.startPrank(proposer);
@@ -354,7 +376,7 @@ contract CrossCheckTest is Test {
 
     function test_getCheckBlockByBlockNumber() public {
         vm.startPrank(depl);
-        crossCheck.grantRole(crossCheck.OPERATOR_ROLE(), depl);
+        crossCheck.grantRole(crossCheck.ADMIN_ROLE(), depl);
         crossCheck.setMaxCheckBlocks(400000);
 
         // test with huge number of check blocks
@@ -379,9 +401,25 @@ contract CrossCheckTest is Test {
         }
     }
 
+    function test_setBlocksPerCheck() public {
+        vm.startPrank(depl);
+        crossCheck.grantRole(crossCheck.ADMIN_ROLE(), depl);
+
+        // should succeed
+        vm.expectEmit(true, false, false, false);
+        emit CrossCheck.CrossCheckBlocksPerCheckUpdated(10000);
+        crossCheck.setBlocksPerCheck(10000);
+
+        assertEq(crossCheck.blocksPerCheck(), 10000);
+
+        // should revert
+        vm.expectPartialRevert(CrossCheck.CrossCheckInvalidBlocksPerCheck.selector);
+        crossCheck.setBlocksPerCheck(5);
+    }
+
     function test_setMaxCheckBlocks() public {
         vm.startPrank(depl);
-        crossCheck.grantRole(crossCheck.OPERATOR_ROLE(), depl);
+        crossCheck.grantRole(crossCheck.ADMIN_ROLE(), depl);
 
         // should succeed
         vm.expectEmit(true, false, false, false);

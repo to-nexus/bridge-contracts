@@ -20,6 +20,7 @@ import {CrossCheckStorage} from "./abstract/CrossCheckStorage.sol";
  */
 contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, RoleManager, ValidatorManager, CrossCheckStorage, ICrossCheck {
     // ////////// errors //////////
+    error CrossCheckInvalidBlocksPerCheck(uint256 blocksPerCheck);
     error CrossCheckInvalidMaxCheckBlocks(uint256 maxCheckBlocks);
     error CrossCheckInvalidChainID(uint256 chainID);
     error CrossCheckNotNextBlock(uint256 nonce, uint256 start);
@@ -36,8 +37,14 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
     event CrossCheckInitialized(uint256 chainID, uint256 blocksPerCheck, uint256 maxCheckBlocks, uint8 validatorThreshold);
 
     /**
-     * @notice Emitted when the maximum number of check blocks is updated
-     * @param maxCheckBlocks The new maximum number of check blocks
+     * @notice Emitted when `blocksPerCheck` value is updated
+     * @param blocksPerCheck The new value to update
+     */
+    event CrossCheckBlocksPerCheckUpdated(uint256 blocksPerCheck);
+
+    /**
+     * @notice Emitted when `maxCheckBlocks` value is updated
+     * @param maxCheckBlocks The new value to update
      */
     event CrossCheckMaxCheckBlocksUpdated(uint256 maxCheckBlocks);
 
@@ -51,6 +58,7 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
     /**
      * @dev Role identifiers used for access control
      */
+    bytes32 public constant ADMIN_ROLE = Const.ADMIN_ROLE;
     bytes32 public constant OPERATOR_ROLE = Const.OPERATOR_ROLE;
     bytes32 public constant VALIDATOR_ROLE = Const.VALIDATOR_ROLE;
 
@@ -59,14 +67,14 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
      */
     uint256 private constant _crossChainID = CrossCheckMixin.crossChainID;
 
-    /**
-     * @dev Number of blocks covered by each check block
-     */
-    uint256 private constant _blocksPerCheck = CrossCheckMixin.blocksPerCheck;
-
     // ////////// storage variables //////////
 
     // see {CrossCheckStorage}
+
+    /**
+     * @dev Number of blocks covered by each check block
+     */
+    uint256 public blocksPerCheck = 3600 * 24;
 
     /**
      * @notice Maximum number of check blocks that can be stored
@@ -76,9 +84,9 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
     /**
      * @dev storage gap
      * 3 slots at CrossCheckStorage
-     * 1 slot here
+     * 2 slots here
      */
-    uint[46] private __gap;
+    uint[45] private __gap;
 
     /**
      * @dev Direct initialization is disabled
@@ -92,15 +100,16 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
      * @param maxCheckBlocks_ Maximum number of check blocks to store
      * @param validatorThreshold_ Number of validator signatures required for data validation
      */
-    function initialize(uint256 maxCheckBlocks_, uint8 validatorThreshold_) external initializer {
+    function initialize(uint256 blocksPerCheck_, uint256 maxCheckBlocks_, uint8 validatorThreshold_) external initializer {
         __UUPSUpgradeable_init();
         __Pausable_init();
         __RoleManager_init(msg.sender);
         __Validator_init(validatorThreshold_);
 
+        _setBlocksPerCheck(blocksPerCheck_);
         _setMaxCheckBlocks(maxCheckBlocks_);
 
-        emit CrossCheckInitialized(_crossChainID, _blocksPerCheck, maxCheckBlocks_, validatorThreshold_);
+        emit CrossCheckInitialized(_crossChainID, blocksPerCheck_, maxCheckBlocks_, validatorThreshold_);
     }
 
     /**
@@ -128,7 +137,7 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
         (, uint256 _nextStart) = getNextBlockInfo();
         uint256 _nextEnd = 0;
         unchecked {
-            _nextEnd = _nextStart + _blocksPerCheck - 1;
+            _nextEnd = _nextStart + blocksPerCheck - 1;
         }
         if (nextNonce != _block.nonce || _nextStart != _block.start || _nextEnd != _block.end) {
             revert CrossCheckNotNextBlock(_block.nonce, _block.start);
@@ -176,25 +185,34 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
     // ////////// admin functions //////////
 
     /**
+     * @notice Updates the number of blocks covered by each check block
+     * @param blocksPerCheck_ The new value to update
+     */
+    function setBlocksPerCheck(uint256 blocksPerCheck_) external onlyRole(ADMIN_ROLE) {
+        _setBlocksPerCheck(blocksPerCheck_);
+        emit CrossCheckBlocksPerCheckUpdated(blocksPerCheck_);
+    }
+
+    /**
      * @notice Updates the maximum number of check blocks to store
-     * @param maxCheckBlocks_ Maximum number of check blocks to store
+     * @param maxCheckBlocks_ The new value to update
      */
-    function setMaxCheckBlocks(uint256 maxCheckBlocks_) external onlyRole(OPERATOR_ROLE) {
+    function setMaxCheckBlocks(uint256 maxCheckBlocks_) external onlyRole(ADMIN_ROLE) {
         _setMaxCheckBlocks(maxCheckBlocks_);
+        emit CrossCheckMaxCheckBlocksUpdated(maxCheckBlocks_);
     }
 
     /**
+     * @notice Pauses or unpauses the contract
      * @dev see {PausableUpgradeable-pause}
+     * @param set True to pause, false to unpause
      */
-    function pause() external onlyRole(OPERATOR_ROLE) {
-        _pause();
-    }
-
-    /**
-     * @dev see {PausableUpgradeable-unpause}
-     */
-    function unpause() external onlyRole(OPERATOR_ROLE) {
-        _unpause();
+    function setPause(bool set) external onlyRole(OPERATOR_ROLE) {
+        if (set) {
+            _pause();
+        } else {
+            _unpause();
+        }
     }
 
     // ////////// internal and private functions //////////
@@ -216,15 +234,25 @@ contract CrossCheck is Initializable, UUPSUpgradeable, PausableUpgradeable, Role
     }
 
     /**
+     * @dev Sets the number of blocks covered by each check block
+     * @param blocksPerCheck_ The new value to update
+     */
+    function _setBlocksPerCheck(uint256 blocksPerCheck_) private {
+        if (blocksPerCheck_ < 100) {
+            revert CrossCheckInvalidBlocksPerCheck(blocksPerCheck_);
+        }
+        blocksPerCheck = blocksPerCheck_;
+    }
+
+    /**
      * @dev Sets the maximum number of check blocks to store
-     * @param maxCheckBlocks_ Maximum number of check blocks to store
+     * @param maxCheckBlocks_ The new value to update
      */
     function _setMaxCheckBlocks(uint256 maxCheckBlocks_) private {
         if (maxCheckBlocks_ < 10) {
             revert CrossCheckInvalidMaxCheckBlocks(maxCheckBlocks_);
         }
         maxCheckBlocks = maxCheckBlocks_;
-        emit CrossCheckMaxCheckBlocksUpdated(maxCheckBlocks_);
     }
 
     /**
