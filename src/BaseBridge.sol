@@ -7,6 +7,9 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {BridgeRegistry} from "./abstract/BridgeRegistry.sol";
@@ -34,6 +37,9 @@ contract BaseBridge is
     ValidatorManager,
     IBaseBridge
 {
+    // @TEST
+    bytes32 pth = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
@@ -43,6 +49,8 @@ contract BaseBridge is
     error BaseBridgeInvalidBalance();
     error BaseBridgeInvalidAmount();
     error BaseBridgeInvalidPermitToken(address expected, address actual);
+    error BaseBridgeInvalidPermitAccount();
+    error BaseBridgeDeadlineExpired(uint deadline);
     error BaseBridgeCanNotZeroAddress();
     error BaseBridgeVerifierNotSet();
     error BaseBridgeNotExistIndex(uint index);
@@ -252,7 +260,7 @@ contract BaseBridge is
      * @notice Bridges tokens using permit functionality
      * @param toChainID Target chain ID
      * @param fromToken Token to bridge
-     * @param to Recipient address
+     * @param to Recipient address (must match permit account)
      * @param value Amount to bridge
      * @param networkFee Network fee
      * @param exFee Exchange fee
@@ -282,15 +290,35 @@ contract BaseBridge is
             BaseBridgeInvalidValue(value + networkFee + exFee, permitArgs.value)
         );
 
-        IERC20Permit(address(fromToken)).permit(
-            permitArgs.account,
-            address(this),
-            permitArgs.value,
-            permitArgs.deadline,
-            permitArgs.v,
-            permitArgs.r,
-            permitArgs.s
-        );
+        {
+            uint beforeAllowance = fromToken.allowance(permitArgs.account, address(this));
+            IERC20Permit(address(fromToken)).permit(
+                permitArgs.account,
+                address(this),
+                permitArgs.value,
+                permitArgs.deadline,
+                permitArgs.v,
+                permitArgs.r,
+                permitArgs.s
+            );
+
+            uint afterAllowance = fromToken.allowance(permitArgs.account, address(this));
+            require(afterAllowance == permitArgs.value, BaseBridgeFailedCall());
+
+            if (beforeAllowance == afterAllowance) {
+                require(block.timestamp <= permitArgs.deadline, BaseBridgeDeadlineExpired(permitArgs.deadline));
+
+                uint nonce = IERC20Permit(address(fromToken)).nonces(permitArgs.account);
+                bytes32 structHash = keccak256(
+                    abi.encode(pth, permitArgs.account, address(this), permitArgs.value, nonce, permitArgs.deadline)
+                );
+
+                bytes32 _domainSeparator = IERC20Permit(address(fromToken)).DOMAIN_SEPARATOR();
+                bytes32 hash = MessageHashUtils.toTypedDataHash(_domainSeparator, structHash);
+                address signer = ECDSA.recover(hash, permitArgs.v, permitArgs.r, permitArgs.s);
+                require(signer == permitArgs.account, BaseBridgeInvalidPermitAccount());
+            }
+        }
 
         _executeBridge(
             BridgeTokenArguments({
