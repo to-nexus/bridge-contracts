@@ -45,6 +45,14 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     uint[44] private __gap;
 
     /**
+     * @notice Contract constructor
+     * @dev Disables direct initialization of implementations
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
      * @notice Initializes the price feed contract
      * @param owner Admin address with price update privileges
      * @param _dollarDecimals Precision for price representation
