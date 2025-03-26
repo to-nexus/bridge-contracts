@@ -44,7 +44,6 @@ interface IBridgeRegistry {
         FinalizeArguments args;
         Const.FinalizeStatus status;
         uint delayExpiration;
-        bytes reason;
     }
 
     function allChainIDs() external view returns (uint[] memory);

@@ -51,8 +51,9 @@ contract BaseBridge is
     error BaseBridgeNotExpired(uint delayExpiration, uint timestamp);
     error BaseBridgeBurnFailed(IERC20 token, address from, uint value);
     error BaseBridgeNotMatchLength();
-    error BaseBridgeFailedCall(string reason);
+    error BaseBridgeFailedCall();
     error BaseBridgeMismatchPermitAccount();
+    error BaseBridgeFailedRelease(Const.FinalizeStatus status);
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -349,19 +350,18 @@ contract BaseBridge is
         _validateSignature(messageHash, v, r, s);
 
         Const.FinalizeStatus status;
-        bytes memory reason;
         bool delay;
         {
             (status, delay) = _checkFinalizeAmount(args.fromChainID, address(args.toToken), args.value, false);
             if (status == Const.FinalizeStatus.Success) {
-                (status, reason) = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+                status = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
             }
         }
 
         if (status == Const.FinalizeStatus.Success) {
             emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
         } else {
-            _setPendingArguments(args, status, reason, delay);
+            _setPendingArguments(args, status, delay);
             emit BridgePending(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp, status);
         }
         return true;
@@ -517,11 +517,8 @@ contract BaseBridge is
      */
     function _releasePending(uint remoteChainID, uint index) private {
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
-
-        (Const.FinalizeStatus status, bytes memory reason) =
-            _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
-        require(status == Const.FinalizeStatus.Success, string(abi.encode(status, reason)));
-
+        (Const.FinalizeStatus status) = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+        require(status == Const.FinalizeStatus.Success, BaseBridgeFailedRelease(status));
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
     }
 
@@ -598,8 +595,8 @@ contract BaseBridge is
             require(msg.value == value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
             _depositToken(remoteChainID, Const.NATIVE_TOKEN, value);
             if (fee != 0) {
-                (bool success, bytes memory reason) = _safeCall(_dev, fee, "");
-                require(success, BaseBridgeFailedCall(string(reason)));
+                bool success = _safeCall(_dev, fee, "");
+                require(success, BaseBridgeFailedCall());
             }
         } else {
             require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
@@ -626,17 +623,16 @@ contract BaseBridge is
      * @param to Recipient address
      * @param value Amount to transfer/mint
      * @return status Success status
-     * @return reason Error message if operation failed
      */
     function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value)
         internal
-        returns (Const.FinalizeStatus status, bytes memory reason)
+        returns (Const.FinalizeStatus status)
     {
         if (address(toToken) == Const.NATIVE_TOKEN) {
-            (bool ok, bytes memory _reason) = _safeCall(payable(to), value, "");
-            if (!ok) return (Const.FinalizeStatus.TransferFailed, _reason);
+            (bool ok) = _safeCall(payable(to), value, "");
+            if (!ok) return (Const.FinalizeStatus.TransferFailed);
             _withdrawToken(fromChainID, Const.NATIVE_TOKEN, value);
-            return (Const.FinalizeStatus.Success, "");
+            return (Const.FinalizeStatus.Success);
         } else if (value != 0) {
             if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
                 return _transferERC20(fromChainID, toToken, to, value);
@@ -656,18 +652,16 @@ contract BaseBridge is
      * @param to Recipient address
      * @param value Amount to transfer
      * @return status Success status
-     * @return reason Error message if failed
      */
     function _transferERC20(uint remoteChainID, IERC20 token, address to, uint value)
         private
-        returns (Const.FinalizeStatus status, bytes memory reason)
+        returns (Const.FinalizeStatus status)
     {
         try IERC20(token).transfer(to, value) returns (bool success) {
             status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.TransferFailed;
             if (success) _withdrawToken(remoteChainID, address(token), value);
-        } catch (bytes memory lowLevelData) {
+        } catch {
             status = Const.FinalizeStatus.TransferFailed;
-            reason = lowLevelData;
         }
     }
 
@@ -678,17 +672,15 @@ contract BaseBridge is
      * @param to Recipient address
      * @param value Amount to mint
      * @return status Success status
-     * @return reason Error message if failed
      */
     function _mintCrossMintableERC20(IERC20 token, address to, uint value)
         private
-        returns (Const.FinalizeStatus status, bytes memory reason)
+        returns (Const.FinalizeStatus status)
     {
         try ICrossMintableERC20(address(token)).mint(to, value) returns (bool success) {
             status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.MintFailed;
-        } catch (bytes memory lowLevelData) {
+        } catch {
             status = Const.FinalizeStatus.MintFailed;
-            reason = lowLevelData;
         }
     }
 
@@ -702,34 +694,27 @@ contract BaseBridge is
      * @param amount Native token amount to send
      * @param data Call data
      * @return success Success status
-     * @return reason Error message if failed
      */
-    function _safeCall(address payable recipient, uint amount, bytes memory data)
-        private
-        returns (bool success, bytes memory reason)
-    {
+    function _safeCall(address payable recipient, uint amount, bytes memory data) private returns (bool success) {
         if (amount != 0) require(address(this).balance >= amount, BaseBridgeInvalidBalance());
 
         bytes memory returndata;
         (success, returndata) = recipient.call{value: amount}(data);
-        if (!success) {
-            if (returndata.length > 0) return (false, returndata);
-            else return (false, "reverted");
-        }
+        if (!success) return (false);
 
         if (amount == 0) {
             if (returndata.length == 0) {
-                if (address(recipient).code.length == 0) return (false, "code");
+                if (address(recipient).code.length == 0) return (false);
             } else {
                 bool returnValue;
                 assembly {
                     returnValue := mload(add(returndata, 32))
                 }
-                if (returnValue != true) return (false, "false");
+                if (returnValue != true) return (false);
             }
         }
 
-        return (true, "");
+        return (true);
     }
 
     /**
