@@ -43,7 +43,6 @@ contract BaseBridge is
     error BaseBridgeInvalidBalance();
     error BaseBridgeInvalidAmount();
     error BaseBridgeInvalidPermitToken(address expected, address actual);
-    error BaseBridgeCanNotZeroMsgValue();
     error BaseBridgeCanNotZeroAddress();
     error BaseBridgeVerifierNotSet();
     error BaseBridgeNotExistIndex(uint index);
