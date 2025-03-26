@@ -413,7 +413,7 @@ contract BaseBridge is
             BaseBridgeNotExpired(pending.delayExpiration, block.timestamp)
         );
 
-        _releasePending(remoteChainID, index);
+        _releasePending(remoteChainID, index, address(0));
     }
 
     /**
@@ -444,7 +444,26 @@ contract BaseBridge is
      */
     function manualProcessPending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) nonReentrant {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
-        _releasePending(remoteChainID, index);
+        _releasePending(remoteChainID, index, address(0));
+    }
+
+    /**
+     * @notice Manually processes a pending operation regardless of pause or safety deadline with a custom recipient
+     * @dev Verifier-only function to force process a pending operation
+     * - Bypasses token pause and safety deadline checks
+     * - Verifies pending operation exists
+     * - Allows overriding the original recipient address
+     * @param remoteChainID Chain ID of the pending operation
+     * @param index Index of the pending operation
+     * @param recipient Custom recipient address that will receive the tokens instead of the original recipient
+     */
+    function manualProcessPendingWithRecipient(uint remoteChainID, uint index, address recipient)
+        external
+        onlyRole(Const.VERIFIER_ROLE)
+        nonReentrant
+    {
+        require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
+        _releasePending(remoteChainID, index, recipient);
     }
 
     /**
@@ -514,12 +533,14 @@ contract BaseBridge is
      * - Emits finalization event
      * @param remoteChainID Source chain identifier
      * @param index Index of the pending operation
+     * @param recipient Recipient address
      */
-    function _releasePending(uint remoteChainID, uint index) private {
+    function _releasePending(uint remoteChainID, uint index, address recipient) private {
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
-        (Const.FinalizeStatus status) = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+        if (recipient == address(0)) recipient = args.to;
+        (Const.FinalizeStatus status) = _finalizeBridge(args.fromChainID, args.toToken, recipient, args.value);
         require(status == Const.FinalizeStatus.Success, BaseBridgeFailedRelease(status));
-        emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
+        emit BridgeFinalized(args.fromChainID, args.index, args.toToken, recipient, args.value, block.timestamp);
     }
 
     /**
