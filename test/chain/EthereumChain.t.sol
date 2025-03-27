@@ -33,8 +33,9 @@ contract EthereumChainTest is CrossChainTest {
             BaseBridge bridgeEthereumImpl = new BaseBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
             bridgeEthereum = BaseBridge(payable(address(bridgeEthereumProxy)));
-            bridgeEthereum.initialize(OWNER, threshold, REWARD);
+            bridgeEthereum.initialize(OWNER, REWARD, threshold);
 
+            bridgeEthereum.grantRole(ADMIN_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(EDITOR_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(OPERATOR_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(PRICER_ROLE, OWNER); // for test
@@ -53,6 +54,7 @@ contract EthereumChainTest is CrossChainTest {
             ERC1967Proxy priceFeedEthereumProxy = new ERC1967Proxy(priceFeedEthereumImpl, bytes(""));
             priceFeedEthereum = PriceFeed(address(priceFeedEthereumProxy));
             priceFeedEthereum.initialize(OWNER, DOLLAR_DECIMALS);
+            priceFeedEthereum.grantRole(PRICER_ROLE, OWNER); // for test
 
             {
                 // token price update
@@ -79,6 +81,9 @@ contract EthereumChainTest is CrossChainTest {
                 OWNER, address(bridgeEthereum), address(priceFeedEthereum), 200000, 0, 0, 0, 0, 0, 2 hours
             );
             bridgeVerifierEthereum.grantRole(PRICER_ROLE, OWNER);
+            bridgeVerifierEthereum.grantRole(ADMIN_ROLE, OWNER);
+            bridgeVerifierEthereum.grantRole(EDITOR_ROLE, OWNER);
+
             bridgeEthereum.setBridgeVerifier(bridgeVerifierEthereum);
 
             bytes32[] memory roles = new bytes32[](5);
@@ -93,7 +98,8 @@ contract EthereumChainTest is CrossChainTest {
             bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth));
             bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross));
 
-            TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY);
+            // Mint tokens excluding the pre-allocated supply amount (CROSS_INITIAL_SUPPLY)
+            TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY - CROSS_INITIAL_SUPPLY);
             TestToken(address(testTokenEthereum)).mint(OWNER, INITIAL_SUPPLY);
         }
         vm.stopPrank();

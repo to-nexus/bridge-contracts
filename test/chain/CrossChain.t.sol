@@ -41,14 +41,15 @@ contract CrossChainTest is SettingTest {
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
             vm.deal(address(bridgeCross), INITIAL_SUPPLY);
-            bridgeCross.initialize(CrossOWNER, threshold, REWARD);
+            bridgeCross.initialize(CrossOWNER, REWARD, threshold);
 
-            crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
-            bridgeCross.setCrossMintableERC20Code(crossMintableERC20Code);
-
+            bridgeCross.grantRole(ADMIN_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(EDITOR_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(OPERATOR_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(PRICER_ROLE, CrossOWNER); // for test
+
+            crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
+            bridgeCross.setCrossMintableERC20Code(crossMintableERC20Code);
             bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross));
 
             bytes32[] memory roles = new bytes32[](5);
@@ -80,6 +81,7 @@ contract CrossChainTest is SettingTest {
             ERC1967Proxy priceFeedCrossProxy = new ERC1967Proxy(priceFeedCrossImpl, bytes(""));
             priceFeedCross = PriceFeed(address(priceFeedCrossProxy));
             priceFeedCross.initialize(CrossOWNER, DOLLAR_DECIMALS);
+            priceFeedCross.grantRole(PRICER_ROLE, CrossOWNER);
 
             {
                 // token price update
@@ -126,6 +128,8 @@ contract CrossChainTest is SettingTest {
                 CrossOWNER, address(bridgeCross), address(priceFeedCross), 200000, 10000, 10, 10_000, 0, 0, 2 hours
             );
             bridgeVerifierCross.grantRole(PRICER_ROLE, CrossOWNER);
+            bridgeVerifierCross.grantRole(ADMIN_ROLE, CrossOWNER);
+            bridgeVerifierCross.grantRole(EDITOR_ROLE, CrossOWNER);
             bridgeVerifierCross.updateGasPrice(ETHEREUM_CHAIN_ID, 1 gwei);
         }
 

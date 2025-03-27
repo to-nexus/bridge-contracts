@@ -56,6 +56,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryExistIndex(uint index);
     error RegistryExistToken(address token);
     error RegistryCanNotZeroValue();
+    error RegistryCanNotZeroAddress();
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
     error RegistryFactoryNotSet();
@@ -177,7 +178,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /**
      * @notice Registers a token pair for bridging
      * @dev Links local and remote tokens with specified parameters
-     * - Validates token rates
      * - Sets up token pair configuration
      * - Handles both origin and wrapped tokens
      * @param remoteChainID Target chain identifier
@@ -189,27 +189,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         public
         onlyRole(Const.EDITOR_ROLE)
     {
-        require(remoteChainID != 0, RegistryCanNotZeroValue());
-        require(localToken != address(0), RegistryCanNotZeroValue());
-        require(remoteToken != address(0), RegistryCanNotZeroValue());
-
-        if (_chains.add(remoteChainID)) {
-            _chainData[remoteChainID] =
-                Chain({remoteChainID: remoteChainID, initiateIndex: 0, finalizeIndex: 0, paused: false});
-        }
-
-        require(_tokens[remoteChainID].add(localToken), RegistryExistToken(localToken));
-
-        _tokenPairs[remoteChainID][localToken] = IBridgeRegistry.TokenPair({
-            localToken: localToken,
-            remoteToken: remoteToken,
-            isOrigin: isOrigin,
-            paused: false,
-            deposited: 0,
-            pendingAmount: 0
-        });
-
-        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, isOrigin);
+        _registerToken(remoteChainID, isOrigin, localToken, remoteToken);
     }
 
     /**
@@ -433,6 +413,40 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function _withdrawToken(uint remoteChainID, address token, uint value) internal virtual {
         _tokenPairs[remoteChainID][token].deposited -= value;
+    }
+
+    /**
+     * @notice Registers a token pair for bridging
+     * @dev Links local and remote tokens with specified parameters
+     * - Sets up token pair configuration
+     * - Handles both origin and wrapped tokens
+     * @param remoteChainID Chain ID of the token pair
+     * @param isOrigin Whether this is the origin chain for the token
+     * @param localToken Local token address
+     * @param remoteToken Remote token address
+     */
+    function _registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken) internal {
+        require(remoteChainID != 0, RegistryCanNotZeroValue());
+        require(localToken != address(0), RegistryCanNotZeroValue());
+        require(remoteToken != address(0), RegistryCanNotZeroValue());
+
+        if (_chains.add(remoteChainID)) {
+            _chainData[remoteChainID] =
+                Chain({remoteChainID: remoteChainID, initiateIndex: 0, finalizeIndex: 0, paused: false});
+        }
+
+        require(_tokens[remoteChainID].add(localToken), RegistryExistToken(localToken));
+
+        _tokenPairs[remoteChainID][localToken] = IBridgeRegistry.TokenPair({
+            localToken: localToken,
+            remoteToken: remoteToken,
+            isOrigin: isOrigin,
+            paused: false,
+            deposited: 0,
+            pendingAmount: 0
+        });
+
+        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, isOrigin);
     }
 
     /**
