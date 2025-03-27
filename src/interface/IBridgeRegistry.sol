@@ -6,15 +6,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 interface IBridgeRegistry {
-    enum PendingType {
-        TokenPaused,
-        VerificationAmountThresholdExceeded,
-        PeriodTotalValueThresholdExceeded,
-        TokenCurrentVolumeOverflow,
-        TransferFailed,
-        MintFailed
-    }
-
     struct FinalizeArguments {
         uint fromChainID;
         uint index;

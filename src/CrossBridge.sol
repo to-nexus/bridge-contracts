@@ -37,13 +37,6 @@ contract CrossBridge is BaseBridge {
     /// @notice bridge exploits, as most of the token supply is initially locked in the bridge contract.
     uint public crossSupplyLimit;
 
-    /// @dev Initial balance of the contract used for cross-chain supply calculations
-    /// @notice Stores the initial balance of the bridge contract to accurately track the amount of tokens
-    /// @notice that have been unlocked. Since the Cross chain begins with most of its native token supply
-    /// @notice locked in the bridge contract, this initial value is essential for calculating the
-    /// @notice circulating supply that has been released through bridging from Ethereum.
-    uint private _crossInitializeBalance;
-
     /// @dev Storage gap for future upgrades
     uint[47] private __gap;
 
@@ -54,12 +47,20 @@ contract CrossBridge is BaseBridge {
      * - Records the initial balance for CROSS token supply tracking
      * - Sets the initial CROSS token supply limit to 0
      * @param owner_ Address that will receive admin role
-     * @param _threshold Minimum number of validators required for validation
      * @param dev_ Address of the developer account for receiving fees
+     * @param _threshold Minimum number of validators required for validation
      */
-    function initialize(address owner_, uint8 _threshold, address payable dev_) external override initializer {
-        __BaseBridge_init(owner_, _threshold, dev_);
-        _crossInitializeBalance = address(this).balance;
+    function initialize(address owner_, address payable dev_, uint8 _threshold) external override initializer {
+        __BaseBridge_init(owner_, dev_, _threshold);
+
+        // Initialize with 10 million CROSS tokens pre-minted
+        // This sets the initial supply of CROSS tokens that are pre-allocated at contract initialization
+        // The 'ether' suffix automatically applies 18 decimals (10^18) to the value
+        crossSupply = Const.CROSS_INITIAL_SUPPLY;
+
+        // Register CROSS token as a token pair
+        // This pairs the native CROSS token on this chain with the CROSS ERC20 token on Ethereum (chain ID 1)
+        _registerToken(1, false, Const.NATIVE_TOKEN, 0x5061C090bf18246890F88AB504Cd562632f83faa);
     }
 
     /**
@@ -93,14 +94,9 @@ contract CrossBridge is BaseBridge {
         returns (Const.FinalizeStatus status, bool delay)
     {
         if (token == Const.NATIVE_TOKEN) {
-            // Calculate how much CROSS native token has been bridged out (initial balance minus current balance)
-            // If current balance is higher than initial (unlikely), default to 0 supply to prevent underflow
-            uint supply =
-                _crossInitializeBalance > address(this).balance ? _crossInitializeBalance - address(this).balance : 0;
-
             // Check if the new transfer would exceed the configured CROSS token issuance limit
             // If limit is exceeded, return a specific error status and mark for delay
-            if (supply + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
+            if (crossSupply + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
         }
 
         return super._checkFinalizeAmount(fromChainID, token, value, retry);

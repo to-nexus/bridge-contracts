@@ -59,7 +59,7 @@ library CalcAmountLib {
         require(priceB != 0, CalcAmountLibCanNotZeroValue("priceB"));
 
         amountB = decimalB >= decimalA
-            ? amountB = amountA.mulDiv(priceB, priceA) * 10 ** (decimalB - decimalA)
+            ? amountB = amountA.mulDiv(priceB * 10 ** (decimalB - decimalA), priceA)
             : amountB = amountA.mulDiv(priceB, priceA * 10 ** (decimalA - decimalB));
     }
 

@@ -117,9 +117,6 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(_priceFeed != address(0), BridgeVerifierCanNotZeroValue("_priceFeed"));
         require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
-        _grantRole(Const.ADMIN_ROLE, initialOwner);
-        _grantRole(Const.EDITOR_ROLE, initialOwner);
-        _grantRole(Const.PRICER_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
 
         priceFeed = IPriceFeed(_priceFeed);

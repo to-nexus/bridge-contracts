@@ -52,6 +52,7 @@ contract BaseBridge is
     error BaseBridgeInvalidPermitAccount();
     error BaseBridgeDeadlineExpired(uint deadline);
     error BaseBridgeCanNotZeroAddress();
+    error BaseBridgeCanNotZeroValue();
     error BaseBridgeVerifierNotSet();
     error BaseBridgeNotExistIndex(uint index);
     error BaseBridgeNotExistToken(address token);
@@ -190,22 +191,23 @@ contract BaseBridge is
     /**
      * @notice Initializes the bridge contract
      * @param owner_ Owner address
-     * @param _threshold Required validator signatures
      * @param dev_ Reward wallet address
+     * @param _threshold Required validator signatures
      */
-    function initialize(address owner_, uint8 _threshold, address payable dev_) external virtual initializer {
-        __BaseBridge_init(owner_, _threshold, dev_);
+    function initialize(address owner_, address payable dev_, uint8 _threshold) external virtual initializer {
+        __BaseBridge_init(owner_, dev_, _threshold);
     }
 
     /**
      * @notice Internal initialization function
      * @param owner_ Owner address
-     * @param _threshold Required validator signatures
      * @param dev_ Reward wallet address
+     * @param _threshold Required validator signatures
      */
-    function __BaseBridge_init(address owner_, uint8 _threshold, address payable dev_) internal onlyInitializing {
+    function __BaseBridge_init(address owner_, address payable dev_, uint8 _threshold) internal onlyInitializing {
         require(owner_ != address(0), BaseBridgeCanNotZeroAddress());
         require(dev_ != address(0), BaseBridgeCanNotZeroAddress());
+        require(_threshold != 0, BaseBridgeCanNotZeroValue());
 
         __UUPSUpgradeable_init();
         __Pausable_init();
@@ -504,7 +506,7 @@ contract BaseBridge is
      * @param index Index of the pending operation
      * @param recipient Custom recipient address that will receive the tokens instead of the original recipient
      */
-    function manualProcessPendingWithRecipient(uint remoteChainID, uint index, address recipient)
+    function manualReleasePendingWithRecipient(uint remoteChainID, uint index, address recipient)
         external
         onlyRole(Const.VERIFIER_ROLE)
         nonReentrant

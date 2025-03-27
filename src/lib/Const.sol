@@ -30,6 +30,19 @@ library Const {
      */
     address internal constant NATIVE_TOKEN = address(1);
 
+    /**
+     * @notice CROSS token contract address on Cross chain
+     * @dev Used for token pairing between Ethereum and Cross chains
+     */
+    address internal constant CROSS_TOKEN = address(0x5061C090bf18246890F88AB504Cd562632f83faa);
+
+    /**
+     * @notice Initial supply of CROSS tokens for the CROSS Foundation
+     * @dev Represents 10 million tokens with 18 decimals (ether denomination)
+     * This is the pre-minted amount allocated at contract initialization
+     */
+    uint internal constant CROSS_INITIAL_SUPPLY = 10_000_000 ether;
+
     uint internal constant PERIOD_INTERVAL = 1 hours;
 
     /**

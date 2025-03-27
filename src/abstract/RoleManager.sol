@@ -35,7 +35,6 @@ abstract contract RoleManager is AccessControlUpgradeable {
     function __RoleManager_init_unchained(address owner) internal onlyInitializing {
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
-        _grantRole(Const.ADMIN_ROLE, owner);
     }
 
     /**

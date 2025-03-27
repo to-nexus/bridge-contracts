@@ -29,13 +29,13 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
 
         // Set cross supply limit as admin
         vm.startPrank(CrossOWNER);
-        bridgeCross.setCrossSupplyLimit(1000 ether);
+        bridgeCross.setCrossSupplyLimit(1000 ether + CROSS_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // Try to set cross supply limit as non-admin (should revert)
         vm.startPrank(USER);
         vm.expectRevert();
-        bridgeCross.setCrossSupplyLimit(500 ether);
+        bridgeCross.setCrossSupplyLimit(500 ether + CROSS_INITIAL_SUPPLY);
         vm.stopPrank();
     }
 
@@ -45,7 +45,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint supplyLimit = 10 ether;
-        bridgeCross.setCrossSupplyLimit(supplyLimit);
+        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // First bridge: should succeed (below limit)
@@ -89,7 +89,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint supplyLimit = 100 ether;
-        bridgeCross.setCrossSupplyLimit(supplyLimit);
+        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // First deposit exactly at the limit
@@ -114,7 +114,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint supplyLimit = 10 ether;
-        bridgeCross.setCrossSupplyLimit(supplyLimit);
+        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // Bridge amount near limit
@@ -125,7 +125,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint newSupplyLimit = 100 ether;
-        bridgeCross.setCrossSupplyLimit(newSupplyLimit);
+        bridgeCross.setCrossSupplyLimit(newSupplyLimit + CROSS_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // Bridge additional amount should now succeed

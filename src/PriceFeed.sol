@@ -20,6 +20,7 @@ import {Const} from "./lib/Const.sol";
  */
 contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     error PriceFeedCanNotZeroValue();
     error PriceFeedCanNotZeroAddress(address token);
@@ -29,6 +30,8 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
 
     event PriceUpdated(address indexed token, uint price, uint priceAt);
     event NativeTokenPriceUpdated(uint indexed chainID, uint price, uint priceAt);
+    event PriceRemoved(address indexed token);
+    event NativeTokenPriceRemoved(uint indexed chainID);
 
     /// @dev Decimal places used for dollar price representation
     uint8 public dollarDecimals;
@@ -36,6 +39,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     uint public updatedAt;
     /// @dev Set of all tokens tracked by this price feed
     EnumerableSet.AddressSet private _tokens;
+    EnumerableSet.UintSet private _chains;
 
     /// @dev Mapping from token address to its price data
     mapping(address => PriceData) private _priceData;
@@ -62,7 +66,6 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
 
         __UUPSUpgradeable_init();
         __RoleManager_init(owner);
-        _grantRole(Const.PRICER_ROLE, owner);
 
         dollarDecimals = _dollarDecimals;
         updatedAt = block.timestamp;
@@ -76,6 +79,14 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      */
     function allPrices() external view returns (bool[] memory exist, uint[] memory prices, uint updatedAt_) {
         return getPrices(_tokens.values());
+    }
+
+    /**
+     * @notice Returns all chains with native token prices
+     * @return chains Array of chain IDs
+     */
+    function allChains() external view returns (uint[] memory chains) {
+        return _chains.values();
     }
 
     /**
@@ -240,6 +251,28 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     }
 
     /**
+     * @notice Removes a token's price data
+     * @dev Only callable by validators, removes stored price data
+     * @param token Address of the token to remove
+     */
+    function removePrice(address token) external onlyRole(Const.PRICER_ROLE) {
+        _tokens.remove(token);
+        delete _priceData[token];
+        emit PriceRemoved(token);
+    }
+
+    /**
+     * @notice Removes a chain's native token price data
+     * @dev Only callable by validators, removes stored native token price data
+     * @param chainID ID of the chain to remove
+     */
+    function removeNativeTokenPrice(uint chainID) external onlyRole(Const.PRICER_ROLE) {
+        _chains.remove(chainID);
+        delete _nativeTokenPrice[chainID];
+        emit NativeTokenPriceRemoved(chainID);
+    }
+
+    /**
      * @notice Internal function to update a token's price
      * @dev Validates price and timestamp, updates storage, and emits event
      * @param token Address of the token to update
@@ -249,6 +282,8 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     function _updatePrice(address token, uint price, uint priceAt) private {
         require(price != 0, PriceFeedCanNotZeroValue());
         require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
+
+        priceAt = priceAt == 0 ? block.timestamp : priceAt;
         _tokens.add(token);
         _priceData[token] = PriceData({token: token, price: price, lastUpdated: priceAt});
         emit PriceUpdated(token, price, priceAt);
@@ -264,6 +299,9 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     function _updateNativeTokenPrice(uint chainID, uint price, uint priceAt) private {
         require(price != 0, PriceFeedCanNotZeroValue());
         require(priceAt <= block.timestamp, PriceFeedInvalidPriceAt(priceAt, block.timestamp));
+
+        priceAt = priceAt == 0 ? block.timestamp : priceAt;
+        _chains.add(chainID);
         _nativeTokenPrice[chainID] = NativeTokenPriceData({chainID: chainID, price: price, lastUpdated: priceAt});
         emit NativeTokenPriceUpdated(chainID, price, priceAt);
     }

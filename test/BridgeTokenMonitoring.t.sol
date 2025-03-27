@@ -28,6 +28,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
         // Utilize components already deployed in CrossChain
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
+        bridgeCross.grantRole(PRICER_ROLE, VALIDATOR1); // for test
 
         // Modify existing bridgeVerifierCross settings
         bridgeVerifierCross.setVerificationAmountThreshold(TEST_VERIFICATION_AMOUNT_THRESHOLD);

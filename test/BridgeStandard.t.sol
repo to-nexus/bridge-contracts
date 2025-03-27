@@ -69,7 +69,7 @@ contract BaseBridgeTest is BridgeTest {
         cross.approve(address(bridgeEthereum), amount);
 
         deposit(false, amount, 5);
-        // withdraw(false, amount, 5);
+        withdraw(false, amount, 5);
     }
 
     function test_fuzz_depositWithdraw_eth(uint amount) public {
