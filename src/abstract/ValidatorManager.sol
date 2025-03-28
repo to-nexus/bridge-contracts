@@ -22,7 +22,6 @@ abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
     error ValidatorThresholdCanNotZero();
     error ValidatorInsufficientSignature(uint length);
     error ValidatorInvalidSignatures();
-    error ValidatorNotAuthorized(address account);
 
     /**
      * @notice Emitted when the signature threshold is changed

@@ -29,13 +29,13 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
 
         // Set cross supply limit as admin
         vm.startPrank(CrossOWNER);
-        bridgeCross.setCrossSupplyLimit(1000 ether + CROSS_INITIAL_SUPPLY);
+        bridgeCross.setCrossSupplyLimit(1000 ether + CROSS_FOUNDATION_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // Try to set cross supply limit as non-admin (should revert)
         vm.startPrank(USER);
         vm.expectRevert();
-        bridgeCross.setCrossSupplyLimit(500 ether + CROSS_INITIAL_SUPPLY);
+        bridgeCross.setCrossSupplyLimit(500 ether + CROSS_FOUNDATION_INITIAL_SUPPLY);
         vm.stopPrank();
     }
 
@@ -45,7 +45,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint supplyLimit = 10 ether;
-        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_INITIAL_SUPPLY);
+        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_FOUNDATION_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // First bridge: should succeed (below limit)
@@ -71,7 +71,11 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         crossFinalize(index, address(NATIVE_TOKEN), USER, largeAmount, threshold);
 
         // Verify that finalization was not successful due to limit
-        assertEq(bridgeCross.isPending(ETHEREUM_CHAIN_ID, index), true, "Finalization should fail due to supply limit");
+        assertTrue(
+            bridgeCross.getPendingArguments(ETHEREUM_CHAIN_ID, index).status
+                == Const.FinalizeStatus.CrossSupplyLimitExceeded,
+            "Finalization should fail due to supply limit"
+        );
 
         // Check that token balances didn't change on finalize attempt
         vm.selectFork(ethereumForkID);
@@ -89,7 +93,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint supplyLimit = 100 ether;
-        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_INITIAL_SUPPLY);
+        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_FOUNDATION_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // First deposit exactly at the limit
@@ -105,7 +109,11 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         crossFinalize(index, address(NATIVE_TOKEN), USER, 1 ether, threshold);
 
         // Verify that finalization was not successful due to limit
-        assertEq(bridgeCross.isPending(ETHEREUM_CHAIN_ID, index), true, "Finalization should fail due to supply limit");
+        assertTrue(
+            bridgeCross.getPendingArguments(ETHEREUM_CHAIN_ID, index).status
+                == Const.FinalizeStatus.CrossSupplyLimitExceeded,
+            "Finalization should fail due to supply limit"
+        );
     }
 
     // Test updating cross supply limit
@@ -114,7 +122,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint supplyLimit = 10 ether;
-        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_INITIAL_SUPPLY);
+        bridgeCross.setCrossSupplyLimit(supplyLimit + CROSS_FOUNDATION_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // Bridge amount near limit
@@ -125,7 +133,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
         uint newSupplyLimit = 100 ether;
-        bridgeCross.setCrossSupplyLimit(newSupplyLimit + CROSS_INITIAL_SUPPLY);
+        bridgeCross.setCrossSupplyLimit(newSupplyLimit + CROSS_FOUNDATION_INITIAL_SUPPLY);
         vm.stopPrank();
 
         // Bridge additional amount should now succeed

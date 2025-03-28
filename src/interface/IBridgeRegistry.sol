@@ -27,8 +27,9 @@ interface IBridgeRegistry {
         address remoteToken; // remote token address
         bool isOrigin; // whether the token is origin token
         bool paused; // whether the token is paused
-        uint deposited; // deposited amount of the token
         uint pendingAmount; // pending amount of the token
+        uint deposited; // deposited amount of the token (used on the chain where the origin token exists)
+        uint minted; // minted amount of the token (used on the chain where the wrapped token exists)
     }
 
     struct PendingData {
@@ -43,6 +44,5 @@ interface IBridgeRegistry {
     function getTokenPair(uint remoteChainID, address token) external view returns (TokenPair memory);
     function getNextInitiateIndex(uint remoteChainID) external view returns (uint);
     function getNextFinalizeIndex(uint remoteChainID) external view returns (uint);
-    function isPending(uint remoteChainID, uint index) external view returns (bool);
     function getPendingArguments(uint remoteChainID, uint index) external view returns (PendingData memory);
 }

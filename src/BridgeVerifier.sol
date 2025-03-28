@@ -28,7 +28,6 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
     using CalcAmountLib for IPriceFeed;
 
-    error BridgeVerifierChainAleadyExist(uint chainID);
     error BridgeVerifierCanNotZeroValue(string name);
     error BridgeVerifierInvalidLength();
     error BridgeVerifierAlreadyHasRole(address account, bytes32 role);
@@ -153,9 +152,22 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (score > type(uint192).max) return Const.FinalizeStatus.TokenScoreOverflow;
 
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
-            return Const.FinalizeStatus.VerificationAmountThresholdExceeded;
+            status = Const.FinalizeStatus.VerificationAmountThresholdExceeded;
+        } else {
+            status = Const.FinalizeStatus.Success;
         }
-        if (_timeWindow == 0 || _periodTotalValueThreshold == 0) return Const.FinalizeStatus.Success;
+
+        if (_timeWindow == 0 || _periodTotalValueThreshold == 0) {
+            return status;
+        } else {
+            // Check for potential overflow before adding new score to the current volume
+            if (type(uint192).max - score < _tokenCurrentVolume[token]) {
+                return Const.FinalizeStatus.TokenCurrentVolumeOverflow;
+            }
+
+            // Update current token volume
+            _tokenCurrentVolume[token] += score;
+        }
 
         // Manage history and verify thresholds
         DoubleEndedQueue.Bytes32Deque storage deque = _tokenMovementHistory[token];
@@ -181,15 +193,6 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
             }
         }
 
-        // Check for potential overflow before adding new score to the current volume
-        if (type(uint192).max - score < _tokenCurrentVolume[token]) {
-            return Const.FinalizeStatus.TokenCurrentVolumeOverflow;
-        }
-
-        uint currentVolume = _tokenCurrentVolume[token] + score;
-        if (currentVolume > _periodTotalValueThreshold) return Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
-        _tokenCurrentVolume[token] = currentVolume;
-
         // If there's already a record for the current time period,
         // update it by combining with the new score rather than creating a duplicate entry
         if (deque.length() != 0 && uint(deque.back() >> 192) == currentTime) {
@@ -200,7 +203,11 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         bytes32 packedMovement = bytes32((currentTime << 192) | score);
         deque.pushBack(packedMovement);
 
-        return Const.FinalizeStatus.Success;
+        if (status == Const.FinalizeStatus.Success && _tokenCurrentVolume[token] > _periodTotalValueThreshold) {
+            status = Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
+        }
+
+        return status;
     }
 
     /**

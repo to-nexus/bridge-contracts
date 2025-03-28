@@ -26,8 +26,9 @@ import {RoleManager} from "./RoleManager.sol";
  *   remoteToken: Corresponding token on remote chain
  *   isOrigin: Whether this is the origin chain
  *   paused: Bridge operations paused flag
- *   deposited: Total amount deposited
  *   pendingAmount: Amount in pending operations
+ *   deposited: Total amount deposited
+ *   minted: Total amount minted
  * }
  *
  * Chain {
@@ -56,7 +57,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryExistIndex(uint index);
     error RegistryExistToken(address token);
     error RegistryCanNotZeroValue();
-    error RegistryCanNotZeroAddress();
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
     error RegistryFactoryNotSet();
@@ -69,7 +69,11 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param isOrigin Whether this is the origin chain for the token
      */
     event TokenPairRegistered(
-        uint indexed remoteChainID, address indexed localToken, address indexed remoteToken, bool isOrigin
+        uint indexed remoteChainID,
+        address indexed localToken,
+        address indexed remoteToken,
+        bool isOrigin,
+        bool supportPermit
     );
 
     /**
@@ -130,6 +134,9 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /// @dev Mapping from chain ID and index to pending operation data
     mapping(uint => mapping(uint => PendingData)) internal _pendingData;
 
+    /// @dev Stores whether a token address doesn't support permit functionality (true = permit not supported)
+    mapping(address => bool) internal _notSupportPermit;
+
     /// @dev Storage gap for future upgradessetCrossMintableERC20Code
     uint[41] private __gap;
 
@@ -172,7 +179,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     {
         require(address(crossMintableERC20Code) != address(0), RegistryFactoryNotSet());
         tokenAddress = crossMintableERC20Code.createCrossMintableERC20(remoteChainID, remoteToken, symbol, decimals);
-        registerToken(remoteChainID, false, tokenAddress, remoteToken);
+        registerToken(remoteChainID, false, true, tokenAddress, remoteToken);
     }
 
     /**
@@ -185,11 +192,14 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param localToken Local token address
      * @param remoteToken Remote token address
      */
-    function registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken)
-        public
-        onlyRole(Const.EDITOR_ROLE)
-    {
-        _registerToken(remoteChainID, isOrigin, localToken, remoteToken);
+    function registerToken(
+        uint remoteChainID,
+        bool isOrigin,
+        bool supportPermit,
+        address localToken,
+        address remoteToken
+    ) public onlyRole(Const.EDITOR_ROLE) {
+        _registerToken(remoteChainID, isOrigin, supportPermit, localToken, remoteToken);
     }
 
     /**
@@ -345,10 +355,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         return _pendingData[remoteChainID][index];
     }
 
-    function isPending(uint remoteChainID, uint index) external view returns (bool) {
-        return _pendingIndex[remoteChainID].contains(index);
-    }
-
     /**
      * @notice Validates token registration and status
      * @dev Internal function to check token can be used for bridging
@@ -393,26 +399,32 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
 
     /**
      * @notice Records token deposit
-     * @dev Updates deposited amount for token pair
+     * @dev Updates accounting for token pair based on origin status
+     * - For origin tokens: Increases deposited amount (tokens locked in bridge)
+     * - For wrapped tokens: Decreases minted amount (tokens burned for cross-chain transfer)
      * @param remoteChainID Chain ID of token pair
      * @param token Token address
      * @param value Amount deposited
      */
     function _depositToken(uint remoteChainID, address token, uint value) internal virtual {
-        _tokenPairs[remoteChainID][token].deposited += value;
+        TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
+        if (tokenPair.isOrigin) tokenPair.deposited += value;
+        else tokenPair.minted -= value;
     }
 
     /**
      * @notice Processes token withdrawal
-     * @dev Updates deposited amount and validates balance
-     * - Checks sufficient balance including pending amounts
-     * - Reduces deposited amount
+     * @dev Updates accounting for token pair based on origin status
+     * - For origin tokens: Decreases deposited amount (tokens released from bridge)
+     * - For wrapped tokens: Increases minted amount (tokens minted on this chain)
      * @param remoteChainID Chain ID of token pair
      * @param token Token address
      * @param value Amount to withdraw
      */
     function _withdrawToken(uint remoteChainID, address token, uint value) internal virtual {
-        _tokenPairs[remoteChainID][token].deposited -= value;
+        TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
+        if (tokenPair.isOrigin) tokenPair.deposited -= value;
+        else tokenPair.minted += value;
     }
 
     /**
@@ -425,7 +437,13 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param localToken Local token address
      * @param remoteToken Remote token address
      */
-    function _registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken) internal {
+    function _registerToken(
+        uint remoteChainID,
+        bool isOrigin,
+        bool supportPermit,
+        address localToken,
+        address remoteToken
+    ) internal {
         require(remoteChainID != 0, RegistryCanNotZeroValue());
         require(localToken != address(0), RegistryCanNotZeroValue());
         require(remoteToken != address(0), RegistryCanNotZeroValue());
@@ -442,11 +460,13 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
             remoteToken: remoteToken,
             isOrigin: isOrigin,
             paused: false,
+            pendingAmount: 0,
             deposited: 0,
-            pendingAmount: 0
+            minted: 0
         });
 
-        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, isOrigin);
+        if (!supportPermit) _notSupportPermit[localToken] = true;
+        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, isOrigin, supportPermit);
     }
 
     /**

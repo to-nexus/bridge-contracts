@@ -17,6 +17,8 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
  * - Implements proxy security checks
  */
 contract CrossBridge is BaseBridge {
+    error CrossBridgeCanNotZeroAddress();
+
     /**
      * @notice Emitted when the cross-chain supply limit is updated
      * @param crossSupplyLimit The new maximum supply limit for CROSS native token transfers
@@ -26,11 +28,6 @@ contract CrossBridge is BaseBridge {
     /// @dev Predefined address for the predeployed implementation
     address private constant PREDEPLOYED_IMPLEMENTATION_ADDRESS = address(0xb81d6e000000000000000000000000000000C0de);
 
-    /// @dev Tracks the current supply of CROSS native tokens that have been released through the bridge
-    /// @notice This counter keeps track of the CROSS native tokens that are currently in circulation through the bridge
-    /// @notice It is incremented when tokens are unlocked from the bridge and decremented when tokens are locked back
-    uint public crossSupply;
-
     /// @dev Maximum issuance limit for CROSS native token on the Cross chain
     /// @notice Defines the maximum amount of CROSS native tokens that can be unlocked from the bridge contract.
     /// @notice This limit is designed to be dynamically adjustable to mitigate security risks from potential
@@ -38,7 +35,7 @@ contract CrossBridge is BaseBridge {
     uint public crossSupplyLimit;
 
     /// @dev Storage gap for future upgrades
-    uint[47] private __gap;
+    uint[49] private __gap;
 
     /**
      * @notice Initializes the CrossBridge contract
@@ -46,21 +43,28 @@ contract CrossBridge is BaseBridge {
      * - Calls the base initialization in BaseBridge
      * - Records the initial balance for CROSS token supply tracking
      * - Sets the initial CROSS token supply limit to 0
+     * - Pairs native CROSS token with the CROSS ERC20 token on Ethereum chain
      * @param owner_ Address that will receive admin role
      * @param dev_ Address of the developer account for receiving fees
      * @param _threshold Minimum number of validators required for validation
+     * @param cross Address of the CROSS ERC20 token on Ethereum chain
+     * @param crossInitialSupply Pre-minted supply of CROSS tokens for the CROSS Foundation
      */
-    function initialize(address owner_, address payable dev_, uint8 _threshold) external override initializer {
+    function initialize(address owner_, address payable dev_, uint8 _threshold, address cross, uint crossInitialSupply)
+        external
+        initializer
+    {
+        require(cross != address(0), CrossBridgeCanNotZeroAddress());
         __BaseBridge_init(owner_, dev_, _threshold);
-
-        // Initialize with 10 million CROSS tokens pre-minted
-        // This sets the initial supply of CROSS tokens that are pre-allocated at contract initialization
-        // The 'ether' suffix automatically applies 18 decimals (10^18) to the value
-        crossSupply = Const.CROSS_INITIAL_SUPPLY;
 
         // Register CROSS token as a token pair
         // This pairs the native CROSS token on this chain with the CROSS ERC20 token on Ethereum (chain ID 1)
-        _registerToken(1, false, Const.NATIVE_TOKEN, 0x5061C090bf18246890F88AB504Cd562632f83faa);
+        _registerToken(Const.ETHEREUM_CHAIN_ID, false, false, Const.NATIVE_TOKEN, cross);
+        if (crossInitialSupply > 0) _withdrawToken(Const.ETHEREUM_CHAIN_ID, Const.NATIVE_TOKEN, crossInitialSupply);
+    }
+
+    function crossSupply() public view returns (uint) {
+        return _tokenPairs[Const.ETHEREUM_CHAIN_ID][Const.NATIVE_TOKEN].minted;
     }
 
     /**
@@ -96,39 +100,10 @@ contract CrossBridge is BaseBridge {
         if (token == Const.NATIVE_TOKEN) {
             // Check if the new transfer would exceed the configured CROSS token issuance limit
             // If limit is exceeded, return a specific error status and mark for delay
-            if (crossSupply + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
+            if (crossSupply() + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
         }
 
         return super._checkFinalizeAmount(fromChainID, token, value, retry);
-    }
-
-    /**
-     * @notice Processes token deposits for bridging operations
-     * @dev Override of BaseBridge._depositToken with special handling for CROSS native token
-     * - For CROSS native token, decrements the crossSupply counter
-     * - For other tokens, calls the parent implementation
-     * - Enforces that CROSS supply is sufficient for withdrawal
-     * @param remoteChainID Target chain identifier
-     * @param token Token being deposited
-     * @param value Amount being deposited
-     */
-    function _depositToken(uint remoteChainID, address token, uint value) internal override {
-        if (token != Const.NATIVE_TOKEN) super._depositToken(remoteChainID, token, value);
-        else crossSupply -= value;
-    }
-
-    /**
-     * @notice Processes token withdrawals for bridging operations
-     * @dev Override of BaseBridge._withdrawToken with special handling for CROSS native token
-     * - For CROSS native token, increments the crossSupply counter
-     * - For other tokens, calls the parent implementation
-     * @param remoteChainID Source chain identifier
-     * @param token Token being withdrawn
-     * @param value Amount being withdrawn
-     */
-    function _withdrawToken(uint remoteChainID, address token, uint value) internal override {
-        if (token != Const.NATIVE_TOKEN) super._withdrawToken(remoteChainID, token, value);
-        else crossSupply += value;
     }
 
     /**

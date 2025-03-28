@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
+import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
+import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
 import {Const} from "../src/lib/Const.sol";
 import {BridgeTest} from "./Bridge.t.sol";
 import {TestToken} from "./token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract BaseBridgeTest is BridgeTest {
     bytes32 public constant PERMIT_TYPEHASH =
@@ -436,5 +437,74 @@ contract BaseBridgeTest is BridgeTest {
         vm.expectRevert();
         bridgeEthereum.permitBridgeTokenBatch(args, permitArgsArray);
         assertEq(cross.balanceOf(OWNER), beforeOwnerBalance); // owner balance should not change
+    }
+
+    function test_tokenPair_depositedAndMinted() public {
+        uint amount = 1000 * 1e18;
+
+        // ===== Original token test (CROSS token) =====
+        vm.selectFork(ethereumForkID);
+
+        // Check initial deposited value
+        IBridgeRegistry.TokenPair memory pairBefore = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(cross));
+
+        // Setup for deposit
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeEthereum), amount);
+
+        // Perform deposit
+        deposit(false, amount, 5);
+
+        // Check if deposited increased
+        vm.selectFork(ethereumForkID);
+        IBridgeRegistry.TokenPair memory pairAfter = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(cross));
+        assertEq(pairAfter.deposited - pairBefore.deposited, amount, "Deposit amount delta check");
+
+        // ===== Wrapped token test =====
+        vm.selectFork(ethereumForkID);
+        vm.prank(OWNER);
+        testTokenEthereum.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenEthereum.approve(address(bridgeEthereum), amount);
+
+        // Check initial minted value
+        vm.selectFork(crossForkID);
+        IBridgeRegistry.TokenPair memory wrappedPairBefore =
+            bridgeCross.getTokenPair(ETHEREUM_CHAIN_ID, address(testTokenCross));
+
+        // Deposit original token (which should mint wrapped token)
+        depositToken(false, amount, 5);
+
+        // Check if minted increased
+        vm.selectFork(crossForkID);
+        IBridgeRegistry.TokenPair memory wrappedPairAfter =
+            bridgeCross.getTokenPair(ETHEREUM_CHAIN_ID, address(testTokenCross));
+        assertEq(wrappedPairAfter.minted - wrappedPairBefore.minted, amount, "Mint amount delta check");
+    }
+
+    function test_tokenPair_ethDeposited() public {
+        uint amount = 1000 * 1e18;
+
+        // ETH deposit/withdraw effect on deposited value test
+        vm.selectFork(ethereumForkID);
+
+        // Check initial deposited value for ETH
+        IBridgeRegistry.TokenPair memory pairBefore = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
+
+        // Setup for deposit
+        vm.deal(USER, amount);
+        vm.selectFork(crossForkID);
+        vm.prank(USER);
+        weth.approve(address(bridgeCross), amount);
+
+        // Perform ETH deposit
+        depositETH(false, amount, 5);
+
+        // Check if deposited increased
+        vm.selectFork(ethereumForkID);
+        IBridgeRegistry.TokenPair memory pairAfter = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
+        assertEq(pairAfter.deposited - pairBefore.deposited, amount, "ETH deposit amount delta check");
     }
 }
