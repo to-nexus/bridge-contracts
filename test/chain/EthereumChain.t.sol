@@ -33,7 +33,9 @@ contract EthereumChainTest is CrossChainTest {
             EthereumBridge bridgeEthereumImpl = new EthereumBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
             bridgeEthereum = EthereumBridge(payable(address(bridgeEthereumProxy)));
-            bridgeEthereum.initialize(OWNER, REWARD, threshold, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY);
+            bridgeEthereum.initializeEthereumBridge(
+                OWNER, REWARD, threshold, CROSS_CHAIN_ID, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY
+            );
 
             bridgeEthereum.grantRole(ADMIN_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(EDITOR_ROLE, OWNER); // for test

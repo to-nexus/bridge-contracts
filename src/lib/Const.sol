@@ -24,9 +24,6 @@ library Const {
         CrossSupplyLimitExceeded
     }
 
-    uint internal constant ETHEREUM_CHAIN_ID = 1;
-    uint internal constant CROSS_CHAIN_ID = 612055;
-
     /**
      * @notice Special address value representing native token
      * @dev address(1) is a conventional address used to represent native tokens (ETH, MATIC, etc.)

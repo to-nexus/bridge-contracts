@@ -41,7 +41,9 @@ contract CrossChainTest is SettingTest {
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
             vm.deal(address(bridgeCross), INITIAL_SUPPLY);
-            bridgeCross.initialize(CrossOWNER, REWARD, threshold, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY);
+            bridgeCross.initializeCrossBridge(
+                CrossOWNER, REWARD, threshold, ETHEREUM_CHAIN_ID, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY
+            );
 
             bridgeCross.grantRole(ADMIN_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(EDITOR_ROLE, CrossOWNER); // for test
