@@ -17,6 +17,8 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
  * - Manages CROSS token pair registration and initial supply
  */
 contract EthereumBridge is BaseBridge {
+    error EthereumBridgeCanNotZeroAddress();
+
     /**
      * @notice Initializes the EthereumBridge contract
      * @dev Sets up the contract with initial configuration
@@ -26,15 +28,25 @@ contract EthereumBridge is BaseBridge {
      * @param owner_ Address that will receive admin role
      * @param dev_ Address of the developer account for receiving fees
      * @param _threshold Minimum number of validators required for validation
+     * @param cross Address of the CROSS ERC20 token on this chain
+     * @param crossInitialSupply Pre-minted supply of CROSS tokens for the CROSS Foundation
      */
-    function initialize(address owner_, address payable dev_, uint8 _threshold) external override initializer {
+
+    /// @dev Storage gap for future upgrades
+    uint[50] private __gap;
+
+    function initialize(address owner_, address payable dev_, uint8 _threshold, address cross, uint crossInitialSupply)
+        external
+        initializer
+    {
+        require(cross != address(0), EthereumBridgeCanNotZeroAddress());
         __BaseBridge_init(owner_, dev_, _threshold);
 
         // Register CROSS token as a token pair
         // This pairs the CROSS ERC20 token on this chain with the Native CROSS token on Cross chain (chain ID 612055)
-        _registerToken(612055, true, Const.CROSS_TOKEN, Const.NATIVE_TOKEN);
+        _registerToken(Const.CROSS_CHAIN_ID, true, true, cross, Const.NATIVE_TOKEN);
 
         // Deposit the initial supply of CROSS tokens
-        _depositToken(612055, Const.CROSS_TOKEN, Const.CROSS_INITIAL_SUPPLY);
+        if (crossInitialSupply > 0) _depositToken(Const.CROSS_CHAIN_ID, cross, crossInitialSupply);
     }
 }

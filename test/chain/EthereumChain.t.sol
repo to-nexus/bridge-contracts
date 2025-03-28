@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BaseBridge} from "../../src/BaseBridge.sol";
 import {BridgeVerifier, IBridgeVerifier} from "../../src/BridgeVerifier.sol";
+import {EthereumBridge} from "../../src/EthereumBridge.sol";
 
 import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {TestToken} from "../token/TestToken.sol";
@@ -19,7 +19,7 @@ contract EthereumChainTest is CrossChainTest {
 
     PriceFeed internal priceFeedEthereum;
     uint internal nextIndexEthereum;
-    BaseBridge internal bridgeEthereum;
+    EthereumBridge internal bridgeEthereum;
     BridgeVerifier internal bridgeVerifierEthereum;
 
     function setUp() public virtual override {
@@ -30,16 +30,16 @@ contract EthereumChainTest is CrossChainTest {
 
         // bridge setup
         {
-            BaseBridge bridgeEthereumImpl = new BaseBridge();
+            EthereumBridge bridgeEthereumImpl = new EthereumBridge();
             ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
-            bridgeEthereum = BaseBridge(payable(address(bridgeEthereumProxy)));
-            bridgeEthereum.initialize(OWNER, REWARD, threshold);
+            bridgeEthereum = EthereumBridge(payable(address(bridgeEthereumProxy)));
+            bridgeEthereum.initialize(OWNER, REWARD, threshold, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY);
 
             bridgeEthereum.grantRole(ADMIN_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(EDITOR_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(OPERATOR_ROLE, OWNER); // for test
             bridgeEthereum.grantRole(PRICER_ROLE, OWNER); // for test
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN));
+            // bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(cross), address(NATIVE_TOKEN)); // already registered
             bytes32[] memory roles = new bytes32[](5);
             for (uint i = 0; i < 5; i++) {
                 roles[i] = VALIDATOR_ROLE;
@@ -95,11 +95,13 @@ contract EthereumChainTest is CrossChainTest {
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address((NATIVE_TOKEN)), address(weth));
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross));
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, true, address(NATIVE_TOKEN), address(weth));
+            bridgeEthereum.registerToken(
+                CROSS_CHAIN_ID, true, true, address(testTokenEthereum), address(testTokenCross)
+            );
 
-            // Mint tokens excluding the pre-allocated supply amount (CROSS_INITIAL_SUPPLY)
-            TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY - CROSS_INITIAL_SUPPLY);
+            // Mint tokens excluding the pre-allocated supply amount (CROSS_FOUNDATION_INITIAL_SUPPLY)
+            TestToken(address(cross)).mint(OWNER, INITIAL_SUPPLY - CROSS_FOUNDATION_INITIAL_SUPPLY);
             TestToken(address(testTokenEthereum)).mint(OWNER, INITIAL_SUPPLY);
         }
         vm.stopPrank();

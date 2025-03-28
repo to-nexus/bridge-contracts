@@ -31,11 +31,11 @@ contract SettingTest is Test {
     uint internal constant VALIDATOR_PK3 = uint(bytes32("validator3"));
     uint internal constant VALIDATOR_PK4 = uint(bytes32("validator4"));
     uint internal constant VALIDATOR_PK5 = uint(bytes32("validator5"));
-    uint internal constant ETHEREUM_CHAIN_ID = 11; // test data
+    uint internal constant ETHEREUM_CHAIN_ID = 1; // test data
     uint internal constant CROSS_CHAIN_ID = 612055; // test data
     IERC20 internal constant NATIVE_TOKEN = IERC20(address(1));
     uint internal constant INITIAL_SUPPLY = 1_000_000_000 ether;
-    uint public constant CROSS_INITIAL_SUPPLY = 10_000_000 ether;
+    uint public constant CROSS_FOUNDATION_INITIAL_SUPPLY = 10_000_000 ether;
     uint8 internal constant DOLLAR_DECIMALS = 6;
 
     uint internal ethereumForkID;

@@ -41,7 +41,7 @@ contract CrossChainTest is SettingTest {
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
             vm.deal(address(bridgeCross), INITIAL_SUPPLY);
-            bridgeCross.initialize(CrossOWNER, REWARD, threshold);
+            bridgeCross.initialize(CrossOWNER, REWARD, threshold, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY);
 
             bridgeCross.grantRole(ADMIN_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(EDITOR_ROLE, CrossOWNER); // for test
@@ -50,7 +50,7 @@ contract CrossChainTest is SettingTest {
 
             crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
             bridgeCross.setCrossMintableERC20Code(crossMintableERC20Code);
-            bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross));
+            // bridgeCross.registerToken(ETHEREUM_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross)); // already registered
 
             bytes32[] memory roles = new bytes32[](5);
             for (uint i = 0; i < 5; i++) {

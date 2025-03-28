@@ -54,6 +54,7 @@ contract BaseBridge is
     error BaseBridgeCanNotZeroAddress();
     error BaseBridgeCanNotZeroValue();
     error BaseBridgeVerifierNotSet();
+    error BaseBridgeNotSupportPermit();
     error BaseBridgeNotExistIndex(uint index);
     error BaseBridgeNotExistToken(address token);
     error BaseBridgeNotExpired(uint delayExpiration, uint timestamp);
@@ -178,7 +179,7 @@ contract BaseBridge is
     uint private _initializedAt;
 
     /// @dev Storage gap for future upgrades
-    uint[47] private __gap;
+    uint[46] private __gap;
 
     /**
      * @notice Contract constructor
@@ -280,6 +281,7 @@ contract BaseBridge is
         bytes calldata extraData,
         PermitArguments calldata permitArgs
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
+        require(!_notSupportPermit[address(fromToken)], BaseBridgeNotSupportPermit());
         require(
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
@@ -292,35 +294,15 @@ contract BaseBridge is
             BaseBridgeInvalidValue(value + networkFee + exFee, permitArgs.value)
         );
 
-        {
-            uint beforeAllowance = fromToken.allowance(permitArgs.account, address(this));
-            IERC20Permit(address(fromToken)).permit(
-                permitArgs.account,
-                address(this),
-                permitArgs.value,
-                permitArgs.deadline,
-                permitArgs.v,
-                permitArgs.r,
-                permitArgs.s
-            );
-
-            uint afterAllowance = fromToken.allowance(permitArgs.account, address(this));
-            require(afterAllowance == permitArgs.value, BaseBridgeFailedCall());
-
-            if (beforeAllowance == afterAllowance) {
-                require(block.timestamp <= permitArgs.deadline, BaseBridgeDeadlineExpired(permitArgs.deadline));
-
-                uint nonce = IERC20Permit(address(fromToken)).nonces(permitArgs.account);
-                bytes32 structHash = keccak256(
-                    abi.encode(pth, permitArgs.account, address(this), permitArgs.value, nonce, permitArgs.deadline)
-                );
-
-                bytes32 _domainSeparator = IERC20Permit(address(fromToken)).DOMAIN_SEPARATOR();
-                bytes32 hash = MessageHashUtils.toTypedDataHash(_domainSeparator, structHash);
-                address signer = ECDSA.recover(hash, permitArgs.v, permitArgs.r, permitArgs.s);
-                require(signer == permitArgs.account, BaseBridgeInvalidPermitAccount());
-            }
-        }
+        IERC20Permit(address(fromToken)).permit(
+            permitArgs.account,
+            address(this),
+            permitArgs.value,
+            permitArgs.deadline,
+            permitArgs.v,
+            permitArgs.r,
+            permitArgs.s
+        );
 
         _executeBridge(
             BridgeTokenArguments({
@@ -454,8 +436,8 @@ contract BaseBridge is
 
         (Const.FinalizeStatus status,) =
             _checkFinalizeAmount(remoteChainID, address(pending.args.toToken), pending.args.value, true);
-        require(status == Const.FinalizeStatus.Success, string(abi.encode(uint(status))));
 
+        require(status == Const.FinalizeStatus.Success, string(abi.encode(uint(status))));
         require(
             pending.delayExpiration == 0 || pending.delayExpiration < block.timestamp,
             BaseBridgeNotExpired(pending.delayExpiration, block.timestamp)
@@ -491,9 +473,7 @@ contract BaseBridge is
      * @param index Index of the pending operation
      */
     function manualReleasePending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) nonReentrant {
-        require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
-        _releasePending(remoteChainID, index, address(0));
-        emit ManualReleased(remoteChainID, index);
+        manualReleasePendingWithRecipient(remoteChainID, index, address(0));
     }
 
     /**
@@ -507,7 +487,7 @@ contract BaseBridge is
      * @param recipient Custom recipient address that will receive the tokens instead of the original recipient
      */
     function manualReleasePendingWithRecipient(uint remoteChainID, uint index, address recipient)
-        external
+        public
         onlyRole(Const.VERIFIER_ROLE)
         nonReentrant
     {
@@ -614,6 +594,8 @@ contract BaseBridge is
         view
         returns (uint _networkFee, uint _exFee)
     {
+        TokenPair memory tokenPair = _tokenPairs[remoteChainID][address(token)];
+        if (!tokenPair.isOrigin) require(tokenPair.minted >= value, BaseBridgeInvalidValue(value, tokenPair.minted));
         require(address(bridgeVerifier) != address(0), BaseBridgeVerifierNotSet());
 
         uint minimumValue;
@@ -665,26 +647,23 @@ contract BaseBridge is
         if (address(token) == Const.NATIVE_TOKEN) {
             // Handling native token transfers (e.g., CROSS, ETH, BNB)
             require(msg.value == value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
-            _depositToken(remoteChainID, Const.NATIVE_TOKEN, value);
             if (fee != 0) {
                 bool success = _safeCall(_dev, fee, "");
                 require(success, BaseBridgeFailedCall());
             }
         } else {
             require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
-
             token.safeTransferFrom(from, address(this), value + fee);
             if (fee != 0) token.safeTransfer(_dev, fee);
 
-            if (_tokenPairs[remoteChainID][address(token)].isOrigin) {
-                _depositToken(remoteChainID, address(token), value);
-            } else {
+            if (!_tokenPairs[remoteChainID][address(token)].isOrigin) {
                 require(
                     ICrossMintableERC20(address(token)).burn(address(this), value), // Burn the wrapped tokens on the source chain
                     BaseBridgeBurnFailed(token, from, value)
                 );
             }
         }
+        _depositToken(remoteChainID, address(token), value);
     }
 
     /**
@@ -706,53 +685,21 @@ contract BaseBridge is
             _withdrawToken(fromChainID, Const.NATIVE_TOKEN, value);
             return (Const.FinalizeStatus.Success);
         } else if (value != 0) {
+            bytes memory data;
             if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
-                return _transferERC20(fromChainID, toToken, to, value);
+                data = abi.encodeCall(IERC20.transfer, (to, value));
+                status = Const.FinalizeStatus.TransferFailed;
             } else {
-                return _mintCrossMintableERC20(toToken, to, value);
+                data = abi.encodeCall(ICrossMintableERC20.mint, (to, value));
+                status = Const.FinalizeStatus.MintFailed;
             }
-        }
-    }
 
-    /**
-     * @notice Transfers ERC20 tokens during bridge finalization
-     * @dev Handles transfer of original tokens on destination chain
-     * - Updates withdrawal tracking
-     * - Transfers tokens to recipient
-     * @param remoteChainID Source chain identifier
-     * @param token Token to transfer
-     * @param to Recipient address
-     * @param value Amount to transfer
-     * @return status Success status
-     */
-    function _transferERC20(uint remoteChainID, IERC20 token, address to, uint value)
-        private
-        returns (Const.FinalizeStatus status)
-    {
-        bool success = _safeCall(payable(address(token)), 0, abi.encodeCall(IERC20.transfer, (to, value)));
-        if (success) {
-            status = Const.FinalizeStatus.Success;
-            _withdrawToken(remoteChainID, address(token), value);
-        } else {
-            status = Const.FinalizeStatus.TransferFailed;
+            if (_safeCall(payable(address(toToken)), 0, data)) {
+                status = Const.FinalizeStatus.Success;
+                _withdrawToken(fromChainID, address(toToken), value);
+            }
+            return status;
         }
-    }
-
-    /**
-     * @notice Mints wrapped tokens during bridge finalization
-     * @dev Handles minting of CrossMintable tokens on destination chain
-     * @param token Token to mint
-     * @param to Recipient address
-     * @param value Amount to mint
-     * @return status Success status
-     */
-    function _mintCrossMintableERC20(IERC20 token, address to, uint value)
-        private
-        returns (Const.FinalizeStatus status)
-    {
-        bool success = _safeCall(payable(address(token)), 0, abi.encodeCall(ICrossMintableERC20.mint, (to, value)));
-        if (success) status = success ? Const.FinalizeStatus.Success : Const.FinalizeStatus.MintFailed;
-        else status = Const.FinalizeStatus.MintFailed;
     }
 
     /**
