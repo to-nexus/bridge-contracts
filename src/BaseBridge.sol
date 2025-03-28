@@ -37,9 +37,6 @@ contract BaseBridge is
     ValidatorManager,
     IBaseBridge
 {
-    // @TEST
-    bytes32 pth = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
@@ -154,15 +151,10 @@ contract BaseBridge is
     event BridgeVerifierSet(address indexed bridgeVerifier);
 
     /**
-     * @notice Emitted when the dev wallet is set
-     * @param dev The address of the new dev wallet
+     * @notice Emitted when the wallet is set
+     * @param dev The address of the new wallet
      */
     event DevSet(address indexed dev);
-
-    /**
-     * @notice Emitted when the dev wallet is set
-     * @param dev The address of the new dev wallet
-     */
 
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
@@ -172,14 +164,14 @@ contract BaseBridge is
     /// @dev Fee management contract
     IBridgeVerifier public bridgeVerifier;
 
-    /// @dev dev walelt
+    /// @dev dev wallet
     address payable private _dev;
 
     /// @dev Block number when contract was initialized
     uint private _initializedAt;
 
     /// @dev Storage gap for future upgrades
-    uint[46] private __gap;
+    uint[47] private __gap;
 
     /**
      * @notice Contract constructor
@@ -195,7 +187,7 @@ contract BaseBridge is
      * @param dev_ Reward wallet address
      * @param _threshold Required validator signatures
      */
-    function initialize(address owner_, address payable dev_, uint8 _threshold) external virtual initializer {
+    function initialize(address owner_, address payable dev_, uint8 _threshold) external initializer {
         __BaseBridge_init(owner_, dev_, _threshold);
     }
 

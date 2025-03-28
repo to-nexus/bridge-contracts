@@ -138,7 +138,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     mapping(address => bool) internal _notSupportPermit;
 
     /// @dev Storage gap for future upgradessetCrossMintableERC20Code
-    uint[41] private __gap;
+    uint[40] private __gap;
 
     /**
      * @notice Initializes the BridgeRegistry

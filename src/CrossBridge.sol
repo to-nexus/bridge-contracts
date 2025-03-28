@@ -18,15 +18,16 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
  */
 contract CrossBridge is BaseBridge {
     error CrossBridgeCanNotZeroAddress();
-
+    error CrossBridgeCanNotZero();
     /**
      * @notice Emitted when the cross-chain supply limit is updated
      * @param crossSupplyLimit The new maximum supply limit for CROSS native token transfers
      */
+
     event CrossSupplyLimitSet(uint crossSupplyLimit);
 
     /// @dev Predefined address for the predeployed implementation
-    address private constant PREDEPLOYED_IMPLEMENTATION_ADDRESS = address(0xb81d6e000000000000000000000000000000C0de);
+    address private constant PREDEPLOYED_IMPLEMENTATION_ADDRESS = address(0xB81D6e000000000000000000000000000000AAaA);
 
     /// @dev Maximum issuance limit for CROSS native token on the Cross chain
     /// @notice Defines the maximum amount of CROSS native tokens that can be unlocked from the bridge contract.
@@ -34,8 +35,12 @@ contract CrossBridge is BaseBridge {
     /// @notice bridge exploits, as most of the token supply is initially locked in the bridge contract.
     uint public crossSupplyLimit;
 
+    /// @dev Ethereum chain ID (e.g., 1 for mainnet, 11155111 for Sepolia testnet, or other chain IDs)
+    /// @dev This is the chain where the Cross ERC20 Token is deployed
+    uint private _ethereumChainID;
+
     /// @dev Storage gap for future upgrades
-    uint[49] private __gap;
+    uint[48] private __gap;
 
     /**
      * @notice Initializes the CrossBridge contract
@@ -50,21 +55,29 @@ contract CrossBridge is BaseBridge {
      * @param cross Address of the CROSS ERC20 token on Ethereum chain
      * @param crossInitialSupply Pre-minted supply of CROSS tokens for the CROSS Foundation
      */
-    function initialize(address owner_, address payable dev_, uint8 _threshold, address cross, uint crossInitialSupply)
-        external
-        initializer
-    {
+    function initializeCrossBridge(
+        address owner_,
+        address payable dev_,
+        uint8 _threshold,
+        uint ethereumChainID,
+        address cross,
+        uint crossInitialSupply
+    ) external initializer {
+        require(ethereumChainID != 0, CrossBridgeCanNotZero());
         require(cross != address(0), CrossBridgeCanNotZeroAddress());
+
         __BaseBridge_init(owner_, dev_, _threshold);
 
         // Register CROSS token as a token pair
-        // This pairs the native CROSS token on this chain with the CROSS ERC20 token on Ethereum (chain ID 1)
-        _registerToken(Const.ETHEREUM_CHAIN_ID, false, false, Const.NATIVE_TOKEN, cross);
-        if (crossInitialSupply > 0) _withdrawToken(Const.ETHEREUM_CHAIN_ID, Const.NATIVE_TOKEN, crossInitialSupply);
+        // This pairs the native CROSS token on this chain with the CROSS ERC20 token on Ethereum
+        _registerToken(ethereumChainID, false, false, Const.NATIVE_TOKEN, cross);
+        if (crossInitialSupply > 0) _withdrawToken(ethereumChainID, Const.NATIVE_TOKEN, crossInitialSupply);
+
+        _ethereumChainID = ethereumChainID;
     }
 
     function crossSupply() public view returns (uint) {
-        return _tokenPairs[Const.ETHEREUM_CHAIN_ID][Const.NATIVE_TOKEN].minted;
+        return _tokenPairs[_ethereumChainID][Const.NATIVE_TOKEN].minted;
     }
 
     /**
