@@ -89,7 +89,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @notice Initializes the BridgeVerifier contract
      * @param initialOwner Admin address
      * @param bridge Bridge contract address
-     * @param _priceFeed Price feed contract address
+     * @param priceFeed_ Price feed contract address
      * @param finalizeBridgeGas Gas amount for finalization
      * @param defaultTokenPrice Default price for tokens without price feed
      * @param defaultExFeeRate Default exchange fee rate
@@ -101,7 +101,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     constructor(
         address initialOwner,
         address bridge,
-        address _priceFeed,
+        address priceFeed_,
         uint finalizeBridgeGas,
         uint defaultTokenPrice,
         uint defaultExFeeRate,
@@ -113,12 +113,12 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(finalizeBridgeGas != 0, BridgeVerifierCanNotZeroValue("finalizeBridgeGas"));
         require(initialOwner != address(0), BridgeVerifierCanNotZeroValue("initialOwner"));
         require(bridge != address(0), BridgeVerifierCanNotZeroValue("bridge"));
-        require(_priceFeed != address(0), BridgeVerifierCanNotZeroValue("_priceFeed"));
+        require(priceFeed_ != address(0), BridgeVerifierCanNotZeroValue("priceFeed_"));
         require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
 
-        priceFeed = IPriceFeed(_priceFeed);
+        priceFeed = IPriceFeed(priceFeed_);
         _finalizeBridgeGas = finalizeBridgeGas;
         _defaultTokenPrice = defaultTokenPrice;
         _defaultExFeeRate = defaultExFeeRate;

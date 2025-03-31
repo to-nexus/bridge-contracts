@@ -20,34 +20,33 @@ contract EthereumBridge is BaseBridge {
     error EthereumBridgeCanNotZeroAddress();
     error EthereumBridgeCanNotZero();
 
+    /// @dev Storage gap for future upgrades
+    uint[50] private __gap;
+
     /**
      * @notice Initializes the EthereumBridge contract
      * @dev Sets up the contract with initial configuration
      * - Calls the base initialization in BaseBridge
      * - Registers CROSS token as a token pair with Cross chain
      * - Sets the initial deposit amount for CROSS tokens
-     * @param owner_ Address that will receive admin role
+     * @param owner Address that will receive admin role
      * @param dev_ Address of the developer account for receiving fees
-     * @param _threshold Minimum number of validators required for validation
+     * @param threshold_ Minimum number of validators required for validation
      * @param crossChainID Cross chain ID (e.g., 612055 for Cross chain, or other chain IDs)
      * @param cross Address of the CROSS ERC20 token on this chain
      * @param crossInitialSupply Pre-minted supply of CROSS tokens for the CROSS Foundation
      */
-
-    /// @dev Storage gap for future upgrades
-    uint[50] private __gap;
-
     function initializeEthereumBridge(
-        address owner_,
+        address owner,
         address payable dev_,
-        uint8 _threshold,
+        uint8 threshold_,
         uint crossChainID,
         address cross,
         uint crossInitialSupply
     ) external initializer {
         require(crossChainID != 0, EthereumBridgeCanNotZero());
         require(cross != address(0), EthereumBridgeCanNotZeroAddress());
-        __BaseBridge_init(owner_, dev_, _threshold);
+        __BaseBridge_init(owner, dev_, threshold_);
 
         // Register CROSS token as a token pair
         // This pairs the CROSS ERC20 token on this chain with the Native CROSS token on Cross chain

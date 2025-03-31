@@ -49,16 +49,16 @@ contract CrossBridge is BaseBridge {
      * - Records the initial balance for CROSS token supply tracking
      * - Sets the initial CROSS token supply limit to 0
      * - Pairs native CROSS token with the CROSS ERC20 token on Ethereum chain
-     * @param owner_ Address that will receive admin role
+     * @param owner Address that will receive admin role
      * @param dev_ Address of the developer account for receiving fees
-     * @param _threshold Minimum number of validators required for validation
+     * @param threshold_ Minimum number of validators required for validation
      * @param cross Address of the CROSS ERC20 token on Ethereum chain
      * @param crossInitialSupply Pre-minted supply of CROSS tokens for the CROSS Foundation
      */
     function initializeCrossBridge(
-        address owner_,
+        address owner,
         address payable dev_,
-        uint8 _threshold,
+        uint8 threshold_,
         uint ethereumChainID,
         address cross,
         uint crossInitialSupply
@@ -66,7 +66,7 @@ contract CrossBridge is BaseBridge {
         require(ethereumChainID != 0, CrossBridgeCanNotZero());
         require(cross != address(0), CrossBridgeCanNotZeroAddress());
 
-        __BaseBridge_init(owner_, dev_, _threshold);
+        __BaseBridge_init(owner, dev_, threshold_);
 
         // Register CROSS token as a token pair
         // This pairs the native CROSS token on this chain with the CROSS ERC20 token on Ethereum
@@ -105,12 +105,12 @@ contract CrossBridge is BaseBridge {
      * @return status Status code indicating the result of the check
      * @return delay Boolean indicating if finalization should be delayed
      */
-    function _checkFinalizeAmount(uint fromChainID, address token, uint value, bool retry)
+    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, bool retry)
         internal
         override
         returns (Const.FinalizeStatus status, bool delay)
     {
-        if (token == Const.NATIVE_TOKEN) {
+        if (address(token) == Const.NATIVE_TOKEN) {
             // Check if the new transfer would exceed the configured CROSS token issuance limit
             // If limit is exceeded, return a specific error status and mark for delay
             if (crossSupply() + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
