@@ -58,9 +58,10 @@ library CalcAmountLib {
         require(priceA != 0, CalcAmountLibCanNotZeroValue("priceA"));
         require(priceB != 0, CalcAmountLibCanNotZeroValue("priceB"));
 
-        amountB = decimalB >= decimalA
-            ? amountB = amountA.mulDiv(priceB * 10 ** (decimalB - decimalA), priceA)
-            : amountB = amountA.mulDiv(priceB, priceA * 10 ** (decimalA - decimalB));
+        if (decimalA == decimalB) return amountA.mulDiv(priceB, priceA);
+        amountB = decimalB > decimalA
+            ? amountA.mulDiv(priceB * 10 ** (decimalB - decimalA), priceA)
+            : amountA.mulDiv(priceB, priceA * 10 ** (decimalA - decimalB));
     }
 
     /// @notice Retrieves the number of decimals for a given token.

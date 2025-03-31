@@ -183,30 +183,30 @@ contract BaseBridge is
 
     /**
      * @notice Initializes the bridge contract
-     * @param owner_ Owner address
+     * @param owner Owner address
      * @param dev_ Reward wallet address
-     * @param _threshold Required validator signatures
+     * @param threshold_ Required validator signatures
      */
-    function initialize(address owner_, address payable dev_, uint8 _threshold) external initializer {
-        __BaseBridge_init(owner_, dev_, _threshold);
+    function initialize(address owner, address payable dev_, uint8 threshold_) external initializer {
+        __BaseBridge_init(owner, dev_, threshold_);
     }
 
     /**
      * @notice Internal initialization function
-     * @param owner_ Owner address
+     * @param owner Owner address
      * @param dev_ Reward wallet address
-     * @param _threshold Required validator signatures
+     * @param threshold_ Required validator signatures
      */
-    function __BaseBridge_init(address owner_, address payable dev_, uint8 _threshold) internal onlyInitializing {
-        require(owner_ != address(0), BaseBridgeCanNotZeroAddress());
+    function __BaseBridge_init(address owner, address payable dev_, uint8 threshold_) internal onlyInitializing {
+        require(owner != address(0), BaseBridgeCanNotZeroAddress());
         require(dev_ != address(0), BaseBridgeCanNotZeroAddress());
-        require(_threshold != 0, BaseBridgeCanNotZeroValue());
+        require(threshold_ != 0, BaseBridgeCanNotZeroValue());
 
         __UUPSUpgradeable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
-        __RoleManager_init(owner_);
-        __Validator_init(_threshold);
+        __RoleManager_init(owner);
+        __Validator_init(threshold_);
         __BridgeRegistry_init();
 
         _dev = dev_;
@@ -374,7 +374,7 @@ contract BaseBridge is
         Const.FinalizeStatus status;
         bool delay;
         {
-            (status, delay) = _checkFinalizeAmount(args.fromChainID, address(args.toToken), args.value, false);
+            (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, false);
             if (status == Const.FinalizeStatus.Success) {
                 status = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
             }
@@ -427,7 +427,7 @@ contract BaseBridge is
         PendingData memory pending = _pendingData[remoteChainID][index];
 
         (Const.FinalizeStatus status,) =
-            _checkFinalizeAmount(remoteChainID, address(pending.args.toToken), pending.args.value, true);
+            _checkFinalizeAmount(remoteChainID, pending.args.toToken, pending.args.value, true);
 
         require(status == Const.FinalizeStatus.Success, string(abi.encode(uint(status))));
         require(
@@ -604,19 +604,19 @@ contract BaseBridge is
      * @return status Success status
      * @return delay Whether verification delay should be applied
      */
-    function _checkFinalizeAmount(uint fromChainID, address token, uint value, bool retry)
+    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, bool retry)
         internal
         virtual
         returns (Const.FinalizeStatus status, bool delay)
     {
         require(address(bridgeVerifier) != address(0), BaseBridgeVerifierNotSet());
 
-        TokenPair memory tokenPair = _tokenPairs[fromChainID][token];
+        TokenPair memory tokenPair = _tokenPairs[fromChainID][address(token)];
         if (tokenPair.paused) return (Const.FinalizeStatus.TokenPaused, false);
 
         // Skip validation if this is a retry - validation was already completed in the initial attempt
         if (!retry) {
-            status = bridgeVerifier.validateBridgeTokenValue(IERC20(token), value);
+            status = bridgeVerifier.validateBridgeTokenValue(token, value);
             if (status != Const.FinalizeStatus.Success) delay = true;
         } else {
             status = Const.FinalizeStatus.Success;

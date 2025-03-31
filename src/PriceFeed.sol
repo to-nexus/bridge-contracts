@@ -46,7 +46,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     /// @dev Mapping from chain ID to native token price for that chain
     mapping(uint => NativeTokenPriceData) private _nativeTokenPrice;
 
-    uint[44] private __gap;
+    uint[42] private __gap;
 
     /**
      * @notice Contract constructor
@@ -59,15 +59,15 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
     /**
      * @notice Initializes the price feed contract
      * @param owner Admin address with price update privileges
-     * @param _dollarDecimals Precision for price representation
+     * @param dollarDecimals_ Precision for price representation
      */
-    function initialize(address owner, uint8 _dollarDecimals) public initializer {
+    function initialize(address owner, uint8 dollarDecimals_) public initializer {
         require(owner != address(0), PriceFeedCanNotZeroAddress(owner));
 
         __UUPSUpgradeable_init();
         __RoleManager_init(owner);
 
-        dollarDecimals = _dollarDecimals;
+        dollarDecimals = dollarDecimals_;
         updatedAt = block.timestamp;
     }
 
