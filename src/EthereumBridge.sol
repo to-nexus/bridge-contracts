@@ -50,7 +50,7 @@ contract EthereumBridge is BaseBridge {
 
         // Register CROSS token as a token pair
         // This pairs the CROSS ERC20 token on this chain with the Native CROSS token on Cross chain
-        _registerToken(crossChainID, true, true, cross, Const.NATIVE_TOKEN);
+        _registerToken(crossChainID, true, cross, Const.NATIVE_TOKEN);
 
         // Deposit the initial supply of CROSS tokens
         if (crossInitialSupply > 0) _depositToken(crossChainID, cross, crossInitialSupply);

@@ -4,6 +4,9 @@ pragma solidity 0.8.28;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -34,6 +37,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     error BridgeVerifierDoesNotHaveRole(address account, bytes32 role);
     error BridgeVerifierMissmatchLength();
     error BridgeVerifierInvalidTimeWindow();
+    error BridgeVerifierInvalidSignature();
+    error BridgeVerifierInvalidPermit();
+    error BaseBridgeDeadlineExpired();
 
     event FinalizeBridgeGasSet(uint finalizeBridgeGas);
     event GasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
@@ -45,8 +51,15 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     event PeriodTotalValueThresholdSet(uint periodTotalValueThreshold);
     event MinimumTokenValueSet(uint minimumTokenValue);
 
+    bytes32 private constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+
     /// @dev Base denominator for fee calculations (10000 = 100%)
     uint private constant DENOMINATOR = 10000;
+
+    /// @dev Mask for extracting the score value from the packed movement record
+    /// @notice The upper 64 bits of the packed movement record store the timestamp
+    /// @notice The lower 192 bits store the score value
     uint private constant TOKEN_SCORE_MASK = type(uint).max >> 64;
 
     /// @dev Price feed contract for token price information
@@ -208,6 +221,44 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         }
 
         return status;
+    }
+
+    /**
+     * @notice Safely permits a token transfer
+     * @dev Handles permit signature verification and allowance updates
+     * @param token Token to permit
+     * @param owner Token owner
+     * @param spender Spender address
+     * @param value Amount to permit
+     * @param deadline Permit deadline
+     * @param v Signature v value
+     * @param r Signature r value
+     * @param s Signature s value
+     */
+    function safePermit(
+        IERC20 token,
+        address owner,
+        address spender,
+        uint value,
+        uint deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        uint beforeAllowance = token.allowance(owner, spender);
+        IERC20Permit(address(token)).permit(owner, spender, value, deadline, v, r, s);
+        uint afterAllowance = token.allowance(owner, spender);
+        require(afterAllowance == value, BridgeVerifierInvalidPermit());
+
+        if (afterAllowance == beforeAllowance) {
+            require(block.timestamp <= deadline, BaseBridgeDeadlineExpired());
+            uint nonce = IERC20Permit(address(token)).nonces(owner);
+            bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, value, nonce, deadline));
+            bytes32 digest =
+                MessageHashUtils.toTypedDataHash(IERC20Permit(address(token)).DOMAIN_SEPARATOR(), structHash);
+            address signer = ECDSA.recover(digest, v, r, s);
+            require(signer == owner, BridgeVerifierInvalidSignature());
+        }
     }
 
     /**
