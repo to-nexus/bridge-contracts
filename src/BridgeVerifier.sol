@@ -45,8 +45,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     event PeriodTotalValueThresholdSet(uint periodTotalValueThreshold);
     event MinimumTokenValueSet(uint minimumTokenValue);
 
-    /// @dev Base denominator for fee calculations (1000 = 100%)
-    uint private constant DENOMINATOR = 1000;
+    /// @dev Base denominator for fee calculations (10000 = 100%)
+    uint private constant DENOMINATOR = 10000;
     uint private constant TOKEN_SCORE_MASK = type(uint).max >> 64;
 
     /// @dev Price feed contract for token price information
@@ -368,7 +368,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
 
     /**
      * @notice Returns the fee denominator
-     * @dev Used for fee calculations (1000 = 100%)
+     * @dev Used for fee calculations (10000 = 100%)
      * @return Denominator constant value
      */
     function denominator() external pure returns (uint) {
