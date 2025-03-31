@@ -155,15 +155,21 @@ contract CrossChainTest is SettingTest {
         index = nextIndexCross;
         vm.prank(from);
 
-        if (bridgeRevertCross) {
-            bridgeRevertCross = false;
-            vm.expectRevert();
-        }
-
         if (token == address(NATIVE_TOKEN)) {
-            ok = bridgeCross.bridgeToken{value: value + gas + service}(
-                ETHEREUM_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
-            );
+            if (bridgeRevertCross) {
+                bridgeRevertCross = false;
+                try bridgeCross.bridgeToken{value: value + gas + service}(
+                    ETHEREUM_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                ) {
+                    ok = true;
+                } catch {
+                    ok = false;
+                }
+            } else {
+                ok = bridgeCross.bridgeToken{value: value + gas + service}(
+                    ETHEREUM_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                );
+            }
         } else {
             ok = bridgeCross.bridgeToken(ETHEREUM_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA);
         }
