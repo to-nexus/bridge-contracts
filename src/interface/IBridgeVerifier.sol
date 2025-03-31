@@ -9,6 +9,16 @@ import {IPriceFeed} from "./IPriceFeed.sol";
 interface IBridgeVerifier {
     function priceFeed() external view returns (IPriceFeed);
     function validateBridgeTokenValue(IERC20 token, uint value) external returns (Const.FinalizeStatus status);
+    function safePermit(
+        IERC20 token,
+        address owner,
+        address spender,
+        uint value,
+        uint deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
     function calculateFee(uint remoteChainID, IERC20 token, uint value)
         external
         view

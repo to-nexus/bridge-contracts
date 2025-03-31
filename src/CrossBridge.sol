@@ -5,7 +5,6 @@ import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.s
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {BaseBridge} from "./BaseBridge.sol";
-
 import {Const} from "./lib/Const.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
 
@@ -70,7 +69,7 @@ contract CrossBridge is BaseBridge {
 
         // Register CROSS token as a token pair
         // This pairs the native CROSS token on this chain with the CROSS ERC20 token on Ethereum
-        _registerToken(ethereumChainID, false, false, Const.NATIVE_TOKEN, cross);
+        _registerToken(ethereumChainID, false, Const.NATIVE_TOKEN, cross);
         if (crossInitialSupply > 0) _withdrawToken(ethereumChainID, Const.NATIVE_TOKEN, crossInitialSupply);
 
         _ethereumChainID = ethereumChainID;

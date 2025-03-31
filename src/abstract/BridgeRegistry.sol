@@ -69,11 +69,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param isOrigin Whether this is the origin chain for the token
      */
     event TokenPairRegistered(
-        uint indexed remoteChainID,
-        address indexed localToken,
-        address indexed remoteToken,
-        bool isOrigin,
-        bool supportPermit
+        uint indexed remoteChainID, address indexed localToken, address indexed remoteToken, bool isOrigin
     );
 
     /**
@@ -134,11 +130,8 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /// @dev Mapping from chain ID and index to pending operation data
     mapping(uint => mapping(uint => PendingData)) internal _pendingData;
 
-    /// @dev Stores whether a token address doesn't support permit functionality (true = permit not supported)
-    mapping(address => bool) internal _notSupportPermit;
-
     /// @dev Storage gap for future upgradessetCrossMintableERC20Code
-    uint[40] private __gap;
+    uint[41] private __gap;
 
     /**
      * @notice Initializes the BridgeRegistry
@@ -179,7 +172,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     {
         require(address(crossMintableERC20Code) != address(0), RegistryFactoryNotSet());
         tokenAddress = crossMintableERC20Code.createCrossMintableERC20(remoteChainID, remoteToken, symbol, decimals);
-        registerToken(remoteChainID, false, true, tokenAddress, remoteToken);
+        registerToken(remoteChainID, false, tokenAddress, remoteToken);
     }
 
     /**
@@ -192,14 +185,11 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param localToken Local token address
      * @param remoteToken Remote token address
      */
-    function registerToken(
-        uint remoteChainID,
-        bool isOrigin,
-        bool supportPermit,
-        address localToken,
-        address remoteToken
-    ) public onlyRole(Const.EDITOR_ROLE) {
-        _registerToken(remoteChainID, isOrigin, supportPermit, localToken, remoteToken);
+    function registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken)
+        public
+        onlyRole(Const.EDITOR_ROLE)
+    {
+        _registerToken(remoteChainID, isOrigin, localToken, remoteToken);
     }
 
     /**
@@ -437,13 +427,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param localToken Local token address
      * @param remoteToken Remote token address
      */
-    function _registerToken(
-        uint remoteChainID,
-        bool isOrigin,
-        bool supportPermit,
-        address localToken,
-        address remoteToken
-    ) internal {
+    function _registerToken(uint remoteChainID, bool isOrigin, address localToken, address remoteToken) internal {
         require(remoteChainID != 0, RegistryCanNotZeroValue());
         require(localToken != address(0), RegistryCanNotZeroValue());
         require(remoteToken != address(0), RegistryCanNotZeroValue());
@@ -465,8 +449,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
             minted: 0
         });
 
-        if (!supportPermit) _notSupportPermit[localToken] = true;
-        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, isOrigin, supportPermit);
+        emit TokenPairRegistered(remoteChainID, localToken, remoteToken, isOrigin);
     }
 
     /**

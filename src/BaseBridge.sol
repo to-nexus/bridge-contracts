@@ -5,11 +5,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {BridgeRegistry} from "./abstract/BridgeRegistry.sol";
@@ -46,12 +42,10 @@ contract BaseBridge is
     error BaseBridgeInvalidBalance();
     error BaseBridgeInvalidAmount();
     error BaseBridgeInvalidPermitToken(address expected, address actual);
-    error BaseBridgeInvalidPermitAccount();
-    error BaseBridgeDeadlineExpired(uint deadline);
+    error BaseBridgeFailedPermitBatch(uint index, bytes reason);
     error BaseBridgeCanNotZeroAddress();
     error BaseBridgeCanNotZeroValue();
     error BaseBridgeVerifierNotSet();
-    error BaseBridgeNotSupportPermit();
     error BaseBridgeNotExistIndex(uint index);
     error BaseBridgeNotExistToken(address token);
     error BaseBridgeNotExpired(uint delayExpiration, uint timestamp);
@@ -273,7 +267,6 @@ contract BaseBridge is
         bytes calldata extraData,
         PermitArguments calldata permitArgs
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
-        require(!_notSupportPermit[address(fromToken)], BaseBridgeNotSupportPermit());
         require(
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
@@ -286,7 +279,8 @@ contract BaseBridge is
             BaseBridgeInvalidValue(value + networkFee + exFee, permitArgs.value)
         );
 
-        IERC20Permit(address(fromToken)).permit(
+        bridgeVerifier.safePermit(
+            fromToken,
             permitArgs.account,
             address(this),
             permitArgs.value,
@@ -322,7 +316,7 @@ contract BaseBridge is
     {
         require(args.length == permitArgs.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < args.length; ++i) {
-            permitBridgeToken(
+            try this.permitBridgeToken(
                 args[i].toChainID,
                 args[i].fromToken,
                 args[i].to,
@@ -331,7 +325,9 @@ contract BaseBridge is
                 args[i].exFee,
                 args[i].extraData,
                 permitArgs[i]
-            );
+            ) {} catch (bytes memory reason) {
+                revert BaseBridgeFailedPermitBatch(i, reason);
+            }
         }
     }
 
@@ -469,8 +465,8 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Manually processes a pending operation regardless of pause or safety deadline with a custom recipient
-     * @dev Verifier-only function to force process a pending operation
+     * @notice Manually release a pending operation regardless of pause or safety deadline with a custom recipient
+     * @dev Verifier-only function to force release a pending operation
      * - Bypasses token pause and safety deadline checks
      * - Verifies pending operation exists
      * - Allows overriding the original recipient address

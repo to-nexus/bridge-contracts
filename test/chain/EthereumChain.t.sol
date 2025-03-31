@@ -97,9 +97,9 @@ contract EthereumChainTest is CrossChainTest {
 
         // add token to bridge (ethereum chain)
         {
-            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, true, address(NATIVE_TOKEN), address(weth));
+            bridgeEthereum.registerToken(CROSS_CHAIN_ID, true, address(NATIVE_TOKEN), address(weth));
             bridgeEthereum.registerToken(
-                CROSS_CHAIN_ID, true, true, address(testTokenEthereum), address(testTokenCross)
+                CROSS_CHAIN_ID, true, address(testTokenEthereum), address(testTokenCross)
             );
 
             // Mint tokens excluding the pre-allocated supply amount (CROSS_FOUNDATION_INITIAL_SUPPLY)
