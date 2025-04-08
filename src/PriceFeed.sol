@@ -98,7 +98,7 @@ contract PriceFeed is UUPSUpgradeable, RoleManager, IPriceFeed {
      * @return lastUpdate Last price update time
      */
     function getPrice(address tokenA, address tokenB) external view returns (uint price, uint lastUpdate) {
-        if (tokenA == tokenB) return (1, block.number);
+        if (tokenA == tokenB) return (10 ** CalcAmountLib.decimals(tokenA), updatedAt);
 
         address[] memory tokens = new address[](2);
         tokens[0] = tokenA;
