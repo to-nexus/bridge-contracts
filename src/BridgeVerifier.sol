@@ -96,7 +96,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     /// @dev History of token movements for volume tracking
     mapping(IERC20 => DoubleEndedQueue.Bytes32Deque) private _tokenMovementHistory;
 
-    mapping(bytes32 role => EnumerableSet.AddressSet) _roles;
+    mapping(bytes32 role => EnumerableSet.AddressSet) private _roleMembers;
 
     /**
      * @notice Initializes the BridgeVerifier contract
@@ -612,7 +612,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @return members Array of addresses that have the specified role
      */
     function getRoleMembers(bytes32 role) external view returns (address[] memory) {
-        return _roles[role].values();
+        return _roleMembers[role].values();
     }
 
     /**
@@ -645,11 +645,11 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
 
     function _grantRole(bytes32 role, address account) internal override returns (bool ok) {
         ok = super._grantRole(role, account);
-        if (ok) require(_roles[role].add(account), BridgeVerifierAlreadyHasRole(account, role));
+        if (ok) require(_roleMembers[role].add(account), BridgeVerifierAlreadyHasRole(account, role));
     }
 
     function _revokeRole(bytes32 role, address account) internal override returns (bool ok) {
         ok = super._revokeRole(role, account);
-        if (ok) require(_roles[role].remove(account), BridgeVerifierDoesNotHaveRole(account, role));
+        if (ok) require(_roleMembers[role].remove(account), BridgeVerifierDoesNotHaveRole(account, role));
     }
 }
