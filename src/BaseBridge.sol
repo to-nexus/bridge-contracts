@@ -698,14 +698,14 @@ contract BaseBridge is
      * - Validates return value if applicable
      * @param recipient Target address
      * @param amount Native token amount to send
-     * @param data Call data
+     * @param data Call data (ERC20 token transfer or ERC20 token minting)
      * @return success Success status
      */
     function _safeCall(address payable recipient, uint amount, bytes memory data) private returns (bool success) {
         require(address(this).balance >= amount, BaseBridgeInvalidBalance());
 
         bytes memory returndata;
-        (success, returndata) = recipient.call{value: amount}(data);
+        (success, returndata) = recipient.call{value: amount, gas: 100000}(data);
         if (!success) return (false);
 
         if (amount == 0) {
