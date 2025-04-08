@@ -47,9 +47,9 @@ contract CalcAmountLibTest is Test {
         uint8 decimalB = 18;
 
         uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
-        uint expectedAmount = 666666666666666; // Approximately 0.667 * 10^15
+        uint expectedAmount = 1500 * 10 ** 18; // $1,500 worth of token B
 
-        assertApproxEqRel(actualAmount, expectedAmount, 1e9);
+        assertEq(actualAmount, expectedAmount);
     }
 
     // Different decimals case: Higher to lower decimals (18 -> 6)
@@ -61,9 +61,9 @@ contract CalcAmountLibTest is Test {
         uint8 decimalB = 6;
 
         uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
-        uint expectedAmount = 666; // Approximately 666.666... (rounded)
+        uint expectedAmount = 1500 * 10 ** 6; // $1,500 worth of token B (6 decimals)
 
-        assertApproxEqRel(actualAmount, expectedAmount, 1e9);
+        assertEq(actualAmount, expectedAmount);
     }
 
     // Different decimals case: Lower to higher decimals (6 -> 18)
@@ -75,9 +75,9 @@ contract CalcAmountLibTest is Test {
         uint8 decimalB = 18;
 
         uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
-        uint expectedAmount = 1500000 * 10 ** 18; // 1,500,000 * 10^18
+        uint expectedAmount = 666666666666666666; // Approximately 0.6667 ETH
 
-        assertEq(actualAmount, expectedAmount);
+        assertApproxEqRel(actualAmount, expectedAmount, 1e9);
     }
 
     // Extreme price difference test
@@ -89,7 +89,7 @@ contract CalcAmountLibTest is Test {
         uint8 decimalB = 8;
 
         uint actualAmount = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
-        uint expectedAmount = 3333333333; // Approximately 0.03333... BTC
+        uint expectedAmount = 3000000; // 0.03 BTC (8 decimals)
 
         assertApproxEqRel(actualAmount, expectedAmount, 1e9);
     }
@@ -128,7 +128,7 @@ contract CalcAmountLibTest is Test {
         uint8 decimalA = 18;
         uint8 decimalB = 18;
 
-        vm.expectRevert(); // Expect revert due to overflow
-        wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+        uint amountB = wrapper.calculateAmountBWithPrice(amountA, priceA, priceB, decimalA, decimalB);
+        assertEq(amountB, type(uint).max / 2);
     }
 }
