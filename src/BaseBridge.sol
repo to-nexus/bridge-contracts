@@ -460,7 +460,7 @@ contract BaseBridge is
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
      */
-    function manualReleasePending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) nonReentrant {
+    function manualReleasePending(uint remoteChainID, uint index) external onlyRole(Const.VERIFIER_ROLE) {
         manualReleasePendingWithRecipient(remoteChainID, index, address(0));
     }
 
