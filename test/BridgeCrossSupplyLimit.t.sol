@@ -24,7 +24,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
     }
 
     // Test setting cross supply limit
-    function testSetCrossSupplyLimit() public {
+    function test_set_cross_supply_limit() public {
         vm.selectFork(crossForkID);
 
         // Set cross supply limit as admin
@@ -40,7 +40,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
     }
 
     // Test cross supply limit exceeded
-    function testCrossSupplyLimitExceeded() public {
+    function test_cross_supply_limit_exceeded() public {
         // Setup: First set a low cross supply limit
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
@@ -88,7 +88,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
     }
 
     // Test using whole supply limit
-    function testUsingFullCrossSupplyLimit() public {
+    function test_using_full_cross_supply_limit() public {
         // Setup: Set a specific cross supply limit
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
@@ -117,7 +117,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
     }
 
     // Test updating cross supply limit
-    function testUpdateCrossSupplyLimit() public {
+    function test_update_cross_supply_limit() public {
         // Setup: First set a low cross supply limit
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
