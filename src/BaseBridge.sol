@@ -3,7 +3,8 @@ pragma solidity 0.8.28;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardTransientUpgradeable} from
+    "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -28,7 +29,7 @@ import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
 contract BaseBridge is
     UUPSUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
+    ReentrancyGuardTransientUpgradeable,
     BridgeRegistry,
     ValidatorManager,
     IBaseBridge
@@ -198,7 +199,7 @@ contract BaseBridge is
 
         __UUPSUpgradeable_init();
         __Pausable_init();
-        __ReentrancyGuard_init();
+        __ReentrancyGuardTransient_init();
         __RoleManager_init(owner);
         __Validator_init(threshold_);
         __BridgeRegistry_init();
