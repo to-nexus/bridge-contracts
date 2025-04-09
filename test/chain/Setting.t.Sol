@@ -31,24 +31,24 @@ contract SettingTest is Test {
     uint internal constant VALIDATOR_PK3 = uint(bytes32("validator3"));
     uint internal constant VALIDATOR_PK4 = uint(bytes32("validator4"));
     uint internal constant VALIDATOR_PK5 = uint(bytes32("validator5"));
-    uint internal constant ETHEREUM_CHAIN_ID = 1; // test data
+    uint internal constant BSC_CHAIN_ID = 57; // test data
     uint internal constant CROSS_CHAIN_ID = 612055; // test data
     IERC20 internal constant NATIVE_TOKEN = IERC20(address(1));
     uint internal constant INITIAL_SUPPLY = 1_000_000_000 ether;
-    uint public constant CROSS_FOUNDATION_INITIAL_SUPPLY = 10_000_000 ether;
+    uint public constant CROSS_FOUNDATION_INITIAL_SUPPLY = 50_000_000 ether;
     uint8 internal constant DOLLAR_DECIMALS = 6;
 
-    uint internal ethereumForkID;
+    uint internal bscForkID;
     uint internal crossForkID;
     uint8 internal threshold;
 
     IERC20 internal cross;
     IERC20 internal weth;
 
-    IERC20 internal testTokenEthereum; // TT origin
+    IERC20 internal testTokenBSC; // TT origin
     IERC20 internal testTokenCross; // TT wrapped
 
-    IERC20 internal testTokenEthereum2; // TT2 origin
+    IERC20 internal testTokenBSC2; // TT2 origin
     IERC20 internal testTokenCross2; // TT2 wrapped
 
     address internal OWNER;
@@ -67,7 +67,7 @@ contract SettingTest is Test {
     bytes NULLDATA;
 
     function setUp() public virtual {
-        ethereumForkID = vm.createFork("http://localhost:8545"); // ethereum test chain
+        bscForkID = vm.createFork("http://localhost:8545"); // bsc test chain
         crossForkID = vm.createFork("http://localhost:8545"); // cross test chain
 
         threshold = uint8(3);
@@ -111,10 +111,10 @@ contract SettingTest is Test {
         vm.label(VALIDATOR4, "validator4");
         vm.label(VALIDATOR5, "validator5");
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.startPrank(OWNER);
         cross = IERC20(new TestToken("Cross", "CROSS", 18));
-        testTokenEthereum = IERC20(new TestToken("Test Token", "TT", 18));
+        testTokenBSC = IERC20(new TestToken("Test Token", "TT", 18));
         vm.stopPrank();
     }
 

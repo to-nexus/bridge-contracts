@@ -34,9 +34,9 @@ contract CrossBridge is BaseBridge {
     /// @notice bridge exploits, as most of the token supply is initially locked in the bridge contract.
     uint public crossSupplyLimit;
 
-    /// @dev Ethereum chain ID (e.g., 1 for mainnet, 11155111 for Sepolia testnet, or other chain IDs)
+    /// @dev BSC chain ID (e.g., 56 for mainnet, 97 for Sepolia testnet, or other chain IDs)
     /// @dev This is the chain where the Cross ERC20 Token is deployed
-    uint private _ethereumChainID;
+    uint private _bscChainID;
 
     /// @dev Storage gap for future upgrades
     uint[48] private __gap;
@@ -47,36 +47,37 @@ contract CrossBridge is BaseBridge {
      * - Calls the base initialization in BaseBridge
      * - Records the initial balance for CROSS token supply tracking
      * - Sets the initial CROSS token supply limit to 0
-     * - Pairs native CROSS token with the CROSS ERC20 token on Ethereum chain
+     * - Pairs native CROSS token with the CROSS ERC20 token on BSC chain
      * @param owner Address that will receive admin role
      * @param dev_ Address of the developer account for receiving fees
      * @param threshold_ Minimum number of validators required for validation
-     * @param cross Address of the CROSS ERC20 token on Ethereum chain
+     * @param bscChainID The chain ID of the BSC Network
+     * @param cross Address of the CROSS ERC20 token on BSC Network
      * @param crossInitialSupply Pre-minted supply of CROSS tokens for the CROSS Foundation
      */
     function initializeCrossBridge(
         address owner,
         address payable dev_,
         uint8 threshold_,
-        uint ethereumChainID,
+        uint bscChainID,
         address cross,
         uint crossInitialSupply
     ) external initializer {
-        require(ethereumChainID != 0, CrossBridgeCanNotZero());
+        require(bscChainID != 0, CrossBridgeCanNotZero());
         require(cross != address(0), CrossBridgeCanNotZeroAddress());
 
         __BaseBridge_init(owner, dev_, threshold_);
 
         // Register CROSS token as a token pair
-        // This pairs the native CROSS token on this chain with the CROSS ERC20 token on Ethereum
-        _registerToken(ethereumChainID, false, Const.NATIVE_TOKEN, cross);
-        if (crossInitialSupply > 0) _withdrawToken(ethereumChainID, Const.NATIVE_TOKEN, crossInitialSupply);
+        // This pairs the native CROSS token on this chain with the CROSS ERC20 token on BSC Network
+        _registerToken(bscChainID, false, Const.NATIVE_TOKEN, cross);
+        if (crossInitialSupply > 0) _withdrawToken(bscChainID, Const.NATIVE_TOKEN, crossInitialSupply);
 
-        _ethereumChainID = ethereumChainID;
+        _bscChainID = bscChainID;
     }
 
     function crossSupply() public view returns (uint) {
-        return _tokenPairs[_ethereumChainID][Const.NATIVE_TOKEN].minted;
+        return _tokenPairs[_bscChainID][Const.NATIVE_TOKEN].minted;
     }
 
     /**

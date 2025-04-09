@@ -272,6 +272,11 @@ contract BaseBridge is
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
         );
+
+        // The permitBridgeToken function doesn't restrict msg.sender, allowing anyone to initiate the bridge operation.
+        // However, it requires that 'to' matches permitArgs.account to ensure that the recipient on the target chain
+        // is the same as the account that signed the permit. This restriction provides protection against front-running
+        // by enforcing that only the intended recipient can receive the bridged tokens.
         require(to == permitArgs.account, BaseBridgeMismatchPermitAccount());
 
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);

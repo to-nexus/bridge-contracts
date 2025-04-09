@@ -19,11 +19,11 @@ contract BaseBridgeTest is BridgeTest {
     function test_depositWithdraw() public {
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         deposit(false, amount, 5);
         withdraw(false, amount, 5);
@@ -32,7 +32,7 @@ contract BaseBridgeTest is BridgeTest {
     function test_depositWithdraw_eth() public {
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.deal(USER, amount);
         vm.selectFork(crossForkID);
         vm.prank(USER);
@@ -45,11 +45,11 @@ contract BaseBridgeTest is BridgeTest {
     function test_depositWithdrawToken() public {
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        testTokenEthereum.transfer(USER, amount);
+        testTokenBSC.transfer(USER, amount);
         vm.prank(USER);
-        testTokenEthereum.approve(address(bridgeEthereum), amount);
+        testTokenBSC.approve(address(bridgeBSC), amount);
         depositToken(false, amount, 5);
 
         vm.selectFork(crossForkID);
@@ -59,15 +59,15 @@ contract BaseBridgeTest is BridgeTest {
     }
 
     function test_fuzz_depositWithdraw(uint amount) public {
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.assume(amount < (cross.balanceOf(OWNER) / 1e18) && amount != 0);
         amount = amount * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         deposit(false, amount, 5);
         withdraw(false, amount, 5);
@@ -82,7 +82,7 @@ contract BaseBridgeTest is BridgeTest {
         vm.assume(amount > minimum && amount != 0);
         vm.assume(amount < 1e24);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         uint dealValue = amount - USER.balance;
         vm.deal(USER, dealValue);
         vm.selectFork(crossForkID);
@@ -94,15 +94,15 @@ contract BaseBridgeTest is BridgeTest {
     }
 
     function test_fuzz_depositWithdrawToken(uint amount) public {
-        vm.selectFork(ethereumForkID);
-        vm.assume(amount < (testTokenEthereum.balanceOf(OWNER) / 1e18) && amount != 0);
+        vm.selectFork(bscForkID);
+        vm.assume(amount < (testTokenBSC.balanceOf(OWNER) / 1e18) && amount != 0);
         amount = amount * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        testTokenEthereum.transfer(USER, amount);
+        testTokenBSC.transfer(USER, amount);
         vm.prank(USER);
-        testTokenEthereum.approve(address(bridgeEthereum), amount);
+        testTokenBSC.approve(address(bridgeBSC), amount);
         depositToken(false, amount, 5);
 
         vm.selectFork(crossForkID);
@@ -115,9 +115,9 @@ contract BaseBridgeTest is BridgeTest {
         uint amount = 1000 * 1e18;
 
         vm.prank(OWNER);
-        testTokenEthereum.transfer(USER, amount);
+        testTokenBSC.transfer(USER, amount);
         vm.prank(USER);
-        testTokenEthereum.approve(address(bridgeEthereum), amount);
+        testTokenBSC.approve(address(bridgeBSC), amount);
 
         depositToken(true, amount, 5); // should finalize revert
 
@@ -126,9 +126,9 @@ contract BaseBridgeTest is BridgeTest {
 
         {
             // token stop
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             vm.prank(OWNER);
-            TestToken(address(testTokenEthereum)).stop();
+            TestToken(address(testTokenBSC)).stop();
 
             (uint value, uint gas, uint service) = crossCalcFee(IERC20(address(testTokenCross)), amount);
             uint total = value + gas + service;
@@ -136,31 +136,31 @@ contract BaseBridgeTest is BridgeTest {
             (uint index, bool ok) = crossBridge(address(testTokenCross), USER, USER, value, gas, service);
             assertTrue(ok);
             crossIncrementIndex();
-            vm.selectFork(ethereumForkID);
-            uint before = testTokenEthereum.balanceOf(USER);
-            ethereumFinalize(index, address(testTokenEthereum), USER, value, 5);
-            assertEq(before, testTokenEthereum.balanceOf(USER));
+            vm.selectFork(bscForkID);
+            uint before = testTokenBSC.balanceOf(USER);
+            bscFinalize(index, address(testTokenBSC), USER, value, 5);
+            assertEq(before, testTokenBSC.balanceOf(USER));
 
-            vm.selectFork(ethereumForkID);
-            IBaseBridge.PendingData memory pendingArgs = bridgeEthereum.getPendingArguments(CROSS_CHAIN_ID, index);
+            vm.selectFork(bscForkID);
+            IBaseBridge.PendingData memory pendingArgs = bridgeBSC.getPendingArguments(CROSS_CHAIN_ID, index);
             assertEq(pendingArgs.delayExpiration, 0);
             assertEq(pendingArgs.args.index, index);
-            assertEq(address(pendingArgs.args.toToken), address(testTokenEthereum));
+            assertEq(address(pendingArgs.args.toToken), address(testTokenBSC));
             assertEq(pendingArgs.args.to, USER);
             assertEq(pendingArgs.args.value, value);
             assertTrue(Const.FinalizeStatus.Success != pendingArgs.status);
 
             // token start
             vm.prank(OWNER);
-            vm.selectFork(ethereumForkID);
-            TestToken(address(testTokenEthereum)).start();
+            vm.selectFork(bscForkID);
+            TestToken(address(testTokenBSC)).start();
 
-            before = testTokenEthereum.balanceOf(USER);
+            before = testTokenBSC.balanceOf(USER);
 
             vm.prank(VALIDATOR1);
-            bridgeEthereum.releasePending(CROSS_CHAIN_ID, index);
+            bridgeBSC.releasePending(CROSS_CHAIN_ID, index);
 
-            assertEq(before + value, testTokenEthereum.balanceOf(USER));
+            assertEq(before + value, testTokenBSC.balanceOf(USER));
         }
     }
 
@@ -168,9 +168,9 @@ contract BaseBridgeTest is BridgeTest {
         uint amount = 1000 * 1e18;
 
         vm.prank(OWNER);
-        testTokenEthereum.transfer(USER, amount);
+        testTokenBSC.transfer(USER, amount);
         vm.prank(USER);
-        testTokenEthereum.approve(address(bridgeEthereum), amount);
+        testTokenBSC.approve(address(bridgeBSC), amount);
 
         depositToken(true, amount, 5); // should finalize revert
 
@@ -179,9 +179,9 @@ contract BaseBridgeTest is BridgeTest {
 
         {
             // token set revert transfer
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             vm.prank(OWNER);
-            TestToken(address(testTokenEthereum)).setRevertTransfer(true);
+            TestToken(address(testTokenBSC)).setRevertTransfer(true);
 
             (uint value, uint gas, uint service) = crossCalcFee(IERC20(address(testTokenCross)), amount);
             uint total = value + gas + service;
@@ -189,45 +189,45 @@ contract BaseBridgeTest is BridgeTest {
             (uint index, bool ok) = crossBridge(address(testTokenCross), USER, USER, value, gas, service);
             assertTrue(ok);
             crossIncrementIndex();
-            vm.selectFork(ethereumForkID);
-            uint before = testTokenEthereum.balanceOf(USER);
-            ethereumFinalize(index, address(testTokenEthereum), USER, value, 5);
-            assertEq(before, testTokenEthereum.balanceOf(USER));
+            vm.selectFork(bscForkID);
+            uint before = testTokenBSC.balanceOf(USER);
+            bscFinalize(index, address(testTokenBSC), USER, value, 5);
+            assertEq(before, testTokenBSC.balanceOf(USER));
 
-            vm.selectFork(ethereumForkID);
-            IBaseBridge.PendingData memory pendingArgs = bridgeEthereum.getPendingArguments(CROSS_CHAIN_ID, index);
+            vm.selectFork(bscForkID);
+            IBaseBridge.PendingData memory pendingArgs = bridgeBSC.getPendingArguments(CROSS_CHAIN_ID, index);
             assertEq(pendingArgs.delayExpiration, 0);
             assertEq(pendingArgs.args.index, index);
-            assertEq(address(pendingArgs.args.toToken), address(testTokenEthereum));
+            assertEq(address(pendingArgs.args.toToken), address(testTokenBSC));
             assertEq(pendingArgs.args.to, USER);
             assertEq(pendingArgs.args.value, value);
             assertTrue(Const.FinalizeStatus.Success != pendingArgs.status);
 
             // token unset revert transfer
             vm.prank(OWNER);
-            vm.selectFork(ethereumForkID);
-            TestToken(address(testTokenEthereum)).setRevertTransfer(false);
+            vm.selectFork(bscForkID);
+            TestToken(address(testTokenBSC)).setRevertTransfer(false);
 
-            before = testTokenEthereum.balanceOf(USER);
+            before = testTokenBSC.balanceOf(USER);
 
             vm.prank(VALIDATOR1);
-            bridgeEthereum.releasePending(CROSS_CHAIN_ID, index);
+            bridgeBSC.releasePending(CROSS_CHAIN_ID, index);
 
-            assertEq(before + value, testTokenEthereum.balanceOf(USER));
+            assertEq(before + value, testTokenBSC.balanceOf(USER));
         }
     }
 
     function test_permit_deposit() public {
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
-        assertTrue(cross.allowance(USER, address(bridgeEthereum)) == 0);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
 
         // initiate
         uint userTokenBalance = cross.balanceOf(USER);
-        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum));
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeBSC));
         vm.selectFork(crossForkID);
         uint userCoinBalance = USER.balance;
         uint bridgeCoinBalance = address(bridgeCross).balance;
@@ -237,23 +237,23 @@ contract BaseBridgeTest is BridgeTest {
             uint deadline = type(uint).max;
             // make permit sig
 
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             uint nonce = IERC20Permit(address(cross)).nonces(USER);
-            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
             permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
         vm.prank(VALIDATOR1);
-        assertTrue(bridgeEthereum.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
+        assertTrue(bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
 
         crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
-        ethereumIncrementIndex();
+        bscIncrementIndex();
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         assertEq(userTokenBalance - amount, cross.balanceOf(USER));
-        assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeEthereum)));
+        assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeBSC)));
         vm.selectFork(crossForkID);
         assertEq(userCoinBalance + (amount), USER.balance);
         assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
@@ -262,14 +262,14 @@ contract BaseBridgeTest is BridgeTest {
     function test_permit_deposit_before_same_approve() public {
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
-        assertTrue(cross.allowance(USER, address(bridgeEthereum)) == 0);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
 
         // initiate
         uint userTokenBalance = cross.balanceOf(USER);
-        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum));
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeBSC));
         vm.selectFork(crossForkID);
         uint userCoinBalance = USER.balance;
         uint bridgeCoinBalance = address(bridgeCross).balance;
@@ -279,9 +279,9 @@ contract BaseBridgeTest is BridgeTest {
             uint deadline = type(uint).max;
             // make permit sig
 
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             uint nonce = IERC20Permit(address(cross)).nonces(USER);
-            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
             permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
@@ -289,17 +289,17 @@ contract BaseBridgeTest is BridgeTest {
 
         // approve before permit
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         vm.prank(VALIDATOR1);
-        assertTrue(bridgeEthereum.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
+        assertTrue(bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
 
         crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
-        ethereumIncrementIndex();
+        bscIncrementIndex();
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         assertEq(userTokenBalance - amount, cross.balanceOf(USER));
-        assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeEthereum)));
+        assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeBSC)));
         vm.selectFork(crossForkID);
         assertEq(userCoinBalance + (amount), USER.balance);
         assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
@@ -308,14 +308,14 @@ contract BaseBridgeTest is BridgeTest {
     function test_permit_depositToken() public {
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        testTokenEthereum.transfer(USER, amount);
-        assertTrue(testTokenEthereum.allowance(USER, address(bridgeEthereum)) == 0);
+        testTokenBSC.transfer(USER, amount);
+        assertTrue(testTokenBSC.allowance(USER, address(bridgeBSC)) == 0);
 
         // initiate
-        uint userEthereumBalance = testTokenEthereum.balanceOf(USER);
-        uint bridgeEthereumBalance = testTokenEthereum.balanceOf(address(bridgeEthereum));
+        uint userBSCBalance = testTokenBSC.balanceOf(USER);
+        uint bridgeBSCBalance = testTokenBSC.balanceOf(address(bridgeBSC));
         vm.selectFork(crossForkID);
         uint userCrossBalance = testTokenCross.balanceOf(USER);
 
@@ -325,31 +325,26 @@ contract BaseBridgeTest is BridgeTest {
             // make permit sig
             index = nextIndexCross;
 
-            vm.selectFork(ethereumForkID);
-            uint nonce = IERC20Permit(address(testTokenEthereum)).nonces(USER);
-            bytes32 h =
-                keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, type(uint).max));
-            bytes32 hash =
-                MessageHashUtils.toTypedDataHash(IERC20Permit(address(testTokenEthereum)).DOMAIN_SEPARATOR(), h);
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(testTokenBSC)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, type(uint).max));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(testTokenBSC)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
 
-            permitArgs = IBaseBridge.PermitArguments(
-                IERC20Permit(address(testTokenEthereum)), USER, amount, type(uint).max, v, r, s
-            );
+            permitArgs =
+                IBaseBridge.PermitArguments(IERC20Permit(address(testTokenBSC)), USER, amount, type(uint).max, v, r, s);
         }
 
         vm.prank(VALIDATOR1);
-        bool ok = bridgeEthereum.permitBridgeToken(
-            CROSS_CHAIN_ID, testTokenEthereum, USER, amount, 0, 0, NULLDATA, permitArgs
-        );
+        bool ok = bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, testTokenBSC, USER, amount, 0, 0, NULLDATA, permitArgs);
         assertTrue(ok);
 
-        ethereumIncrementIndex();
+        bscIncrementIndex();
         crossFinalize(index, address(testTokenCross), USER, amount, 5);
 
-        vm.selectFork(ethereumForkID);
-        assertEq(userEthereumBalance - amount, testTokenEthereum.balanceOf(USER));
-        assertEq(bridgeEthereumBalance + amount, testTokenEthereum.balanceOf(address(bridgeEthereum)));
+        vm.selectFork(bscForkID);
+        assertEq(userBSCBalance - amount, testTokenBSC.balanceOf(USER));
+        assertEq(bridgeBSCBalance + amount, testTokenBSC.balanceOf(address(bridgeBSC)));
         vm.selectFork(crossForkID);
         assertEq(userCrossBalance + amount, testTokenCross.balanceOf(USER));
     }
@@ -358,14 +353,14 @@ contract BaseBridgeTest is BridgeTest {
         // not allow fail
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
-        assertTrue(cross.allowance(USER, address(bridgeEthereum)) == 0);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
 
         // initiate
         uint userTokenBalance = cross.balanceOf(USER);
-        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum));
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeBSC));
         vm.selectFork(crossForkID);
         uint userCoinBalance = USER.balance;
         uint bridgeCoinBalance = address(bridgeCross).balance;
@@ -375,9 +370,9 @@ contract BaseBridgeTest is BridgeTest {
             uint deadline = type(uint).max;
             // make permit sig
 
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             uint nonce = IERC20Permit(address(cross)).nonces(USER);
-            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
             permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
@@ -388,9 +383,9 @@ contract BaseBridgeTest is BridgeTest {
             uint deadline = type(uint).max;
             // make permit sig
 
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             uint nonce = IERC20Permit(address(cross)).nonces(OWNER);
-            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, OWNER, address(bridgeEthereum), amount, nonce, deadline));
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, OWNER, address(bridgeBSC), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(OWNER_PK, hash);
             permitArgs2 = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), OWNER, amount, deadline, v, r, s);
@@ -413,15 +408,15 @@ contract BaseBridgeTest is BridgeTest {
 
         uint beforeOwnerBalance = cross.balanceOf(OWNER);
         vm.prank(VALIDATOR1);
-        bridgeEthereum.permitBridgeTokenBatch(args, permitArgsArray);
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
         assertTrue(cross.balanceOf(OWNER) < beforeOwnerBalance); // owner balance should change
 
         crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
-        ethereumIncrementIndex();
+        bscIncrementIndex();
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         assertEq(userTokenBalance - amount, cross.balanceOf(USER));
-        assertEq(bridgeTokenBalance + amount * 2, cross.balanceOf(address(bridgeEthereum)));
+        assertEq(bridgeTokenBalance + amount * 2, cross.balanceOf(address(bridgeBSC)));
         vm.selectFork(crossForkID);
         assertEq(userCoinBalance + (amount), USER.balance);
         assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
@@ -431,19 +426,19 @@ contract BaseBridgeTest is BridgeTest {
         // allow fail
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
-        assertTrue(cross.allowance(USER, address(bridgeEthereum)) == 0);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
 
         IBaseBridge.PermitArguments memory permitArgs;
         {
             uint deadline = type(uint).max;
             // make permit sig
 
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             uint nonce = IERC20Permit(address(cross)).nonces(USER);
-            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
             permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
@@ -454,9 +449,9 @@ contract BaseBridgeTest is BridgeTest {
             uint deadline = type(uint).max;
             // make permit sig
 
-            vm.selectFork(ethereumForkID);
+            vm.selectFork(bscForkID);
             uint nonce = IERC20Permit(address(cross)).nonces(OWNER);
-            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, OWNER, address(bridgeEthereum), amount, nonce, deadline));
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, OWNER, address(bridgeBSC), amount, nonce, deadline));
             bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
             (uint8 v, bytes32 r, bytes32 s) = vm.sign(OWNER_PK, hash);
             permitArgs2 =
@@ -481,7 +476,7 @@ contract BaseBridgeTest is BridgeTest {
         uint beforeOwnerBalance = cross.balanceOf(OWNER);
         vm.prank(VALIDATOR1);
         vm.expectRevert();
-        bridgeEthereum.permitBridgeTokenBatch(args, permitArgsArray);
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
         assertEq(cross.balanceOf(OWNER), beforeOwnerBalance); // owner balance should not change
     }
 
@@ -489,36 +484,36 @@ contract BaseBridgeTest is BridgeTest {
         uint amount = 1000 * 1e18;
 
         // ===== Original token test (CROSS token) =====
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
 
         // Check initial deposited value
-        IBridgeRegistry.TokenPair memory pairBefore = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(cross));
+        IBridgeRegistry.TokenPair memory pairBefore = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(cross));
 
         // Setup for deposit
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         // Perform deposit
         deposit(false, amount, 5);
 
         // Check if deposited increased
-        vm.selectFork(ethereumForkID);
-        IBridgeRegistry.TokenPair memory pairAfter = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(cross));
+        vm.selectFork(bscForkID);
+        IBridgeRegistry.TokenPair memory pairAfter = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(cross));
         assertEq(pairAfter.deposited - pairBefore.deposited, amount, "Deposit amount delta check");
 
         // ===== Wrapped token test =====
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        testTokenEthereum.transfer(USER, amount);
+        testTokenBSC.transfer(USER, amount);
         vm.prank(USER);
-        testTokenEthereum.approve(address(bridgeEthereum), amount);
+        testTokenBSC.approve(address(bridgeBSC), amount);
 
         // Check initial minted value
         vm.selectFork(crossForkID);
         IBridgeRegistry.TokenPair memory wrappedPairBefore =
-            bridgeCross.getTokenPair(ETHEREUM_CHAIN_ID, address(testTokenCross));
+            bridgeCross.getTokenPair(BSC_CHAIN_ID, address(testTokenCross));
 
         // Deposit original token (which should mint wrapped token)
         depositToken(false, amount, 5);
@@ -526,7 +521,7 @@ contract BaseBridgeTest is BridgeTest {
         // Check if minted increased
         vm.selectFork(crossForkID);
         IBridgeRegistry.TokenPair memory wrappedPairAfter =
-            bridgeCross.getTokenPair(ETHEREUM_CHAIN_ID, address(testTokenCross));
+            bridgeCross.getTokenPair(BSC_CHAIN_ID, address(testTokenCross));
         assertEq(wrappedPairAfter.minted - wrappedPairBefore.minted, amount, "Mint amount delta check");
     }
 
@@ -534,10 +529,10 @@ contract BaseBridgeTest is BridgeTest {
         uint amount = 1000 * 1e18;
 
         // ETH deposit/withdraw effect on deposited value test
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
 
         // Check initial deposited value for ETH
-        IBridgeRegistry.TokenPair memory pairBefore = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
+        IBridgeRegistry.TokenPair memory pairBefore = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
 
         // Setup for deposit
         vm.deal(USER, amount);
@@ -549,8 +544,8 @@ contract BaseBridgeTest is BridgeTest {
         depositETH(false, amount, 5);
 
         // Check if deposited increased
-        vm.selectFork(ethereumForkID);
-        IBridgeRegistry.TokenPair memory pairAfter = bridgeEthereum.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
+        vm.selectFork(bscForkID);
+        IBridgeRegistry.TokenPair memory pairAfter = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
         assertEq(pairAfter.deposited - pairBefore.deposited, amount, "ETH deposit amount delta check");
     }
 }

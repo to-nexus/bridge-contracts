@@ -121,7 +121,7 @@ contract CalcAmountLibTest is Test {
     }
 
     // Overflow test
-    function test_overflow() public {
+    function test_overflow() public view {
         uint amountA = type(uint).max; // Maximum uint value
         uint priceA = 1 * 10 ** 8;
         uint priceB = 2 * 10 ** 8; // Double price
