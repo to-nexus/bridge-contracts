@@ -23,7 +23,7 @@ contract CrossMintableERC20 is ERC20, ERC20Permit, ICrossMintableERC20 {
     }
 
     modifier onlyBridge() {
-        require(bridge == msg.sender, ERC20NotBridge(msg.sender));
+        require(bridge == _msgSender(), ERC20NotBridge(_msgSender()));
         _;
     }
 

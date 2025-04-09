@@ -14,13 +14,13 @@ contract BridgeGasUsedTest is BridgeTest {
         uint reserve = 100000 * 1e18;
         uint amount = 1000 * 1e18;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, reserve);
         vm.prank(OWNER);
-        cross.approve(address(bridgeEthereum), reserve);
+        cross.approve(address(bridgeBSC), reserve);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), reserve);
+        cross.approve(address(bridgeBSC), reserve);
 
         // cycle1
         if (enableGasUsedLog) console.log("bridge coin cycle1");
@@ -38,10 +38,10 @@ contract BridgeGasUsedTest is BridgeTest {
         withdraw(false, amount, 5);
 
         // owner key bridge
-        (uint index, bool ok) = ethereumBridge(address(cross), OWNER, OWNER, amount, 0, 0);
+        (uint index, bool ok) = bscBridge(address(cross), OWNER, OWNER, amount, 0, 0);
         if (ok) {
             if (enableGasUsedLog) console.log("owner bridge token (transfer)", uint(vm.lastCallGas().gasTotalUsed));
-            ethereumIncrementIndex();
+            bscIncrementIndex();
             ok = crossFinalize(index, address(NATIVE_TOKEN), OWNER, amount, 3);
             if (ok && enableGasUsedLog) console.log("owner finalize coin", uint(vm.lastCallGas().gasTotalUsed));
         }
@@ -54,20 +54,20 @@ contract BridgeGasUsedTest is BridgeTest {
         if (ok) {
             if (enableGasUsedLog) console.log("owner bridge coin", uint(vm.lastCallGas().gasTotalUsed));
             crossIncrementIndex();
-            ok = ethereumFinalize(index, address(cross), OWNER, amount, 3);
+            ok = bscFinalize(index, address(cross), OWNER, amount, 3);
             if (ok && enableGasUsedLog) {
                 console.log("owner finalize token (transfer)", uint(vm.lastCallGas().gasTotalUsed));
             }
         }
 
         // test token
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        testTokenEthereum.transfer(USER, reserve);
+        testTokenBSC.transfer(USER, reserve);
         vm.prank(OWNER);
-        testTokenEthereum.approve(address(bridgeEthereum), reserve);
+        testTokenBSC.approve(address(bridgeBSC), reserve);
         vm.prank(USER);
-        testTokenEthereum.approve(address(bridgeEthereum), reserve);
+        testTokenBSC.approve(address(bridgeBSC), reserve);
         vm.selectFork(crossForkID);
         vm.prank(USER);
         testTokenCross.approve(address(bridgeCross), reserve);
@@ -90,9 +90,9 @@ contract BridgeGasUsedTest is BridgeTest {
         withdrawToken(false, amount, 5);
 
         // owner
-        (index, ok) = ethereumBridge(address(testTokenEthereum), OWNER, OWNER, amount, 0, 0);
+        (index, ok) = bscBridge(address(testTokenBSC), OWNER, OWNER, amount, 0, 0);
         if (ok) {
-            ethereumIncrementIndex();
+            bscIncrementIndex();
             crossFinalize(index, address(testTokenCross), OWNER, amount, 3);
             if (ok && enableGasUsedLog) console.log("owner finalize token (mint)", uint(vm.lastCallGas().gasTotalUsed));
         }
@@ -103,7 +103,7 @@ contract BridgeGasUsedTest is BridgeTest {
         if (ok) {
             if (enableGasUsedLog) console.log("owner bridge token (burn)", uint(vm.lastCallGas().gasTotalUsed));
             crossIncrementIndex();
-            ethereumFinalize(index, address(testTokenEthereum), OWNER, amount, 3);
+            bscFinalize(index, address(testTokenBSC), OWNER, amount, 3);
         }
     }
 }

@@ -248,8 +248,10 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         uint beforeAllowance = token.allowance(owner, spender);
         IERC20Permit(address(token)).permit(owner, spender, value, deadline, v, r, s);
         uint afterAllowance = token.allowance(owner, spender);
-        require(afterAllowance == value, BridgeVerifierInvalidPermit());
+        require(afterAllowance == value, BridgeVerifierInvalidPermit()); // token allowance should be same as value
 
+        // if afterAllowance, beforeAllowance and value are the same,
+        // it is not sure that the permit was executed, so we need to verify the signature by ourselves
         if (afterAllowance == beforeAllowance) {
             require(block.timestamp <= deadline, BaseBridgeDeadlineExpired());
 

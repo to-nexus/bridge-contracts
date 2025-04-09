@@ -11,17 +11,17 @@ contract BridgeSetTest is BridgeTest {
     function test_set_validator() public {
         vm.startPrank(OWNER);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         bytes32[] memory roles = new bytes32[](5);
         for (uint i = 0; i < 5; i++) {
             roles[i] = VALIDATOR_ROLE;
         }
-        bridgeEthereum.revokeRoleBatch(roles, VALIDATORS);
-        bool ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
+        bridgeBSC.revokeRoleBatch(roles, VALIDATORS);
+        bool ok = bridgeBSC.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertFalse(ok);
 
-        bridgeEthereum.grantRoleBatch(roles, VALIDATORS);
-        ok = bridgeEthereum.hasRole(VALIDATOR_ROLE, VALIDATOR5);
+        bridgeBSC.grantRoleBatch(roles, VALIDATORS);
+        ok = bridgeBSC.hasRole(VALIDATOR_ROLE, VALIDATOR5);
         vm.assertTrue(ok);
         vm.stopPrank();
 
@@ -39,28 +39,28 @@ contract BridgeSetTest is BridgeTest {
     function test_set_pause() public {
         uint amount = 1000 ether;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         deposit(false, amount, 5);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeEthereum.setPause(true);
+        bridgeBSC.setPause(true);
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         bridgeCross.setPause(true);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
-        bridgeRevertEthereum = true;
+        bridgeRevertBSC = true;
         vm.prank(USER);
         deposit(true, amount, 5);
 
@@ -68,9 +68,9 @@ contract BridgeSetTest is BridgeTest {
         vm.prank(USER);
         withdraw(true, amount, 5);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeEthereum.setPause(false);
+        bridgeBSC.setPause(false);
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         bridgeCross.setPause(false);
@@ -84,28 +84,28 @@ contract BridgeSetTest is BridgeTest {
     function test_set_threshold() public {
         uint amount = 1000;
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         vm.prank(USER);
         deposit(false, amount, 3);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         threshold = 4;
         vm.prank(OWNER);
-        bridgeEthereum.changeThreshold(threshold);
+        bridgeBSC.changeThreshold(threshold);
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         bridgeCross.changeThreshold(threshold);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         finalizeRevertCross = true;
         vm.prank(USER);
@@ -114,19 +114,19 @@ contract BridgeSetTest is BridgeTest {
         vm.selectFork(crossForkID);
         crossFinalize(index, address(NATIVE_TOKEN), USER, amount, 4);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         threshold = 1;
         vm.prank(OWNER);
-        bridgeEthereum.changeThreshold(threshold);
+        bridgeBSC.changeThreshold(threshold);
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         bridgeCross.changeThreshold(threshold);
 
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
         vm.prank(USER);
         deposit(false, amount, 1);
@@ -287,13 +287,13 @@ contract BridgeSetTest is BridgeTest {
     function test_set_dev() public {
         address payable newDev = payable(address(0xbeef));
 
-        // Set dev wallet on Ethereum chain
-        vm.selectFork(ethereumForkID);
+        // Set dev wallet on BSC chain
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeEthereum.setDev(newDev);
+        bridgeBSC.setDev(newDev);
 
         // Verify dev wallet is set correctly
-        address devAddress = bridgeEthereum.dev();
+        address devAddress = bridgeBSC.dev();
         assertEq(devAddress, address(newDev));
 
         // Set dev wallet on Cross chain
@@ -311,39 +311,39 @@ contract BridgeSetTest is BridgeTest {
      * @dev Verifies that entire chains can be paused and unpaused
      */
     function test_set_chain_pause() public {
-        // Pause chain on Ethereum
-        vm.selectFork(ethereumForkID);
+        // Pause chain on BSC
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeEthereum.setChainPause(CROSS_CHAIN_ID, true);
+        bridgeBSC.setChainPause(CROSS_CHAIN_ID, true);
 
         // Try to deposit tokens (should fail due to chain pause)
         uint amount = 1000 ether;
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
-        bridgeRevertEthereum = true;
+        bridgeRevertBSC = true;
         vm.prank(USER);
         deposit(true, amount, 5);
 
         // Unpause chain
         vm.prank(OWNER);
-        bridgeEthereum.setChainPause(CROSS_CHAIN_ID, false);
+        bridgeBSC.setChainPause(CROSS_CHAIN_ID, false);
 
         // Now deposit should succeed
-        bridgeRevertEthereum = false;
+        bridgeRevertBSC = false;
         vm.prank(USER);
         deposit(false, amount, 5);
 
         // Test same operations on Cross chain
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setChainPause(ETHEREUM_CHAIN_ID, true);
+        bridgeCross.setChainPause(BSC_CHAIN_ID, true);
 
         // Unpause chain
         vm.prank(CrossOWNER);
-        bridgeCross.setChainPause(ETHEREUM_CHAIN_ID, false);
+        bridgeCross.setChainPause(BSC_CHAIN_ID, false);
     }
 
     /**
@@ -351,39 +351,39 @@ contract BridgeSetTest is BridgeTest {
      * @dev Verifies that tokens can be paused and unpaused in the bridge
      */
     function test_set_token_pause() public {
-        // Pause token on Ethereum chain
-        vm.selectFork(ethereumForkID);
+        // Pause token on BSC chain
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeEthereum.setTokenPause(CROSS_CHAIN_ID, address(cross), true);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), true);
 
         // Try to deposit tokens (should fail due to pause)
         uint amount = 1000 ether;
         vm.prank(OWNER);
         cross.transfer(USER, amount);
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), amount);
+        cross.approve(address(bridgeBSC), amount);
 
-        bridgeRevertEthereum = true;
+        bridgeRevertBSC = true;
         vm.prank(USER);
         deposit(true, amount, 5);
 
         // Unpause token
         vm.prank(OWNER);
-        bridgeEthereum.setTokenPause(CROSS_CHAIN_ID, address(cross), false);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), false);
 
         // Now deposit should succeed
-        bridgeRevertEthereum = false;
+        bridgeRevertBSC = false;
         vm.prank(USER);
         deposit(false, amount, 5);
 
         // Test same operations on Cross chain
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(ETHEREUM_CHAIN_ID, address(weth), true);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), true);
 
         // Unpause token
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(ETHEREUM_CHAIN_ID, address(weth), false);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), false);
     }
 
     /**
@@ -393,10 +393,10 @@ contract BridgeSetTest is BridgeTest {
     function test_set_verification_delay() public {
         uint newDelay = 2 hours;
 
-        // Set verification delay on Ethereum chain
-        vm.selectFork(ethereumForkID);
+        // Set verification delay on BSC chain
+        vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeEthereum.setVerificationDelay(newDelay);
+        bridgeBSC.setVerificationDelay(newDelay);
 
         // Set verification delay on Cross chain
         vm.selectFork(crossForkID);

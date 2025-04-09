@@ -10,21 +10,21 @@ import {Const} from "./lib/Const.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
 
 /**
- * @title EthereumBridge
- * @notice Ethereum-side bridge contract for cross-chain token transfers
- * @dev Extends BaseBridge to handle Ethereum-specific bridge operations
- * - Handles token transfers between Ethereum and Cross chain
+ * @title BSCBridge
+ * @notice BSC-side bridge contract for cross-chain token transfers
+ * @dev Extends BaseBridge to handle BSC-specific bridge operations
+ * - Handles token transfers between BSC and Cross chain
  * - Manages CROSS token pair registration and initial supply
  */
-contract EthereumBridge is BaseBridge {
-    error EthereumBridgeCanNotZeroAddress();
-    error EthereumBridgeCanNotZero();
+contract BSCBridge is BaseBridge {
+    error BSCBridgeCanNotZeroAddress();
+    error BSCBridgeCanNotZero();
 
     /// @dev Storage gap for future upgrades
     uint[50] private __gap;
 
     /**
-     * @notice Initializes the EthereumBridge contract
+     * @notice Initializes the BSCBridge contract
      * @dev Sets up the contract with initial configuration
      * - Calls the base initialization in BaseBridge
      * - Registers CROSS token as a token pair with Cross chain
@@ -36,7 +36,7 @@ contract EthereumBridge is BaseBridge {
      * @param cross Address of the CROSS ERC20 token on this chain
      * @param crossInitialSupply Pre-minted supply of CROSS tokens for the CROSS Foundation
      */
-    function initializeEthereumBridge(
+    function initializeBSCBridge(
         address owner,
         address payable dev_,
         uint8 threshold_,
@@ -44,8 +44,8 @@ contract EthereumBridge is BaseBridge {
         address cross,
         uint crossInitialSupply
     ) external initializer {
-        require(crossChainID != 0, EthereumBridgeCanNotZero());
-        require(cross != address(0), EthereumBridgeCanNotZeroAddress());
+        require(crossChainID != 0, BSCBridgeCanNotZero());
+        require(cross != address(0), BSCBridgeCanNotZeroAddress());
         __BaseBridge_init(owner, dev_, threshold_);
 
         // Register CROSS token as a token pair

@@ -14,13 +14,13 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         super.setUp();
 
         // Ensure USER has enough tokens for tests
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         vm.startPrank(OWNER);
         cross.transfer(USER, 1000 ether);
         vm.stopPrank();
 
         vm.prank(USER);
-        cross.approve(address(bridgeEthereum), type(uint).max);
+        cross.approve(address(bridgeBSC), type(uint).max);
     }
 
     // Test setting cross supply limit
@@ -55,13 +55,13 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         // Second bridge: should fail (exceeds limit)
         uint largeAmount = 10 ether;
 
-        // Handle the ethereum side
-        vm.selectFork(ethereumForkID);
+        // Handle the bsc side
+        vm.selectFork(bscForkID);
         uint userTokenBalance = cross.balanceOf(USER);
-        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum));
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeBSC));
 
-        (index,) = ethereumBridge(address(cross), USER, USER, largeAmount, 0, 0);
-        ethereumIncrementIndex();
+        (index,) = bscBridge(address(cross), USER, USER, largeAmount, 0, 0);
+        bscIncrementIndex();
 
         // Move to cross chain for finalization - should fail due to limit
         vm.selectFork(crossForkID);
@@ -72,15 +72,14 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
 
         // Verify that finalization was not successful due to limit
         assertTrue(
-            bridgeCross.getPendingArguments(ETHEREUM_CHAIN_ID, index).status
-                == Const.FinalizeStatus.CrossSupplyLimitExceeded,
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status == Const.FinalizeStatus.CrossSupplyLimitExceeded,
             "Finalization should fail due to supply limit"
         );
 
         // Check that token balances didn't change on finalize attempt
-        vm.selectFork(ethereumForkID);
+        vm.selectFork(bscForkID);
         assertEq(userTokenBalance - largeAmount, cross.balanceOf(USER));
-        assertEq(bridgeTokenBalance + largeAmount, cross.balanceOf(address(bridgeEthereum)));
+        assertEq(bridgeTokenBalance + largeAmount, cross.balanceOf(address(bridgeBSC)));
 
         // Check that coin balances didn't change on finalize attempt
         vm.selectFork(crossForkID);
@@ -100,9 +99,9 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         deposit(false, supplyLimit, threshold);
 
         // Next deposit should fail (exceeds limit)
-        vm.selectFork(ethereumForkID);
-        (uint index,) = ethereumBridge(address(cross), USER, USER, 1 ether, 0, 0);
-        ethereumIncrementIndex();
+        vm.selectFork(bscForkID);
+        (uint index,) = bscBridge(address(cross), USER, USER, 1 ether, 0, 0);
+        bscIncrementIndex();
 
         vm.selectFork(crossForkID);
         // Try to finalize - should fail
@@ -110,8 +109,7 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
 
         // Verify that finalization was not successful due to limit
         assertTrue(
-            bridgeCross.getPendingArguments(ETHEREUM_CHAIN_ID, index).status
-                == Const.FinalizeStatus.CrossSupplyLimitExceeded,
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status == Const.FinalizeStatus.CrossSupplyLimitExceeded,
             "Finalization should fail due to supply limit"
         );
     }
