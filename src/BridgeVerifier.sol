@@ -252,8 +252,12 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
 
         if (afterAllowance == beforeAllowance) {
             require(block.timestamp <= deadline, BaseBridgeDeadlineExpired());
+
             uint nonce = IERC20Permit(address(token)).nonces(owner);
-            bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, value, nonce, deadline));
+            require(nonce != 0, BridgeVerifierInvalidPermit());
+            --nonce;
+
+            bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonce, deadline));
             bytes32 digest =
                 MessageHashUtils.toTypedDataHash(IERC20Permit(address(token)).DOMAIN_SEPARATOR(), structHash);
             address signer = ECDSA.recover(digest, v, r, s);

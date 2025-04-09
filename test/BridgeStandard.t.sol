@@ -259,6 +259,52 @@ contract BaseBridgeTest is BridgeTest {
         assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
     }
 
+    function test_permit_deposit_before_same_approve() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(ethereumForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        assertTrue(cross.allowance(USER, address(bridgeEthereum)) == 0);
+
+        // initiate
+        uint userTokenBalance = cross.balanceOf(USER);
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum));
+        vm.selectFork(crossForkID);
+        uint userCoinBalance = USER.balance;
+        uint bridgeCoinBalance = address(bridgeCross).balance;
+
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            uint deadline = type(uint).max;
+            // make permit sig
+
+            vm.selectFork(ethereumForkID);
+            uint nonce = IERC20Permit(address(cross)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeEthereum), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
+        }
+
+        // approve before permit
+        vm.prank(USER);
+        cross.approve(address(bridgeEthereum), amount);
+
+        vm.prank(VALIDATOR1);
+        assertTrue(bridgeEthereum.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
+
+        crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
+        ethereumIncrementIndex();
+
+        vm.selectFork(ethereumForkID);
+        assertEq(userTokenBalance - amount, cross.balanceOf(USER));
+        assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeEthereum)));
+        vm.selectFork(crossForkID);
+        assertEq(userCoinBalance + (amount), USER.balance);
+        assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
+    }
+
     function test_permit_depositToken() public {
         uint amount = 1000 * 1e18;
 
