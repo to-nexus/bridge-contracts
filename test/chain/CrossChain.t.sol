@@ -49,7 +49,7 @@ contract CrossChainTest is SettingTest {
             bridgeCross.grantRole(EDITOR_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(OPERATOR_ROLE, CrossOWNER); // for test
             bridgeCross.grantRole(PRICER_ROLE, CrossOWNER); // for test
-
+            bridgeCross.grantRole(VERIFIER_ROLE, CrossOWNER); // for test
             crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
             bridgeCross.setCrossMintableERC20Code(crossMintableERC20Code);
             // bridgeCross.registerToken(BSC_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross)); // already registered
