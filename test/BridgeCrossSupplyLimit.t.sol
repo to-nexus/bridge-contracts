@@ -84,6 +84,11 @@ contract BridgeCrossSupplyLimitTest is BridgeTest {
         // Check that coin balances didn't change on finalize attempt
         vm.selectFork(crossForkID);
         assertEq(userCoinBalance, USER.balance);
+
+        // Test manual release pending
+        vm.prank(CrossOWNER);
+        bridgeCross.manualReleasePending(BSC_CHAIN_ID, index);
+        assertTrue(bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status == Const.FinalizeStatus.None);
     }
 
     // Test using whole supply limit
