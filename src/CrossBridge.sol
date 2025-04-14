@@ -110,7 +110,7 @@ contract CrossBridge is BaseBridge {
         override
         returns (Const.FinalizeStatus status, bool delay)
     {
-        if (address(token) == Const.NATIVE_TOKEN) {
+        if (address(token) == Const.NATIVE_TOKEN && fromChainID == _bscChainID) {
             // Check if the new transfer would exceed the configured CROSS token issuance limit
             // If limit is exceeded, return a specific error status and mark for delay
             if (crossSupply() + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
