@@ -22,7 +22,7 @@ contract BridgeScript is Script {
     string BRIDGE_ROLE_MEMBERS = "BRIDGE_ROLE_MEMBERS";
 
     // Bridge Verifier env variables
-    string VERIFIER_PRICER = "VERIFIER_PRICER";
+    string VERIFIER_PRICER = "PRICER";
     string VERIFIER_FINALIZE_BRIDGE_GAS = "FINALIZE_BRIDGE_GAS";
     string VERIFIER_DEFAULT_TOKEN_PRICE = "DEFAULT_TOKEN_PRICE";
     string VERIFIER_DEFAULT_EX_FEE_RATE = "DEFAULT_EX_FEE_RATE";
@@ -59,6 +59,7 @@ contract BridgeScript is Script {
 
     bytes32[] emptyBytes32Array;
     address[] emptyAddressArray;
+    uint[] emptyUintArray;
 
     function setUp() public virtual {
         // load env variables
@@ -79,6 +80,8 @@ contract BridgeScript is Script {
         bridgeRoleMembers = vm.envOr(BRIDGE_ROLE_MEMBERS, ",", emptyAddressArray);
         verifierRoles = vm.envOr(VERIFIER_ROLES, ",", emptyBytes32Array);
         verifierRoleMembers = vm.envOr(VERIFIER_ROLE_MEMBERS, ",", emptyAddressArray);
+        verifierGasPrices = vm.envOr(VERIFIER_GAS_PRICES, ",", emptyUintArray);
+        verifierGasPriceChains = vm.envOr(VERIFIER_GAS_PRICE_CHAINS, ",", emptyUintArray);
 
         // print env variables
         console.log("priceFeed", priceFeed);
@@ -173,7 +176,9 @@ contract BridgeScript is Script {
         console.log("BridgeVerifier will be deployed to", address(verifier));
         vm.stopBroadcast();
 
-        vm.broadcast(vm.envAddress(VERIFIER_PRICER));
-        verifier.updateGasPriceBatch(verifierGasPriceChains, verifierGasPrices);
+        if (verifierGasPriceChains.length > 0) {
+            vm.broadcast(vm.envAddress(VERIFIER_PRICER));
+            verifier.updateGasPriceBatch(verifierGasPriceChains, verifierGasPrices);
+        }
     }
 }
