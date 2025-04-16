@@ -1,0 +1,138 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+
+import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
+
+import {Const} from "../../src/lib/Const.sol";
+import {TestToken} from "../token/TestToken.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Test, console} from "forge-std/Test.sol";
+
+contract SettingTest is Test {
+    using Math for uint;
+
+    bytes32 public constant FINALIZE_TYPEHASH = keccak256(
+        "FinalizeBridge(uint256 fromChainID,uint256 index,address toToken,address to,uint256 value,bytes extraData)"
+    );
+
+    bytes32 public constant VALIDATOR_ROLE = Const.VALIDATOR_ROLE;
+    bytes32 public constant OPERATOR_ROLE = Const.OPERATOR_ROLE;
+    bytes32 public constant EDITOR_ROLE = Const.EDITOR_ROLE;
+    bytes32 public constant PRICER_ROLE = Const.PRICER_ROLE;
+    bytes32 public constant ADMIN_ROLE = Const.ADMIN_ROLE;
+    bytes32 public constant VERIFIER_ROLE = Const.VERIFIER_ROLE;
+
+    uint internal constant OWNER_PK = uint(bytes32("owner"));
+    uint internal constant CrossOWNER_PK = uint(bytes32("cross_owner"));
+    uint internal constant USER_PK = uint(bytes32("user"));
+    uint internal constant REWARD_PK = uint(bytes32("reward"));
+    uint internal constant VALIDATOR_PK1 = uint(bytes32("validator1"));
+    uint internal constant VALIDATOR_PK2 = uint(bytes32("validator2"));
+    uint internal constant VALIDATOR_PK3 = uint(bytes32("validator3"));
+    uint internal constant VALIDATOR_PK4 = uint(bytes32("validator4"));
+    uint internal constant VALIDATOR_PK5 = uint(bytes32("validator5"));
+    uint internal constant BSC_CHAIN_ID = 57; // test data
+    uint internal constant CROSS_CHAIN_ID = 612055; // test data
+    IERC20 internal constant NATIVE_TOKEN = IERC20(address(1));
+    uint internal constant INITIAL_SUPPLY = 1_000_000_000 ether;
+    uint public constant CROSS_FOUNDATION_INITIAL_SUPPLY = 50_000_000 ether;
+    uint8 internal constant DOLLAR_DECIMALS = 6;
+
+    uint internal bscForkID;
+    uint internal crossForkID;
+    uint8 internal threshold;
+
+    IERC20 internal cross;
+    IERC20 internal weth;
+
+    IERC20 internal testTokenBSC; // TT origin
+    IERC20 internal testTokenCross; // TT wrapped
+
+    IERC20 internal testTokenBSC2; // TT2 origin
+    IERC20 internal testTokenCross2; // TT2 wrapped
+
+    address internal OWNER;
+    address internal CrossOWNER;
+    address internal USER;
+    address payable internal REWARD;
+    address internal VALIDATOR1;
+    address internal VALIDATOR2;
+    address internal VALIDATOR3;
+    address internal VALIDATOR4;
+    address internal VALIDATOR5;
+
+    address[] internal VALIDATORS;
+    uint[] internal VALIDATOR_PKs = [VALIDATOR_PK1, VALIDATOR_PK2, VALIDATOR_PK3, VALIDATOR_PK4, VALIDATOR_PK5];
+
+    bytes NULLDATA;
+
+    function setUp() public virtual {
+        bscForkID = vm.createFork("http://localhost:8545"); // bsc test chain
+        crossForkID = vm.createFork("http://localhost:8545"); // cross test chain
+
+        threshold = uint8(3);
+
+        OWNER = vm.addr(OWNER_PK);
+        CrossOWNER = vm.addr(CrossOWNER_PK);
+        USER = vm.addr(USER_PK);
+        REWARD = payable(vm.addr(REWARD_PK));
+
+        VALIDATOR1 = vm.addr(VALIDATOR_PK1);
+        VALIDATOR2 = vm.addr(VALIDATOR_PK2);
+        VALIDATOR3 = vm.addr(VALIDATOR_PK3);
+        VALIDATOR4 = vm.addr(VALIDATOR_PK4);
+        VALIDATOR5 = vm.addr(VALIDATOR_PK5);
+
+        VALIDATORS = [VALIDATOR1, VALIDATOR2, VALIDATOR3, VALIDATOR4, VALIDATOR5];
+
+        // Sort VALIDATORS array in ascending order based on address values
+        for (uint i = 0; i < VALIDATORS.length - 1; i++) {
+            for (uint j = 0; j < VALIDATORS.length - i - 1; j++) {
+                if (uint160(VALIDATORS[j]) > uint160(VALIDATORS[j + 1])) {
+                    address temp = VALIDATORS[j];
+                    VALIDATORS[j] = VALIDATORS[j + 1];
+                    VALIDATORS[j + 1] = temp;
+
+                    // Also sort VALIDATOR_PKs in the same order
+                    uint tempPK = VALIDATOR_PKs[j];
+                    VALIDATOR_PKs[j] = VALIDATOR_PKs[j + 1];
+                    VALIDATOR_PKs[j + 1] = tempPK;
+                }
+            }
+        }
+
+        vm.label(OWNER, "owner");
+        vm.label(CrossOWNER, "cross_owner");
+        vm.label(USER, "user");
+        vm.label(REWARD, "reward");
+        vm.label(VALIDATOR1, "validator1");
+        vm.label(VALIDATOR2, "validator2");
+        vm.label(VALIDATOR3, "validator3");
+        vm.label(VALIDATOR4, "validator4");
+        vm.label(VALIDATOR5, "validator5");
+
+        vm.selectFork(bscForkID);
+        vm.startPrank(OWNER);
+        cross = IERC20(new TestToken("Cross", "CROSS", 18));
+        testTokenBSC = IERC20(new TestToken("Test Token", "TT", 18));
+        vm.stopPrank();
+    }
+
+    function estimateMaxValue(BridgeVerifier bridgeVerifier, uint remoteChainID, IERC20 token, uint totalValue)
+        internal
+        view
+        returns (bool ok, uint value, uint gasFee, uint exFee)
+    {
+        uint minimumAmount;
+        uint exFeeRate;
+        (minimumAmount, gasFee, exFeeRate) = bridgeVerifier.getTokenConfig(remoteChainID, token);
+        if (totalValue <= gasFee) return (false, 0, 0, 0);
+
+        uint denominator = bridgeVerifier.denominator();
+        uint v = totalValue - gasFee;
+        value = v.mulDiv(denominator, (denominator + exFeeRate));
+        exFee = value.mulDiv(exFeeRate, denominator);
+        ok = value > minimumAmount;
+    }
+}

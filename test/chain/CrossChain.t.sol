@@ -1,0 +1,228 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
+
+import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
+import {CrossBridge} from "../../src/CrossBridge.sol";
+
+import {IPriceFeed, PriceFeed} from "../../src/PriceFeed.sol";
+import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
+
+import {CrossMintableERC20} from "../../src/token/CrossMintableERC20.sol";
+import {CrossMintableERC20Code} from "../../src/token/CrossMintableERC20Code.sol";
+import {ICrossMintableERC20Code} from "../../src/token/ICrossMintableERC20Code.sol";
+import {SettingTest} from "./Setting.t.sol";
+
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {console} from "forge-std/Test.sol";
+
+contract CrossChainTest is SettingTest {
+    bool internal bridgeRevertCross = false;
+    bool internal finalizeRevertCross = false;
+
+    uint internal nextIndexCross;
+    CrossBridge internal bridgeCross;
+    BridgeVerifier internal bridgeVerifierCross;
+    PriceFeed internal priceFeedCross;
+    ICrossMintableERC20Code internal crossMintableERC20Code;
+
+    function setUp() public virtual override {
+        super.setUp();
+        nextIndexCross = 1;
+
+        vm.selectFork(crossForkID);
+        vm.startPrank(CrossOWNER);
+
+        // bridge setup
+        {
+            // bridge
+            CrossBridge bridgeCrossImpl = new CrossBridge();
+            ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
+            bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
+            vm.deal(address(bridgeCross), INITIAL_SUPPLY);
+            bridgeCross.initializeCrossBridge(
+                CrossOWNER, REWARD, threshold, BSC_CHAIN_ID, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY
+            );
+
+            bridgeCross.grantRole(ADMIN_ROLE, CrossOWNER); // for test
+            bridgeCross.grantRole(EDITOR_ROLE, CrossOWNER); // for test
+            bridgeCross.grantRole(OPERATOR_ROLE, CrossOWNER); // for test
+            bridgeCross.grantRole(PRICER_ROLE, CrossOWNER); // for test
+            bridgeCross.grantRole(VERIFIER_ROLE, CrossOWNER); // for test
+            crossMintableERC20Code = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeCross))));
+            bridgeCross.setCrossMintableERC20Code(crossMintableERC20Code);
+            // bridgeCross.registerToken(BSC_CHAIN_ID, false, address(NATIVE_TOKEN), address(cross)); // already registered
+
+            bytes32[] memory roles = new bytes32[](5);
+            for (uint i = 0; i < 5; i++) {
+                roles[i] = VALIDATOR_ROLE;
+            }
+
+            bridgeCross.grantRoleBatch(roles, VALIDATORS);
+
+            bridgeCross.setCrossSupplyLimit(INITIAL_SUPPLY); // Set maximum supply limit for testing purposes
+
+            vm.label(address(bridgeCross), "CrossBridge");
+        }
+
+        // add token to bridge (cross chain)
+        {
+            // test token
+            address ttAddress = bridgeCross.createToken(BSC_CHAIN_ID, address(testTokenBSC), "TT", 18);
+            testTokenCross = IERC20(ttAddress);
+
+            // weth
+            address wethAddress = bridgeCross.createToken(BSC_CHAIN_ID, address(NATIVE_TOKEN), "ETH", 18);
+            weth = IERC20(wethAddress);
+        }
+
+        // fee table
+        {
+            address priceFeedCrossImpl = address(new PriceFeed());
+            ERC1967Proxy priceFeedCrossProxy = new ERC1967Proxy(priceFeedCrossImpl, bytes(""));
+            priceFeedCross = PriceFeed(address(priceFeedCrossProxy));
+            priceFeedCross.initialize(CrossOWNER, DOLLAR_DECIMALS);
+            priceFeedCross.grantRole(PRICER_ROLE, CrossOWNER);
+
+            {
+                // token price update
+                address[] memory tokens = new address[](3);
+                uint[] memory prices = new uint[](3);
+                uint[] memory pricesAt = new uint[](3);
+
+                tokens[0] = address(weth);
+                prices[0] = 10 * (10 ** 6);
+                pricesAt[0] = 0;
+
+                tokens[1] = address(testTokenCross);
+                prices[1] = 1 * (10 ** 6);
+                pricesAt[1] = 0;
+
+                tokens[2] = address(NATIVE_TOKEN);
+                prices[2] = (10 ** DOLLAR_DECIMALS) / 10;
+                pricesAt[2] = 0;
+
+                priceFeedCross.updatePrice(tokens, prices, pricesAt);
+            }
+
+            {
+                // native token price update
+                uint[] memory chainIDs = new uint[](1);
+                uint[] memory prices = new uint[](1);
+                uint[] memory pricesAt = new uint[](1);
+
+                chainIDs[0] = BSC_CHAIN_ID;
+                prices[0] = 100_000;
+                pricesAt[0] = 0;
+
+                priceFeedCross.updateNativeTokenPrice(chainIDs, prices, pricesAt);
+            }
+
+            bytes32[] memory roles = new bytes32[](5);
+            for (uint i = 0; i < 5; i++) {
+                roles[i] = PRICER_ROLE;
+            }
+
+            priceFeedCross.grantRoleBatch(roles, VALIDATORS);
+
+            bridgeVerifierCross = new BridgeVerifier(
+                CrossOWNER, address(bridgeCross), address(priceFeedCross), 200000, 10000, 10, 10_000, 0, 0, 2 hours
+            );
+            bridgeVerifierCross.grantRole(PRICER_ROLE, CrossOWNER);
+            bridgeVerifierCross.grantRole(ADMIN_ROLE, CrossOWNER);
+            bridgeVerifierCross.grantRole(EDITOR_ROLE, CrossOWNER);
+            bridgeVerifierCross.updateGasPrice(BSC_CHAIN_ID, 1 gwei);
+        }
+
+        bridgeCross.setBridgeVerifier(bridgeVerifierCross);
+
+        vm.stopPrank();
+    }
+
+    function crossIncrementIndex() public {
+        nextIndexCross++;
+    }
+
+    // ----- Functions -----
+    function crossBridge(address token, address from, address to, uint value, uint gas, uint service)
+        public
+        returns (uint index, bool ok)
+    {
+        vm.selectFork(crossForkID);
+
+        // bridge
+        index = nextIndexCross;
+        vm.prank(from);
+
+        if (token == address(NATIVE_TOKEN)) {
+            if (bridgeRevertCross) {
+                bridgeRevertCross = false;
+                try bridgeCross.bridgeToken{value: value + gas + service}(
+                    BSC_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                ) {
+                    ok = true;
+                } catch {
+                    ok = false;
+                }
+            } else {
+                ok = bridgeCross.bridgeToken{value: value + gas + service}(
+                    BSC_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                );
+            }
+        } else {
+            ok = bridgeCross.bridgeToken(BSC_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA);
+        }
+    }
+
+    function crossFinalize(uint index, address token, address to, uint value, uint sigCount) public returns (bool ok) {
+        vm.selectFork(crossForkID);
+        if (sigCount > threshold) sigCount = threshold;
+
+        // create finalize validator signature
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, BSC_CHAIN_ID, index, token, to, value, NULLDATA));
+        bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), h);
+
+        uint8[] memory v = new uint8[](sigCount);
+        bytes32[] memory r = new bytes32[](sigCount);
+        bytes32[] memory s = new bytes32[](sigCount);
+        for (uint i = 0; i < sigCount; i++) {
+            (v[i], r[i], s[i]) = vm.sign(VALIDATOR_PKs[i], hash);
+        }
+
+        // finalize
+        vm.prank(VALIDATOR1);
+        if (finalizeRevertCross) {
+            finalizeRevertCross = false;
+            vm.expectRevert();
+        }
+        ok = bridgeCross.finalizeBridge(
+            IBridgeRegistry.FinalizeArguments({
+                fromChainID: BSC_CHAIN_ID,
+                index: index,
+                toToken: IERC20(token),
+                to: to,
+                value: value,
+                extraData: NULLDATA
+            }),
+            v,
+            r,
+            s
+        );
+    }
+
+    function crossCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
+        vm.selectFork(crossForkID);
+        if (address(bridgeVerifierCross) == address(0)) return (totalValue, 0, 0);
+
+        bool ok;
+        (ok, value, gas, ex) = estimateMaxValue(bridgeVerifierCross, BSC_CHAIN_ID, token, totalValue);
+        assertTrue(ok);
+    }
+
+    function crossGetTokenFee(IERC20 token) public returns (uint minimum, uint gasFee, uint exFeeRate) {
+        vm.selectFork(crossForkID);
+        if (address(bridgeVerifierCross) == address(0)) return (0, 0, 0);
+        (minimum, gasFee, exFeeRate) = bridgeVerifierCross.getTokenConfig(BSC_CHAIN_ID, token);
+    }
+}

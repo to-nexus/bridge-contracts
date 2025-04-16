@@ -1,327 +1,551 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BridgeCross} from "../src/BridgeCross.sol";
-import {BridgeEthereum} from "../src/BridgeEthereum.sol";
-
-import {BridgeFeeManager, IBridgeFeeManager} from "../src/BridgeFeeManager.sol";
-import {CrossMintableERC20, CrossMintableERC20Code} from "../src/CrossMintableERC20.sol";
-import {BridgeStandard} from "../src/abstract/BridgeStandard.sol";
-import {TestToken} from "./token/TestToken.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {Test, console} from "forge-std/Test.sol";
 
-contract BridgeStandardTest is Test {
-    event BridgeInitiated(uint indexed index, address indexed from, address indexed to, uint value);
-    event BridgeFinalized(uint indexed index, address indexed to, uint value, bytes32 indexed otherChainHash);
+import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
+import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
+import {Const} from "../src/lib/Const.sol";
+import {BridgeTest} from "./Bridge.t.sol";
+import {TestToken} from "./token/TestToken.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-    bool public bridgeRevert = false;
-    bool public finalizeRevert = false;
-    uint public exrate = 100;
+contract BaseBridgeTest is BridgeTest {
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
-    bytes32 public constant FINALIZE_TYPEHASH =
-        keccak256("Finalize(uint256 index,address token,address to,uint256 value)");
+    // ----- Test -----
+    function test_depositWithdraw() public {
+        uint amount = 1000 * 1e18;
 
-    uint internal constant OWNER_PK = uint(bytes32("owner"));
-    uint internal constant USER_PK = uint(bytes32("user"));
-    uint internal constant REWARD_PK = uint(bytes32("reward"));
-    uint internal constant VALIDATOR_PK1 = uint(bytes32("validator1"));
-    uint internal constant VALIDATOR_PK2 = uint(bytes32("validator2"));
-    uint internal constant VALIDATOR_PK3 = uint(bytes32("validator3"));
-    uint internal constant VALIDATOR_PK4 = uint(bytes32("validator4"));
-    uint internal constant VALIDATOR_PK5 = uint(bytes32("validator5"));
-
-    address public OWNER;
-    address public USER;
-    address public REWARD;
-    address public VALIDATOR1;
-    address public VALIDATOR2;
-    address public VALIDATOR3;
-    address public VALIDATOR4;
-    address public VALIDATOR5;
-
-    address[5] public VALIDATORS;
-    uint[5] public VALIDATOR_PKs = [VALIDATOR_PK1, VALIDATOR_PK2, VALIDATOR_PK3, VALIDATOR_PK4, VALIDATOR_PK5];
-
-    TestToken public cross;
-    IERC20 public xcross = IERC20(address(1));
-    IERC20 public testTokenAtEthereum;
-    IERC20 public testTokenAtCross;
-
-    bytes[] NULLDATA;
-
-    struct BridgeInfo {
-        BridgeStandard b;
-        uint nextIndex;
-        address otherBridge;
-    }
-
-    mapping(address => BridgeInfo) public bridges;
-
-    BridgeInfo public bridgeEthereum;
-    BridgeInfo public bridgeCross;
-    BridgeFeeManager public bridgeFeeManager;
-    CrossMintableERC20Code public crossMintableERC20Code;
-
-    function setUp() public {
-        OWNER = vm.addr(OWNER_PK);
-        USER = vm.addr(USER_PK);
-        REWARD = vm.addr(REWARD_PK);
-
-        VALIDATOR1 = vm.addr(VALIDATOR_PK1);
-        VALIDATOR2 = vm.addr(VALIDATOR_PK2);
-        VALIDATOR3 = vm.addr(VALIDATOR_PK3);
-        VALIDATOR4 = vm.addr(VALIDATOR_PK4);
-        VALIDATOR5 = vm.addr(VALIDATOR_PK5);
-
-        VALIDATORS = [VALIDATOR1, VALIDATOR2, VALIDATOR3, VALIDATOR4, VALIDATOR5];
-
-        vm.label(OWNER, "owner");
-        vm.label(USER, "user");
-        vm.label(REWARD, "reward");
-        vm.label(VALIDATOR1, "validator1");
-        vm.label(VALIDATOR2, "validator2");
-        vm.label(VALIDATOR3, "validator3");
-        vm.label(VALIDATOR4, "validator4");
-        vm.label(VALIDATOR5, "validator5");
-
-        vm.startPrank(OWNER);
-
-        address[] memory validators = new address[](5);
-        for (uint i = 0; i < 5; i++) {
-            validators[i] = VALIDATORS[i];
-        }
-
-        // token setup
-        {
-            cross = new TestToken("Cross", "CROSS", 18);
-            TestToken tt = new TestToken("Test Token", "TT", 18);
-            testTokenAtEthereum = IERC20(address(tt));
-            crossMintableERC20Code = new CrossMintableERC20Code();
-        }
-
-        // bridge(cross) fee table setup
-        {
-            bridgeFeeManager = new BridgeFeeManager();
-            IBridgeFeeManager.FeeInfo[] memory FeeInfoList = new IBridgeFeeManager.FeeInfo[](2);
-            FeeInfoList[0] = IBridgeFeeManager.FeeInfo(address(cross), 100 * 1e18, 10);
-            FeeInfoList[1] = IBridgeFeeManager.FeeInfo(address(testTokenAtEthereum), 100 * 1e18, 10);
-
-            bridgeFeeManager.addFeeInfoMany(FeeInfoList);
-        }
-
-        // bridge setup
-        {
-            BridgeEthereum bridgeEthereumImpl = new BridgeEthereum();
-            BridgeCross bridgeCrossImpl = new BridgeCross();
-            ERC1967Proxy bridgeEthereumProxy = new ERC1967Proxy(address(bridgeEthereumImpl), bytes(""));
-            ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
-
-            bridgeEthereum = BridgeInfo(BridgeEthereum(payable(address(bridgeEthereumProxy))), 1, address(0));
-            bridgeCross = BridgeInfo(BridgeCross(payable(address(bridgeCrossProxy))), 1, address(0));
-
-            // initialize
-            BridgeEthereum(address(bridgeEthereum.b)).initialize(IERC20(address(cross)), REWARD, address(0));
-            BridgeCross(address(bridgeCross.b)).initialize(
-                address(crossMintableERC20Code), REWARD, address(bridgeFeeManager)
-            );
-
-            // set validator
-            bridgeEthereum.b.setValidators(validators);
-            bridgeCross.b.setValidators(validators);
-
-            bridges[address(bridgeEthereum.b)] = bridgeEthereum;
-            bridges[address(bridgeCross.b)] = bridgeCross;
-
-            bridgeEthereum.otherBridge = address(bridgeCross.b);
-            bridgeCross.otherBridge = address(bridgeEthereum.b);
-        }
-
-        // add token to bridge
-        {
-            string memory name = string(abi.encodePacked("Cross Bridge ", "TT"));
-            bytes32 salt = keccak256(abi.encodePacked(testTokenAtEthereum));
-            bytes memory bytecode =
-                abi.encodePacked(type(CrossMintableERC20).creationCode, abi.encode(name, "TT", uint8(18)));
-
-            BridgeCross(address(bridgeCross.b)).addTokenDeploy(testTokenAtEthereum, "TT", 18);
-            address ttAddress = Create2.computeAddress(salt, keccak256(bytecode), address(bridgeCross.b));
-            testTokenAtCross = IERC20(ttAddress);
-            BridgeCross(address(bridgeCross.b)).addToken(xcross, IERC20(address(cross)));
-
-            BridgeEthereum(address(bridgeEthereum.b)).addToken(IERC20(address(cross)), xcross);
-            BridgeEthereum(address(bridgeEthereum.b)).addToken(testTokenAtEthereum, testTokenAtCross);
-
-            uint initialSupply = 1000000000 * 1e18;
-            cross.mint(OWNER, initialSupply);
-            TestToken(address(testTokenAtEthereum)).mint(OWNER, initialSupply);
-            vm.deal(address(bridgeCross.b), initialSupply);
-        }
-
-        vm.stopPrank();
-    }
-
-    // ----- Functions -----
-    function bridge(BridgeInfo memory info, address token, uint value, uint gas, uint service)
-        public
-        returns (uint index, bool ok)
-    {
-        // bridge
-        index = info.nextIndex;
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
         vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
 
-        if (bridgeRevert) {
-            bridgeRevert = false;
-            vm.expectRevert();
-        }
+        deposit(false, amount, 5);
+        withdraw(false, amount, 5);
+    }
 
-        if (token == address(xcross)) {
-            assertTrue(USER.balance >= value + gas + service);
-            ok = info.b.bridge{value: value + gas + service}(IERC20(token), value, gas, service, NULLDATA);
-        } else {
-            ok = info.b.bridge(IERC20(token), value, gas, service, NULLDATA);
+    function test_depositWithdraw_eth() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+        vm.selectFork(crossForkID);
+        vm.prank(USER);
+        weth.approve(address(bridgeCross), amount);
+
+        depositETH(false, amount, 5);
+        withdrawETH(false, amount, 5);
+    }
+
+    function test_depositWithdrawToken() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+        depositToken(false, amount, 5);
+
+        vm.selectFork(crossForkID);
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), amount);
+        withdrawToken(false, amount, 5);
+    }
+
+    function test_fuzz_depositWithdraw(uint amount) public {
+        vm.selectFork(bscForkID);
+        vm.assume(amount < (cross.balanceOf(OWNER) / 1e18) && amount != 0);
+        amount = amount * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        deposit(false, amount, 5);
+        withdraw(false, amount, 5);
+    }
+
+    function test_fuzz_depositWithdraw_eth(uint amount) public {
+        (uint minimum, uint gasFee, uint exFeeRate) = crossGetTokenFee(weth);
+        uint denom = bridgeVerifierCross.denominator();
+        minimum = minimum + gasFee + (minimum * exFeeRate / denom);
+        if (minimum < 10) minimum = 1000;
+
+        vm.assume(amount > minimum && amount != 0);
+        vm.assume(amount < 1e24);
+
+        vm.selectFork(bscForkID);
+        uint dealValue = amount - USER.balance;
+        vm.deal(USER, dealValue);
+        vm.selectFork(crossForkID);
+        vm.prank(USER);
+        weth.approve(address(bridgeCross), amount);
+
+        depositETH(false, amount, 5);
+        withdrawETH(false, amount, 5);
+    }
+
+    function test_fuzz_depositWithdrawToken(uint amount) public {
+        vm.selectFork(bscForkID);
+        vm.assume(amount < (testTokenBSC.balanceOf(OWNER) / 1e18) && amount != 0);
+        amount = amount * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+        depositToken(false, amount, 5);
+
+        vm.selectFork(crossForkID);
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), amount);
+        withdrawToken(false, amount, 5);
+    }
+
+    function test_pending_finalize() public {
+        uint amount = 1000 * 1e18;
+
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        depositToken(true, amount, 5); // should finalize revert
+
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), amount);
+
+        {
+            // token stop
+            vm.selectFork(bscForkID);
+            vm.prank(OWNER);
+            TestToken(address(testTokenBSC)).stop();
+
+            (uint value, uint gas, uint service) = crossCalcFee(IERC20(address(testTokenCross)), amount);
+            uint total = value + gas + service;
+            assertTrue(total <= amount);
+            (uint index, bool ok) = crossBridge(address(testTokenCross), USER, USER, value, gas, service);
+            assertTrue(ok);
+            crossIncrementIndex();
+            vm.selectFork(bscForkID);
+            uint before = testTokenBSC.balanceOf(USER);
+            bscFinalize(index, address(testTokenBSC), USER, value, 5);
+            assertEq(before, testTokenBSC.balanceOf(USER));
+
+            vm.selectFork(bscForkID);
+            IBaseBridge.PendingData memory pendingArgs = bridgeBSC.getPendingArguments(CROSS_CHAIN_ID, index);
+            assertEq(pendingArgs.delayExpiration, 0);
+            assertEq(pendingArgs.args.index, index);
+            assertEq(address(pendingArgs.args.toToken), address(testTokenBSC));
+            assertEq(pendingArgs.args.to, USER);
+            assertEq(pendingArgs.args.value, value);
+            assertTrue(Const.FinalizeStatus.Success != pendingArgs.status);
+
+            // token start
+            vm.prank(OWNER);
+            vm.selectFork(bscForkID);
+            TestToken(address(testTokenBSC)).start();
+
+            before = testTokenBSC.balanceOf(USER);
+
+            vm.prank(VALIDATOR1);
+            bridgeBSC.releasePending(CROSS_CHAIN_ID, index);
+
+            assertEq(before + value, testTokenBSC.balanceOf(USER));
         }
     }
 
-    function finalize(address toBridge, uint index, address token, uint value, uint sigCount)
-        public
-        returns (bool ok)
-    {
-        if (sigCount > 5) sigCount = 5;
+    function test_pending_finalize_with_revert_transfer() public {
+        uint amount = 1000 * 1e18;
 
-        // create finalize validator signature
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, index, token, USER, value, NULLDATA));
-        bytes32 hash = MessageHashUtils.toTypedDataHash(BridgeStandard(toBridge).domainSeparator(), h);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
 
-        bytes[] memory sigs = new bytes[](sigCount);
-        for (uint i = 0; i < sigCount; i++) {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(VALIDATOR_PKs[i], hash);
-            sigs[i] = abi.encodePacked(r, s, v);
+        depositToken(true, amount, 5); // should finalize revert
+
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), amount);
+
+        {
+            // token set revert transfer
+            vm.selectFork(bscForkID);
+            vm.prank(OWNER);
+            TestToken(address(testTokenBSC)).setRevertTransfer(true);
+
+            (uint value, uint gas, uint service) = crossCalcFee(IERC20(address(testTokenCross)), amount);
+            uint total = value + gas + service;
+            assertTrue(total <= amount);
+            (uint index, bool ok) = crossBridge(address(testTokenCross), USER, USER, value, gas, service);
+            assertTrue(ok);
+            crossIncrementIndex();
+            vm.selectFork(bscForkID);
+            uint before = testTokenBSC.balanceOf(USER);
+            bscFinalize(index, address(testTokenBSC), USER, value, 5);
+            assertEq(before, testTokenBSC.balanceOf(USER));
+
+            vm.selectFork(bscForkID);
+            IBaseBridge.PendingData memory pendingArgs = bridgeBSC.getPendingArguments(CROSS_CHAIN_ID, index);
+            assertEq(pendingArgs.delayExpiration, 0);
+            assertEq(pendingArgs.args.index, index);
+            assertEq(address(pendingArgs.args.toToken), address(testTokenBSC));
+            assertEq(pendingArgs.args.to, USER);
+            assertEq(pendingArgs.args.value, value);
+            assertTrue(Const.FinalizeStatus.Success != pendingArgs.status);
+
+            // token unset revert transfer
+            vm.prank(OWNER);
+            vm.selectFork(bscForkID);
+            TestToken(address(testTokenBSC)).setRevertTransfer(false);
+
+            before = testTokenBSC.balanceOf(USER);
+
+            vm.prank(VALIDATOR1);
+            bridgeBSC.releasePending(CROSS_CHAIN_ID, index);
+
+            assertEq(before + value, testTokenBSC.balanceOf(USER));
+        }
+    }
+
+    function test_permit_deposit() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
+
+        // initiate
+        uint userTokenBalance = cross.balanceOf(USER);
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeBSC));
+        vm.selectFork(crossForkID);
+        uint userCoinBalance = USER.balance;
+        uint bridgeCoinBalance = address(bridgeCross).balance;
+
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            uint deadline = type(uint).max;
+            // make permit sig
+
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(cross)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
-        // finalize
         vm.prank(VALIDATOR1);
-        if (finalizeRevert) {
-            finalizeRevert = false;
-            vm.expectRevert();
-        }
-        ok = bridges[toBridge].b.finalize(index, IERC20(token), USER, value, NULLDATA, sigs);
+        assertTrue(bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
+
+        crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
+        bscIncrementIndex();
+
+        vm.selectFork(bscForkID);
+        assertEq(userTokenBalance - amount, cross.balanceOf(USER));
+        assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeBSC)));
+        vm.selectFork(crossForkID);
+        assertEq(userCoinBalance + (amount), USER.balance);
+        assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
     }
 
-    function calcFee(IERC20 token, uint value) public view returns (uint bridgeValue, uint gas, uint service) {
-        BridgeFeeManager.FeeInfo memory feeInfo = bridgeFeeManager.getTokenFee(address(token));
-        require(feeInfo.gasFee < value, "value too low");
+    function test_permit_deposit_before_same_approve() public {
+        uint amount = 1000 * 1e18;
 
-        gas = feeInfo.gasFee;
-        uint denom = bridgeFeeManager.denominator();
-        uint serviceRate = feeInfo.serviceFee;
-
-        uint v = value - gas;
-        uint t = denom + serviceRate;
-
-        bridgeValue = (v * denom / t);
-        service = (v * serviceRate / t);
-    }
-
-    function deposit(bool isRevert, uint amount, uint validatorNum) public returns (uint index) {
-        // initiate
-        uint userTokenBalance = cross.balanceOf(USER);
-        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum.b));
-        uint userCoinBalance = USER.balance;
-        uint bridgeCoinBalance = address(bridgeCross.b).balance;
-
-        bool ok;
-        (index, ok) = bridge(bridgeEthereum, address(cross), amount, 0, 0);
-        if (ok) {
-            bridgeEthereum.nextIndex++;
-            finalize(bridgeEthereum.otherBridge, index, address(xcross), amount, validatorNum);
-        }
-
-        if (!isRevert) {
-            assertEq(userTokenBalance - amount, cross.balanceOf(USER));
-            assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeEthereum.b)));
-            assertEq(userCoinBalance + (amount * exrate), USER.balance);
-            assertEq(bridgeCoinBalance - (amount * exrate), address(bridgeCross.b).balance);
-        }
-    }
-
-    function withdraw(bool isRevert, uint amount, uint validatorNum) public returns (uint index) {
-        require(amount / exrate > 0, "amount too low");
-        (uint value, uint gas, uint service) = calcFee(xcross, amount);
-        require(value + gas + service <= amount, "invalid fee");
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
 
         // initiate
         uint userTokenBalance = cross.balanceOf(USER);
-        uint bridgeTokenBalance = cross.balanceOf(address(bridgeEthereum.b));
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeBSC));
+        vm.selectFork(crossForkID);
         uint userCoinBalance = USER.balance;
-        uint bridgeCoinBalance = address(bridgeCross.b).balance;
-        uint rewardWalletBalance = REWARD.balance;
+        uint bridgeCoinBalance = address(bridgeCross).balance;
 
-        value = (value / exrate) * exrate;
-        require(value > 0, "value too low");
-        service = (service / exrate) * exrate;
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            uint deadline = type(uint).max;
+            // make permit sig
 
-        bool ok;
-        (index, ok) = bridge(bridgeCross, address(xcross), value, gas, service);
-        if (ok) {
-            bridgeCross.nextIndex++;
-            finalize(bridgeCross.otherBridge, index, address(cross), value, validatorNum);
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(cross)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
-        if (!isRevert) {
-            assertEq(userTokenBalance + (value / exrate), cross.balanceOf(USER));
-            assertEq(bridgeTokenBalance - (value / exrate), cross.balanceOf(address(bridgeEthereum.b)));
-            assertEq(userCoinBalance - value + gas + service, USER.balance);
-            assertEq(bridgeCoinBalance + value, address(bridgeCross.b).balance);
-            assertEq(rewardWalletBalance + gas + service, REWARD.balance);
-        }
+        // approve before permit
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        vm.prank(VALIDATOR1);
+        assertTrue(bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
+
+        crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
+        bscIncrementIndex();
+
+        vm.selectFork(bscForkID);
+        assertEq(userTokenBalance - amount, cross.balanceOf(USER));
+        assertEq(bridgeTokenBalance + amount, cross.balanceOf(address(bridgeBSC)));
+        vm.selectFork(crossForkID);
+        assertEq(userCoinBalance + (amount), USER.balance);
+        assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
     }
 
-    function depositToken(bool isRevert, uint amount, uint validatorNum) public {
+    function test_permit_depositToken() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        assertTrue(testTokenBSC.allowance(USER, address(bridgeBSC)) == 0);
+
         // initiate
-        uint userEthereumBalance = testTokenAtEthereum.balanceOf(USER);
-        uint bridgeEthereumBalance = testTokenAtEthereum.balanceOf(address(bridgeEthereum.b));
-        uint userCrossBalance = testTokenAtCross.balanceOf(USER);
+        uint userBSCBalance = testTokenBSC.balanceOf(USER);
+        uint bridgeBSCBalance = testTokenBSC.balanceOf(address(bridgeBSC));
+        vm.selectFork(crossForkID);
+        uint userCrossBalance = testTokenCross.balanceOf(USER);
 
-        (uint index, bool ok) = bridge(bridgeEthereum, address(testTokenAtEthereum), amount, 0, 0);
-        if (ok) {
-            bridgeEthereum.nextIndex++;
-            finalize(bridgeEthereum.otherBridge, index, address(testTokenAtCross), amount, validatorNum);
+        uint index;
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            // make permit sig
+            index = nextIndexCross;
+
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(testTokenBSC)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, type(uint).max));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(testTokenBSC)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+
+            permitArgs =
+                IBaseBridge.PermitArguments(IERC20Permit(address(testTokenBSC)), USER, amount, type(uint).max, v, r, s);
         }
 
-        if (!isRevert) {
-            assertEq(userEthereumBalance - amount, testTokenAtEthereum.balanceOf(USER));
-            assertEq(bridgeEthereumBalance + amount, testTokenAtEthereum.balanceOf(address(bridgeEthereum.b)));
-            assertEq(userCrossBalance + amount, testTokenAtCross.balanceOf(USER));
-        }
+        vm.prank(VALIDATOR1);
+        bool ok = bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, testTokenBSC, USER, amount, 0, 0, NULLDATA, permitArgs);
+        assertTrue(ok);
+
+        bscIncrementIndex();
+        crossFinalize(index, address(testTokenCross), USER, amount, 5);
+
+        vm.selectFork(bscForkID);
+        assertEq(userBSCBalance - amount, testTokenBSC.balanceOf(USER));
+        assertEq(bridgeBSCBalance + amount, testTokenBSC.balanceOf(address(bridgeBSC)));
+        vm.selectFork(crossForkID);
+        assertEq(userCrossBalance + amount, testTokenCross.balanceOf(USER));
     }
 
-    function withdrawToken(bool isRevert, uint amount, uint validatorNum) public {
-        (uint value, uint gas, uint service) = calcFee(IERC20(address(testTokenAtCross)), amount);
-        require(value + gas + service <= amount, "invalid fee");
-        uint total = value + gas + service;
-        assertTrue(total <= amount);
+    function test_permit_deposit_batch() public {
+        // not allow fail
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
 
         // initiate
-        uint userEthereumBalance = testTokenAtEthereum.balanceOf(USER);
-        uint bridgeEthereumBalance = testTokenAtEthereum.balanceOf(address(bridgeEthereum.b));
-        uint userCrossBalance = testTokenAtCross.balanceOf(USER);
-        uint rewardWalletBalance = testTokenAtCross.balanceOf(REWARD);
+        uint userTokenBalance = cross.balanceOf(USER);
+        uint bridgeTokenBalance = cross.balanceOf(address(bridgeBSC));
+        vm.selectFork(crossForkID);
+        uint userCoinBalance = USER.balance;
+        uint bridgeCoinBalance = address(bridgeCross).balance;
 
-        (uint index, bool ok) = bridge(bridgeCross, address(testTokenAtCross), value, gas, service);
-        if (ok) {
-            bridgeCross.nextIndex++;
-            finalize(bridgeCross.otherBridge, index, address(testTokenAtEthereum), value, validatorNum);
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            uint deadline = type(uint).max;
+            // make permit sig
+
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(cross)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
-        if (!isRevert) {
-            assertEq(userEthereumBalance + value, testTokenAtEthereum.balanceOf(USER));
-            assertEq(bridgeEthereumBalance - value, testTokenAtEthereum.balanceOf(address(bridgeEthereum.b)));
-            assertEq(userCrossBalance - total, testTokenAtCross.balanceOf(USER));
-            assertEq(rewardWalletBalance + gas + service, testTokenAtCross.balanceOf(REWARD));
+        IBaseBridge.PermitArguments memory permitArgs2;
+        {
+            uint deadline = type(uint).max;
+            // make permit sig
+
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(cross)).nonces(OWNER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, OWNER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(OWNER_PK, hash);
+            permitArgs2 = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), OWNER, amount, deadline, v, r, s);
         }
+
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](2);
+        {
+            args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, NULLDATA);
+        }
+        {
+            args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, OWNER, amount, 0, 0, NULLDATA);
+        }
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](2);
+        {
+            permitArgsArray[0] = permitArgs;
+        }
+        {
+            permitArgsArray[1] = permitArgs2;
+        }
+
+        uint beforeOwnerBalance = cross.balanceOf(OWNER);
+        vm.prank(VALIDATOR1);
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
+        assertTrue(cross.balanceOf(OWNER) < beforeOwnerBalance); // owner balance should change
+
+        crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
+        bscIncrementIndex();
+
+        vm.selectFork(bscForkID);
+        assertEq(userTokenBalance - amount, cross.balanceOf(USER));
+        assertEq(bridgeTokenBalance + amount * 2, cross.balanceOf(address(bridgeBSC)));
+        vm.selectFork(crossForkID);
+        assertEq(userCoinBalance + (amount), USER.balance);
+        assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
+    }
+
+    function test_permit_deposit_batch_with_fail() public {
+        // allow fail
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        assertTrue(cross.allowance(USER, address(bridgeBSC)) == 0);
+
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            uint deadline = type(uint).max;
+            // make permit sig
+
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(cross)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
+        }
+
+        IBaseBridge.PermitArguments memory permitArgs2;
+        {
+            uint deadline = type(uint).max;
+            // make permit sig
+
+            vm.selectFork(bscForkID);
+            uint nonce = IERC20Permit(address(cross)).nonces(OWNER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, OWNER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(OWNER_PK, hash);
+            permitArgs2 =
+                IBaseBridge.PermitArguments(IERC20Permit(address(cross)), OWNER, amount, deadline, v + 1, r, s); // invalid v
+        }
+
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](2);
+        {
+            args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, NULLDATA);
+        }
+        {
+            args[1] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, OWNER, OWNER, amount, 0, 0, NULLDATA);
+        }
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](2);
+        {
+            permitArgsArray[0] = permitArgs;
+        }
+        {
+            permitArgsArray[1] = permitArgs2;
+        }
+
+        uint beforeOwnerBalance = cross.balanceOf(OWNER);
+        vm.prank(VALIDATOR1);
+        vm.expectRevert();
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
+        assertEq(cross.balanceOf(OWNER), beforeOwnerBalance); // owner balance should not change
+    }
+
+    function test_tokenPair_depositedAndMinted() public {
+        uint amount = 1000 * 1e18;
+
+        // ===== Original token test (CROSS token) =====
+        vm.selectFork(bscForkID);
+
+        // Check initial deposited value
+        IBridgeRegistry.TokenPair memory pairBefore = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(cross));
+
+        // Setup for deposit
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        // Perform deposit
+        deposit(false, amount, 5);
+
+        // Check if deposited increased
+        vm.selectFork(bscForkID);
+        IBridgeRegistry.TokenPair memory pairAfter = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(cross));
+        assertEq(pairAfter.deposited - pairBefore.deposited, amount, "Deposit amount delta check");
+
+        // ===== Wrapped token test =====
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        // Check initial minted value
+        vm.selectFork(crossForkID);
+        IBridgeRegistry.TokenPair memory wrappedPairBefore =
+            bridgeCross.getTokenPair(BSC_CHAIN_ID, address(testTokenCross));
+
+        // Deposit original token (which should mint wrapped token)
+        depositToken(false, amount, 5);
+
+        // Check if minted increased
+        vm.selectFork(crossForkID);
+        IBridgeRegistry.TokenPair memory wrappedPairAfter =
+            bridgeCross.getTokenPair(BSC_CHAIN_ID, address(testTokenCross));
+        assertEq(wrappedPairAfter.minted - wrappedPairBefore.minted, amount, "Mint amount delta check");
+    }
+
+    function test_tokenPair_ethDeposited() public {
+        uint amount = 1000 * 1e18;
+
+        // ETH deposit/withdraw effect on deposited value test
+        vm.selectFork(bscForkID);
+
+        // Check initial deposited value for ETH
+        IBridgeRegistry.TokenPair memory pairBefore = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
+
+        // Setup for deposit
+        vm.deal(USER, amount);
+        vm.selectFork(crossForkID);
+        vm.prank(USER);
+        weth.approve(address(bridgeCross), amount);
+
+        // Perform ETH deposit
+        depositETH(false, amount, 5);
+
+        // Check if deposited increased
+        vm.selectFork(bscForkID);
+        IBridgeRegistry.TokenPair memory pairAfter = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(NATIVE_TOKEN));
+        assertEq(pairAfter.deposited - pairBefore.deposited, amount, "ETH deposit amount delta check");
     }
 }

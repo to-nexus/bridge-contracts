@@ -1,106 +1,129 @@
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IValidatorManager} from "../interface/IValidatorManager.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-abstract contract ValidatorManager is OwnableUpgradeable, EIP712Upgradeable, IValidatorManager {
+import {Const} from "../lib/Const.sol";
+import {RoleManager} from "./RoleManager.sol";
+/**
+ * @title ValidatorManager
+ * @notice Abstract contract for managing bridge validators and signature verification
+ * @dev This contract extends Role to provide validator-specific functionality
+ * - Signature verification logic using EIP-712
+ * - Threshold-based multi-signature validation
+ * - Duplicate signature detection
+ * - Validator role management using bytes32 role identifiers
+ */
+
+abstract contract ValidatorManager is RoleManager, EIP712Upgradeable {
     using ECDSA for bytes32;
-    using EnumerableSet for EnumerableSet.AddressSet;
 
-    error ValidatorManagerNotValidator(address account);
-    error ValidatorManagerAlreadyExistValidator(address account);
-    error ValidatorManagerNotExistValidator(address account);
+    error ValidatorThresholdCanNotZero();
+    error ValidatorInsufficientSignature(uint length);
+    error ValidatorInvalidSignatures();
 
-    event ValidatorSet(address validators, bool status);
+    /**
+     * @notice Emitted when the signature threshold is changed
+     * @param threshold New threshold value
+     */
     event ThresholdChanged(uint8 threshold);
 
-    EnumerableSet.AddressSet private _validators;
-    uint8 private _threshold;
-
-    uint[48] private __gap;
-
-    modifier onlyValidator() {
-        require(isValidator(_msgSender()), ValidatorManagerNotValidator(_msgSender()));
-        _;
+    /// @dev Minimum number of validator signatures required
+    /// @custom:storage-location erc7201:cross.bridge.ValidatorManager
+    struct ValidatorManagerStorage {
+        uint8 _threshold;
     }
 
-    function __Validator_init() internal onlyInitializing {
+    // keccak256(abi.encode(uint256(keccak256("erc7201:cross.bridge.ValidatorManager")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ValidatorManagerStorageLocation =
+        0x303ad04a409295f82fe653ea0c2830faa7f9686cca19dded40cb6b9dfd913200;
+
+    function _getValidatorManagerStorage() private pure returns (ValidatorManagerStorage storage $) {
+        assembly {
+            $.slot := ValidatorManagerStorageLocation
+        }
+    }
+
+    /**
+     * @notice Initializes the ValidatorManager
+     * @dev Sets up EIP712 domain for signature verification and initializes threshold
+     * - Configures EIP-712 domain with name "Validator" and version "1.0.0"
+     * - Sets initial threshold value
+     * @param threshold_ Required number of validator signatures
+     */
+    function __Validator_init(uint8 threshold_) internal onlyInitializing {
+        require(threshold_ != 0, ValidatorThresholdCanNotZero());
         __EIP712_init("Validator", "1.0.0");
-        _threshold = 3;
+
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        $._threshold = threshold_;
     }
 
-    function isValidator(address validator) public view returns (bool) {
-        return _validators.contains(validator);
-    }
-
+    /**
+     * @notice Returns the current threshold value
+     * @return Current threshold value
+     */
     function threshold() external view returns (uint8) {
-        return _threshold;
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        return $._threshold;
     }
 
-    // ----- Set Functions -----
-    function changeThreshold(uint8 threshold_) external onlyOwner {
-        _threshold = threshold_;
+    /**
+     * @notice Changes the threshold value
+     * @dev Updates minimum required signatures and emits event
+     * @param threshold_ New threshold value
+     */
+    function changeThreshold(uint8 threshold_) external onlyRole(Const.ADMIN_ROLE) {
+        require(threshold_ != 0, ValidatorThresholdCanNotZero());
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        $._threshold = threshold_;
         emit ThresholdChanged(threshold_);
     }
 
-    function setValidator(address validator) external {
-        _setValidator(validator, true);
-    }
+    /**
+     * @notice Validates signatures from validators
+     * @dev Verifies that there are enough valid signatures from unique validators
+     * - Checks signature array lengths match
+     * - Verifies minimum threshold of signatures
+     * - Recovers signer addresses from signatures
+     * - Validates signers have Validator role using Const.VALIDATOR_ROLE identifier
+     * - Detects and ignores duplicate signatures by comparing validator addresses
+     * - Optimizes duplicate checking by requiring signatures to be sorted in ascending order by validator address
+     * - Ensures final valid signature count meets threshold
+     * @param messageHash Message hash to verify
+     * @param v Array of signature v values
+     * @param r Array of signature r values
+     * @param s Array of signature s values
+     * @notice The signatures must be sorted in ascending order by validator address for proper duplicate detection
+     */
+    function _validateSignature(bytes32 messageHash, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
+        internal
+        view
+    {
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
 
-    function setValidators(address[] memory validators) external {
-        for (uint i = 0; i < validators.length; i++) {
-            _setValidator(validators[i], true);
-        }
-    }
-
-    function removeValidator(address validator) external {
-        _setValidator(validator, false);
-    }
-
-    function removeValidators(address[] memory validators) external {
-        for (uint i = 0; i < validators.length; i++) {
-            _setValidator(validators[i], false);
-        }
-    }
-
-    function _setValidator(address account, bool set) internal onlyOwner {
-        if (set) require(_validators.add(account), ValidatorManagerAlreadyExistValidator(account));
-        else require(_validators.remove(account), ValidatorManagerNotExistValidator(account));
-        emit ValidatorSet(account, set);
-    }
-
-    function _validate(bytes32 h, bytes[] memory sigs) internal view returns (bool) {
-        uint sigsLength = sigs.length;
-        if (sigsLength < _threshold) return false;
+        uint sigsLength = v.length;
+        require(sigsLength == r.length && sigsLength == s.length, ValidatorInvalidSignatures());
+        require(sigsLength >= $._threshold, ValidatorInsufficientSignature(sigsLength));
 
         uint valid = 0;
-        address[] memory _signed = new address[](sigsLength);
-        for (uint i = 0; i < sigs.length; i++) {
-            bytes memory sig = sigs[i];
-            if (sig.length < 65) return false;
+        address before = address(0);
+        for (uint i = 0; i < sigsLength; ++i) {
+            // Recover signer address using EIP-712 typed data hash
+            address validator = _hashTypedDataV4(messageHash).recover(v[i], r[i], s[i]);
 
-            address validator = _hashTypedDataV4(h).recover(sig);
-
-            if (!isValidator(validator)) return false; // 유효하지 않은 서명이 하나라도 있다면 false
-
-            bool dup = false;
-            for (uint j = 0; j < _signed.length; j++) {
-                if (validator == _signed[j]) {
-                    dup = true;
-                    break;
-                }
-            }
-
-            if (!dup) {
+            // Optimize duplicate detection by comparing with the previous validator address
+            // Note: Signatures MUST be sorted in ascending order by validator address for this to work correctly
+            if (before < validator && hasRole(Const.VALIDATOR_ROLE, validator)) {
                 unchecked {
                     ++valid;
                 }
+                before = validator;
             }
         }
 
-        return valid >= _threshold;
+        // Ensure enough unique valid signatures
+        require(valid >= $._threshold, ValidatorInsufficientSignature(valid));
     }
 }
