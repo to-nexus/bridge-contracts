@@ -16,8 +16,7 @@ import "pancake-v3-contracts/projects/v3-core/contracts/interfaces/callback/IPan
 /**
  * @title PancakeSwapDeployScript
  * @notice PancakeSwap V3 풀 배포 스크립트
- * @dev 실행 방법: forge script script/PancakeSwapDeploy:PancakeSwapDeployScript --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast -vvv
- * @dev 컴파일러 버전 명시: forge script script/PancakeSwapDeploy:PancakeSwapDeployScript --use solc:0.7.6 --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast -vvv
+ * @dev 실행 방법: forge script test/PancakeSwapDeploy:PancakeSwapDeployScript --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast -vvv
  */
 contract PancakeSwapDeployScript is Script {
     // Fee 상수
