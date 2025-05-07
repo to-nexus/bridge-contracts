@@ -28,7 +28,7 @@ contract CrossTokenTest is Test {
         ttoken.mint(OWNER, 1_000_000_000 * 1e18);
     }
 
-    function test_permit_transfer() public {
+    function testPermitTransfer() public {
         // create permit data
         address from = OWNER;
         address to = USER;
@@ -56,7 +56,7 @@ contract CrossTokenTest is Test {
         }
     }
 
-    function test_permit_transfer2() public {
+    function testPermitTransfer2() public {
         // create permit data
         address from = OWNER;
         address to = USER;

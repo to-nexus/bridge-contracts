@@ -15,7 +15,6 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
 
     error SwapBridgeBridgeFailed();
     error SwapBridgeInsufficientBalance();
-    error SwapBridgeInvalidBridgeValue();
     error SwapBridgeInvalidPath();
     error SwapBridgeInvalidBridgeToken();
     error SwapBridgeInvalidToken();

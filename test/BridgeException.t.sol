@@ -5,7 +5,7 @@ import {BridgeTest} from "./Bridge.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BridgeExceptionTest is BridgeTest {
-    function test_deposit_with_insufficient_balance() public {
+    function testDepositWithInsufficientBalance() public {
         uint amount = 1000 ether;
 
         vm.selectFork(bscForkID);
@@ -18,7 +18,7 @@ contract BridgeExceptionTest is BridgeTest {
         deposit(true, amount + 1000, 5);
     }
 
-    function test_deposit_with_insufficient_validator_signature() public {
+    function testDepositWithInsufficientValidatorSignature() public {
         uint amount = 1000 ether;
 
         vm.selectFork(bscForkID);
@@ -31,7 +31,7 @@ contract BridgeExceptionTest is BridgeTest {
         deposit(true, amount, 1);
     }
 
-    function test_withdraw_with_insufficient_balance() public {
+    function testWithdrawWithInsufficientBalance() public {
         uint amount = 1000 ether;
 
         vm.selectFork(bscForkID);
@@ -47,7 +47,7 @@ contract BridgeExceptionTest is BridgeTest {
         withdraw(true, USER.balance + 1000, 5);
     }
 
-    function test_withdraw_with_insufficient_validator_signature() public {
+    function testWithdrawWithInsufficientValidatorSignature() public {
         uint amount = 1000 ether;
 
         vm.selectFork(bscForkID);
@@ -64,7 +64,7 @@ contract BridgeExceptionTest is BridgeTest {
         withdraw(true, amount, 1);
     }
 
-    function test_deposit_with_insufficient_allowance() public {
+    function testDepositWithInsufficientAllowance() public {
         uint amount = 1000 ether;
 
         vm.selectFork(bscForkID);
@@ -77,7 +77,7 @@ contract BridgeExceptionTest is BridgeTest {
         deposit(true, amount, 5);
     }
 
-    function test_deposit_withdraw_at_token_paused() public {
+    function testDepositWithdrawAtTokenPaused() public {
         // token pause
         vm.selectFork(bscForkID);
         vm.prank(OWNER);

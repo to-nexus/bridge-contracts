@@ -43,19 +43,19 @@ contract SigTest is Test {
      * [PASS] test_sigvrs() (gas: 17380)
      * [PASS] test_sigvrs_many() (gas: 578317)
      */
-    function test_sigvrs() public view {
+    function testSigvrs() public view {
         sigvrs(hash, v, r, s);
     }
 
-    function test_sigarray() public view {
+    function testSigarray() public view {
         sigarray(hash, sig);
     }
 
-    function test_sigvrs_many() public view {
+    function testSigvrsMany() public view {
         sigvrsBatch(hash_arr, v_arr, r_arr, s_arr);
     }
 
-    function test_sigarray_many() public view {
+    function testSigarrayMany() public view {
         sigarrayBatch(hash_arr, sig_arr);
     }
 

@@ -8,7 +8,7 @@ import {BridgeTest} from "./Bridge.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BridgeSetTest is BridgeTest {
-    function test_set_validator() public {
+    function testSetValidator() public {
         vm.startPrank(OWNER);
 
         vm.selectFork(bscForkID);
@@ -36,7 +36,7 @@ contract BridgeSetTest is BridgeTest {
         vm.stopPrank();
     }
 
-    function test_set_pause() public {
+    function testSetPause() public {
         uint amount = 1000 ether;
 
         vm.selectFork(bscForkID);
@@ -81,7 +81,7 @@ contract BridgeSetTest is BridgeTest {
         withdraw(false, amount, 5);
     }
 
-    function test_set_threshold() public {
+    function testSetThreshold() public {
         uint amount = 1000;
 
         vm.selectFork(bscForkID);
@@ -136,7 +136,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the exchange fee rate
      * @dev Verifies that token-specific exchange fee rates can be set and updated
      */
-    function test_set_ex_fee_rate() public {
+    function testSetExFeeRate() public {
         uint exFeeRate = 50; // 5%
 
         // Get bridge manager from the Cross bridge
@@ -164,7 +164,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the finalize bridge gas
      * @dev Verifies that the gas amount required for finalizing bridge operations can be set
      */
-    function test_set_finalize_bridge_gas() public {
+    function testSetFinalizeBridgeGas() public {
         uint finalizeBridgeGas = 500000;
 
         // Set finalize bridge gas on Cross chain
@@ -179,7 +179,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the default token price
      * @dev Verifies that the default token price used when price feed is unavailable can be set
      */
-    function test_set_default_token_price() public {
+    function testSetDefaultTokenPrice() public {
         uint defaultPrice = 1000 * 10 ** 6; // $1000
 
         // Set default token price on Cross chain
@@ -194,7 +194,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the default exchange fee rate
      * @dev Verifies that the global default exchange fee rate can be set
      */
-    function test_set_default_ex_fee_rate() public {
+    function testSetDefaultExFeeRate() public {
         uint defaultExFeeRate = 20; // 2%
 
         // Set default exchange fee rate on Cross chain
@@ -209,7 +209,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the minimum token value
      * @dev Verifies that the minimum USD value of tokens that can be bridged can be set
      */
-    function test_set_minimum_token_value() public {
+    function testSetMinimumTokenValue() public {
         uint minimumValue = 10 * 10 ** 6; // $10
 
         // Set minimum token value on Cross chain
@@ -224,7 +224,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the verification amount threshold
      * @dev Verifies that the threshold for requiring verification of large transfers can be set
      */
-    function test_set_verification_amount_threshold() public {
+    function testSetVerificationAmountThreshold() public {
         uint threshold = 100000 * 10 ** 6; // $100,000
 
         // Set verification amount threshold on Cross chain
@@ -239,7 +239,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the monitoring time window
      * @dev Verifies that the time window for monitoring token transfer volume can be set
      */
-    function test_set_time_window() public {
+    function testSetTimeWindow() public {
         uint timeWindow = 4 hours;
 
         // Set time window on Cross chain
@@ -254,7 +254,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the period total value threshold
      * @dev Verifies that the maximum USD value of tokens that can be processed within the time window can be set
      */
-    function test_set_period_total_value_threshold() public {
+    function testSetPeriodTotalValueThreshold() public {
         uint threshold = 1000000 * 10 ** 6; // $1,000,000
 
         // Set period total value threshold on Cross chain
@@ -269,7 +269,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the price feed
      * @dev Verifies that the price feed contract reference can be set and removed
      */
-    function test_set_price_feed() public {
+    function testSetPriceFeed() public {
         address newPriceFeed = address(0xFEED);
 
         // Set price feed on Cross chain
@@ -284,7 +284,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting the dev wallet address
      * @dev Verifies that the dev wallet can be updated
      */
-    function test_set_dev() public {
+    function testSetDev() public {
         address payable newDev = payable(address(0xbeef));
 
         // Set dev wallet on BSC chain
@@ -310,7 +310,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting chain pause status
      * @dev Verifies that entire chains can be paused and unpaused
      */
-    function test_set_chain_pause() public {
+    function testSetChainPause() public {
         // Pause chain on BSC
         vm.selectFork(bscForkID);
         vm.prank(OWNER);
@@ -350,7 +350,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting token pause status
      * @dev Verifies that tokens can be paused and unpaused in the bridge
      */
-    function test_set_token_pause() public {
+    function testSetTokenPause() public {
         // Pause token on BSC chain
         vm.selectFork(bscForkID);
         vm.prank(OWNER);
@@ -390,7 +390,7 @@ contract BridgeSetTest is BridgeTest {
      * @notice Test setting base verification delay
      * @dev Verifies that verification delay can be configured
      */
-    function test_set_verification_delay() public {
+    function testSetVerificationDelay() public {
         uint newDelay = 2 hours;
 
         // Set verification delay on BSC chain

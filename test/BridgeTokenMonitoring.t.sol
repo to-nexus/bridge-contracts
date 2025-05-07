@@ -61,7 +61,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
      * @notice Test basic validation with amount below thresholds
      * @dev Verifies that validation passes for normal amounts
      */
-    function test_validateBridgeTokenValue_below_threshold() public {
+    function testValidateBridgeTokenValueBelowThreshold() public {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
@@ -77,7 +77,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
      * @notice Test validation failure when amount exceeds verification threshold
      * @dev Verifies that validation fails when a single transfer exceeds the set threshold
      */
-    function test_validateBridgeTokenValue_exceed_verification_threshold() public {
+    function testValidateBridgeTokenValueExceedVerificationThreshold() public {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
@@ -92,7 +92,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
      * @notice Test validation failure when total volume exceeds period threshold
      * @dev Verifies that validation fails when multiple transfers exceed the period total value threshold
      */
-    function test_validateBridgeTokenValue_exceed_period_total_threshold() public {
+    function testValidateBridgeTokenValueExceedPeriodTotalThreshold() public {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
@@ -114,7 +114,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
      * @notice Test validation after time window has passed
      * @dev Verifies that old transfers are removed from the time window tracking
      */
-    function test_validateBridgeTokenValue_time_window_expiration() public {
+    function testValidateBridgeTokenValueTimeWindowExpiration() public {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
@@ -143,7 +143,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
      * @notice Test zero token value validation
      * @dev Verifies behavior when token value is zero
      */
-    function test_validateBridgeTokenValue_zero_value() public {
+    function testValidateBridgeTokenValueZeroValue() public {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
@@ -158,7 +158,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
      * @notice Test validation with different tokens
      * @dev Verifies that validation properly tracks thresholds separately for different tokens
      */
-    function test_validateBridgeTokenValue_multiple_tokens() public {
+    function testValidateBridgeTokenValueMultipleTokens() public {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
