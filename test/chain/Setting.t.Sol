@@ -49,9 +49,6 @@ contract SettingTest is Test {
     IERC20 internal testTokenBSC; // TT origin
     IERC20 internal testTokenCross; // TT wrapped
 
-    IERC20 internal testTokenBSC2; // TT2 origin
-    IERC20 internal testTokenCross2; // TT2 wrapped
-
     address internal OWNER;
     address internal CrossOWNER;
     address internal USER;
@@ -67,9 +64,13 @@ contract SettingTest is Test {
 
     bytes NULLDATA;
 
+    string internal defaultNodeURL = "http://localhost:8545";
+    string internal bscNodeURL = defaultNodeURL;
+    string internal crossNodeURL = defaultNodeURL;
+
     function setUp() public virtual {
-        bscForkID = vm.createFork("http://localhost:8545"); // bsc test chain
-        crossForkID = vm.createFork("http://localhost:8545"); // cross test chain
+        bscForkID = vm.createFork(bscNodeURL); // bsc test chain
+        crossForkID = vm.createFork(crossNodeURL); // cross test chain
 
         threshold = uint8(3);
 
