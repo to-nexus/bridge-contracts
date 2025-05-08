@@ -1,8 +1,45 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.2;
 
-/// @notice Chainlink price oracle
 interface ISwapBridgeRouter {
+    function swapExactTokensForCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountIn,
+        uint amountOutMin,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external;
+
+    function swapTokensForExactCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountOut,
+        uint amountInMax,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external;
+
+    function swapExactETHForCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountOutMin,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external payable;
+
+    function swapETHForExactCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountOut,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external payable;
+
     function swapExactTokensForTokensBridge(
         uint toChainID,
         address to,
@@ -21,7 +58,7 @@ interface ISwapBridgeRouter {
         uint amountInMax,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
     ) external;
 
@@ -31,7 +68,7 @@ interface ISwapBridgeRouter {
         uint amountOutMin,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
     ) external payable;
 
@@ -42,7 +79,7 @@ interface ISwapBridgeRouter {
         uint amountInMax,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
     ) external;
 
@@ -53,7 +90,7 @@ interface ISwapBridgeRouter {
         uint amountOutMin,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
     ) external payable;
 
@@ -63,16 +100,28 @@ interface ISwapBridgeRouter {
         uint amountOut,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
     ) external payable;
 
-    function getSwapBridgesOut(uint toChainID, uint amountIn, address[] calldata path)
+    function getPath(address token) external view returns (address[] memory);
+
+    function getSwapBridgeOutCross(address token, uint amountIn)
         external
         view
         returns (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee);
 
-    function getSwapBridgesIn(uint toChainID, uint amountOut, address[] calldata path)
+    function getSwapBridgeInCross(address token, uint amountOut)
+        external
+        view
+        returns (uint[] memory amounts, uint networkFee, uint exFee);
+
+    function getSwapBridgeOut(uint toChainID, uint amountIn, address[] memory path)
+        external
+        view
+        returns (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee);
+
+    function getSwapBridgeIn(uint toChainID, uint amountOut, address[] memory path)
         external
         view
         returns (uint[] memory amounts, uint networkFee, uint exFee);

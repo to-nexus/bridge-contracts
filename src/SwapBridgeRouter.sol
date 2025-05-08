@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IPancakeRouter02} from "pancake-smart-contracts/contracts/interfaces/IPancakeRouter02.sol";
 
@@ -10,7 +12,7 @@ import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
 import {ISwapBridgeRouter} from "./interface/ISwapBridgeRouter.sol";
 import {Const} from "./lib/Const.sol";
 
-contract SwapBridgeRouter is ISwapBridgeRouter {
+contract SwapBridgeRouter is ISwapBridgeRouter, Ownable, Pausable {
     using Math for uint;
 
     error SwapBridgeBridgeFailed();
@@ -27,12 +29,21 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint indexed toChainID, uint indexed index, address indexed from, address to, uint bridgeValue, address[] path
     );
 
+    event TokenPathSet(address indexed token, address[] path);
+
     IBaseBridge public immutable bridge;
     IPancakeRouter02 public immutable swapRouter;
+    address public immutable cross;
+    uint public immutable crossChainID;
+    mapping(address => address[]) public tokenToPath;
 
-    constructor(address bridge_, address swapRouter_) {
+    constructor(address owner_, address bridge_, address swapRouter_, address cross_, uint crossChainID_)
+        Ownable(owner_)
+    {
         bridge = IBaseBridge(bridge_);
         swapRouter = IPancakeRouter02(swapRouter_);
+        cross = cross_;
+        crossChainID = crossChainID_;
     }
 
     receive() external payable {
@@ -61,6 +72,70 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
     // -------------------------
     // --- execute functions ---
     // -------------------------
+    // ------------- route 경로가 정해져있는 함수 -------------
+    function swapExactTokensForCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountIn,
+        uint amountOutMin,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external {
+        address[] memory path = tokenToPath[tokenForSwap];
+        require(path.length > 1, SwapBridgeInvalidPath());
+
+        swapExactTokensForTokensBridge(
+            crossChainID, to, amountIn, amountOutMin, maxNetworkFee, maxExFee, path, deadline
+        );
+    }
+
+    function swapTokensForExactCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountOut,
+        uint amountInMax,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external {
+        address[] memory path = tokenToPath[tokenForSwap];
+        require(path.length > 1, SwapBridgeInvalidPath());
+
+        swapTokensForExactTokensBridge(
+            crossChainID, to, amountOut, amountInMax, maxNetworkFee, maxExFee, path, deadline
+        );
+    }
+
+    function swapExactETHForCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountOutMin,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external payable {
+        address[] memory path = tokenToPath[tokenForSwap];
+        require(path.length > 1, SwapBridgeInvalidPath());
+
+        swapExactETHForTokensBridge(crossChainID, to, amountOutMin, maxNetworkFee, maxExFee, path, deadline);
+    }
+
+    function swapETHForExactCrossTokensBridge(
+        address tokenForSwap,
+        address to,
+        uint amountOut,
+        uint maxNetworkFee,
+        uint maxExFee,
+        uint deadline
+    ) external payable {
+        address[] memory path = tokenToPath[tokenForSwap];
+        require(path.length > 1, SwapBridgeInvalidPath());
+
+        swapETHForExactTokensBridge(crossChainID, to, amountOut, maxNetworkFee, maxExFee, path, deadline);
+    }
+
+    // ------------- 기본 swap bridge 함수 -------------
     // 정확한 양의 토큰을 다른 토큰으로 교환 후 Bridge 요청
     function swapExactTokensForTokensBridge(
         uint toChainID,
@@ -71,7 +146,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint maxExFee,
         address[] memory path,
         uint deadline
-    ) external validPath(toChainID, path) handleToken(path, amountIn) {
+    ) public validPath(toChainID, path) handleToken(path, amountIn) {
         // swap 요청
         swapRouter.swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), deadline);
 
@@ -87,9 +162,9 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint amountInMax,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
-    ) external validPath(toChainID, path) handleToken(path, amountInMax) {
+    ) public validPath(toChainID, path) handleToken(path, amountInMax) {
         amountOut = _calculateTotalAmount(toChainID, amountOut, path);
 
         // swap 요청
@@ -106,9 +181,9 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint amountOutMin,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path, // @TODO: ETH일때 path 확인 필요
+        address[] memory path,
         uint deadline
-    ) external payable validPath(toChainID, path) handleToken(path, msg.value) {
+    ) public payable validPath(toChainID, path) handleToken(path, msg.value) {
         // swap 요청
         swapRouter.swapExactETHForTokens{value: msg.value}(amountOutMin, path, address(this), deadline);
 
@@ -124,9 +199,9 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint amountInMax,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
-    ) external validPath(toChainID, path) handleToken(path, amountInMax) {
+    ) public validPath(toChainID, path) handleToken(path, amountInMax) {
         amountOut = _calculateTotalAmount(toChainID, amountOut, path);
 
         // swap 요청
@@ -144,9 +219,9 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint amountOutMin,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
-    ) external payable validPath(toChainID, path) handleToken(path, amountIn) {
+    ) public payable validPath(toChainID, path) handleToken(path, amountIn) {
         // swap 요청
         swapRouter.swapExactTokensForETH(amountIn, amountOutMin, path, address(this), deadline);
 
@@ -161,9 +236,9 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint amountOut,
         uint maxNetworkFee,
         uint maxExFee,
-        address[] calldata path,
+        address[] memory path,
         uint deadline
-    ) external payable validPath(toChainID, path) handleToken(path, msg.value) {
+    ) public payable validPath(toChainID, path) handleToken(path, msg.value) {
         amountOut = _calculateTotalAmount(toChainID, amountOut, path);
 
         // swap 요청
@@ -173,12 +248,47 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         _bridgeToken(toChainID, to, maxNetworkFee, maxExFee, path);
     }
 
+    function setTokenPath(address token, address[] memory path) external onlyOwner {
+        require(path.length > 1, SwapBridgeInvalidPath());
+        require(path[0] == token, SwapBridgeInvalidPath());
+        require(path[path.length - 1] == cross, SwapBridgeInvalidPath());
+
+        tokenToPath[token] = path;
+        emit TokenPathSet(token, path);
+    }
+
     // ----------------------
     // --- view functions ---
     // ----------------------
-    // bridge할 token의 수량 => swap + target chain에서 받을 token의 수량 계산
-    function getSwapBridgesOut(uint toChainID, uint amountIn, address[] calldata path)
+
+    // Cross 토큰 스왑의 path 조회. 시작 token의 주소를 입력
+    function getPath(address token) external view returns (address[] memory) {
+        return tokenToPath[token];
+    }
+
+    // Cross 토큰 스왑의 출력 수량, 브릿지 가치, 네트워크 수수료, 추가 수수료 조회, 시작토큰주소와 amountIn을 입력
+    function getSwapBridgeOutCross(address token, uint amountIn)
         external
+        view
+        returns (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee)
+    {
+        address[] memory path = tokenToPath[token];
+        (amounts, bridgeValue, networkFee, exFee) = getSwapBridgeOut(crossChainID, amountIn, path);
+    }
+
+    // Cross 토큰 스왑의 입력 수량, 네트워크 수수료, 추가 수수료 조회, 시작토큰주소와 amountOut을 입력
+    function getSwapBridgeInCross(address token, uint amountOut)
+        external
+        view
+        returns (uint[] memory amounts, uint networkFee, uint exFee)
+    {
+        address[] memory path = tokenToPath[token];
+        (amounts, networkFee, exFee) = getSwapBridgeIn(crossChainID, amountOut, path);
+    }
+
+    // bridge할 token의 수량 => swap + target chain에서 받을 token의 수량 계산
+    function getSwapBridgeOut(uint toChainID, uint amountIn, address[] memory path)
+        public
         view
         returns (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee)
     {
@@ -195,8 +305,8 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
     }
 
     // // target chain에서 받을 token의 수량 => from chain에서 bridge할 token의 수량 계산
-    function getSwapBridgesIn(uint toChainID, uint amountOut, address[] calldata path)
-        external
+    function getSwapBridgeIn(uint toChainID, uint amountOut, address[] memory path)
+        public
         view
         returns (uint[] memory amounts, uint networkFee, uint exFee)
     {
@@ -272,7 +382,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         emit SwapBridgeInitiated(toChainID, index, msg.sender, to, bridgeValue, path);
     }
 
-    function _estimateMaxValue(uint remoteChainID, IERC20 token, uint totalValue)
+    function _estimateMaxValue(uint toChainID, IERC20 token, uint totalValue)
         private
         view
         returns (bool ok, uint value, uint networkFee, uint exFee)
@@ -281,7 +391,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
 
         uint minimumAmount;
         uint exFeeRate;
-        (minimumAmount, networkFee, exFeeRate) = bridgeVerifier.getTokenConfig(remoteChainID, token);
+        (minimumAmount, networkFee, exFeeRate) = bridgeVerifier.getTokenConfig(toChainID, token);
         if (totalValue <= networkFee) return (false, 0, 0, 0);
 
         uint denominator = bridgeVerifier.denominator();
@@ -291,7 +401,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         ok = value > minimumAmount && totalValue >= value + networkFee + exFee;
     }
 
-    function _calculateTotalAmount(uint remoteChainID, uint value, address[] memory path)
+    function _calculateTotalAmount(uint toChainID, uint value, address[] memory path)
         private
         view
         returns (uint totalValue)
@@ -305,7 +415,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter {
         uint exFeeRate;
         uint networkFee;
 
-        (minimumAmount, networkFee, exFeeRate) = bridgeVerifier.getTokenConfig(remoteChainID, token);
+        (minimumAmount, networkFee, exFeeRate) = bridgeVerifier.getTokenConfig(toChainID, token);
         require(value > minimumAmount, SwapBridgeInsufficientBalance());
 
         uint denominator = bridgeVerifier.denominator();

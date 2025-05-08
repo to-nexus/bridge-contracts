@@ -17,13 +17,17 @@ contract SwapBridgeTest is BridgeTest {
     TestToken public tokenUSD;
     address public WETH;
 
+    address[] public wethToCrossPath;
+    address[] public tokenUsdToCrossPath;
+
     function setUp() public override {
         bscNodeURL = "https://bsc-mainnet.crosstoken.io/2272489872e4f1475ff25d57ce93b51989f933c7";
         super.setUp();
         vm.selectFork(bscForkID);
 
         router = IPancakeRouter02(address(0x10ED43C718714eb63d5aA57B78B54704E256024E));
-        swapBridgeRouter = new SwapBridgeRouter(address(bridgeBSC), address(router));
+        swapBridgeRouter =
+            new SwapBridgeRouter(OWNER, address(bridgeBSC), address(router), address(cross), CROSS_CHAIN_ID);
         WETH = router.WETH();
 
         vm.startPrank(OWNER);
@@ -58,6 +62,12 @@ contract SwapBridgeTest is BridgeTest {
             block.timestamp + 300
         );
 
+        wethToCrossPath = [WETH, address(cross)];
+        tokenUsdToCrossPath = [address(tokenUSD), address(cross)];
+
+        swapBridgeRouter.setTokenPath(address(tokenUSD), tokenUsdToCrossPath);
+        swapBridgeRouter.setTokenPath(WETH, wethToCrossPath);
+
         vm.stopPrank();
     }
 
@@ -67,14 +77,13 @@ contract SwapBridgeTest is BridgeTest {
         vm.prank(OWNER);
         tokenUSD.transfer(USER, amount0);
 
-        // 2. 스왑 준비
         address[] memory path = new address[](2);
         path[0] = address(tokenUSD);
         path[1] = address(cross);
 
-        // getAmountsOut 테스트
+        // getSwapBridgeOut 테스트
         (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee) =
-            swapBridgeRouter.getSwapBridgesOut(CROSS_CHAIN_ID, amount0, path);
+            swapBridgeRouter.getSwapBridgeOut(CROSS_CHAIN_ID, amount0, path);
         assertTrue(amounts[0] == amount0);
         assertTrue(amounts[1] > 0);
 
@@ -85,7 +94,7 @@ contract SwapBridgeTest is BridgeTest {
 
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, path);
-            // 스왑
+            // 스왑 브릿지
             swapBridgeRouter.swapExactTokensForTokensBridge(
                 CROSS_CHAIN_ID, USER, amount0, amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
             );
@@ -102,7 +111,7 @@ contract SwapBridgeTest is BridgeTest {
         path[1] = address(cross);
 
         (uint[] memory amounts, uint networkFee, uint exFee) =
-            swapBridgeRouter.getSwapBridgesIn(CROSS_CHAIN_ID, bridgeValue, path);
+            swapBridgeRouter.getSwapBridgeIn(CROSS_CHAIN_ID, bridgeValue, path);
         assertTrue(amounts[0] > 0);
         assertTrue(amounts[1] == bridgeValue);
 
@@ -117,7 +126,7 @@ contract SwapBridgeTest is BridgeTest {
 
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, path);
-            // 스왑
+            // 스왑 브릿지
             swapBridgeRouter.swapTokensForExactTokensBridge(
                 CROSS_CHAIN_ID, USER, bridgeValue, amounts[0], networkFee, exFee, path, uint(block.timestamp + 300)
             );
@@ -131,14 +140,13 @@ contract SwapBridgeTest is BridgeTest {
         vm.prank(OWNER);
         payable(USER).transfer(amount0);
 
-        // 2. 스왑 준비
         address[] memory path = new address[](2);
-        path[0] = address(WETH);
+        path[0] = WETH;
         path[1] = address(cross);
 
-        // getAmountsOut 테스트
+        // getSwapBridgeOut 테스트
         (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee) =
-            swapBridgeRouter.getSwapBridgesOut(CROSS_CHAIN_ID, amount0, path);
+            swapBridgeRouter.getSwapBridgeOut(CROSS_CHAIN_ID, amount0, path);
         assertTrue(amounts[0] == amount0);
         assertTrue(amounts[1] > 0);
 
@@ -148,7 +156,7 @@ contract SwapBridgeTest is BridgeTest {
 
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, path);
-            // 스왑
+            // 스왑 브릿지
             swapBridgeRouter.swapExactETHForTokensBridge{value: amount0}(
                 CROSS_CHAIN_ID, USER, amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
             );
@@ -162,10 +170,10 @@ contract SwapBridgeTest is BridgeTest {
         // 스왑 준비
         address[] memory path = new address[](2);
         path[0] = address(cross);
-        path[1] = address(WETH);
+        path[1] = WETH;
 
         (uint[] memory amounts, uint networkFee, uint exFee) =
-            swapBridgeRouter.getSwapBridgesIn(CROSS_CHAIN_ID, bridgeValue, path);
+            swapBridgeRouter.getSwapBridgeIn(CROSS_CHAIN_ID, bridgeValue, path);
         assertTrue(amounts[0] > 0);
         assertTrue(amounts[1] == bridgeValue);
 
@@ -180,7 +188,7 @@ contract SwapBridgeTest is BridgeTest {
 
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, path);
-            // 스왑
+            // 스왑 브릿지
             swapBridgeRouter.swapTokensForExactETHBridge(
                 CROSS_CHAIN_ID, USER, bridgeValue, amounts[0], networkFee, exFee, path, uint(block.timestamp + 300)
             );
@@ -194,14 +202,13 @@ contract SwapBridgeTest is BridgeTest {
         vm.prank(OWNER);
         cross.transfer(USER, amount0);
 
-        // 2. 스왑 준비
         address[] memory path = new address[](2);
         path[0] = address(cross);
-        path[1] = address(WETH);
+        path[1] = WETH;
 
-        // getAmountsOut 테스트
+        // getSwapBridgeOut 테스트
         (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee) =
-            swapBridgeRouter.getSwapBridgesOut(CROSS_CHAIN_ID, amount0, path);
+            swapBridgeRouter.getSwapBridgeOut(CROSS_CHAIN_ID, amount0, path);
         assertTrue(amounts[0] == amount0);
         assertTrue(amounts[1] > 0);
 
@@ -212,7 +219,7 @@ contract SwapBridgeTest is BridgeTest {
 
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, path);
-            // 스왑
+            // 스왑 브릿지
             swapBridgeRouter.swapExactTokensForETHBridge(
                 CROSS_CHAIN_ID, USER, amounts[0], amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
             );
@@ -225,11 +232,11 @@ contract SwapBridgeTest is BridgeTest {
 
         // 스왑 준비
         address[] memory path = new address[](2);
-        path[0] = address(WETH);
+        path[0] = WETH;
         path[1] = address(cross);
 
         (uint[] memory amounts, uint networkFee, uint exFee) =
-            swapBridgeRouter.getSwapBridgesIn(CROSS_CHAIN_ID, bridgeValue, path);
+            swapBridgeRouter.getSwapBridgeIn(CROSS_CHAIN_ID, bridgeValue, path);
         assertTrue(amounts[0] > 0);
         assertTrue(amounts[1] == bridgeValue);
 
@@ -244,9 +251,115 @@ contract SwapBridgeTest is BridgeTest {
 
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, path);
-            // 스왑
+            // 스왑 브릿지
             swapBridgeRouter.swapETHForExactTokensBridge{value: amounts[0]}(
                 CROSS_CHAIN_ID, USER, bridgeValue, networkFee, exFee, path, uint(block.timestamp + 300)
+            );
+            vm.stopPrank();
+        }
+    }
+
+    function testSwapExactTokensForCrossTokensBridge() public {
+        uint amount0 = 100 ether;
+        // token 충전
+        vm.prank(OWNER);
+        tokenUSD.transfer(USER, amount0);
+
+        // getSwapBridgeOut 테스트
+        (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee) =
+            swapBridgeRouter.getSwapBridgeOutCross(address(tokenUSD), amount0);
+        assertTrue(amounts[0] == amount0);
+        assertTrue(amounts[1] > 0);
+
+        uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
+        {
+            vm.startPrank(USER);
+            tokenUSD.approve(address(swapBridgeRouter), type(uint).max);
+
+            vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
+            emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, tokenUsdToCrossPath);
+            // 스왑 브릿지
+            swapBridgeRouter.swapExactTokensForCrossTokensBridge(
+                address(tokenUSD), USER, amount0, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
+            );
+            vm.stopPrank();
+        }
+    }
+
+    function testSwapTokensForExactCrossTokensBridge() public {
+        uint bridgeValue = 100 ether;
+
+        (uint[] memory amounts, uint networkFee, uint exFee) =
+            swapBridgeRouter.getSwapBridgeInCross(address(tokenUSD), bridgeValue);
+        assertTrue(amounts[0] > 0);
+        assertTrue(amounts[1] == bridgeValue);
+
+        // token 충전
+        vm.prank(OWNER);
+        tokenUSD.transfer(USER, amounts[0]);
+
+        uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
+        {
+            vm.startPrank(USER);
+            tokenUSD.approve(address(swapBridgeRouter), type(uint).max);
+
+            vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
+            emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, tokenUsdToCrossPath);
+            // 스왑 브릿지
+            swapBridgeRouter.swapTokensForExactCrossTokensBridge(
+                address(tokenUSD), USER, bridgeValue, amounts[0], networkFee, exFee, uint(block.timestamp + 300)
+            );
+            vm.stopPrank();
+        }
+    }
+
+    function testSwapExactETHForCrossTokensBridge() public {
+        uint amount0 = 100 ether;
+        // token 충전
+        vm.prank(OWNER);
+        payable(USER).transfer(amount0);
+
+        // getSwapBridgeOut 테스트
+        (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee) =
+            swapBridgeRouter.getSwapBridgeOutCross(WETH, amount0);
+        assertTrue(amounts[0] == amount0);
+        assertTrue(amounts[1] > 0);
+
+        uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
+        {
+            vm.startPrank(USER);
+
+            vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
+            emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, wethToCrossPath);
+            // 스왑 브릿지
+            swapBridgeRouter.swapExactETHForCrossTokensBridge{value: amount0}(
+                WETH, USER, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
+            );
+            vm.stopPrank();
+        }
+    }
+
+    function testSwapETHForExactCrossTokensBridge() public {
+        uint bridgeValue = 100 ether;
+
+        (uint[] memory amounts, uint networkFee, uint exFee) = swapBridgeRouter.getSwapBridgeInCross(WETH, bridgeValue);
+        assertTrue(amounts[0] > 0);
+        assertTrue(amounts[1] == bridgeValue);
+
+        // token 충전
+        vm.prank(OWNER);
+        tokenUSD.transfer(USER, amounts[0]);
+        payable(USER).transfer(amounts[0]);
+
+        uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
+        {
+            vm.startPrank(USER);
+
+            vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
+            emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, bridgeValue, wethToCrossPath);
+            // 스왑 브릿지
+            swapBridgeRouter.swapETHForExactCrossTokensBridge{value: amounts[0]}(
+                WETH, USER, bridgeValue, networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
         }
