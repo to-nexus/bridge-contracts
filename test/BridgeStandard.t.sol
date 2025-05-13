@@ -16,7 +16,7 @@ contract BaseBridgeTest is BridgeTest {
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     // ----- Test -----
-    function test_depositWithdraw() public {
+    function testDepositWithdraw() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -29,7 +29,7 @@ contract BaseBridgeTest is BridgeTest {
         withdraw(false, amount, 5);
     }
 
-    function test_depositWithdraw_eth() public {
+    function testDepositWithdrawEth() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -42,7 +42,7 @@ contract BaseBridgeTest is BridgeTest {
         withdrawETH(false, amount, 5);
     }
 
-    function test_depositWithdrawToken() public {
+    function testDepositWithdrawToken() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -58,7 +58,7 @@ contract BaseBridgeTest is BridgeTest {
         withdrawToken(false, amount, 5);
     }
 
-    function test_fuzz_depositWithdraw(uint amount) public {
+    function testFuzzDepositWithdraw(uint amount) public {
         vm.selectFork(bscForkID);
         vm.assume(amount < (cross.balanceOf(OWNER) / 1e18) && amount != 0);
         amount = amount * 1e18;
@@ -73,7 +73,7 @@ contract BaseBridgeTest is BridgeTest {
         withdraw(false, amount, 5);
     }
 
-    function test_fuzz_depositWithdraw_eth(uint amount) public {
+    function testFuzzDepositWithdrawEth(uint amount) public {
         (uint minimum, uint gasFee, uint exFeeRate) = crossGetTokenFee(weth);
         uint denom = bridgeVerifierCross.denominator();
         minimum = minimum + gasFee + (minimum * exFeeRate / denom);
@@ -93,7 +93,7 @@ contract BaseBridgeTest is BridgeTest {
         withdrawETH(false, amount, 5);
     }
 
-    function test_fuzz_depositWithdrawToken(uint amount) public {
+    function testFuzzDepositWithdrawToken(uint amount) public {
         vm.selectFork(bscForkID);
         vm.assume(amount < (testTokenBSC.balanceOf(OWNER) / 1e18) && amount != 0);
         amount = amount * 1e18;
@@ -111,7 +111,7 @@ contract BaseBridgeTest is BridgeTest {
         withdrawToken(false, amount, 5);
     }
 
-    function test_pending_finalize() public {
+    function testPendingFinalize() public {
         uint amount = 1000 * 1e18;
 
         vm.prank(OWNER);
@@ -164,7 +164,7 @@ contract BaseBridgeTest is BridgeTest {
         }
     }
 
-    function test_pending_finalize_with_revert_transfer() public {
+    function testPendingFinalizeWithRevertTransfer() public {
         uint amount = 1000 * 1e18;
 
         vm.prank(OWNER);
@@ -217,7 +217,7 @@ contract BaseBridgeTest is BridgeTest {
         }
     }
 
-    function test_permit_deposit() public {
+    function testPermitDeposit() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -259,7 +259,7 @@ contract BaseBridgeTest is BridgeTest {
         assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
     }
 
-    function test_permit_deposit_before_same_approve() public {
+    function testPermitDepositBeforeSameApprove() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -305,7 +305,7 @@ contract BaseBridgeTest is BridgeTest {
         assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
     }
 
-    function test_permit_depositToken() public {
+    function testPermitDepositToken() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -349,7 +349,7 @@ contract BaseBridgeTest is BridgeTest {
         assertEq(userCrossBalance + amount, testTokenCross.balanceOf(USER));
     }
 
-    function test_permit_deposit_batch() public {
+    function testPermitDepositBatch() public {
         // not allow fail
         uint amount = 1000 * 1e18;
 
@@ -422,7 +422,7 @@ contract BaseBridgeTest is BridgeTest {
         assertEq(bridgeCoinBalance - (amount), address(bridgeCross).balance);
     }
 
-    function test_permit_deposit_batch_with_fail() public {
+    function testPermitDepositBatchWithFail() public {
         // allow fail
         uint amount = 1000 * 1e18;
 
@@ -480,7 +480,7 @@ contract BaseBridgeTest is BridgeTest {
         assertEq(cross.balanceOf(OWNER), beforeOwnerBalance); // owner balance should not change
     }
 
-    function test_tokenPair_depositedAndMinted() public {
+    function testTokenPairDepositedAndMinted() public {
         uint amount = 1000 * 1e18;
 
         // ===== Original token test (CROSS token) =====
@@ -525,7 +525,7 @@ contract BaseBridgeTest is BridgeTest {
         assertEq(wrappedPairAfter.minted - wrappedPairBefore.minted, amount, "Mint amount delta check");
     }
 
-    function test_tokenPair_ethDeposited() public {
+    function testTokenPairEthDeposited() public {
         uint amount = 1000 * 1e18;
 
         // ETH deposit/withdraw effect on deposited value test

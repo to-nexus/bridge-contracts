@@ -6,6 +6,9 @@ optimizer = true
 optimizer_runs = 162
 
 
+remappings = [
+    "pancake-smart-contracts/contracts/=lib/pancake-smart-contracts/projects/exchange-protocol/contracts/"
+]
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
 [fmt]

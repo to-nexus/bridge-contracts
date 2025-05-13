@@ -10,7 +10,7 @@ contract BridgeGasUsedTest is BridgeTest {
         // enableGasUsedLog = true;
     }
 
-    function test_log_bridge_gasused() public {
+    function testLogBridgeGasused() public {
         uint reserve = 100000 * 1e18;
         uint amount = 1000 * 1e18;
 
