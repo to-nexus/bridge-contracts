@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -20,6 +21,7 @@ import {Const} from "./lib/Const.sol";
 /// @dev Uses PancakeSwap for token swapping and Bridge for cross-chain token transfers
 contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownable, Pausable {
     using Math for uint;
+    using SafeERC20 for IERC20;
 
     error SwapBridgeBridgeFailed();
     error SwapBridgeInsufficientBalance();
@@ -436,48 +438,6 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
         );
     }
 
-    /// @notice Helper function to reduce code duplication across swap types
-    /// @dev Executes appropriate swap based on SwapType and performs bridge operation
-    function _executeSwapAndBridge(
-        uint toChainID,
-        address to,
-        uint amount,
-        uint amountOutOrMin,
-        uint maxNetworkFee,
-        uint maxExFee,
-        address[] memory path,
-        uint deadline,
-        SwapType swapType
-    ) private {
-        uint amountSwapOutMin;
-        uint amountOut;
-        uint[] memory amounts;
-
-        // Execute the appropriate swap based on swap type
-        if (swapType == SwapType.EXACT_TOKEN_FOR_TOKEN) {
-            amountSwapOutMin = amountOutOrMin + maxNetworkFee + maxExFee;
-            amounts = swapRouter.swapExactTokensForTokens(amount, amountSwapOutMin, path, address(this), deadline);
-        } else if (swapType == SwapType.EXACT_ETH_FOR_TOKEN) {
-            amountSwapOutMin = amountOutOrMin + maxNetworkFee + maxExFee;
-            amounts = swapRouter.swapExactETHForTokens{value: amount}(amountSwapOutMin, path, address(this), deadline);
-        } else if (swapType == SwapType.EXACT_TOKEN_FOR_ETH) {
-            amountSwapOutMin = amountOutOrMin + maxNetworkFee + maxExFee;
-            amounts = swapRouter.swapExactTokensForETH(amount, amountSwapOutMin, path, address(this), deadline);
-        } else if (swapType == SwapType.TOKEN_FOR_EXACT_TOKEN) {
-            amountOut = _calculateTotalAmount(toChainID, amountOutOrMin, path);
-            amounts = swapRouter.swapTokensForExactTokens(amountOut, amount, path, address(this), deadline);
-        } else if (swapType == SwapType.ETH_FOR_EXACT_TOKEN) {
-            amountOut = _calculateTotalAmount(toChainID, amountOutOrMin, path);
-            amounts = swapRouter.swapETHForExactTokens{value: amount}(amountOut, path, address(this), deadline);
-        } else if (swapType == SwapType.TOKEN_FOR_EXACT_ETH) {
-            amountOut = _calculateTotalAmount(toChainID, amountOutOrMin, path);
-            amounts = swapRouter.swapTokensForExactETH(amountOut, amount, path, address(this), deadline);
-        }
-
-        // Bridge the tokens to the destination chain
-        _bridgeToken(toChainID, to, amountOutOrMin, maxNetworkFee, maxExFee, path, amounts);
-    }
-
     // -----------------------
     // --- admin functions ---
     // -----------------------
@@ -707,7 +667,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
         // Check if the token is WETH and if the transaction includes enough ETH
         // If it's WETH and enough ETH is provided, we don't need to transfer tokens
         if (!(address(token) == swapRouter.WETH() && msg.value >= amount)) {
-            token.transferFrom(msg.sender, address(this), amount);
+            token.safeTransferFrom(msg.sender, address(this), amount);
         }
 
         // Approve the swap router to spend the tokens if needed
@@ -724,7 +684,49 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
 
         // refund any remaining balance
         uint refundAmount = token.balanceOf(address(this));
-        if (refundAmount > 0) token.transfer(msg.sender, refundAmount);
+        if (refundAmount > 0) token.safeTransfer(msg.sender, refundAmount);
+    }
+
+    /// @notice Helper function to reduce code duplication across swap types
+    /// @dev Executes appropriate swap based on SwapType and performs bridge operation
+    function _executeSwapAndBridge(
+        uint toChainID,
+        address to,
+        uint amount,
+        uint amountOutOrMin,
+        uint maxNetworkFee,
+        uint maxExFee,
+        address[] memory path,
+        uint deadline,
+        SwapType swapType
+    ) private {
+        uint amountSwapOutMin;
+        uint amountOut;
+        uint[] memory amounts;
+
+        // Execute the appropriate swap based on swap type
+        if (swapType == SwapType.EXACT_TOKEN_FOR_TOKEN) {
+            amountSwapOutMin = amountOutOrMin + maxNetworkFee + maxExFee;
+            amounts = swapRouter.swapExactTokensForTokens(amount, amountSwapOutMin, path, address(this), deadline);
+        } else if (swapType == SwapType.EXACT_ETH_FOR_TOKEN) {
+            amountSwapOutMin = amountOutOrMin + maxNetworkFee + maxExFee;
+            amounts = swapRouter.swapExactETHForTokens{value: amount}(amountSwapOutMin, path, address(this), deadline);
+        } else if (swapType == SwapType.EXACT_TOKEN_FOR_ETH) {
+            amountSwapOutMin = amountOutOrMin + maxNetworkFee + maxExFee;
+            amounts = swapRouter.swapExactTokensForETH(amount, amountSwapOutMin, path, address(this), deadline);
+        } else if (swapType == SwapType.TOKEN_FOR_EXACT_TOKEN) {
+            amountOut = _calculateTotalAmount(toChainID, amountOutOrMin, path);
+            amounts = swapRouter.swapTokensForExactTokens(amountOut, amount, path, address(this), deadline);
+        } else if (swapType == SwapType.ETH_FOR_EXACT_TOKEN) {
+            amountOut = _calculateTotalAmount(toChainID, amountOutOrMin, path);
+            amounts = swapRouter.swapETHForExactTokens{value: amount}(amountOut, path, address(this), deadline);
+        } else if (swapType == SwapType.TOKEN_FOR_EXACT_ETH) {
+            amountOut = _calculateTotalAmount(toChainID, amountOutOrMin, path);
+            amounts = swapRouter.swapTokensForExactETH(amountOut, amount, path, address(this), deadline);
+        }
+
+        // Bridge the tokens to the destination chain
+        _bridgeToken(toChainID, to, amountOutOrMin, maxNetworkFee, maxExFee, path, amounts);
     }
 
     /// @notice Bridges tokens to the destination chain
