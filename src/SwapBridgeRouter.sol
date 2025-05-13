@@ -495,6 +495,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @return bridgeValue The amount of tokens being bridged
     /// @return networkFee The network fee for the bridge
     /// @return exFee The exchange fee for the bridge
+    /// @return priceImpactBps The price impact in basis points
     function getSwapBridgeOutCross(address token, uint amountIn)
         external
         view
@@ -510,6 +511,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @return amounts The array of input amounts for each step in the swap
     /// @return networkFee The network fee for the bridge
     /// @return exFee The exchange fee for the bridge
+    /// @return priceImpactBps The price impact in basis points
     function getSwapBridgeInCross(address token, uint amountOut)
         external
         view
@@ -527,6 +529,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @return bridgeValue The amount of tokens being bridged
     /// @return networkFee The network fee for the bridge
     /// @return exFee The exchange fee for the bridge
+    /// @return priceImpactBps The price impact in basis points
     function getSwapBridgeOut(uint toChainID, uint amountIn, address[] memory path)
         public
         view
@@ -555,6 +558,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @return amounts The array of input amounts for each step in the swap
     /// @return networkFee The network fee for the bridge
     /// @return exFee The exchange fee for the bridge
+    /// @return priceImpactBps The price impact in basis points
     function getSwapBridgeIn(uint toChainID, uint amountOut, address[] memory path)
         public
         view
@@ -870,7 +874,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
         // Get token configuration for this chain
         (minimumAmount, networkFee, exFeeRate) = bridgeVerifier.getTokenConfig(toChainID, token);
         // Ensure the requested value exceeds the minimum bridgeable amount
-        require(value > minimumAmount, SwapBridgeInsufficientBalance());
+        require(value >= minimumAmount, SwapBridgeInsufficientBalance());
 
         uint denominator = bridgeVerifier.denominator();
 
@@ -880,7 +884,6 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
 
         // Calculate total amount needed: the bridge value + exchange fee + network fee
         totalValue = value + exFee + networkFee;
-
-        return totalValue;
+        return;
     }
 }

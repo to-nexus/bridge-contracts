@@ -13,13 +13,9 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Script, console} from "forge-std/Script.sol";
 
 contract BSCBridgeScript is Script, BridgeScript {
-    string IMPLEMENTATION = "IMPLEMENTATION";
-
-    address impl;
-
     function setUp() public override {
         super.setUp();
-        
+
         // load env variables
         impl = vm.envAddress(IMPLEMENTATION);
 
@@ -36,15 +32,19 @@ contract BSCBridgeScript is Script, BridgeScript {
      * --sig "setupBSCBridge()"
      */
     function setupBSCBridge() public {
-        crossChainID = vm.envUint(BridgeScript.BRIDGE_CROSS_CHAIN_ID);
-        console.log("crossChainID", crossChainID);
-
-        BSCBridge bscBridge = BSCBridge(deployBSCBridgeProxy());
-
-        _setupBridge(address(bscBridge));
+        address bscBridge = deployBSCBridgeProxy();
+        _setupBridge(bscBridge);
     }
 
     function deployBSCBridgeProxy() public returns (address) {
+        crossChainID = vm.envUint(BridgeScript.BRIDGE_CROSS_CHAIN_ID);
+        cross = vm.envAddress(BRIDGE_CROSS);
+        crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
+
+        console.log("crossChainID", crossChainID);
+        console.log("cross", cross);
+        console.log("crossInitialSupply", crossInitialSupply);
+
         vm.broadcast();
         address proxy = address(
             new ERC1967Proxy(

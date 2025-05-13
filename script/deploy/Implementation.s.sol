@@ -13,6 +13,11 @@ import {Script, console} from "forge-std/Script.sol";
 contract ImplementationScript is Script {
     function setUp() public {}
 
+    function deployImpl() public {
+        deployPriceFeedImpl();
+        deployBaseBridgeImpl();
+    }
+
     function deployBSCImpl() public {
         deployPriceFeedImpl();
         deployBSCBridgeImpl();

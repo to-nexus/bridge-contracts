@@ -5,7 +5,6 @@ libs = ["lib"]
 optimizer = true
 optimizer_runs = 162
 
-
 remappings = [
     "pancake-smart-contracts/contracts/=lib/pancake-smart-contracts/projects/exchange-protocol/contracts/"
 ]

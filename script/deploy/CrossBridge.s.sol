@@ -39,7 +39,12 @@ contract CrossBridgeScript is Script, BridgeScript {
      */
     function setupCrossBridge() public {
         bscChainID = vm.envUint(BridgeScript.BRIDGE_BSC_CHAIN_ID);
+        cross = vm.envAddress(BRIDGE_CROSS);
+        crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
+
         console.log("bscChainID", bscChainID);
+        console.log("cross", cross);
+        console.log("crossInitialSupply", crossInitialSupply);
 
         vm.broadcast();
         crossBridge.initializeCrossBridge(owner, dev, threshold, bscChainID, cross, crossInitialSupply);

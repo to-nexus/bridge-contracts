@@ -4,13 +4,16 @@ pragma solidity 0.8.28;
 import {BaseBridge} from "../../src/BaseBridge.sol";
 import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
 import {CrossMintableERC20Code} from "../../src/token/CrossMintableERC20Code.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import {Script, console} from "forge-std/Script.sol";
 
 contract BridgeScript is Script {
     // Common env variables
     string OWNER = "OWNER";
     string PRICE_FEED = "PRICE_FEED";
-
+    string IMPLEMENTATION = "IMPLEMENTATION";
+    
     // Bridge env variables
     string BRIDGE_DEV = "DEV";
     string BRIDGE_THRESHOLD = "THRESHOLD";
@@ -35,6 +38,7 @@ contract BridgeScript is Script {
     string VERIFIER_GAS_PRICES = "VERIFIER_GAS_PRICES";
     string VERIFIER_GAS_PRICE_CHAINS = "VERIFIER_GAS_PRICE_CHAINS";
 
+    address impl;
     address priceFeed;
     address owner;
     address payable dev;
@@ -67,8 +71,6 @@ contract BridgeScript is Script {
         owner = vm.envAddress(OWNER);
         dev = payable(vm.envAddress(BRIDGE_DEV));
         threshold = uint8(vm.envUint(BRIDGE_THRESHOLD));
-        cross = vm.envAddress(BRIDGE_CROSS);
-        crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
         finalizeBridgeGas = vm.envUint(VERIFIER_FINALIZE_BRIDGE_GAS);
         defaultTokenPrice = vm.envUint(VERIFIER_DEFAULT_TOKEN_PRICE);
         defaultExFeeRate = vm.envUint(VERIFIER_DEFAULT_EX_FEE_RATE);
@@ -88,8 +90,6 @@ contract BridgeScript is Script {
         console.log("owner", owner);
         console.log("dev", dev);
         console.log("threshold", threshold);
-        console.log("cross", cross);
-        console.log("crossInitialSupply", crossInitialSupply);
         console.log("finalizeBridgeGas", finalizeBridgeGas);
         console.log("defaultTokenPrice", defaultTokenPrice);
         console.log("defaultExFeeRate", defaultExFeeRate);
@@ -141,6 +141,32 @@ contract BridgeScript is Script {
                 )
             );
         }
+    }
+
+    /**
+     * @notice Setup Base Bridge contract and initialize
+     * command
+     * forge script ./script/deploy/Bridge.sol:BridgeScript \
+     * -f $RPC_URL \
+     * --sender $SENDER \
+     * --sig "setupBaseBridge()"
+     */
+    function setupBaseBridge() public {
+        // load env variables
+        impl = vm.envAddress(IMPLEMENTATION);
+
+        // print env variables
+        console.log("impl", impl);
+
+        address baseBridge = deployBaseBridgeProxy();
+        _setupBridge(baseBridge);
+    }
+
+    function deployBaseBridgeProxy() public returns (address) {
+        vm.broadcast();
+        address proxy = address(new ERC1967Proxy(impl, abi.encodeCall(BaseBridge.initialize, (owner, dev, threshold))));
+        console.log("BaseBridgeProxy will be deployed to", proxy);
+        return proxy;
     }
 
     /**
