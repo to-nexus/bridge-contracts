@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {BaseBridge} from "../../src/BaseBridge.sol";
 import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
 import {CrossMintableERC20Code} from "../../src/token/CrossMintableERC20Code.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import {Script, console} from "forge-std/Script.sol";
 
 contract BridgeScript is Script {
@@ -141,6 +143,30 @@ contract BridgeScript is Script {
                 )
             );
         }
+    }
+
+    /**
+     * @notice Setup Base Bridge contract and initialize
+     * command
+     * forge script ./script/deploy/Bridge.sol:BridgeScript \
+     * -f $RPC_URL \
+     * --sender $SENDER \
+     * --sig "setupBaseBridge()"
+     */
+    function setupBaseBridge() public {
+        crossChainID = vm.envUint(BridgeScript.BRIDGE_CROSS_CHAIN_ID);
+        console.log("crossChainID", crossChainID);
+
+        BaseBridge baseBridge = BaseBridge(deployBaseBridgeProxy());
+
+        _setupBridge(address(baseBridge));
+    }
+
+    function deployBaseBridgeProxy() public returns (address) {
+        vm.broadcast();
+        address proxy = address(new ERC1967Proxy(impl, abi.encodeCall(BaseBridge.initialize, (owner, dev, threshold))));
+        console.log("BaseBridgeProxy will be deployed to", proxy);
+        return proxy;
     }
 
     /**
