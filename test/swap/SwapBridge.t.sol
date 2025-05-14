@@ -33,7 +33,7 @@ contract SwapBridgeTest is BridgeTest {
     address[] public tokenUsdToCrossPath;
 
     function setUp() public override {
-        bscNodeURL = "https://bsc-mainnet.crosstoken.io/2272489872e4f1475ff25d57ce93b51989f933c7"; // BSC Mainnet RPC URL
+        bscNodeURL = vm.envString("BSC_RPC_URL"); // use bsc-mainnet from env
         super.setUp();
         vm.selectFork(bscForkID);
 

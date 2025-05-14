@@ -6,7 +6,7 @@ import "forge-std/Test.sol";
 import "pancake-smart-contracts/contracts/interfaces/IPancakeRouter02.sol";
 
 contract PancakeSwapTest is Test {
-    string constant bscNodeURL = "https://bsc-mainnet.crosstoken.io/2272489872e4f1475ff25d57ce93b51989f933c7"; // use bsc-mainnet
+    string public bscNodeURL;
 
     IPancakeRouter02 public router;
     TestToken public tokenA;
@@ -17,6 +17,7 @@ contract PancakeSwapTest is Test {
     address internal USER;
 
     function setUp() public {
+        bscNodeURL = vm.envString("BSC_RPC_URL"); // use bsc-mainnet from env
         vm.createSelectFork(bscNodeURL);
 
         OWNER = vm.addr(OWNER_PK);
