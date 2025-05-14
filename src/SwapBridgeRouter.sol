@@ -153,7 +153,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxNetworkFee The maximum network fee to pay
     /// @param maxExFee The maximum exchange fee to pay
     /// @param deadline The deadline for the swap
-    function swapExactTokensForCrossTokensBridge(
+    function swapBridgeExactTokensForCrossTokens(
         address sourceToken,
         address to,
         uint amountIn,
@@ -186,7 +186,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxNetworkFee The maximum network fee to pay
     /// @param maxExFee The maximum exchange fee to pay
     /// @param deadline The deadline for the swap
-    function swapTokensForExactCrossTokensBridge(
+    function swapBridgeTokensForExactCrossTokens(
         address sourceToken,
         address to,
         uint amountOut,
@@ -218,7 +218,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxNetworkFee The maximum network fee to pay
     /// @param maxExFee The maximum exchange fee to pay
     /// @param deadline The deadline for the swap
-    function swapExactETHForCrossTokensBridge(
+    function swapBridgeExactETHForCrossTokens(
         address sourceToken,
         address to,
         uint amountOutMin,
@@ -249,7 +249,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxNetworkFee The maximum network fee to pay
     /// @param maxExFee The maximum exchange fee to pay
     /// @param deadline The deadline for the swap
-    function swapETHForExactCrossTokensBridge(
+    function swapBridgeETHForExactCrossTokens(
         address sourceToken,
         address to,
         uint amountOut,
@@ -283,7 +283,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxExFee The maximum exchange fee to pay
     /// @param path The swap path
     /// @param deadline The deadline for the swap
-    function swapExactTokensForTokensBridge(
+    function swapBridgeExactTokensForTokens(
         uint toChainID,
         address to,
         uint amountIn,
@@ -315,7 +315,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxExFee The maximum exchange fee to pay
     /// @param path The swap path
     /// @param deadline The deadline for the swap
-    function swapTokensForExactTokensBridge(
+    function swapBridgeTokensForExactTokens(
         uint toChainID,
         address to,
         uint amountOut,
@@ -346,7 +346,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxExFee The maximum exchange fee to pay
     /// @param path The swap path
     /// @param deadline The deadline for the swap
-    function swapExactETHForTokensBridge(
+    function swapBridgeExactETHForTokens(
         uint toChainID,
         address to,
         uint amountOutMin,
@@ -377,7 +377,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxExFee The maximum exchange fee to pay
     /// @param path The swap path
     /// @param deadline The deadline for the swap
-    function swapTokensForExactETHBridge(
+    function swapBridgeTokensForExactETH(
         uint toChainID,
         address to,
         uint amountOut,
@@ -401,7 +401,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxExFee The maximum exchange fee to pay
     /// @param path The swap path
     /// @param deadline The deadline for the swap
-    function swapExactTokensForETHBridge(
+    function swapBridgeExactTokensForETH(
         uint toChainID,
         address to,
         uint amountIn,
@@ -424,7 +424,7 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
     /// @param maxExFee The maximum exchange fee to pay
     /// @param path The swap path
     /// @param deadline The deadline for the swap
-    function swapETHForExactTokensBridge(
+    function swapBridgeETHForExactTokens(
         uint toChainID,
         address to,
         uint amountOut,
@@ -884,6 +884,5 @@ contract SwapBridgeRouter is ISwapBridgeRouter, ReentrancyGuardTransient, Ownabl
 
         // Calculate total amount needed: the bridge value + exchange fee + network fee
         totalValue = value + exFee + networkFee;
-        return;
     }
 }
