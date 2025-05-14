@@ -19,7 +19,7 @@ interface ISwapBridgeRouter {
         uint exFee;
     }
 
-    function swapExactTokensForCrossTokensBridge(
+    function swapBridgeExactTokensForCrossTokens(
         address tokenForSwap,
         address to,
         uint amountIn,
@@ -29,7 +29,7 @@ interface ISwapBridgeRouter {
         uint deadline
     ) external;
 
-    function swapTokensForExactCrossTokensBridge(
+    function swapBridgeTokensForExactCrossTokens(
         address tokenForSwap,
         address to,
         uint amountOut,
@@ -39,7 +39,7 @@ interface ISwapBridgeRouter {
         uint deadline
     ) external;
 
-    function swapExactETHForCrossTokensBridge(
+    function swapBridgeExactETHForCrossTokens(
         address tokenForSwap,
         address to,
         uint amountOutMin,
@@ -48,7 +48,7 @@ interface ISwapBridgeRouter {
         uint deadline
     ) external payable;
 
-    function swapETHForExactCrossTokensBridge(
+    function swapBridgeETHForExactCrossTokens(
         address tokenForSwap,
         address to,
         uint amountOut,
@@ -57,7 +57,7 @@ interface ISwapBridgeRouter {
         uint deadline
     ) external payable;
 
-    function swapExactTokensForTokensBridge(
+    function swapBridgeExactTokensForTokens(
         uint toChainID,
         address to,
         uint amountIn,
@@ -68,28 +68,7 @@ interface ISwapBridgeRouter {
         uint deadline
     ) external;
 
-    function swapTokensForExactTokensBridge(
-        uint toChainID,
-        address to,
-        uint amountOut,
-        uint amountInMax,
-        uint maxNetworkFee,
-        uint maxExFee,
-        address[] memory path,
-        uint deadline
-    ) external;
-
-    function swapExactETHForTokensBridge(
-        uint toChainID,
-        address to,
-        uint amountOutMin,
-        uint maxNetworkFee,
-        uint maxExFee,
-        address[] memory path,
-        uint deadline
-    ) external payable;
-
-    function swapTokensForExactETHBridge(
+    function swapBridgeTokensForExactTokens(
         uint toChainID,
         address to,
         uint amountOut,
@@ -100,7 +79,28 @@ interface ISwapBridgeRouter {
         uint deadline
     ) external;
 
-    function swapExactTokensForETHBridge(
+    function swapBridgeExactETHForTokens(
+        uint toChainID,
+        address to,
+        uint amountOutMin,
+        uint maxNetworkFee,
+        uint maxExFee,
+        address[] memory path,
+        uint deadline
+    ) external payable;
+
+    function swapBridgeTokensForExactETH(
+        uint toChainID,
+        address to,
+        uint amountOut,
+        uint amountInMax,
+        uint maxNetworkFee,
+        uint maxExFee,
+        address[] memory path,
+        uint deadline
+    ) external;
+
+    function swapBridgeExactTokensForETH(
         uint toChainID,
         address to,
         uint amountIn,
@@ -111,7 +111,7 @@ interface ISwapBridgeRouter {
         uint deadline
     ) external payable;
 
-    function swapETHForExactTokensBridge(
+    function swapBridgeETHForExactTokens(
         uint toChainID,
         address to,
         uint amountOut,

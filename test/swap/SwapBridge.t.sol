@@ -207,7 +207,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
             // Swap bridge
-            swapBridgeRouter.swapExactTokensForTokensBridge(
+            swapBridgeRouter.swapBridgeExactTokensForTokens(
                 CROSS_CHAIN_ID, USER, amount, amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -253,7 +253,7 @@ contract SwapBridgeTest is BridgeTest {
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
 
             // Swap bridge
-            swapBridgeRouter.swapTokensForExactTokensBridge(
+            swapBridgeRouter.swapBridgeTokensForExactTokens(
                 CROSS_CHAIN_ID, USER, bridgeValue, amounts[0], networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -297,7 +297,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
             // Swap bridge
-            swapBridgeRouter.swapExactETHForTokensBridge{value: amount}(
+            swapBridgeRouter.swapBridgeExactETHForTokens{value: amount}(
                 CROSS_CHAIN_ID, USER, amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -342,7 +342,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
             // Swap bridge
-            swapBridgeRouter.swapTokensForExactETHBridge(
+            swapBridgeRouter.swapBridgeTokensForExactETH(
                 CROSS_CHAIN_ID, USER, bridgeValue, amounts[0], networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -387,7 +387,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
             // Swap bridge
-            swapBridgeRouter.swapExactTokensForETHBridge(
+            swapBridgeRouter.swapBridgeExactTokensForETH(
                 CROSS_CHAIN_ID, USER, amounts[0], amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -431,7 +431,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
             // Swap bridge
-            swapBridgeRouter.swapETHForExactTokensBridge{value: amounts[0]}(
+            swapBridgeRouter.swapBridgeETHForExactTokens{value: amounts[0]}(
                 CROSS_CHAIN_ID, USER, bridgeValue, networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -472,7 +472,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, tokenUsdToCrossPath, amounts);
             // Swap bridge
-            swapBridgeRouter.swapExactTokensForCrossTokensBridge(
+            swapBridgeRouter.swapBridgeExactTokensForCrossTokens(
                 address(tokenUSD), USER, amount, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -512,7 +512,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, tokenUsdToCrossPath, amounts);
             // Swap bridge
-            swapBridgeRouter.swapTokensForExactCrossTokensBridge(
+            swapBridgeRouter.swapBridgeTokensForExactCrossTokens(
                 address(tokenUSD), USER, bridgeValue, amounts[0], networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -553,7 +553,7 @@ contract SwapBridgeTest is BridgeTest {
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, wethToCrossPath, amounts);
 
             // Swap bridge
-            swapBridgeRouter.swapExactETHForCrossTokensBridge{value: amount}(
+            swapBridgeRouter.swapBridgeExactETHForCrossTokens{value: amount}(
                 WETH, USER, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
@@ -591,7 +591,7 @@ contract SwapBridgeTest is BridgeTest {
             vm.expectEmit(true, true, true, true, address(swapBridgeRouter), 1);
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, wethToCrossPath, amounts);
             // Swap bridge
-            swapBridgeRouter.swapETHForExactCrossTokensBridge{value: amounts[0]}(
+            swapBridgeRouter.swapBridgeETHForExactCrossTokens{value: amounts[0]}(
                 WETH, USER, bridgeValue, networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
