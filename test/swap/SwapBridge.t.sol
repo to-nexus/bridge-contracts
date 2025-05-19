@@ -78,92 +78,92 @@ contract SwapBridgeTest is BridgeTest {
         vm.stopPrank();
     }
 
-    function testSwapExactTokensForTokensBridge() public {
+    function testSwapBridgeExactTokensForTokens() public {
         _swapExactTokensForTokensBridge(100 ether);
     }
 
-    function testSwapTokensForExactTokensBridge() public {
+    function testSwapBridgeTokensForExactTokens() public {
         _swapTokensForExactTokensBridge(100 ether);
     }
 
-    function testSwapExactETHForTokensBridge() public {
+    function testSwapBridgeExactETHForTokens() public {
         _swapExactETHForTokensBridge(100 ether);
     }
 
-    function testSwapTokensForExactETHBridge() public {
+    function testSwapBridgeTokensForExactETH() public {
         _swapTokensForExactETHBridge(100 ether);
     }
 
-    function testSwapExactTokensForETHBridge() public {
+    function testSwapBridgeExactTokensForETH() public {
         _swapExactTokensForETHBridge(1000 ether);
     }
 
-    function testSwapETHForExactTokensBridge() public {
+    function testSwapBridgeETHForExactTokens() public {
         _swapETHForExactTokensBridge(100 ether);
     }
 
-    function testSwapExactTokensForCrossTokensBridge() public {
+    function testSwapBridgeExactTokensForCrossTokens() public {
         _swapExactTokensForCrossTokensBridge(100 ether);
     }
 
-    function testSwapTokensForExactCrossTokensBridge() public {
+    function testSwapBridgeTokensForExactCrossTokens() public {
         _swapTokensForExactCrossTokensBridge(100 ether);
     }
 
-    function testSwapExactETHForCrossTokensBridge() public {
+    function testSwapBridgeExactETHForCrossTokens() public {
         _swapExactETHForCrossTokensBridge(100 ether);
     }
 
-    function testSwapETHForExactCrossTokensBridge() public {
+    function testSwapBridgeETHForExactCrossTokens() public {
         _swapETHForExactCrossTokensBridge(100 ether);
     }
 
-    function testFuzzSwapExactTokensForTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactTokensForTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactTokensForTokensBridge(x);
     }
 
-    function testFuzzSwapTokensForExactTokensBridge(uint x) public {
+    function testFuzzSwapBridgeTokensForExactTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapTokensForExactTokensBridge(x);
     }
 
-    function testFuzzSwapExactETHForTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactETHForTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactETHForTokensBridge(x);
     }
 
-    function testFuzzSwapTokensForExactETHBridge(uint x) public {
+    function testFuzzSwapBridgeTokensForExactETH(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapTokensForExactETHBridge(x);
     }
 
-    function testFuzzSwapExactTokensForETHBridge(uint x) public {
+    function testFuzzSwapBridgeExactTokensForETH(uint x) public {
         vm.assume(x > 1000 ether && x < 10000 ether);
         _swapExactTokensForETHBridge(x);
     }
 
-    function testFuzzSwapETHForExactTokensBridge(uint x) public {
+    function testFuzzSwapBridgeETHForExactTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapETHForExactTokensBridge(x);
     }
 
-    function testFuzzSwapExactTokensForCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactTokensForCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactTokensForCrossTokensBridge(x);
     }
 
-    function testFuzzSwapTokensForExactCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeTokensForExactCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapTokensForExactCrossTokensBridge(x);
     }
 
-    function testFuzzSwapExactETHForCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactETHForCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactETHForCrossTokensBridge(x);
     }
 
-    function testFuzzSwapETHForExactCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeETHForExactCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapETHForExactCrossTokensBridge(x);
     }
@@ -554,7 +554,7 @@ contract SwapBridgeTest is BridgeTest {
 
             // Swap bridge
             swapBridgeRouter.swapBridgeExactETHForCrossTokens{value: amount}(
-                WETH, USER, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
+                USER, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
         }
@@ -592,7 +592,7 @@ contract SwapBridgeTest is BridgeTest {
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, wethToCrossPath, amounts);
             // Swap bridge
             swapBridgeRouter.swapBridgeETHForExactCrossTokens{value: amounts[0]}(
-                WETH, USER, bridgeValue, networkFee, exFee, uint(block.timestamp + 300)
+                USER, bridgeValue, networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
         }

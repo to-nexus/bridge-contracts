@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.2;
 
+import {IBaseBridge} from "./IBaseBridge.sol";
+import {IPancakeRouter02} from "pancake-smart-contracts/contracts/interfaces/IPancakeRouter02.sol";
+
 interface ISwapBridgeRouter {
     /// @notice Enum defining swap types with exact inputs or outputs
     enum SwapType {
@@ -20,40 +23,38 @@ interface ISwapBridgeRouter {
     }
 
     function swapBridgeExactTokensForCrossTokens(
-        address tokenForSwap,
+        address sourceToken,
         address to,
         uint amountIn,
         uint amountOutMin,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         uint deadline
     ) external;
 
     function swapBridgeTokensForExactCrossTokens(
-        address tokenForSwap,
+        address sourceToken,
         address to,
         uint amountOut,
         uint amountInMax,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         uint deadline
     ) external;
 
     function swapBridgeExactETHForCrossTokens(
-        address tokenForSwap,
         address to,
         uint amountOutMin,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         uint deadline
     ) external payable;
 
     function swapBridgeETHForExactCrossTokens(
-        address tokenForSwap,
         address to,
         uint amountOut,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         uint deadline
     ) external payable;
 
@@ -62,8 +63,8 @@ interface ISwapBridgeRouter {
         address to,
         uint amountIn,
         uint amountOutMin,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         address[] memory path,
         uint deadline
     ) external;
@@ -73,8 +74,8 @@ interface ISwapBridgeRouter {
         address to,
         uint amountOut,
         uint amountInMax,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         address[] memory path,
         uint deadline
     ) external;
@@ -83,8 +84,8 @@ interface ISwapBridgeRouter {
         uint toChainID,
         address to,
         uint amountOutMin,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         address[] memory path,
         uint deadline
     ) external payable;
@@ -94,8 +95,8 @@ interface ISwapBridgeRouter {
         address to,
         uint amountOut,
         uint amountInMax,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         address[] memory path,
         uint deadline
     ) external;
@@ -105,8 +106,8 @@ interface ISwapBridgeRouter {
         address to,
         uint amountIn,
         uint amountOutMin,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         address[] memory path,
         uint deadline
     ) external payable;
@@ -115,12 +116,17 @@ interface ISwapBridgeRouter {
         uint toChainID,
         address to,
         uint amountOut,
-        uint maxNetworkFee,
-        uint maxExFee,
+        uint networkFeeMax,
+        uint exFeeMax,
         address[] memory path,
         uint deadline
     ) external payable;
 
+    function WETH() external view returns (address);
+    function BRIDGE() external view returns (IBaseBridge);
+    function SWAP_ROUTER() external view returns (IPancakeRouter02);
+
+    function getSourceTokens() external view returns (address[] memory);
     function getPath(address token) external view returns (address[] memory);
     function getSwapBridgeOutCross(address token, uint amountIn)
         external
