@@ -66,10 +66,10 @@ contract SwapBridgeTest is BridgeTest {
         );
 
         router.addLiquidityETH{value: 10000 ether}(
-            address(cross), 60000000 ether, 54000000 ether, 9000 ether, OWNER, block.timestamp + 300
+            address(tokenUSD), 6000000 ether, 5400000 ether, 9000 ether, OWNER, block.timestamp + 300
         );
 
-        wethToCrossPath = [WETH, address(cross)];
+        wethToCrossPath = [WETH, address(tokenUSD), address(cross)];
         tokenUsdToCrossPath = [address(tokenUSD), address(cross)];
 
         swapBridgeRouter.setTokenPath(address(tokenUSD), tokenUsdToCrossPath);
@@ -78,92 +78,92 @@ contract SwapBridgeTest is BridgeTest {
         vm.stopPrank();
     }
 
-    function testSwapExactTokensForTokensBridge() public {
+    function testSwapBridgeExactTokensForTokens() public {
         _swapExactTokensForTokensBridge(100 ether);
     }
 
-    function testSwapTokensForExactTokensBridge() public {
+    function testSwapBridgeTokensForExactTokens() public {
         _swapTokensForExactTokensBridge(100 ether);
     }
 
-    function testSwapExactETHForTokensBridge() public {
+    function testSwapBridgeExactETHForTokens() public {
         _swapExactETHForTokensBridge(100 ether);
     }
 
-    function testSwapTokensForExactETHBridge() public {
+    function testSwapBridgeTokensForExactETH() public {
         _swapTokensForExactETHBridge(100 ether);
     }
 
-    function testSwapExactTokensForETHBridge() public {
+    function testSwapBridgeExactTokensForETH() public {
         _swapExactTokensForETHBridge(1000 ether);
     }
 
-    function testSwapETHForExactTokensBridge() public {
+    function testSwapBridgeETHForExactTokens() public {
         _swapETHForExactTokensBridge(100 ether);
     }
 
-    function testSwapExactTokensForCrossTokensBridge() public {
+    function testSwapBridgeExactTokensForCrossTokens() public {
         _swapExactTokensForCrossTokensBridge(100 ether);
     }
 
-    function testSwapTokensForExactCrossTokensBridge() public {
+    function testSwapBridgeTokensForExactCrossTokens() public {
         _swapTokensForExactCrossTokensBridge(100 ether);
     }
 
-    function testSwapExactETHForCrossTokensBridge() public {
+    function testSwapBridgeExactETHForCrossTokens() public {
         _swapExactETHForCrossTokensBridge(100 ether);
     }
 
-    function testSwapETHForExactCrossTokensBridge() public {
+    function testSwapBridgeETHForExactCrossTokens() public {
         _swapETHForExactCrossTokensBridge(100 ether);
     }
 
-    function testFuzzSwapExactTokensForTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactTokensForTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactTokensForTokensBridge(x);
     }
 
-    function testFuzzSwapTokensForExactTokensBridge(uint x) public {
+    function testFuzzSwapBridgeTokensForExactTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapTokensForExactTokensBridge(x);
     }
 
-    function testFuzzSwapExactETHForTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactETHForTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactETHForTokensBridge(x);
     }
 
-    function testFuzzSwapTokensForExactETHBridge(uint x) public {
+    function testFuzzSwapBridgeTokensForExactETH(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapTokensForExactETHBridge(x);
     }
 
-    function testFuzzSwapExactTokensForETHBridge(uint x) public {
+    function testFuzzSwapBridgeExactTokensForETH(uint x) public {
         vm.assume(x > 1000 ether && x < 10000 ether);
         _swapExactTokensForETHBridge(x);
     }
 
-    function testFuzzSwapETHForExactTokensBridge(uint x) public {
+    function testFuzzSwapBridgeETHForExactTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapETHForExactTokensBridge(x);
     }
 
-    function testFuzzSwapExactTokensForCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactTokensForCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactTokensForCrossTokensBridge(x);
     }
 
-    function testFuzzSwapTokensForExactCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeTokensForExactCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapTokensForExactCrossTokensBridge(x);
     }
 
-    function testFuzzSwapExactETHForCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeExactETHForCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapExactETHForCrossTokensBridge(x);
     }
 
-    function testFuzzSwapETHForExactCrossTokensBridge(uint x) public {
+    function testFuzzSwapBridgeETHForExactCrossTokens(uint x) public {
         vm.assume(x > 100 ether && x < 1000 ether);
         _swapETHForExactCrossTokensBridge(x);
     }
@@ -266,15 +266,16 @@ contract SwapBridgeTest is BridgeTest {
         vm.prank(OWNER);
         payable(USER).transfer(amount);
 
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](3);
         path[0] = WETH;
-        path[1] = address(cross);
+        path[1] = address(tokenUSD);
+        path[2] = address(cross);
 
         // Test getSwapBridgeOut
         (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee,) =
             swapBridgeRouter.getSwapBridgeOut(CROSS_CHAIN_ID, amount, path);
         assertTrue(amounts[0] == amount);
-        assertTrue(amounts[1] > 0);
+        assertTrue(amounts[2] > 0);
 
         uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
         {
@@ -298,7 +299,7 @@ contract SwapBridgeTest is BridgeTest {
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
             // Swap bridge
             swapBridgeRouter.swapBridgeExactETHForTokens{value: amount}(
-                CROSS_CHAIN_ID, USER, amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
+                CROSS_CHAIN_ID, USER, amounts[2], networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
         }
@@ -306,14 +307,15 @@ contract SwapBridgeTest is BridgeTest {
 
     function _swapTokensForExactETHBridge(uint bridgeValue) private {
         // Prepare for swap
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](3);
         path[0] = address(cross);
-        path[1] = WETH;
+        path[1] = address(tokenUSD);
+        path[2] = WETH;
 
         (uint[] memory amounts, uint networkFee, uint exFee,) =
             swapBridgeRouter.getSwapBridgeIn(CROSS_CHAIN_ID, bridgeValue, path);
         assertTrue(amounts[0] > 0);
-        assertTrue(amounts[1] == bridgeValue);
+        assertTrue(amounts[2] == bridgeValue);
 
         vm.assume(cross.balanceOf(OWNER) >= amounts[0]);
         // Charge token
@@ -355,15 +357,16 @@ contract SwapBridgeTest is BridgeTest {
         vm.prank(OWNER);
         cross.transfer(USER, amount);
 
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](3);
         path[0] = address(cross);
-        path[1] = WETH;
+        path[1] = address(tokenUSD);
+        path[2] = WETH;
 
         // Test getSwapBridgeOut
         (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee,) =
             swapBridgeRouter.getSwapBridgeOut(CROSS_CHAIN_ID, amount, path);
         assertTrue(amounts[0] == amount);
-        assertTrue(amounts[1] > 0);
+        assertTrue(amounts[2] > 0);
 
         uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
         {
@@ -388,7 +391,7 @@ contract SwapBridgeTest is BridgeTest {
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, path, amounts);
             // Swap bridge
             swapBridgeRouter.swapBridgeExactTokensForETH(
-                CROSS_CHAIN_ID, USER, amounts[0], amounts[1], networkFee, exFee, path, uint(block.timestamp + 300)
+                CROSS_CHAIN_ID, USER, amounts[0], amounts[2], networkFee, exFee, path, uint(block.timestamp + 300)
             );
             vm.stopPrank();
         }
@@ -396,14 +399,15 @@ contract SwapBridgeTest is BridgeTest {
 
     function _swapETHForExactTokensBridge(uint bridgeValue) private {
         // Prepare for swap
-        address[] memory path = new address[](2);
+        address[] memory path = new address[](3);
         path[0] = WETH;
-        path[1] = address(cross);
+        path[1] = address(tokenUSD);
+        path[2] = address(cross);
 
         (uint[] memory amounts, uint networkFee, uint exFee,) =
             swapBridgeRouter.getSwapBridgeIn(CROSS_CHAIN_ID, bridgeValue, path);
         assertTrue(amounts[0] > 0);
-        assertTrue(amounts[1] == bridgeValue);
+        assertTrue(amounts[2] == bridgeValue);
 
         vm.assume(OWNER.balance >= amounts[0]);
         // Charge token
@@ -529,7 +533,7 @@ contract SwapBridgeTest is BridgeTest {
         (uint[] memory amounts, uint bridgeValue, uint networkFee, uint exFee,) =
             swapBridgeRouter.getSwapBridgeOutCross(WETH, amount);
         assertTrue(amounts[0] == amount);
-        assertTrue(amounts[1] > 0);
+        assertTrue(amounts[2] > 0);
 
         uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
         {
@@ -554,7 +558,7 @@ contract SwapBridgeTest is BridgeTest {
 
             // Swap bridge
             swapBridgeRouter.swapBridgeExactETHForCrossTokens{value: amount}(
-                WETH, USER, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
+                USER, amounts[1], networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
         }
@@ -563,7 +567,7 @@ contract SwapBridgeTest is BridgeTest {
     function _swapETHForExactCrossTokensBridge(uint bridgeValue) private {
         (uint[] memory amounts, uint networkFee, uint exFee,) = swapBridgeRouter.getSwapBridgeInCross(WETH, bridgeValue);
         assertTrue(amounts[0] > 0);
-        assertTrue(amounts[1] == bridgeValue);
+        assertTrue(amounts[2] == bridgeValue);
 
         vm.assume(OWNER.balance >= amounts[0]);
         // Charge token
@@ -592,7 +596,7 @@ contract SwapBridgeTest is BridgeTest {
             emit SwapBridgeInitiated(CROSS_CHAIN_ID, expectedIndex, USER, USER, wethToCrossPath, amounts);
             // Swap bridge
             swapBridgeRouter.swapBridgeETHForExactCrossTokens{value: amounts[0]}(
-                WETH, USER, bridgeValue, networkFee, exFee, uint(block.timestamp + 300)
+                USER, bridgeValue, networkFee, exFee, uint(block.timestamp + 300)
             );
             vm.stopPrank();
         }
