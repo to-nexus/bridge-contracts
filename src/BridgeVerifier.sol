@@ -165,7 +165,10 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (score > type(uint192).max) return Const.FinalizeStatus.TokenScoreOverflow;
 
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
-            return Const.FinalizeStatus.VerificationAmountThresholdExceeded;
+            status = Const.FinalizeStatus.VerificationAmountThresholdExceeded;
+            return status;
+        } else {
+            status = Const.FinalizeStatus.Success;
         }
 
         if (_timeWindow == 0 || _periodTotalValueThreshold == 0) return Const.FinalizeStatus.Success;
