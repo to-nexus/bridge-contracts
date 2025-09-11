@@ -40,7 +40,7 @@ contract CrossChainTest is SettingTest {
             CrossBridge bridgeCrossImpl = new CrossBridge();
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
-            vm.deal(address(bridgeCross), INITIAL_SUPPLY);
+            vm.deal(address(bridgeCross), INITIAL_SUPPLY - CROSS_FOUNDATION_INITIAL_SUPPLY);
             bridgeCross.initializeCrossBridge(
                 CrossOWNER, REWARD, threshold, BSC_CHAIN_ID, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY
             );

@@ -3,6 +3,11 @@ src = "src"
 out = "out"
 libs = ["lib"]
 optimizer = true
+optimizer_runs = 162
+
+
+[profile.v2]
+optimizer = true
 optimizer_runs = 1
 
 

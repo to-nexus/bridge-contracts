@@ -74,6 +74,7 @@ contract BSCBridgeV2 is BaseBridge {
         external
         whenNotPaused
         nonReentrant
+        returns (bool)
     {
         require(deadWallets[deadWallet], BSCBridgeInvalidDeadWallet());
         require(amount > 0, BSCBridgeCanNotZero());
@@ -101,5 +102,7 @@ contract BSCBridgeV2 is BaseBridge {
             "",
             block.timestamp
         );
+
+        return true;
     }
 }

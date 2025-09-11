@@ -185,4 +185,44 @@ contract BridgeTest is BSCTest {
             assertEq(bridgeCoinBalance - value, address(bridgeBSC).balance);
         }
     }
+
+    // burn cross token to dead wallet (bsc -> cross chain)
+    function burnCrossToDeadWallet(
+        bool isRevert,
+        address from,
+        address deadWallet,
+        uint amount,
+        bool alreadyTransferred
+    ) public returns (uint index) {
+        vm.selectFork(bscForkID);
+        uint bscUserBalance = cross.balanceOf(from);
+        uint bscBridgeBalance = cross.balanceOf(address(bridgeBSC));
+        uint bscDeadWalletBalance = cross.balanceOf(deadWallet);
+        vm.selectFork(crossForkID);
+        uint crossDeadWalletBalance = deadWallet.balance;
+        uint crossBridgeBalance = address(bridgeCross).balance;
+
+        bool ok;
+        (index, ok) = bscBurnCrossToDeadWallet(from, deadWallet, amount, alreadyTransferred);
+        if (ok) {
+            if (enableGasUsedLog) console.log("bridge token (transfer)", uint(vm.lastCallGas().gasTotalUsed));
+            bscIncrementIndex();
+            ok = crossFinalize(index, address(NATIVE_TOKEN), deadWallet, amount, 5);
+            if (ok && enableGasUsedLog) console.log("finalize coin", uint(vm.lastCallGas().gasTotalUsed));
+        }
+
+        if (!isRevert) {
+            vm.selectFork(bscForkID);
+            if (alreadyTransferred) {
+                assertEq(bscUserBalance, cross.balanceOf(from));
+            } else {
+                assertEq(bscUserBalance - amount, cross.balanceOf(from));
+                assertEq(bscDeadWalletBalance + amount, cross.balanceOf(deadWallet));
+            }
+            assertEq(bscBridgeBalance, cross.balanceOf(address(bridgeBSC)));
+            vm.selectFork(crossForkID);
+            assertEq(crossDeadWalletBalance + amount, deadWallet.balance);
+            assertEq(crossBridgeBalance - amount, address(bridgeCross).balance);
+        }
+    }
 }
