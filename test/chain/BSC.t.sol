@@ -8,6 +8,7 @@ import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {TestToken} from "../token/TestToken.sol";
 import {CrossChainTest} from "./CrossChain.t.sol";
 
+import {BSCBridgeV2} from "../../src/BSCBridgeV2.sol";
 import {IPriceFeed, PriceFeed} from "../../src/PriceFeed.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -169,6 +170,23 @@ contract BSCTest is CrossChainTest {
             r,
             s
         );
+    }
+
+    function bscBurnCrossToDeadWallet(address from, address to, uint value, bool alreadyTransferred)
+        public
+        returns (uint index, bool ok)
+    {
+        vm.selectFork(bscForkID);
+        // burn cross to dead wallet
+        index = nextIndexBSC;
+        vm.prank(from);
+
+        if (bridgeRevertBSC) {
+            bridgeRevertBSC = false;
+            vm.expectRevert();
+        }
+
+        ok = BSCBridgeV2(address(bridgeBSC)).burnCrossToDeadWallet(to, value, alreadyTransferred);
     }
 
     function bscCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {

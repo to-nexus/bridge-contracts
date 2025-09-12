@@ -165,22 +165,18 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (score > type(uint192).max) return Const.FinalizeStatus.TokenScoreOverflow;
 
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
-            status = Const.FinalizeStatus.VerificationAmountThresholdExceeded;
-        } else {
-            status = Const.FinalizeStatus.Success;
+            return Const.FinalizeStatus.VerificationAmountThresholdExceeded;
         }
 
-        if (_timeWindow == 0 || _periodTotalValueThreshold == 0) {
-            return status;
-        } else {
-            // Check for potential overflow before adding new score to the current volume
-            if (type(uint192).max - score < _tokenCurrentVolume[token]) {
-                return Const.FinalizeStatus.TokenCurrentVolumeOverflow;
-            }
+        if (_timeWindow == 0 || _periodTotalValueThreshold == 0) return Const.FinalizeStatus.Success;
 
-            // Update current token volume
-            _tokenCurrentVolume[token] += score;
+        // Check for potential overflow before adding new score to the current volume
+        if (type(uint192).max - score < _tokenCurrentVolume[token]) {
+            return Const.FinalizeStatus.TokenCurrentVolumeOverflow;
         }
+
+        // Update current token volume
+        _tokenCurrentVolume[token] += score;
 
         // Manage history and verify thresholds
         DoubleEndedQueue.Bytes32Deque storage deque = _tokenMovementHistory[token];
@@ -216,11 +212,11 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         bytes32 packedMovement = bytes32((currentTime << 192) | score);
         deque.pushBack(packedMovement);
 
-        if (status == Const.FinalizeStatus.Success && _tokenCurrentVolume[token] > _periodTotalValueThreshold) {
-            status = Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
+        if (_tokenCurrentVolume[token] > _periodTotalValueThreshold) {
+            return Const.FinalizeStatus.PeriodTotalValueThresholdExceeded;
         }
 
-        return status;
+        return Const.FinalizeStatus.Success;
     }
 
     /**

@@ -81,10 +81,14 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
 
+        uint score = bridgeVerifierCross.getTokenCurrentScore(testTokenCross);
+
         // Perform the rest of the test
         (Const.FinalizeStatus status) = bridgeVerifierCross.validateBridgeTokenValue(testTokenCross, 20 ether);
 
         assertTrue(status == Const.FinalizeStatus.VerificationAmountThresholdExceeded);
+        assertTrue(score == bridgeVerifierCross.getTokenCurrentScore(testTokenCross));
+
         vm.stopPrank();
     }
 
