@@ -67,8 +67,8 @@ contract BridgeScript is Script {
         owner = vm.envAddress(OWNER);
         dev = payable(vm.envAddress(BRIDGE_DEV));
         threshold = uint8(vm.envUint(BRIDGE_THRESHOLD));
-        cross = vm.envAddress(BRIDGE_CROSS);
-        crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
+        // cross = vm.envAddress(BRIDGE_CROSS);
+        // crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
         finalizeBridgeGas = vm.envUint(VERIFIER_FINALIZE_BRIDGE_GAS);
         defaultTokenPrice = vm.envUint(VERIFIER_DEFAULT_TOKEN_PRICE);
         defaultExFeeRate = vm.envUint(VERIFIER_DEFAULT_EX_FEE_RATE);
@@ -144,6 +144,33 @@ contract BridgeScript is Script {
     }
 
     /**
+<<<<<<< Updated upstream
+=======
+     * @notice Setup Base Bridge contract and initialize
+     * command
+     * forge script ./script/deploy/Bridge.sol:BridgeScript \
+     * -f $RPC_URL \
+     * --sender $SENDER \
+     * --sig "setupBaseBridge()"
+     */
+    function setupBaseBridge() public {
+        crossChainID = vm.envUint(BridgeScript.BRIDGE_CROSS_CHAIN_ID);
+        console.log("crossChainID", crossChainID);
+
+        BaseBridge baseBridge = BaseBridge(deployBaseBridgeProxy());
+
+        _setupBridge(address(baseBridge));
+    }
+
+    function deployBaseBridgeProxy() public returns (address) {
+        vm.broadcast();
+        address proxy = address(new ERC1967Proxy(address(0x0b526c7AC326F89c50C3268585fD89AD13b2fDF2), abi.encodeCall(BaseBridge.initialize, (owner, dev, threshold))));
+        console.log("BaseBridgeProxy will be deployed to", proxy);
+        return proxy;
+    }
+
+    /**
+>>>>>>> Stashed changes
      * @notice bridge setup after initialize
      */
     function _setupBridge(address bridge) internal {
