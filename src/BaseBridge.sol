@@ -594,7 +594,10 @@ contract BaseBridge is
 
         uint minimumValue;
         (minimumValue, _networkFee, _exFee) = bridgeVerifier.calculateFee(remoteChainID, token, value);
-        require(value >= minimumValue && networkFee >= _networkFee && exFee >= _exFee, BaseBridgeInvalidAmount());
+        require(
+            value != 0 && value >= minimumValue && networkFee >= _networkFee && exFee >= _exFee,
+            BaseBridgeInvalidAmount()
+        );
     }
 
     /**
