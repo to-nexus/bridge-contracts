@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {BaseBridge} from "../../src/BaseBridge.sol";
+import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
 import {PriceFeed} from "../../src/PriceFeed.sol";
 import {Const} from "../../src/lib/Const.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -28,12 +30,9 @@ contract PriceFeedScript is Script {
 
     address priceFeed;
     address owner;
-    address bridge;
+    BaseBridge bridge;
     uint8 threshold;
-    uint crossChainID;
     uint bscChainID;
-    address cross;
-    uint crossInitialSupply;
     uint finalizeBridgeGas;
     uint defaultTokenPrice;
     uint defaultExFeeRate;
@@ -52,23 +51,23 @@ contract PriceFeedScript is Script {
 
     function setUp() public virtual {
         // load env variables
-        bridge = vm.envAddress(BRIDGE);
+        bridge = BaseBridge(vm.envAddress(BRIDGE));
         priceFeed = vm.envAddress(PRICE_FEED);
         owner = vm.envAddress(OWNER);
-        finalizeBridgeGas = vm.envUint(VERIFIER_FINALIZE_BRIDGE_GAS);
-        defaultTokenPrice = vm.envUint(VERIFIER_DEFAULT_TOKEN_PRICE);
-        defaultExFeeRate = vm.envUint(VERIFIER_DEFAULT_EX_FEE_RATE);
-        minimumTokenValue = vm.envUint(VERIFIER_MINIMUM_TOKEN_VALUE);
-        verificationAmountThreshold = vm.envUint(VERIFIER_VERIFICATION_AMOUNT_THRESHOLD);
-        periodTotalValueThreshold = vm.envUint(VERIFIER_PERIOD_TOTAL_VALUE_THRESHOLD);
-        timeWindow = vm.envUint(VERIFIER_TIME_WINDOW);
-        verifierRoles = vm.envOr(VERIFIER_ROLES, ",", emptyBytes32Array);
-        verifierRoleMembers = vm.envOr(VERIFIER_ROLE_MEMBERS, ",", emptyAddressArray);
-        verifierGasPrices = vm.envOr(VERIFIER_GAS_PRICES, ",", emptyUintArray);
-        verifierGasPriceChains = vm.envOr(VERIFIER_GAS_PRICE_CHAINS, ",", emptyUintArray);
+        finalizeBridgeGas = vm.envUint(FINALIZE_BRIDGE_GAS);
+        defaultTokenPrice = vm.envUint(DEFAULT_TOKEN_PRICE);
+        defaultExFeeRate = vm.envUint(DEFAULT_EX_FEE_RATE);
+        minimumTokenValue = vm.envUint(MINIMUM_TOKEN_VALUE);
+        verificationAmountThreshold = vm.envUint(VERIFICATION_AMOUNT_THRESHOLD);
+        periodTotalValueThreshold = vm.envUint(PERIOD_TOTAL_VALUE_THRESHOLD);
+        timeWindow = vm.envUint(TIME_WINDOW);
+        verifierRoles = vm.envOr(ROLES, ",", emptyBytes32Array);
+        verifierRoleMembers = vm.envOr(ROLE_MEMBERS, ",", emptyAddressArray);
+        verifierGasPrices = vm.envOr(GAS_PRICES, ",", emptyUintArray);
+        verifierGasPriceChains = vm.envOr(GAS_PRICE_CHAINS, ",", emptyUintArray);
 
         // print env variables
-        console.log("bridge", bridge);
+        console.log("bridge", address(bridge));
         console.log("priceFeed", priceFeed);
         console.log("owner", owner);
         console.log("finalizeBridgeGas", finalizeBridgeGas);
@@ -116,7 +115,7 @@ contract PriceFeedScript is Script {
         // set verifier
         BridgeVerifier verifier = new BridgeVerifier(
             owner,
-            address(bridge),
+            address(bridge), // bridge
             priceFeed,
             finalizeBridgeGas,
             defaultTokenPrice,
@@ -133,7 +132,7 @@ contract PriceFeedScript is Script {
         vm.stopBroadcast();
 
         if (verifierGasPriceChains.length > 0) {
-            vm.broadcast(vm.envAddress(VERIFIER_PRICER));
+            vm.broadcast(vm.envAddress(PRICER));
             verifier.updateGasPriceBatch(verifierGasPriceChains, verifierGasPrices);
         }
     }

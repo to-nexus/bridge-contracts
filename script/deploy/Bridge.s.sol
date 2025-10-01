@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {BaseBridge} from "../../src/BaseBridge.sol";
 import {BridgeVerifier} from "../../src/BridgeVerifier.sol";
 import {CrossMintableERC20Code} from "../../src/token/CrossMintableERC20Code.sol";
+
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 contract BridgeScript is Script {

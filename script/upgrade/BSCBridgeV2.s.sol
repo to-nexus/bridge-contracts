@@ -46,34 +46,4 @@ contract BSCBridgeV2Script is Script {
 
         console.log("Upgraded Implementation", Upgrades.getImplementationAddress(address(proxy)));
     }
-
-    // @test-only
-    function deployAndUpgradeBSCBridgeV2(BSCBridgeV2 proxy, uint crossChainID, IERC20 cross) public {
-        address impl = deployBSCBridgeV2Impl();
-        upgradeBSCBridgeV2(proxy, impl, crossChainID, cross);
-    }
-
-    // @test-only
-    function deployAndUpgradeAndBurnBSCBridgeV2(BSCBridgeV2 proxy, uint crossChainID, IERC20 cross) public {
-        address impl = deployBSCBridgeV2Impl();
-        upgradeBSCBridgeV2(proxy, impl, crossChainID, cross);
-
-        uint index = proxy.getNextInitiateIndex(crossChainID);
-        vm.broadcast();
-        vm.expectEmit(true, true, true, false, address(proxy));
-        emit BridgeInitiated(
-            crossChainID,
-            index,
-            cross,
-            IERC20(Const.NATIVE_TOKEN),
-            address(proxy),
-            deadWallet,
-            10 ether,
-            0,
-            0,
-            "",
-            block.timestamp
-        );
-        proxy.burnCross(deadWallet, 10 ether, true);
-    }
 }
