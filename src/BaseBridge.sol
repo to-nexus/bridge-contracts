@@ -681,9 +681,7 @@ contract BaseBridge is
             if (!ok) return (Const.FinalizeStatus.TransferFailed);
             _withdrawToken(fromChainID, Const.NATIVE_TOKEN, value);
             return (Const.FinalizeStatus.Success);
-        } else if (value == 0) {
-            return Const.FinalizeStatus.Success;
-        } else {
+        } else if (value != 0) {
             bytes memory data;
             if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
                 data = abi.encodeCall(IERC20.transfer, (to, value));
