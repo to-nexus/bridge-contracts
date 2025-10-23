@@ -11,11 +11,11 @@ import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
 
 /**
  * @title BridgeBot
- * @notice 주기적으로 토큰을 브릿지하는 봇 컨트랙트
- * @dev 설정된 주기에 따라 토큰을 자동으로 브릿지하는 기능을 제공
- * - 주기적 브릿지 실행
- * - 오너 권한으로 설정 변경 및 출금
- * - 누구나 브릿지 실행 가능
+ * @notice Bot contract for periodic token bridging
+ * @dev Provides automated token bridging functionality based on configured intervals
+ * - Periodic bridge execution
+ * - Owner-only configuration management and withdrawals
+ * - Public bridge execution capability
  */
 contract BridgeBot is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -27,13 +27,13 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     error BridgeBotBridgeFailed();
 
     /**
-     * @notice 브릿지 설정 구조체
-     * @param tokenAddress 브릿지할 토큰 주소
-     * @param recipient 받는 지갑 주소
-     * @param toChainID 대상 체인 ID
-     * @param interval 브릿지 실행 간격 (초 단위)
-     * @param lastExecuted 마지막 실행 시점
-     * @param enabled 활성화 여부
+     * @notice Bridge configuration structure
+     * @param tokenAddress Token address to bridge
+     * @param recipient Recipient wallet address
+     * @param toChainID Target chain ID
+     * @param interval Bridge execution interval in seconds
+     * @param lastExecuted Last execution timestamp
+     * @param enabled Activation status
      */
     struct BridgeConfig {
         address tokenAddress;
@@ -45,14 +45,14 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 브릿지 실행 이벤트
-     * @param configId 설정 ID
-     * @param tokenAddress 토큰 주소
-     * @param amount 브릿지된 수량
-     * @param recipient 받는 주소
-     * @param toChainID 대상 체인 ID
-     * @param executor 실행자
-     * @param timestamp 실행 시간
+     * @notice Bridge execution event
+     * @param configId Configuration ID
+     * @param tokenAddress Token address
+     * @param amount Bridged amount
+     * @param recipient Recipient address
+     * @param toChainID Target chain ID
+     * @param executor Transaction executor
+     * @param timestamp Execution timestamp
      */
     event BridgeExecuted(
         uint indexed configId,
@@ -65,46 +65,46 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     );
 
     /**
-     * @notice 브릿지 설정 추가 이벤트
+     * @notice Bridge configuration added event
      */
     event BridgeConfigAdded(uint indexed configId, BridgeConfig config);
 
     /**
-     * @notice 브릿지 설정 업데이트 이벤트
+     * @notice Bridge configuration updated event
      */
     event BridgeConfigUpdated(uint indexed configId, BridgeConfig config);
 
     /**
-     * @notice 브릿지 설정 활성화/비활성화 이벤트
+     * @notice Bridge configuration enabled/disabled event
      */
     event BridgeConfigToggled(uint indexed configId, bool enabled);
 
     /**
-     * @notice 토큰 출금 이벤트
+     * @notice Token withdrawal event
      */
     event TokenWithdrawn(address indexed token, address indexed to, uint amount);
 
     /**
-     * @notice 네이티브 토큰 출금 이벤트
+     * @notice Native token withdrawal event
      */
     event NativeWithdrawn(address indexed to, uint amount);
 
-    /// @dev 네이티브 토큰 주소 상수
+    /// @dev Native token address constant
     address public constant NATIVE_TOKEN = address(1);
 
-    /// @dev 브릿지 컨트랙트
+    /// @dev Bridge contract
     BaseBridge public immutable bridge;
 
-    /// @dev 브릿지 설정들
+    /// @dev Bridge configurations
     mapping(uint => BridgeConfig) public bridgeConfigs;
 
-    /// @dev 다음 설정 ID
+    /// @dev Next configuration ID
     uint public nextConfigId;
 
     /**
-     * @notice 컨트랙트 생성자
-     * @param _bridge 브릿지 컨트랙트 주소
-     * @param _owner 컨트랙트 오너 주소
+     * @notice Contract constructor
+     * @param _bridge Bridge contract address
+     * @param _owner Contract owner address
      */
     constructor(address _bridge, address _owner) Ownable(_owner) {
         require(_bridge != address(0), BridgeBotCanNotZeroAddress());
@@ -112,12 +112,12 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 브릿지 설정 추가
-     * @param tokenAddress 토큰 주소
-     * @param recipient 받는 주소
-     * @param toChainID 대상 체인 ID
-     * @param interval 실행 간격 (초)
-     * @return configId 설정 ID
+     * @notice Add bridge configuration
+     * @param tokenAddress Token address
+     * @param recipient Recipient address
+     * @param toChainID Target chain ID
+     * @param interval Execution interval in seconds
+     * @return configId Configuration ID
      */
     function addBridgeConfig(address tokenAddress, address recipient, uint toChainID, uint interval)
         external
@@ -143,12 +143,12 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 브릿지 설정 업데이트
-     * @param configId 설정 ID
-     * @param tokenAddress 토큰 주소
-     * @param recipient 받는 주소
-     * @param toChainID 대상 체인 ID
-     * @param interval 실행 간격 (초)
+     * @notice Update bridge configuration
+     * @param configId Configuration ID
+     * @param tokenAddress Token address
+     * @param recipient Recipient address
+     * @param toChainID Target chain ID
+     * @param interval Execution interval in seconds
      */
     function updateBridgeConfig(uint configId, address tokenAddress, address recipient, uint toChainID, uint interval)
         external
@@ -168,9 +168,9 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 브릿지 설정 활성화/비활성화
-     * @param configId 설정 ID
-     * @param enabled 활성화 여부
+     * @notice Enable/disable bridge configuration
+     * @param configId Configuration ID
+     * @param enabled Enable status
      */
     function toggleBridgeConfig(uint configId, bool enabled) external onlyOwner {
         require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
@@ -180,17 +180,17 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 브릿지 실행 가능 여부 확인
-     * @param configId 설정 ID
-     * @return canExecute 실행 가능 여부
-     * @return nextAvailableTime 다음 실행 가능 시간
+     * @notice Check if bridge can be executed
+     * @param configId Configuration ID
+     * @return canExecute Whether execution is possible
+     * @return nextAvailableTime Next available execution time
      */
     function canExecuteBridge(uint configId) public view returns (bool canExecute, uint nextAvailableTime) {
         BridgeConfig memory config = bridgeConfigs[configId];
 
         if (!config.enabled || config.tokenAddress == address(0)) return (false, 0);
 
-        // 첫 번째 실행인 경우 (lastExecuted == 0)
+        // First execution case (lastExecuted == 0)
         if (config.lastExecuted == 0) return (true, 0);
 
         uint currentPeriod = block.timestamp - (block.timestamp % config.interval);
@@ -201,18 +201,18 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 브릿지 실행 (누구나 호출 가능)
-     * @param configId 설정 ID
-     * @param amount 브릿지할 수량
+     * @notice Execute bridge (publicly callable)
+     * @param configId Configuration ID
+     * @param amount Amount to bridge
      */
     function executeBridge(uint configId, uint amount) external nonReentrant {
         _executeBridgeInternal(configId, amount);
     }
 
     /**
-     * @notice 내부 브릿지 실행 함수
-     * @param configId 설정 ID
-     * @param amount 브릿지할 수량
+     * @notice Internal bridge execution function
+     * @param configId Configuration ID
+     * @param amount Amount to bridge
      */
     function _executeBridgeInternal(uint configId, uint amount) internal {
         require(amount > 0, BridgeBotCanNotZeroValue());
@@ -223,12 +223,12 @@ contract BridgeBot is Ownable, ReentrancyGuard {
         (bool canExecute, uint nextAvailableTime) = canExecuteBridge(configId);
         require(canExecute, BridgeBotNotTimeYet(nextAvailableTime));
 
-        // 잔액 확인
+        // Check balance
         uint balance;
         if (config.tokenAddress == NATIVE_TOKEN) balance = address(this).balance;
         else balance = IERC20(config.tokenAddress).balanceOf(address(this));
 
-        // 수수료 계산
+        // Calculate fees
         IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
         (uint minimumValue, uint gasFee, uint exFee) =
             bridgeVerifier.calculateFee(config.toChainID, IERC20(config.tokenAddress), amount);
@@ -237,7 +237,7 @@ contract BridgeBot is Ownable, ReentrancyGuard {
         require(balance >= totalRequired, BridgeBotInsufficientBalance(totalRequired, balance));
         require(amount >= minimumValue, "Amount below minimum");
 
-        // 토큰 승인 (ERC20인 경우)
+        // Token approval (for ERC20)
         if (config.tokenAddress != NATIVE_TOKEN) {
             IERC20 token = IERC20(config.tokenAddress);
             if (token.allowance(address(this), address(bridge)) < totalRequired) {
@@ -245,7 +245,7 @@ contract BridgeBot is Ownable, ReentrancyGuard {
             }
         }
 
-        // 브릿지 실행
+        // Execute bridge
         bool success;
         if (config.tokenAddress == NATIVE_TOKEN) {
             success = bridge.bridgeToken{value: totalRequired}(
@@ -259,7 +259,7 @@ contract BridgeBot is Ownable, ReentrancyGuard {
 
         require(success, BridgeBotBridgeFailed());
 
-        // 마지막 실행 시간 업데이트
+        // Update last execution time
         config.lastExecuted = block.timestamp;
 
         emit BridgeExecuted(
@@ -268,9 +268,9 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 여러 브릿지 설정을 일괄 실행
-     * @param configIds 설정 ID 배열
-     * @param amounts 각 설정에 대응하는 브릿지 수량 배열
+     * @notice Execute multiple bridge configurations in batch
+     * @param configIds Array of configuration IDs
+     * @param amounts Array of bridge amounts corresponding to each configuration
      */
     function executeBridgeBatch(uint[] calldata configIds, uint[] calldata amounts) external nonReentrant {
         require(configIds.length == amounts.length, "Array length mismatch");
@@ -282,10 +282,10 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice ERC20 토큰 출금 (오너만 가능)
-     * @param token 토큰 주소
-     * @param to 받을 주소
-     * @param amount 출금할 수량
+     * @notice Withdraw ERC20 tokens (owner only)
+     * @param token Token address
+     * @param to Recipient address
+     * @param amount Amount to withdraw
      */
     function withdrawToken(address token, address to, uint amount) external onlyOwner {
         require(token != address(0), BridgeBotCanNotZeroAddress());
@@ -297,9 +297,9 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 네이티브 토큰 출금 (오너만 가능)
-     * @param to 받을 주소
-     * @param amount 출금할 수량
+     * @notice Withdraw native tokens (owner only)
+     * @param to Recipient address
+     * @param amount Amount to withdraw
      */
     function withdrawNative(address payable to, uint amount) external onlyOwner {
         require(to != address(0), BridgeBotCanNotZeroAddress());
@@ -313,9 +313,9 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 모든 ERC20 토큰 출금 (오너만 가능)
-     * @param token 토큰 주소
-     * @param to 받을 주소
+     * @notice Withdraw all ERC20 tokens (owner only)
+     * @param token Token address
+     * @param to Recipient address
      */
     function withdrawAllTokens(address token, address to) external onlyOwner {
         require(token != address(0), BridgeBotCanNotZeroAddress());
@@ -329,8 +329,8 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 모든 네이티브 토큰 출금 (오너만 가능)
-     * @param to 받을 주소
+     * @notice Withdraw all native tokens (owner only)
+     * @param to Recipient address
      */
     function withdrawAllNative(address payable to) external onlyOwner {
         require(to != address(0), BridgeBotCanNotZeroAddress());
@@ -344,18 +344,18 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 브릿지 설정 조회
-     * @param configId 설정 ID
-     * @return config 브릿지 설정
+     * @notice Get bridge configuration
+     * @param configId Configuration ID
+     * @return config Bridge configuration
      */
     function getBridgeConfig(uint configId) external view returns (BridgeConfig memory config) {
         return bridgeConfigs[configId];
     }
 
     /**
-     * @notice 실행 가능한 브릿지 설정들 조회
-     * @param maxConfigs 최대 조회할 설정 개수
-     * @return executableConfigs 실행 가능한 설정 ID 배열
+     * @notice Get executable bridge configurations
+     * @param maxConfigs Maximum number of configurations to retrieve
+     * @return executableConfigs Array of executable configuration IDs
      */
     function getExecutableConfigs(uint maxConfigs) external view returns (uint[] memory executableConfigs) {
         uint[] memory temp = new uint[](maxConfigs);
@@ -376,12 +376,12 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice 네이티브 토큰 수신
+     * @notice Receive native tokens
      */
     receive() external payable {}
 
     /**
-     * @notice fallback 함수
+     * @notice Fallback function
      */
     fallback() external payable {}
 }
