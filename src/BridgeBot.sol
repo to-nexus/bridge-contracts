@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -15,9 +16,9 @@ import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
  * @dev Provides automated token bridging functionality based on configured intervals
  * - Periodic bridge execution
  * - Owner-only configuration management and withdrawals
- * - Public bridge execution capability
+ * - Role-based bridge execution capability
  */
-contract BridgeBot is Ownable, ReentrancyGuard {
+contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error BridgeBotCanNotZeroAddress();
@@ -92,6 +93,9 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     /// @dev Native token address constant
     address public constant NATIVE_TOKEN = address(1);
 
+    /// @dev Role for executing bridge operations
+    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
+
     /// @dev Bridge contract
     BaseBridge public immutable bridge;
 
@@ -105,10 +109,17 @@ contract BridgeBot is Ownable, ReentrancyGuard {
      * @notice Contract constructor
      * @param _bridge Bridge contract address
      * @param _owner Contract owner address
+     * @param _executor Initial executor address
      */
-    constructor(address _bridge, address _owner) Ownable(_owner) {
+    constructor(address _bridge, address _owner, address _executor) Ownable(_owner) {
         require(_bridge != address(0), BridgeBotCanNotZeroAddress());
+        require(_executor != address(0), BridgeBotCanNotZeroAddress());
         bridge = BaseBridge(payable(_bridge));
+
+        // Set up roles
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(EXECUTOR_ROLE, _owner);
+        _grantRole(EXECUTOR_ROLE, _executor);
     }
 
     /**
@@ -201,11 +212,11 @@ contract BridgeBot is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Execute bridge (publicly callable)
+     * @notice Execute bridge (role restricted)
      * @param configId Configuration ID
      * @param amount Amount to bridge
      */
-    function executeBridge(uint configId, uint amount) external nonReentrant {
+    function executeBridge(uint configId, uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
         _executeBridgeInternal(configId, amount);
     }
 
@@ -272,7 +283,11 @@ contract BridgeBot is Ownable, ReentrancyGuard {
      * @param configIds Array of configuration IDs
      * @param amounts Array of bridge amounts corresponding to each configuration
      */
-    function executeBridgeBatch(uint[] calldata configIds, uint[] calldata amounts) external nonReentrant {
+    function executeBridgeBatch(uint[] calldata configIds, uint[] calldata amounts)
+        external
+        onlyRole(EXECUTOR_ROLE)
+        nonReentrant
+    {
         require(configIds.length == amounts.length, "Array length mismatch");
 
         for (uint i = 0; i < configIds.length; i++) {
@@ -373,6 +388,23 @@ contract BridgeBot is Ownable, ReentrancyGuard {
         for (uint i = 0; i < count; i++) {
             executableConfigs[i] = temp[i];
         }
+    }
+
+    /**
+     * @notice Grant executor role to an address (admin only)
+     * @param account Address to grant executor role
+     */
+    function grantExecutorRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(account != address(0), BridgeBotCanNotZeroAddress());
+        grantRole(EXECUTOR_ROLE, account);
+    }
+
+    /**
+     * @notice Revoke executor role from an address (admin only)
+     * @param account Address to revoke executor role
+     */
+    function revokeExecutorRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        revokeRole(EXECUTOR_ROLE, account);
     }
 
     /**

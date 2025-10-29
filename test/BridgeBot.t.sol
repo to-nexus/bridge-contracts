@@ -77,7 +77,7 @@ contract BridgeBotTest is Test {
         mockBridge = new MockBridge(address(bridgeVerifier));
 
         // Deploy bridge bot
-        bridgeBot = new BridgeBot(address(mockBridge), owner);
+        bridgeBot = new BridgeBot(address(mockBridge), owner, executor);
 
         // Fund the bridge bot
         testToken.transfer(address(bridgeBot), BRIDGE_AMOUNT * 10);
@@ -325,6 +325,75 @@ contract BridgeBotTest is Test {
         bridgeBot.withdrawNative(payable(user), 1 ether);
 
         vm.stopPrank();
+    }
+
+    function testRoleManagement() public {
+        // Test initial roles
+        assertTrue(bridgeBot.hasRole(bridgeBot.DEFAULT_ADMIN_ROLE(), owner));
+        assertTrue(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), owner));
+        assertTrue(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), executor));
+
+        // Test granting role
+        vm.prank(owner);
+        bridgeBot.grantExecutorRole(user);
+        assertTrue(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), user));
+
+        // Test revoking role
+        vm.prank(owner);
+        bridgeBot.revokeExecutorRole(executor);
+        assertFalse(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), executor));
+
+        // Test only owner can manage roles
+        vm.prank(user);
+        vm.expectRevert();
+        bridgeBot.grantExecutorRole(address(0x5));
+
+        vm.prank(user);
+        vm.expectRevert();
+        bridgeBot.revokeExecutorRole(owner);
+    }
+
+    function testOnlyExecutorCanBridge() public {
+        vm.prank(owner);
+        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+
+        // Non-executor should not be able to execute bridge
+        vm.prank(user);
+        vm.expectRevert();
+        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
+
+        // Executor should be able to execute bridge
+        vm.prank(executor);
+        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
+
+        // Owner (who has executor role) should also be able to execute bridge
+        vm.warp(block.timestamp + DAILY_INTERVAL + 1);
+        vm.prank(owner);
+        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
+    }
+
+    function testOnlyExecutorCanBridgeBatch() public {
+        vm.startPrank(owner);
+        uint configId1 = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        uint configId2 = bridgeBot.addBridgeConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        vm.stopPrank();
+
+        uint[] memory configIds = new uint[](2);
+        configIds[0] = configId1;
+        configIds[1] = configId2;
+
+        uint[] memory amounts = new uint[](2);
+        amounts[0] = BRIDGE_AMOUNT;
+        amounts[1] = 1 ether;
+
+        // Non-executor should not be able to execute bridge batch
+        vm.prank(user);
+        vm.expectRevert();
+        bridgeBot.executeBridgeBatch(configIds, amounts);
+
+        // Executor should be able to execute bridge batch
+        vm.prank(executor);
+        bridgeBot.executeBridgeBatch(configIds, amounts);
     }
 }
 
