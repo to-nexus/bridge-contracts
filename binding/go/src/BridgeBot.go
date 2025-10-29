@@ -41,8 +41,8 @@ type BridgeBotBridgeConfig struct {
 
 // BridgeBotMetaData contains all meta data concerning the BridgeBot contract.
 var BridgeBotMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_owner\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"fallback\",\"stateMutability\":\"payable\"},{\"type\":\"receive\",\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"NATIVE_TOKEN\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"addBridgeConfig\",\"inputs\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"bridge\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractBaseBridge\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"bridgeConfigs\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"canExecuteBridge\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"canExecute\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"nextAvailableTime\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"executeBridge\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeBridgeBatch\",\"inputs\":[{\"name\":\"configIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"amounts\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getBridgeConfig\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"config\",\"type\":\"tuple\",\"internalType\":\"structBridgeBot.BridgeConfig\",\"components\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getExecutableConfigs\",\"inputs\":[{\"name\":\"maxConfigs\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"executableConfigs\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"nextConfigId\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"toggleBridgeConfig\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"updateBridgeConfig\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawAllNative\",\"inputs\":[{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"addresspayable\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawAllTokens\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawNative\",\"inputs\":[{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"addresspayable\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"BridgeConfigAdded\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"config\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structBridgeBot.BridgeConfig\",\"components\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BridgeConfigToggled\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BridgeConfigUpdated\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"config\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structBridgeBot.BridgeConfig\",\"components\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BridgeExecuted\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"tokenAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"executor\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"timestamp\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"NativeWithdrawn\",\"inputs\":[{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenWithdrawn\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"BridgeBotBridgeFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BridgeBotCanNotZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BridgeBotCanNotZeroValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BridgeBotInsufficientBalance\",\"inputs\":[{\"name\":\"required\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"available\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BridgeBotNotTimeYet\",\"inputs\":[{\"name\":\"nextAvailableTime\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"OwnableInvalidOwner\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}]",
-	Bin: "0x60a0346100ff57601f6116db38819003918201601f19168301916001600160401b038311848410176101035780849260409485528339810103126100ff5761004681610117565b906001600160a01b039061005c90602001610117565b169081156100ec575f80546001600160a01b031981168417825560405193916001600160a01b03909116907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a3600180556001600160a01b031680156100dd576080526115af908161012c823960805181818161039401526110db0152f35b630508665f60e41b5f5260045ffd5b631e4fbdf760e01b5f525f60045260245ffd5b5f80fd5b634e487b7160e01b5f52604160045260245ffd5b51906001600160a01b03821682036100ff5756fe60806040526004361015610010575b005b5f3560e01c806301e3366714610b4857806307b18bde14610a9357806331f7d96414610a785780634624e6801461092557806350f760e91461083157806370d2ddf41461074f578063715018a6146106f857806376e95f16146105e65780638da5cb5b146105bf57806399d726c7146105a2578063b157607414610575578063bd5f0afb146104e3578063d172f2f01461046d578063d9f66db1146103ef578063e1068d8d146103c3578063e78cea921461037f578063e9cf510c1461028b578063ed2859d91461016e5763f2fde38b0361000e573461016a57602036600319011261016a576100fe610bcc565b610106610f49565b6001600160a01b03168015610157575f80546001600160a01b03198116831782556001600160a01b0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a3005b631e4fbdf760e01b5f525f60045260245ffd5b5f80fd5b3461016a5760a036600319011261016a5760043561018a610be2565b6044356001600160a01b0381169081900361016a57608435916101ab610f49565b5f848152600260205260409020546101cd906001600160a01b03161515610d8c565b6001600160a01b0381161561027c57811561027c57821561026d575f8481526002602081905260409182902080546001600160a01b03949094166001600160a01b03199485161781556001810180549094169490941790925560643591830191909155600382019290925590517fe983b12d31b0781e2aa16f6b2bbac09cf920528457b5fe0c4a48a4b7b639b7659181906102689082610d1a565b0390a2005b6319e9855160e11b5f5260045ffd5b630508665f60e41b5f5260045ffd5b3461016a57602036600319011261016a576004356102a881610f03565b905f5f91600354925b83811080610376575b156102fd576102c881610e04565b506102dc575b6102d790610cf8565b6102b1565b916102f581846102ef6102d79489610f35565b52610cf8565b9290506102ce565b848361030881610f03565b915f5b82811061035757836040518091602082016020835281518091526020604084019201905f5b81811061033e575050500390f35b8251845285945060209384019390920191600101610330565b8061036460019284610f35565b5161036f8287610f35565b520161030b565b508183106102ba565b3461016a575f36600319011261016a576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b3461016a57602036600319011261016a5760406103e1600435610e04565b825191151582526020820152f35b3461016a57602036600319011261016a57610408610bcc565b610410610f49565b6001600160a01b0316801561027c57478061042757005b6020816104645f8080807fc303ca808382409472acbbf899c316cf439f409f6584aae22df86dfa3c9ed50497895af161045e610c7b565b50610cba565b604051908152a2005b3461016a57602036600319011261016a576004355f52600260205260c060405f2060018060a01b038154169060018060a01b0360018201541690600281015460038201549060ff6005600485015494015416936040519586526020860152604085015260608401526080830152151560a0820152f35b3461016a57604036600319011261016a576004356024358015159081810361016a577f82f1ecf86a9817521d2294bafc22d903bcad5c99e954156dfe15a17d381465e091610464602092610535610f49565b5f868152600285526040902054610556906001600160a01b03161515610d8c565b855f5260028452600560405f20019060ff801983541691151516179055565b3461016a57604036600319011261016a5761058e610ffd565b61059c60243560043561107c565b60018055005b3461016a575f36600319011261016a576020600354604051908152f35b3461016a575f36600319011261016a575f546040516001600160a01b039091168152602090f35b3461016a57604036600319011261016a5760043567ffffffffffffffff811161016a57610617903690600401610bf8565b9060243567ffffffffffffffff811161016a57610638903690600401610bf8565b9290610642610ffd565b8382036106bb575f5b8281106106585760018055005b8061066f6106696001938688610d68565b35610e04565b50806106a7575b610681575b0161064b565b6106a261068f828688610d68565b3561069b838987610d68565b359061107c565b61067b565b506106b3818785610d68565b351515610676565b60405162461bcd60e51b8152602060048201526015602482015274082e4e4c2f240d8cadccee8d040dad2e6dac2e8c6d605b1b6044820152606490fd5b3461016a575f36600319011261016a57610710610f49565b5f80546001600160a01b0319811682556001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a3005b3461016a57602036600319011261016a575f60a060405161076f81610c29565b82815282602082015282604082015282606082015282608082015201526004355f52600260205260c060405f206040516107a881610c29565b60018060a01b038254169182825260018060a01b03600182015416602083019081526002820154604084019081526003830154916060850192835260a060ff6005600487015496608089019788520154169501941515855260405195865260018060a01b03905116602086015251604085015251606084015251608083015251151560a0820152f35b3461016a57604036600319011261016a5761084a610bcc565b610852610be2565b9061085b610f49565b6001600160a01b0316801561027c576001600160a01b03821691821561027c576040516370a0823160e01b815230600482015290602082602481865afa91821561091a575f926108e6575b50816108ae57005b816108dd7f8210728e7c071f615b840ee026032693858fbcd5e5359e67e438c890f59e56209360209386610f6f565b604051908152a3005b9091506020813d602011610912575b8161090260209383610c59565b8101031261016a575190846108a6565b3d91506108f5565b6040513d5f823e3d90fd5b3461016a57608036600319011261016a5761093e610bcc565b610946610be2565b9060643590610953610f49565b6001600160a01b031691821561027c576001600160a01b0316801561027c57811561026d576020926005610a31926003549461098e86610cf8565b6003556040519361099e85610c29565b84528684019182526044356040808601918252606086019283525f60808701818152600160a089018181528b84526002808e5294909320985189546001600160a01b039182166001600160a01b0319918216178b559751918a0180549290911691909716179095559151908601559051600385015590516004840155519101805460ff191691151560ff16919091179055565b805f5260028252807f607fee93225368fbfdfbb5f502b83308d35c011b90d3dd40178380cd0d3cb123610a6d60405f2060405191829182610d1a565b0390a2604051908152f35b3461016a575f36600319011261016a57602060405160018152f35b3461016a57604036600319011261016a57610aac610bcc565b60243590610ab8610f49565b6001600160a01b031690811561027c57801561026d57804710610b0c576020816104645f8080807fc303ca808382409472acbbf899c316cf439f409f6584aae22df86dfa3c9ed50497895af161045e610c7b565b60405162461bcd60e51b8152602060048201526014602482015273496e73756666696369656e742062616c616e636560601b6044820152606490fd5b3461016a57606036600319011261016a57610b61610bcc565b610b69610be2565b9060443590610b76610f49565b6001600160a01b031690811561027c576001600160a01b03831692831561027c57811561026d57816108dd7f8210728e7c071f615b840ee026032693858fbcd5e5359e67e438c890f59e56209360209386610f6f565b600435906001600160a01b038216820361016a57565b602435906001600160a01b038216820361016a57565b9181601f8401121561016a5782359167ffffffffffffffff831161016a576020808501948460051b01011161016a57565b60c0810190811067ffffffffffffffff821117610c4557604052565b634e487b7160e01b5f52604160045260245ffd5b90601f8019910116810190811067ffffffffffffffff821117610c4557604052565b3d15610cb5573d9067ffffffffffffffff8211610c455760405191610caa601f8201601f191660200184610c59565b82523d5f602084013e565b606090565b15610cc157565b60405162461bcd60e51b815260206004820152600f60248201526e151c985b9cd9995c8819985a5b1959608a1b6044820152606490fd5b5f198114610d065760010190565b634e487b7160e01b5f52601160045260245ffd5b81546001600160a01b039081168252600183015416602082015260028201546040820152600382015460608201526004820154608082015260059091015460ff16151560a082015260c00190565b9190811015610d785760051b0190565b634e487b7160e01b5f52603260045260245ffd5b15610d9357565b60405162461bcd60e51b8152602060048201526011602482015270436f6e666967206e6f742065786973747360781b6044820152606490fd5b8115610dd6570690565b634e487b7160e01b5f52601260045260245ffd5b91908203918211610d0657565b91908201809211610d0657565b5f52600260205260405f2090604051610e1c81610c29565b82546001600160a01b03908116808352600185015490911660208301526002840154604083015260038401546060830181815260048601546080850181815260059097015460ff1615801560a0909601869052919492939092610ee2575b50610ed75715610ecc57610e9a610e94610ead9242610dcc565b42610dea565b9351610ea7835182610dcc565b90610dea565b80931192835f14610ebe5750505f90565b610ec9915190610df7565b90565b505090506001905f90565b50505090505f905f90565b9050155f610e7a565b67ffffffffffffffff8111610c455760051b60200190565b90610f0d82610eeb565b610f1a6040519182610c59565b8281528092610f2b601f1991610eeb565b0190602036910137565b8051821015610d785760209160051b010190565b5f546001600160a01b03163303610f5c57565b63118cdaa760e01b5f523360045260245ffd5b60405163a9059cbb60e01b60208281019182526001600160a01b03909416602483015260448083019590955293815290925f91610fad606482610c59565b519082855af11561091a575f513d610ff457506001600160a01b0381163b155b610fd45750565b635274afe760e01b5f9081526001600160a01b0391909116600452602490fd5b60011415610fcd565b60026001541461100e576002600155565b633ee5aeb560e01b5f5260045ffd5b9081602091031261016a5751801515810361016a5790565b9081526001600160a01b039182166020820152911660408201526060810191909152608081019190915260a081019190915260e060c082018190525f908201526101000190565b811561026d57805f52600260205260405f209060ff60058301541680611566575b1561152a576110ab81610e04565b9015611518575081546001600160a01b031660018114939084156114b55747945b604051637838174760e11b81527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316602082600481845afa91821561091a575f92611471575b506002870197606089546064604051809681936337dba1f760e21b835260048301528960248301528a604483015260018060a01b03165afa90811561091a575f5f945f9361142d575b5061117783611172878b610df7565b610df7565b91828110611417575087106113db5786941561130a575b88549495506020946001600160a01b03166001810361129957508954895460018b0154604051632fe9316f60e11b8152988997889687956111e59591949293926001600160a01b0390811692169060048801611035565b03925af190811561091a575f9161126a575b505b1561125b5760807f96c3158688b0338fd59b23dd6fceb0f7b812847dac9bc3b620784f4da36b68ee9142600486015560018060a01b03855416946001808060a01b039101541695546040519182526020820152336040820152426060820152a4565b6307c4732760e51b5f5260045ffd5b61128c915060203d602011611292575b6112848183610c59565b81019061101d565b5f6111f7565b503d61127a565b8a5460018b0154604051632fe9316f60e11b815298899788965f965087956112d39591949293926001600160a01b03169160048801611035565b03925af190811561091a575f916112eb575b506111f9565b611304915060203d602011611292576112848183610c59565b5f6112e5565b604051636eb1769f60e11b8152306004820152602481018490529450602085604481895afa801561091a5787955f916113a5575b5081111561118e57935060205f9560446040518098819363095ea7b360e01b8352876004840152811960248401525af193841561091a578695602095611388575b5085945061118e565b61139e90863d8811611292576112848183610c59565b505f61137f565b9550506020853d6020116113d3575b816113c160209383610c59565b8101031261016a57808795519061133e565b3d91506113b4565b60405162461bcd60e51b8152602060048201526014602482015273416d6f756e742062656c6f77206d696e696d756d60601b6044820152606490fd5b8263203b880360e11b5f5260045260245260445ffd5b92505092506060813d606011611469575b8161144b60609383610c59565b8101031261016a57805160208201516040909201519193905f611163565b3d915061143e565b9091506020813d6020116114ad575b8161148d60209383610c59565b8101031261016a57516001600160a01b038116810361016a57905f61111a565b3d9150611480565b6040516370a0823160e01b8152306004820152602081602481855afa90811561091a575f916114e6575b50946110cc565b90506020813d602011611510575b8161150160209383610c59565b8101031261016a57515f6114df565b3d91506114f4565b6357c8d07f60e11b5f5260045260245ffd5b60405162461bcd60e51b8152602060048201526014602482015273436f6e666967206e6f7420617661696c61626c6560601b6044820152606490fd5b5081546001600160a01b0316151561109d56fea264697066735822122083e4eb090766de61c58833b245160f4db4284dce552696f071a6db82fb8d280464736f6c634300081c0033",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[{\"name\":\"_bridge\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_owner\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"_executor\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"fallback\",\"stateMutability\":\"payable\"},{\"type\":\"receive\",\"stateMutability\":\"payable\"},{\"type\":\"function\",\"name\":\"DEFAULT_ADMIN_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"EXECUTOR_ROLE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"NATIVE_TOKEN\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"addBridgeConfig\",\"inputs\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"bridge\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"contractBaseBridge\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"bridgeConfigs\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"canExecuteBridge\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"canExecute\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"nextAvailableTime\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"executeBridge\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"executeBridgeBatch\",\"inputs\":[{\"name\":\"configIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"},{\"name\":\"amounts\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getBridgeConfig\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"config\",\"type\":\"tuple\",\"internalType\":\"structBridgeBot.BridgeConfig\",\"components\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getExecutableConfigs\",\"inputs\":[{\"name\":\"maxConfigs\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"executableConfigs\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRoleAdmin\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"grantExecutorRole\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"grantRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"hasRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"nextConfigId\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"renounceRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"callerConfirmation\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeExecutorRole\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"revokeRole\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"toggleBridgeConfig\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"updateBridgeConfig\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawAllNative\",\"inputs\":[{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"addresspayable\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawAllTokens\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawNative\",\"inputs\":[{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"addresspayable\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"withdrawToken\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"BridgeConfigAdded\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"config\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structBridgeBot.BridgeConfig\",\"components\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BridgeConfigToggled\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BridgeConfigUpdated\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"config\",\"type\":\"tuple\",\"indexed\":false,\"internalType\":\"structBridgeBot.BridgeConfig\",\"components\":[{\"name\":\"tokenAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"recipient\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"interval\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"lastExecuted\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"enabled\",\"type\":\"bool\",\"internalType\":\"bool\"}]}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BridgeExecuted\",\"inputs\":[{\"name\":\"configId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"tokenAddress\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"recipient\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"toChainID\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"executor\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"timestamp\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"NativeWithdrawn\",\"inputs\":[{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleAdminChanged\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"previousAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"newAdminRole\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleGranted\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRevoked\",\"inputs\":[{\"name\":\"role\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"},{\"name\":\"account\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"sender\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"TokenWithdrawn\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"AccessControlBadConfirmation\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"AccessControlUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"neededRole\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}]},{\"type\":\"error\",\"name\":\"BridgeBotBridgeFailed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BridgeBotCanNotZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BridgeBotCanNotZeroValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BridgeBotInsufficientBalance\",\"inputs\":[{\"name\":\"required\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"available\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"BridgeBotNotTimeYet\",\"inputs\":[{\"name\":\"nextAvailableTime\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"OwnableInvalidOwner\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"OwnableUnauthorizedAccount\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"ReentrancyGuardReentrantCall\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"SafeERC20FailedOperation\",\"inputs\":[{\"name\":\"token\",\"type\":\"address\",\"internalType\":\"address\"}]}]",
+	Bin: "0x60a03461012f57601f611ef838819003918201601f19168301916001600160401b038311848410176101335780849260609460405283398101031261012f5761004781610147565b61005f604061005860208501610147565b9301610147565b906001600160a01b038316801561011c575f80546001600160a01b03198116831782556001600160a01b0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a360016002556001600160a01b0316801561010d576001600160a01b0382161561010d576100ed926100e7916080526100e78161015b565b506101d1565b50604051611c33908161026582396080518181816103ff015261171f0152f35b630508665f60e41b5f5260045ffd5b631e4fbdf760e01b5f525f60045260245ffd5b5f80fd5b634e487b7160e01b5f52604160045260245ffd5b51906001600160a01b038216820361012f57565b6001600160a01b0381165f9081525f516020611eb85f395f51905f52602052604090205460ff166101cc576001600160a01b03165f8181525f516020611eb85f395f51905f5260205260408120805460ff191660011790553391905f516020611e985f395f51905f528180a4600190565b505f90565b6001600160a01b0381165f9081525f516020611ed85f395f51905f52602052604090205460ff166101cc576001600160a01b03165f8181525f516020611ed85f395f51905f5260205260408120805460ff191660011790553391907fd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63905f516020611e985f395f51905f529080a460019056fe60806040526004361015610010575b005b5f3560e01c806301e3366714610e8357806301ffc9a714610e2d57806307b18bde14610d7857806307bd026514610d51578063248a9ca314610d1e5780632f2ff15d14610ce057806331f7d96414610cc557806336568abe14610c815780634624e68014610b2b57806349a396b914610ac257806350f760e9146109ce57806370d2ddf4146108ec578063715018a61461089557806376e95f161461077a57806380a4d414146107005780638da5cb5b146106d957806391d148541461069057806399d726c714610673578063a217fddf14610659578063b157607414610623578063bd5f0afb14610591578063d172f2f01461051b578063d547741f146104d8578063d9f66db11461045a578063e1068d8d1461042e578063e78cea92146103ea578063e9cf510c146102f6578063ed2859d9146101dc5763f2fde38b0361000e57346101d85760203660031901126101d85761016c610f07565b610174611284565b6001600160a01b031680156101c5575f80546001600160a01b03198116831782556001600160a01b0316907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09080a3005b631e4fbdf760e01b5f525f60045260245ffd5b5f80fd5b346101d85760a03660031901126101d8576004356101f8610f1d565b6044356001600160a01b038116908190036101d85760843591610219611284565b5f8481526003602052604090205461023b906001600160a01b031615156110c7565b6001600160a01b038116156102e75781156102e75782156102d8575f8481526003602081905260409182902080546001600160a01b03949094166001600160a01b03199485161781556001810180549094169490941790925560643560028401559082019290925590517fe983b12d31b0781e2aa16f6b2bbac09cf920528457b5fe0c4a48a4b7b639b7659181906102d39082611055565b0390a2005b6319e9855160e11b5f5260045ffd5b630508665f60e41b5f5260045ffd5b346101d85760203660031901126101d8576004356103138161123e565b905f5f91600454925b838110806103e1575b15610368576103338161113f565b50610347575b61034290611033565b61031c565b91610360818461035a6103429489611270565b52611033565b929050610339565b84836103738161123e565b915f5b8281106103c257836040518091602082016020835281518091526020604084019201905f5b8181106103a9575050500390f35b825184528594506020938401939092019160010161039b565b806103cf60019284611270565b516103da8287611270565b5201610376565b50818310610325565b346101d8575f3660031901126101d8576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b346101d85760203660031901126101d857604061044c60043561113f565b825191151582526020820152f35b346101d85760203660031901126101d857610473610f07565b61047b611284565b6001600160a01b031680156102e757478061049257005b6020816104cf5f8080807fc303ca808382409472acbbf899c316cf439f409f6584aae22df86dfa3c9ed50497895af16104c9610fb6565b50610ff5565b604051908152a2005b346101d85760403660031901126101d85761000e6004356104f7610f1d565b90610516610511825f526001602052600160405f20015490565b6113d0565b6115bf565b346101d85760203660031901126101d8576004355f52600360205260c060405f2060018060a01b038154169060018060a01b0360018201541690600281015460038201549060ff6005600485015494015416936040519586526020860152604085015260608401526080830152151560a0820152f35b346101d85760403660031901126101d857600435602435801515908181036101d8577f82f1ecf86a9817521d2294bafc22d903bcad5c99e954156dfe15a17d381465e0916104cf6020926105e3611284565b5f868152600385526040902054610604906001600160a01b031615156110c7565b855f5260038452600560405f20019060ff801983541691151516179055565b346101d85760403660031901126101d85761063c611387565b610644611643565b6106526024356004356116c0565b6001600255005b346101d8575f3660031901126101d85760206040515f8152f35b346101d8575f3660031901126101d8576020600454604051908152f35b346101d85760403660031901126101d8576106a9610f1d565b6004355f52600160205260405f209060018060a01b03165f52602052602060ff60405f2054166040519015158152f35b346101d8575f3660031901126101d8575f546040516001600160a01b039091168152602090f35b346101d85760203660031901126101d857610719610f07565b610721611338565b6001600160a01b038116156102e7575f516020611bbe5f395f51905f525f5260016020527fc9ee83ecf8e561e5df8e9e3a8d108a689296832fb5d541ca3c450b10eaabf8e25461000e9190610775906113d0565b61140a565b346101d85760403660031901126101d85760043567ffffffffffffffff81116101d8576107ab903690600401610f33565b9060243567ffffffffffffffff81116101d8576107cc903690600401610f33565b92906107d6611387565b6107de611643565b838203610858575f5b8281106107f5576001600255005b8061080c61080660019386886110a3565b3561113f565b5080610844575b61081e575b016107e7565b61083f61082c8286886110a3565b356108388389876110a3565b35906116c0565b610818565b506108508187856110a3565b351515610813565b60405162461bcd60e51b8152602060048201526015602482015274082e4e4c2f240d8cadccee8d040dad2e6dac2e8c6d605b1b6044820152606490fd5b346101d8575f3660031901126101d8576108ad611284565b5f80546001600160a01b0319811682556001600160a01b03167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e08280a3005b346101d85760203660031901126101d8575f60a060405161090c81610f64565b82815282602082015282604082015282606082015282608082015201526004355f52600360205260c060405f2060405161094581610f64565b60018060a01b038254169182825260018060a01b03600182015416602083019081526002820154604084019081526003830154916060850192835260a060ff6005600487015496608089019788520154169501941515855260405195865260018060a01b03905116602086015251604085015251606084015251608083015251151560a0820152f35b346101d85760403660031901126101d8576109e7610f07565b6109ef610f1d565b906109f8611284565b6001600160a01b031680156102e7576001600160a01b0382169182156102e7576040516370a0823160e01b815230600482015290602082602481865afa918215610ab7575f92610a83575b5081610a4b57005b81610a7a7f8210728e7c071f615b840ee026032693858fbcd5e5359e67e438c890f59e562093602093866112aa565b604051908152a3005b9091506020813d602011610aaf575b81610a9f60209383610f94565b810103126101d857519084610a43565b3d9150610a92565b6040513d5f823e3d90fd5b346101d85760203660031901126101d85761000e610ade610f07565b610ae6611338565b5f516020611bbe5f395f51905f525f5260016020527fc9ee83ecf8e561e5df8e9e3a8d108a689296832fb5d541ca3c450b10eaabf8e254610b26906113d0565b61152e565b346101d85760803660031901126101d857610b44610f07565b610b4c610f1d565b9060643590610b59611284565b6001600160a01b03169182156102e7576001600160a01b031680156102e75781156102d8576020926005610c3a9260045494610b9486611033565b60045560405193610ba485610f64565b84528684019182526044356040808601918252606086019283525f60808701818152600160a089018181528b84526003808e5294909320985189546001600160a01b039182166001600160a01b0319918216178b559751918a0180549290911691909716179095559151600287015591519185019190915590516004840155519101805460ff191691151560ff16919091179055565b805f5260038252807f607fee93225368fbfdfbb5f502b83308d35c011b90d3dd40178380cd0d3cb123610c7660405f2060405191829182611055565b0390a2604051908152f35b346101d85760403660031901126101d857610c9a610f1d565b336001600160a01b03821603610cb65761000e906004356115bf565b63334bd91960e11b5f5260045ffd5b346101d8575f3660031901126101d857602060405160018152f35b346101d85760403660031901126101d85761000e600435610cff610f1d565b90610d19610511825f526001602052600160405f20015490565b6114a2565b346101d85760203660031901126101d8576020610d496004355f526001602052600160405f20015490565b604051908152f35b346101d8575f3660031901126101d85760206040515f516020611bbe5f395f51905f528152f35b346101d85760403660031901126101d857610d91610f07565b60243590610d9d611284565b6001600160a01b03169081156102e75780156102d857804710610df1576020816104cf5f8080807fc303ca808382409472acbbf899c316cf439f409f6584aae22df86dfa3c9ed50497895af16104c9610fb6565b60405162461bcd60e51b8152602060048201526014602482015273496e73756666696369656e742062616c616e636560601b6044820152606490fd5b346101d85760203660031901126101d85760043563ffffffff60e01b81168091036101d857602090637965db0b60e01b8114908115610e72575b506040519015158152f35b6301ffc9a760e01b14905082610e67565b346101d85760603660031901126101d857610e9c610f07565b610ea4610f1d565b9060443590610eb1611284565b6001600160a01b03169081156102e7576001600160a01b0383169283156102e75781156102d85781610a7a7f8210728e7c071f615b840ee026032693858fbcd5e5359e67e438c890f59e562093602093866112aa565b600435906001600160a01b03821682036101d857565b602435906001600160a01b03821682036101d857565b9181601f840112156101d85782359167ffffffffffffffff83116101d8576020808501948460051b0101116101d857565b60c0810190811067ffffffffffffffff821117610f8057604052565b634e487b7160e01b5f52604160045260245ffd5b90601f8019910116810190811067ffffffffffffffff821117610f8057604052565b3d15610ff0573d9067ffffffffffffffff8211610f805760405191610fe5601f8201601f191660200184610f94565b82523d5f602084013e565b606090565b15610ffc57565b60405162461bcd60e51b815260206004820152600f60248201526e151c985b9cd9995c8819985a5b1959608a1b6044820152606490fd5b5f1981146110415760010190565b634e487b7160e01b5f52601160045260245ffd5b81546001600160a01b039081168252600183015416602082015260028201546040820152600382015460608201526004820154608082015260059091015460ff16151560a082015260c00190565b91908110156110b35760051b0190565b634e487b7160e01b5f52603260045260245ffd5b156110ce57565b60405162461bcd60e51b8152602060048201526011602482015270436f6e666967206e6f742065786973747360781b6044820152606490fd5b8115611111570690565b634e487b7160e01b5f52601260045260245ffd5b9190820391821161104157565b9190820180921161104157565b5f52600360205260405f209060405161115781610f64565b82546001600160a01b03908116808352600185015490911660208301526002840154604083015260038401546060830181815260048601546080850181815260059097015460ff1615801560a090960186905291949293909261121d575b506112125715611207576111d56111cf6111e89242611107565b42611125565b93516111e2835182611107565b90611125565b80931192835f146111f95750505f90565b611204915190611132565b90565b505090506001905f90565b50505090505f905f90565b9050155f6111b5565b67ffffffffffffffff8111610f805760051b60200190565b9061124882611226565b6112556040519182610f94565b8281528092611266601f1991611226565b0190602036910137565b80518210156110b35760209160051b010190565b5f546001600160a01b0316330361129757565b63118cdaa760e01b5f523360045260245ffd5b60405163a9059cbb60e01b60208281019182526001600160a01b03909416602483015260448083019590955293815290925f916112e8606482610f94565b519082855af115610ab7575f513d61132f57506001600160a01b0381163b155b61130f5750565b635274afe760e01b5f9081526001600160a01b0391909116600452602490fd5b60011415611308565b335f9081527fa6eef7e35abe7026729641147f7915573c7e97b47efa546f5f6e3230263bcb49602052604090205460ff161561137057565b63e2517d3f60e01b5f52336004525f60245260445ffd5b335f9081525f516020611bde5f395f51905f52602052604090205460ff16156113ac57565b63e2517d3f60e01b5f52336004525f516020611bbe5f395f51905f5260245260445ffd5b5f81815260016020908152604080832033845290915290205460ff16156113f45750565b63e2517d3f60e01b5f523360045260245260445ffd5b6001600160a01b0381165f9081525f516020611bde5f395f51905f52602052604090205460ff1661149d576001600160a01b03165f8181525f516020611bde5f395f51905f5260205260408120805460ff191660011790553391905f516020611bbe5f395f51905f52907f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d9080a4600190565b505f90565b5f8181526001602090815260408083206001600160a01b038616845290915290205460ff16611528575f8181526001602081815260408084206001600160a01b0396909616808552959091528220805460ff19169091179055339291907f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d9080a4600190565b50505f90565b6001600160a01b0381165f9081525f516020611bde5f395f51905f52602052604090205460ff161561149d576001600160a01b03165f8181525f516020611bde5f395f51905f5260205260408120805460ff191690553391905f516020611bbe5f395f51905f52907ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b9080a4600190565b5f8181526001602090815260408083206001600160a01b038616845290915290205460ff1615611528575f8181526001602090815260408083206001600160a01b0395909516808452949091528120805460ff19169055339291907ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b9080a4600190565b60028054146116525760028055565b633ee5aeb560e01b5f5260045ffd5b908160209103126101d8575180151581036101d85790565b9081526001600160a01b039182166020820152911660408201526060810191909152608081019190915260a081019190915260e060c082018190525f908201526101000190565b81156102d857805f52600360205260405f209060ff60058301541680611baa575b15611b6e576116ef8161113f565b9015611b5c575081546001600160a01b03166001811493908415611af95747945b604051637838174760e11b81527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316602082600481845afa918215610ab7575f92611ab5575b506002870197606089546064604051809681936337dba1f760e21b835260048301528960248301528a604483015260018060a01b03165afa908115610ab7575f5f945f93611a71575b506117bb836117b6878b611132565b611132565b91828110611a5b57508710611a1f5786941561194e575b88549495506020946001600160a01b0316600181036118dd57508954895460018b0154604051632fe9316f60e11b8152988997889687956118299591949293926001600160a01b0390811692169060048801611679565b03925af1908115610ab7575f916118ae575b505b1561189f5760807f96c3158688b0338fd59b23dd6fceb0f7b812847dac9bc3b620784f4da36b68ee9142600486015560018060a01b03855416946001808060a01b039101541695546040519182526020820152336040820152426060820152a4565b6307c4732760e51b5f5260045ffd5b6118d0915060203d6020116118d6575b6118c88183610f94565b810190611661565b5f61183b565b503d6118be565b8a5460018b0154604051632fe9316f60e11b815298899788965f965087956119179591949293926001600160a01b03169160048801611679565b03925af1908115610ab7575f9161192f575b5061183d565b611948915060203d6020116118d6576118c88183610f94565b5f611929565b604051636eb1769f60e11b8152306004820152602481018490529450602085604481895afa8015610ab75787955f916119e9575b508111156117d257935060205f9560446040518098819363095ea7b360e01b8352876004840152811960248401525af1938415610ab75786956020956119cc575b508594506117d2565b6119e290863d88116118d6576118c88183610f94565b505f6119c3565b9550506020853d602011611a17575b81611a0560209383610f94565b810103126101d8578087955190611982565b3d91506119f8565b60405162461bcd60e51b8152602060048201526014602482015273416d6f756e742062656c6f77206d696e696d756d60601b6044820152606490fd5b8263203b880360e11b5f5260045260245260445ffd5b92505092506060813d606011611aad575b81611a8f60609383610f94565b810103126101d857805160208201516040909201519193905f6117a7565b3d9150611a82565b9091506020813d602011611af1575b81611ad160209383610f94565b810103126101d857516001600160a01b03811681036101d857905f61175e565b3d9150611ac4565b6040516370a0823160e01b8152306004820152602081602481855afa908115610ab7575f91611b2a575b5094611710565b90506020813d602011611b54575b81611b4560209383610f94565b810103126101d857515f611b23565b3d9150611b38565b6357c8d07f60e11b5f5260045260245ffd5b60405162461bcd60e51b8152602060048201526014602482015273436f6e666967206e6f7420617661696c61626c6560601b6044820152606490fd5b5081546001600160a01b031615156116e156fed8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63c9ee83ecf8e561e5df8e9e3a8d108a689296832fb5d541ca3c450b10eaabf8e1a264697066735822122061a195821bff59740401063cb63e50b0120f83c5a7efc9a09da76937773c62de64736f6c634300081c00332f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0da6eef7e35abe7026729641147f7915573c7e97b47efa546f5f6e3230263bcb49c9ee83ecf8e561e5df8e9e3a8d108a689296832fb5d541ca3c450b10eaabf8e1",
 }
 
 // BridgeBotABI is the input ABI used to generate the binding from.
@@ -54,7 +54,7 @@ var BridgeBotABI = BridgeBotMetaData.ABI
 var BridgeBotBin = BridgeBotMetaData.Bin
 
 // DeployBridgeBot deploys a new Ethereum contract, binding an instance of BridgeBot to it.
-func DeployBridgeBot(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address, _owner common.Address) (common.Address, *types.Transaction, *BridgeBot, error) {
+func DeployBridgeBot(auth *bind.TransactOpts, backend bind.ContractBackend, _bridge common.Address, _owner common.Address, _executor common.Address) (common.Address, *types.Transaction, *BridgeBot, error) {
 	parsed, err := BridgeBotMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
@@ -63,7 +63,7 @@ func DeployBridgeBot(auth *bind.TransactOpts, backend bind.ContractBackend, _bri
 		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(BridgeBotBin), backend, _bridge, _owner)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(BridgeBotBin), backend, _bridge, _owner, _executor)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -210,6 +210,68 @@ func (_BridgeBot *BridgeBotTransactorRaw) Transfer(opts *bind.TransactOpts) (*ty
 // Transact invokes the (paid) contract method with params as input values.
 func (_BridgeBot *BridgeBotTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _BridgeBot.Contract.contract.Transact(opts, method, params...)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_BridgeBot *BridgeBotCaller) DEFAULTADMINROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _BridgeBot.contract.Call(opts, &out, "DEFAULT_ADMIN_ROLE")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_BridgeBot *BridgeBotSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _BridgeBot.Contract.DEFAULTADMINROLE(&_BridgeBot.CallOpts)
+}
+
+// DEFAULTADMINROLE is a free data retrieval call binding the contract method 0xa217fddf.
+//
+// Solidity: function DEFAULT_ADMIN_ROLE() view returns(bytes32)
+func (_BridgeBot *BridgeBotCallerSession) DEFAULTADMINROLE() ([32]byte, error) {
+	return _BridgeBot.Contract.DEFAULTADMINROLE(&_BridgeBot.CallOpts)
+}
+
+// EXECUTORROLE is a free data retrieval call binding the contract method 0x07bd0265.
+//
+// Solidity: function EXECUTOR_ROLE() view returns(bytes32)
+func (_BridgeBot *BridgeBotCaller) EXECUTORROLE(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _BridgeBot.contract.Call(opts, &out, "EXECUTOR_ROLE")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// EXECUTORROLE is a free data retrieval call binding the contract method 0x07bd0265.
+//
+// Solidity: function EXECUTOR_ROLE() view returns(bytes32)
+func (_BridgeBot *BridgeBotSession) EXECUTORROLE() ([32]byte, error) {
+	return _BridgeBot.Contract.EXECUTORROLE(&_BridgeBot.CallOpts)
+}
+
+// EXECUTORROLE is a free data retrieval call binding the contract method 0x07bd0265.
+//
+// Solidity: function EXECUTOR_ROLE() view returns(bytes32)
+func (_BridgeBot *BridgeBotCallerSession) EXECUTORROLE() ([32]byte, error) {
+	return _BridgeBot.Contract.EXECUTORROLE(&_BridgeBot.CallOpts)
 }
 
 // NATIVETOKEN is a free data retrieval call binding the contract method 0x31f7d964.
@@ -446,6 +508,68 @@ func (_BridgeBot *BridgeBotCallerSession) GetExecutableConfigs(maxConfigs *big.I
 	return _BridgeBot.Contract.GetExecutableConfigs(&_BridgeBot.CallOpts, maxConfigs)
 }
 
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_BridgeBot *BridgeBotCaller) GetRoleAdmin(opts *bind.CallOpts, role [32]byte) ([32]byte, error) {
+	var out []interface{}
+	err := _BridgeBot.contract.Call(opts, &out, "getRoleAdmin", role)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_BridgeBot *BridgeBotSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _BridgeBot.Contract.GetRoleAdmin(&_BridgeBot.CallOpts, role)
+}
+
+// GetRoleAdmin is a free data retrieval call binding the contract method 0x248a9ca3.
+//
+// Solidity: function getRoleAdmin(bytes32 role) view returns(bytes32)
+func (_BridgeBot *BridgeBotCallerSession) GetRoleAdmin(role [32]byte) ([32]byte, error) {
+	return _BridgeBot.Contract.GetRoleAdmin(&_BridgeBot.CallOpts, role)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_BridgeBot *BridgeBotCaller) HasRole(opts *bind.CallOpts, role [32]byte, account common.Address) (bool, error) {
+	var out []interface{}
+	err := _BridgeBot.contract.Call(opts, &out, "hasRole", role, account)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_BridgeBot *BridgeBotSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _BridgeBot.Contract.HasRole(&_BridgeBot.CallOpts, role, account)
+}
+
+// HasRole is a free data retrieval call binding the contract method 0x91d14854.
+//
+// Solidity: function hasRole(bytes32 role, address account) view returns(bool)
+func (_BridgeBot *BridgeBotCallerSession) HasRole(role [32]byte, account common.Address) (bool, error) {
+	return _BridgeBot.Contract.HasRole(&_BridgeBot.CallOpts, role, account)
+}
+
 // NextConfigId is a free data retrieval call binding the contract method 0x99d726c7.
 //
 // Solidity: function nextConfigId() view returns(uint256)
@@ -506,6 +630,37 @@ func (_BridgeBot *BridgeBotSession) Owner() (common.Address, error) {
 // Solidity: function owner() view returns(address)
 func (_BridgeBot *BridgeBotCallerSession) Owner() (common.Address, error) {
 	return _BridgeBot.Contract.Owner(&_BridgeBot.CallOpts)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_BridgeBot *BridgeBotCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
+	var out []interface{}
+	err := _BridgeBot.contract.Call(opts, &out, "supportsInterface", interfaceId)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_BridgeBot *BridgeBotSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _BridgeBot.Contract.SupportsInterface(&_BridgeBot.CallOpts, interfaceId)
+}
+
+// SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
+//
+// Solidity: function supportsInterface(bytes4 interfaceId) view returns(bool)
+func (_BridgeBot *BridgeBotCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+	return _BridgeBot.Contract.SupportsInterface(&_BridgeBot.CallOpts, interfaceId)
 }
 
 // AddBridgeConfig is a paid mutator transaction binding the contract method 0x4624e680.
@@ -571,6 +726,48 @@ func (_BridgeBot *BridgeBotTransactorSession) ExecuteBridgeBatch(configIds []*bi
 	return _BridgeBot.Contract.ExecuteBridgeBatch(&_BridgeBot.TransactOpts, configIds, amounts)
 }
 
+// GrantExecutorRole is a paid mutator transaction binding the contract method 0x80a4d414.
+//
+// Solidity: function grantExecutorRole(address account) returns()
+func (_BridgeBot *BridgeBotTransactor) GrantExecutorRole(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.contract.Transact(opts, "grantExecutorRole", account)
+}
+
+// GrantExecutorRole is a paid mutator transaction binding the contract method 0x80a4d414.
+//
+// Solidity: function grantExecutorRole(address account) returns()
+func (_BridgeBot *BridgeBotSession) GrantExecutorRole(account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.GrantExecutorRole(&_BridgeBot.TransactOpts, account)
+}
+
+// GrantExecutorRole is a paid mutator transaction binding the contract method 0x80a4d414.
+//
+// Solidity: function grantExecutorRole(address account) returns()
+func (_BridgeBot *BridgeBotTransactorSession) GrantExecutorRole(account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.GrantExecutorRole(&_BridgeBot.TransactOpts, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_BridgeBot *BridgeBotTransactor) GrantRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.contract.Transact(opts, "grantRole", role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_BridgeBot *BridgeBotSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.GrantRole(&_BridgeBot.TransactOpts, role, account)
+}
+
+// GrantRole is a paid mutator transaction binding the contract method 0x2f2ff15d.
+//
+// Solidity: function grantRole(bytes32 role, address account) returns()
+func (_BridgeBot *BridgeBotTransactorSession) GrantRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.GrantRole(&_BridgeBot.TransactOpts, role, account)
+}
+
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
 //
 // Solidity: function renounceOwnership() returns()
@@ -590,6 +787,69 @@ func (_BridgeBot *BridgeBotSession) RenounceOwnership() (*types.Transaction, err
 // Solidity: function renounceOwnership() returns()
 func (_BridgeBot *BridgeBotTransactorSession) RenounceOwnership() (*types.Transaction, error) {
 	return _BridgeBot.Contract.RenounceOwnership(&_BridgeBot.TransactOpts)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address callerConfirmation) returns()
+func (_BridgeBot *BridgeBotTransactor) RenounceRole(opts *bind.TransactOpts, role [32]byte, callerConfirmation common.Address) (*types.Transaction, error) {
+	return _BridgeBot.contract.Transact(opts, "renounceRole", role, callerConfirmation)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address callerConfirmation) returns()
+func (_BridgeBot *BridgeBotSession) RenounceRole(role [32]byte, callerConfirmation common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.RenounceRole(&_BridgeBot.TransactOpts, role, callerConfirmation)
+}
+
+// RenounceRole is a paid mutator transaction binding the contract method 0x36568abe.
+//
+// Solidity: function renounceRole(bytes32 role, address callerConfirmation) returns()
+func (_BridgeBot *BridgeBotTransactorSession) RenounceRole(role [32]byte, callerConfirmation common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.RenounceRole(&_BridgeBot.TransactOpts, role, callerConfirmation)
+}
+
+// RevokeExecutorRole is a paid mutator transaction binding the contract method 0x49a396b9.
+//
+// Solidity: function revokeExecutorRole(address account) returns()
+func (_BridgeBot *BridgeBotTransactor) RevokeExecutorRole(opts *bind.TransactOpts, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.contract.Transact(opts, "revokeExecutorRole", account)
+}
+
+// RevokeExecutorRole is a paid mutator transaction binding the contract method 0x49a396b9.
+//
+// Solidity: function revokeExecutorRole(address account) returns()
+func (_BridgeBot *BridgeBotSession) RevokeExecutorRole(account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.RevokeExecutorRole(&_BridgeBot.TransactOpts, account)
+}
+
+// RevokeExecutorRole is a paid mutator transaction binding the contract method 0x49a396b9.
+//
+// Solidity: function revokeExecutorRole(address account) returns()
+func (_BridgeBot *BridgeBotTransactorSession) RevokeExecutorRole(account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.RevokeExecutorRole(&_BridgeBot.TransactOpts, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_BridgeBot *BridgeBotTransactor) RevokeRole(opts *bind.TransactOpts, role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.contract.Transact(opts, "revokeRole", role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_BridgeBot *BridgeBotSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.RevokeRole(&_BridgeBot.TransactOpts, role, account)
+}
+
+// RevokeRole is a paid mutator transaction binding the contract method 0xd547741f.
+//
+// Solidity: function revokeRole(bytes32 role, address account) returns()
+func (_BridgeBot *BridgeBotTransactorSession) RevokeRole(role [32]byte, account common.Address) (*types.Transaction, error) {
+	return _BridgeBot.Contract.RevokeRole(&_BridgeBot.TransactOpts, role, account)
 }
 
 // ToggleBridgeConfig is a paid mutator transaction binding the contract method 0xbd5f0afb.
@@ -1676,6 +1936,492 @@ func (_BridgeBot *BridgeBotFilterer) WatchOwnershipTransferred(opts *bind.WatchO
 func (_BridgeBot *BridgeBotFilterer) ParseOwnershipTransferred(log types.Log) (*BridgeBotOwnershipTransferred, error) {
 	event := new(BridgeBotOwnershipTransferred)
 	if err := _BridgeBot.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BridgeBotRoleAdminChangedIterator is returned from FilterRoleAdminChanged and is used to iterate over the raw logs and unpacked data for RoleAdminChanged events raised by the BridgeBot contract.
+type BridgeBotRoleAdminChangedIterator struct {
+	Event *BridgeBotRoleAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BridgeBotRoleAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BridgeBotRoleAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BridgeBotRoleAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BridgeBotRoleAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BridgeBotRoleAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BridgeBotRoleAdminChanged represents a RoleAdminChanged event raised by the BridgeBot contract.
+type BridgeBotRoleAdminChanged struct {
+	Role              [32]byte
+	PreviousAdminRole [32]byte
+	NewAdminRole      [32]byte
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleAdminChanged is a free log retrieval operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_BridgeBot *BridgeBotFilterer) FilterRoleAdminChanged(opts *bind.FilterOpts, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (*BridgeBotRoleAdminChangedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _BridgeBot.contract.FilterLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BridgeBotRoleAdminChangedIterator{contract: _BridgeBot.contract, event: "RoleAdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleAdminChanged is a free log subscription operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_BridgeBot *BridgeBotFilterer) WatchRoleAdminChanged(opts *bind.WatchOpts, sink chan<- *BridgeBotRoleAdminChanged, role [][32]byte, previousAdminRole [][32]byte, newAdminRole [][32]byte) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var previousAdminRoleRule []interface{}
+	for _, previousAdminRoleItem := range previousAdminRole {
+		previousAdminRoleRule = append(previousAdminRoleRule, previousAdminRoleItem)
+	}
+	var newAdminRoleRule []interface{}
+	for _, newAdminRoleItem := range newAdminRole {
+		newAdminRoleRule = append(newAdminRoleRule, newAdminRoleItem)
+	}
+
+	logs, sub, err := _BridgeBot.contract.WatchLogs(opts, "RoleAdminChanged", roleRule, previousAdminRoleRule, newAdminRoleRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BridgeBotRoleAdminChanged)
+				if err := _BridgeBot.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleAdminChanged is a log parse operation binding the contract event 0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff.
+//
+// Solidity: event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)
+func (_BridgeBot *BridgeBotFilterer) ParseRoleAdminChanged(log types.Log) (*BridgeBotRoleAdminChanged, error) {
+	event := new(BridgeBotRoleAdminChanged)
+	if err := _BridgeBot.contract.UnpackLog(event, "RoleAdminChanged", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BridgeBotRoleGrantedIterator is returned from FilterRoleGranted and is used to iterate over the raw logs and unpacked data for RoleGranted events raised by the BridgeBot contract.
+type BridgeBotRoleGrantedIterator struct {
+	Event *BridgeBotRoleGranted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BridgeBotRoleGrantedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BridgeBotRoleGranted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BridgeBotRoleGranted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BridgeBotRoleGrantedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BridgeBotRoleGrantedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BridgeBotRoleGranted represents a RoleGranted event raised by the BridgeBot contract.
+type BridgeBotRoleGranted struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleGranted is a free log retrieval operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BridgeBot *BridgeBotFilterer) FilterRoleGranted(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*BridgeBotRoleGrantedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BridgeBot.contract.FilterLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BridgeBotRoleGrantedIterator{contract: _BridgeBot.contract, event: "RoleGranted", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleGranted is a free log subscription operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BridgeBot *BridgeBotFilterer) WatchRoleGranted(opts *bind.WatchOpts, sink chan<- *BridgeBotRoleGranted, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BridgeBot.contract.WatchLogs(opts, "RoleGranted", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BridgeBotRoleGranted)
+				if err := _BridgeBot.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleGranted is a log parse operation binding the contract event 0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d.
+//
+// Solidity: event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BridgeBot *BridgeBotFilterer) ParseRoleGranted(log types.Log) (*BridgeBotRoleGranted, error) {
+	event := new(BridgeBotRoleGranted)
+	if err := _BridgeBot.contract.UnpackLog(event, "RoleGranted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// BridgeBotRoleRevokedIterator is returned from FilterRoleRevoked and is used to iterate over the raw logs and unpacked data for RoleRevoked events raised by the BridgeBot contract.
+type BridgeBotRoleRevokedIterator struct {
+	Event *BridgeBotRoleRevoked // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BridgeBotRoleRevokedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BridgeBotRoleRevoked)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BridgeBotRoleRevoked)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BridgeBotRoleRevokedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BridgeBotRoleRevokedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BridgeBotRoleRevoked represents a RoleRevoked event raised by the BridgeBot contract.
+type BridgeBotRoleRevoked struct {
+	Role    [32]byte
+	Account common.Address
+	Sender  common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleRevoked is a free log retrieval operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BridgeBot *BridgeBotFilterer) FilterRoleRevoked(opts *bind.FilterOpts, role [][32]byte, account []common.Address, sender []common.Address) (*BridgeBotRoleRevokedIterator, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BridgeBot.contract.FilterLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BridgeBotRoleRevokedIterator{contract: _BridgeBot.contract, event: "RoleRevoked", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleRevoked is a free log subscription operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BridgeBot *BridgeBotFilterer) WatchRoleRevoked(opts *bind.WatchOpts, sink chan<- *BridgeBotRoleRevoked, role [][32]byte, account []common.Address, sender []common.Address) (event.Subscription, error) {
+
+	var roleRule []interface{}
+	for _, roleItem := range role {
+		roleRule = append(roleRule, roleItem)
+	}
+	var accountRule []interface{}
+	for _, accountItem := range account {
+		accountRule = append(accountRule, accountItem)
+	}
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _BridgeBot.contract.WatchLogs(opts, "RoleRevoked", roleRule, accountRule, senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BridgeBotRoleRevoked)
+				if err := _BridgeBot.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleRevoked is a log parse operation binding the contract event 0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b.
+//
+// Solidity: event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)
+func (_BridgeBot *BridgeBotFilterer) ParseRoleRevoked(log types.Log) (*BridgeBotRoleRevoked, error) {
+	event := new(BridgeBotRoleRevoked)
+	if err := _BridgeBot.contract.UnpackLog(event, "RoleRevoked", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
