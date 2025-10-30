@@ -250,61 +250,6 @@ contract BridgeBotTest is Test {
         vm.stopPrank();
     }
 
-    function testGetExecutableConfigs() public {
-        vm.startPrank(owner);
-
-        // Add multiple configs
-        uint configId1 = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
-        uint configId2 = bridgeBot.addBridgeConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
-        vm.stopPrank();
-
-        // Both should be executable initially
-        uint[] memory executableConfigs = bridgeBot.getExecutableConfigs(10);
-        assertEq(executableConfigs.length, 2);
-        assertEq(executableConfigs[0], configId1);
-        assertEq(executableConfigs[1], configId2);
-
-        // Execute first config
-        vm.prank(executor);
-        bridgeBot.executeBridge(configId1, BRIDGE_AMOUNT);
-
-        // Only second should be executable now
-        executableConfigs = bridgeBot.getExecutableConfigs(10);
-        assertEq(executableConfigs.length, 1);
-        assertEq(executableConfigs[0], configId2);
-    }
-
-    function testExecuteBridgeBatch() public {
-        vm.startPrank(owner);
-
-        uint configId1 = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
-        uint configId2 = bridgeBot.addBridgeConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
-        vm.stopPrank();
-
-        // Execute batch
-        uint[] memory configIds = new uint[](2);
-        configIds[0] = configId1;
-        configIds[1] = configId2;
-
-        uint[] memory amounts = new uint[](2);
-        amounts[0] = BRIDGE_AMOUNT;
-        amounts[1] = 1 ether;
-
-        vm.prank(executor);
-        bridgeBot.executeBridgeBatch(configIds, amounts);
-
-        // Both configs should have been executed
-        BridgeBot.BridgeConfig memory config1 = bridgeBot.getBridgeConfig(configId1);
-        BridgeBot.BridgeConfig memory config2 = bridgeBot.getBridgeConfig(configId2);
-
-        assertEq(config1.lastExecuted, block.timestamp);
-        assertEq(config2.lastExecuted, block.timestamp);
-    }
-
     function testOnlyOwnerFunctions() public {
         // Non-owner should not be able to call owner functions
         vm.startPrank(user);
@@ -370,30 +315,6 @@ contract BridgeBotTest is Test {
         vm.warp(block.timestamp + DAILY_INTERVAL + 1);
         vm.prank(owner);
         bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
-    }
-
-    function testOnlyExecutorCanBridgeBatch() public {
-        vm.startPrank(owner);
-        uint configId1 = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-        uint configId2 = bridgeBot.addBridgeConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-        vm.stopPrank();
-
-        uint[] memory configIds = new uint[](2);
-        configIds[0] = configId1;
-        configIds[1] = configId2;
-
-        uint[] memory amounts = new uint[](2);
-        amounts[0] = BRIDGE_AMOUNT;
-        amounts[1] = 1 ether;
-
-        // Non-executor should not be able to execute bridge batch
-        vm.prank(user);
-        vm.expectRevert();
-        bridgeBot.executeBridgeBatch(configIds, amounts);
-
-        // Executor should be able to execute bridge batch
-        vm.prank(executor);
-        bridgeBot.executeBridgeBatch(configIds, amounts);
     }
 }
 

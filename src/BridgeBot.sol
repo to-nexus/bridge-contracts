@@ -176,6 +176,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         bridgeConfigs[configId].recipient = recipient;
         bridgeConfigs[configId].toChainID = toChainID;
         bridgeConfigs[configId].interval = interval;
+        bridgeConfigs[configId].lastExecuted = 0; // Reset execution timer
 
         emit BridgeConfigUpdated(configId, bridgeConfigs[configId]);
     }
@@ -253,8 +254,11 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         // Token approval (for ERC20)
         if (config.tokenAddress != NATIVE_TOKEN) {
             IERC20 token = IERC20(config.tokenAddress);
-            if (token.allowance(address(this), address(bridge)) < totalRequired) {
-                token.approve(address(bridge), type(uint).max);
+            uint currentAllowance = token.allowance(address(this), address(bridge));
+            if (currentAllowance < totalRequired) {
+                // Reset allowance to 0 first if needed (for some tokens like USDT)
+                if (currentAllowance > 0) token.approve(address(bridge), 0);
+                token.approve(address(bridge), totalRequired);
             }
         }
 
@@ -278,24 +282,6 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         emit BridgeExecuted(
             configId, config.tokenAddress, amount, config.recipient, config.toChainID, msg.sender, block.timestamp
         );
-    }
-
-    /**
-     * @notice Execute multiple bridge configurations in batch
-     * @param configIds Array of configuration IDs
-     * @param amounts Array of bridge amounts corresponding to each configuration
-     */
-    function executeBridgeBatch(uint[] calldata configIds, uint[] calldata amounts)
-        external
-        onlyRole(EXECUTOR_ROLE)
-        nonReentrant
-    {
-        require(configIds.length == amounts.length, "Array length mismatch");
-
-        for (uint i = 0; i < configIds.length; i++) {
-            (bool canExecute,) = canExecuteBridge(configIds[i]);
-            if (canExecute && amounts[i] > 0) _executeBridgeInternal(configIds[i], amounts[i]);
-        }
     }
 
     /**
@@ -367,29 +353,6 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      */
     function getBridgeConfig(uint configId) external view returns (BridgeConfig memory config) {
         return bridgeConfigs[configId];
-    }
-
-    /**
-     * @notice Get executable bridge configurations
-     * @param maxConfigs Maximum number of configurations to retrieve
-     * @return executableConfigs Array of executable configuration IDs
-     */
-    function getExecutableConfigs(uint maxConfigs) external view returns (uint[] memory executableConfigs) {
-        uint[] memory temp = new uint[](maxConfigs);
-        uint count = 0;
-
-        for (uint i = 0; i < nextConfigId && count < maxConfigs; i++) {
-            (bool canExecute,) = canExecuteBridge(i);
-            if (canExecute) {
-                temp[count] = i;
-                count++;
-            }
-        }
-
-        executableConfigs = new uint[](count);
-        for (uint i = 0; i < count; i++) {
-            executableConfigs[i] = temp[i];
-        }
     }
 
     /**
