@@ -76,8 +76,8 @@ contract BridgeBotTest is Test {
         // Update mock bridge with correct bridge verifier
         mockBridge = new MockBridge(address(bridgeVerifier));
 
-        // Deploy bridge bot
-        bridgeBot = new BridgeBot(address(mockBridge), owner, executor);
+        // Deploy bridge bot (with 1 day admin delay)
+        bridgeBot = new BridgeBot(address(mockBridge), owner, executor, 1 days);
 
         // Fund the bridge bot
         testToken.transfer(address(bridgeBot), BRIDGE_AMOUNT * 10);

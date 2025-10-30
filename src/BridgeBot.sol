@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControlDefaultAdminRules} from
+    "@openzeppelin/contracts/access/extensions/AccessControlDefaultAdminRules.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -15,10 +15,10 @@ import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
  * @notice Bot contract for periodic token bridging
  * @dev Provides automated token bridging functionality based on configured intervals
  * - Periodic bridge execution
- * - Owner-only configuration management and withdrawals
+ * - Admin-only configuration management and withdrawals
  * - Role-based bridge execution capability
  */
-contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
+contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error BridgeBotCanNotZeroAddress();
@@ -108,16 +108,18 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     /**
      * @notice Contract constructor
      * @param _bridge Bridge contract address
-     * @param _owner Contract owner address
+     * @param _owner Initial admin address
      * @param _executor Initial executor address
+     * @param _adminDelay Delay for admin role changes (in seconds)
      */
-    constructor(address _bridge, address _owner, address _executor) Ownable(_owner) {
+    constructor(address _bridge, address _owner, address _executor, uint48 _adminDelay)
+        AccessControlDefaultAdminRules(_adminDelay, _owner)
+    {
         require(_bridge != address(0), BridgeBotCanNotZeroAddress());
         require(_executor != address(0), BridgeBotCanNotZeroAddress());
         bridge = BaseBridge(payable(_bridge));
 
-        // Set up roles
-        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        // Set up executor role
         _grantRole(EXECUTOR_ROLE, _owner);
         _grantRole(EXECUTOR_ROLE, _executor);
     }
@@ -132,7 +134,7 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
      */
     function addBridgeConfig(address tokenAddress, address recipient, uint toChainID, uint interval)
         external
-        onlyOwner
+        onlyRole(DEFAULT_ADMIN_ROLE)
         returns (uint configId)
     {
         require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
@@ -163,7 +165,7 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
      */
     function updateBridgeConfig(uint configId, address tokenAddress, address recipient, uint toChainID, uint interval)
         external
-        onlyOwner
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
         require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
@@ -183,7 +185,7 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
      * @param configId Configuration ID
      * @param enabled Enable status
      */
-    function toggleBridgeConfig(uint configId, bool enabled) external onlyOwner {
+    function toggleBridgeConfig(uint configId, bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
 
         bridgeConfigs[configId].enabled = enabled;
@@ -297,12 +299,12 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraw ERC20 tokens (owner only)
+     * @notice Withdraw ERC20 tokens (admin only)
      * @param token Token address
      * @param to Recipient address
      * @param amount Amount to withdraw
      */
-    function withdrawToken(address token, address to, uint amount) external onlyOwner {
+    function withdrawToken(address token, address to, uint amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(token != address(0), BridgeBotCanNotZeroAddress());
         require(to != address(0), BridgeBotCanNotZeroAddress());
         require(amount > 0, BridgeBotCanNotZeroValue());
@@ -312,11 +314,11 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraw native tokens (owner only)
+     * @notice Withdraw native tokens (admin only)
      * @param to Recipient address
      * @param amount Amount to withdraw
      */
-    function withdrawNative(address payable to, uint amount) external onlyOwner {
+    function withdrawNative(address payable to, uint amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(to != address(0), BridgeBotCanNotZeroAddress());
         require(amount > 0, BridgeBotCanNotZeroValue());
         require(address(this).balance >= amount, "Insufficient balance");
@@ -328,11 +330,11 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraw all ERC20 tokens (owner only)
+     * @notice Withdraw all ERC20 tokens (admin only)
      * @param token Token address
      * @param to Recipient address
      */
-    function withdrawAllTokens(address token, address to) external onlyOwner {
+    function withdrawAllTokens(address token, address to) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(token != address(0), BridgeBotCanNotZeroAddress());
         require(to != address(0), BridgeBotCanNotZeroAddress());
 
@@ -344,10 +346,10 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraw all native tokens (owner only)
+     * @notice Withdraw all native tokens (admin only)
      * @param to Recipient address
      */
-    function withdrawAllNative(address payable to) external onlyOwner {
+    function withdrawAllNative(address payable to) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(to != address(0), BridgeBotCanNotZeroAddress());
 
         uint balance = address(this).balance;
@@ -391,7 +393,7 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice Grant executor role to an address (admin only)
+     * @notice Grant executor role to an address (default admin only)
      * @param account Address to grant executor role
      */
     function grantExecutorRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -400,7 +402,7 @@ contract BridgeBot is Ownable, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @notice Revoke executor role from an address (admin only)
+     * @notice Revoke executor role from an address (default admin only)
      * @param account Address to revoke executor role
      */
     function revokeExecutorRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
