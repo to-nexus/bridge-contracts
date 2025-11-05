@@ -162,11 +162,16 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param recipient Recipient address
      * @param toChainID Target chain ID
      * @param interval Execution interval in seconds
+     * @param lastExecuted Last execution timestamp (0 = use current block.timestamp)
      */
-    function updateBridgeConfig(uint configId, address tokenAddress, address recipient, uint toChainID, uint interval)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function updateBridgeConfig(
+        uint configId,
+        address tokenAddress,
+        address recipient,
+        uint toChainID,
+        uint interval,
+        uint lastExecuted
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
         require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
         require(recipient != address(0), BridgeBotCanNotZeroAddress());
@@ -176,7 +181,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         bridgeConfigs[configId].recipient = recipient;
         bridgeConfigs[configId].toChainID = toChainID;
         bridgeConfigs[configId].interval = interval;
-        bridgeConfigs[configId].lastExecuted = 0; // Reset execution timer
+        bridgeConfigs[configId].lastExecuted = lastExecuted == 0 ? block.timestamp : lastExecuted;
 
         emit BridgeConfigUpdated(configId, bridgeConfigs[configId]);
     }
@@ -254,12 +259,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         // Token approval (for ERC20)
         if (config.tokenAddress != NATIVE_TOKEN) {
             IERC20 token = IERC20(config.tokenAddress);
-            uint currentAllowance = token.allowance(address(this), address(bridge));
-            if (currentAllowance < totalRequired) {
-                // Reset allowance to 0 first if needed (for some tokens like USDT)
-                if (currentAllowance > 0) token.approve(address(bridge), 0);
-                token.approve(address(bridge), totalRequired);
-            }
+            token.forceApprove(address(bridge), totalRequired);
         }
 
         // Execute bridge
