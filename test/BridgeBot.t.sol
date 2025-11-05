@@ -192,7 +192,8 @@ contract BridgeBotTest is Test {
             NATIVE_TOKEN,
             user,
             56, // BSC mainnet
-            3600 // 1 hour
+            3600, // 1 hour
+            0 // lastExecuted (0 = use current block.timestamp)
         );
 
         BridgeBot.BridgeConfig memory config = bridgeBot.getBridgeConfig(configId);
@@ -258,7 +259,7 @@ contract BridgeBotTest is Test {
         bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
 
         vm.expectRevert();
-        bridgeBot.updateBridgeConfig(0, address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        bridgeBot.updateBridgeConfig(0, address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
 
         vm.expectRevert();
         bridgeBot.toggleBridgeConfig(0, false);
