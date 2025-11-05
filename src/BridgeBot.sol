@@ -93,6 +93,9 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     /// @dev Native token address constant
     address public constant NATIVE_TOKEN = address(1);
 
+    /// @dev Role for editing bridge configurations
+    bytes32 public constant EDITOR_ROLE = keccak256("EDITOR_ROLE");
+
     /// @dev Role for executing bridge operations
     bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
 
@@ -119,7 +122,12 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         require(_executor != address(0), BridgeBotCanNotZeroAddress());
         bridge = BaseBridge(payable(_bridge));
 
-        // Set up executor role
+        // Set DEFAULT_ADMIN_ROLE as the admin for EDITOR_ROLE and EXECUTOR_ROLE
+        _setRoleAdmin(EDITOR_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(EXECUTOR_ROLE, DEFAULT_ADMIN_ROLE);
+
+        // Grant roles
+        _grantRole(EDITOR_ROLE, _owner);
         _grantRole(EXECUTOR_ROLE, _owner);
         _grantRole(EXECUTOR_ROLE, _executor);
     }
@@ -134,7 +142,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      */
     function addBridgeConfig(address tokenAddress, address recipient, uint toChainID, uint interval)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(EDITOR_ROLE)
         returns (uint configId)
     {
         require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
@@ -171,7 +179,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         uint toChainID,
         uint interval,
         uint lastExecuted
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(EDITOR_ROLE) {
         require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
         require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
         require(recipient != address(0), BridgeBotCanNotZeroAddress());
@@ -191,7 +199,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param configId Configuration ID
      * @param enabled Enable status
      */
-    function toggleBridgeConfig(uint configId, bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function toggleBridgeConfig(uint configId, bool enabled) external onlyRole(EDITOR_ROLE) {
         require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
 
         bridgeConfigs[configId].enabled = enabled;
@@ -220,20 +228,33 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     }
 
     /**
-     * @notice Execute bridge (role restricted)
+     * @notice Execute ERC20 token bridge (role restricted)
      * @param configId Configuration ID
      * @param amount Amount to bridge
      */
     function executeBridge(uint configId, uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
-        _executeBridgeInternal(configId, amount);
+        BridgeConfig storage config = bridgeConfigs[configId];
+        require(config.tokenAddress != NATIVE_TOKEN, "Use executeBridgeNative for native tokens");
+        _executeBridgeERC20Internal(configId, amount);
     }
 
     /**
-     * @notice Internal bridge execution function
+     * @notice Execute native token bridge (role restricted)
      * @param configId Configuration ID
      * @param amount Amount to bridge
      */
-    function _executeBridgeInternal(uint configId, uint amount) internal {
+    function executeBridgeNative(uint configId, uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
+        BridgeConfig storage config = bridgeConfigs[configId];
+        require(config.tokenAddress == NATIVE_TOKEN, "Use executeBridge for ERC20 tokens");
+        _executeBridgeNativeInternal(configId, amount);
+    }
+
+    /**
+     * @notice Internal ERC20 bridge execution function
+     * @param configId Configuration ID
+     * @param amount Amount to bridge
+     */
+    function _executeBridgeERC20Internal(uint configId, uint amount) internal {
         require(amount > 0, BridgeBotCanNotZeroValue());
 
         BridgeConfig storage config = bridgeConfigs[configId];
@@ -243,9 +264,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         require(canExecute, BridgeBotNotTimeYet(nextAvailableTime));
 
         // Check balance
-        uint balance;
-        if (config.tokenAddress == NATIVE_TOKEN) balance = address(this).balance;
-        else balance = IERC20(config.tokenAddress).balanceOf(address(this));
+        uint balance = IERC20(config.tokenAddress).balanceOf(address(this));
 
         // Calculate fees
         IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
@@ -256,23 +275,13 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         require(balance >= totalRequired, BridgeBotInsufficientBalance(totalRequired, balance));
         require(amount >= minimumValue, "Amount below minimum");
 
-        // Token approval (for ERC20)
-        if (config.tokenAddress != NATIVE_TOKEN) {
-            IERC20 token = IERC20(config.tokenAddress);
-            token.forceApprove(address(bridge), totalRequired);
-        }
+        // Token approval
+        IERC20(config.tokenAddress).forceApprove(address(bridge), totalRequired);
 
         // Execute bridge
-        bool success;
-        if (config.tokenAddress == NATIVE_TOKEN) {
-            success = bridge.bridgeToken{value: totalRequired}(
-                config.toChainID, IERC20(config.tokenAddress), config.recipient, amount, gasFee, exFee, ""
-            );
-        } else {
-            success = bridge.bridgeToken(
-                config.toChainID, IERC20(config.tokenAddress), config.recipient, amount, gasFee, exFee, ""
-            );
-        }
+        bool success = bridge.bridgeToken(
+            config.toChainID, IERC20(config.tokenAddress), config.recipient, amount, gasFee, exFee, ""
+        );
 
         require(success, BridgeBotBridgeFailed());
 
@@ -281,6 +290,47 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
 
         emit BridgeExecuted(
             configId, config.tokenAddress, amount, config.recipient, config.toChainID, msg.sender, block.timestamp
+        );
+    }
+
+    /**
+     * @notice Internal native token bridge execution function
+     * @param configId Configuration ID
+     * @param amount Amount to bridge
+     */
+    function _executeBridgeNativeInternal(uint configId, uint amount) internal {
+        require(amount > 0, BridgeBotCanNotZeroValue());
+
+        BridgeConfig storage config = bridgeConfigs[configId];
+        require(config.enabled, "Config not available");
+
+        (bool canExecute, uint nextAvailableTime) = canExecuteBridge(configId);
+        require(canExecute, BridgeBotNotTimeYet(nextAvailableTime));
+
+        // Check balance
+        uint balance = address(this).balance;
+
+        // Calculate fees
+        IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
+        (uint minimumValue, uint gasFee, uint exFee) =
+            bridgeVerifier.calculateFee(config.toChainID, IERC20(NATIVE_TOKEN), amount);
+
+        uint totalRequired = amount + gasFee + exFee;
+        require(balance >= totalRequired, BridgeBotInsufficientBalance(totalRequired, balance));
+        require(amount >= minimumValue, "Amount below minimum");
+
+        // Execute bridge with native token
+        bool success = bridge.bridgeToken{value: totalRequired}(
+            config.toChainID, IERC20(NATIVE_TOKEN), config.recipient, amount, gasFee, exFee, ""
+        );
+
+        require(success, BridgeBotBridgeFailed());
+
+        // Update last execution time
+        config.lastExecuted = block.timestamp;
+
+        emit BridgeExecuted(
+            configId, NATIVE_TOKEN, amount, config.recipient, config.toChainID, msg.sender, block.timestamp
         );
     }
 
@@ -353,23 +403,6 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      */
     function getBridgeConfig(uint configId) external view returns (BridgeConfig memory config) {
         return bridgeConfigs[configId];
-    }
-
-    /**
-     * @notice Grant executor role to an address (default admin only)
-     * @param account Address to grant executor role
-     */
-    function grantExecutorRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(account != address(0), BridgeBotCanNotZeroAddress());
-        grantRole(EXECUTOR_ROLE, account);
-    }
-
-    /**
-     * @notice Revoke executor role from an address (default admin only)
-     * @param account Address to revoke executor role
-     */
-    function revokeExecutorRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        revokeRole(EXECUTOR_ROLE, account);
     }
 
     /**
