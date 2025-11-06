@@ -122,10 +122,6 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         require(_executor != address(0), BridgeBotCanNotZeroAddress());
         bridge = BaseBridge(payable(_bridge));
 
-        // Set DEFAULT_ADMIN_ROLE as the admin for EDITOR_ROLE and EXECUTOR_ROLE
-        _setRoleAdmin(EDITOR_ROLE, DEFAULT_ADMIN_ROLE);
-        _setRoleAdmin(EXECUTOR_ROLE, DEFAULT_ADMIN_ROLE);
-
         // Grant roles
         _grantRole(EDITOR_ROLE, _owner);
         _grantRole(EXECUTOR_ROLE, _owner);
