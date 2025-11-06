@@ -23,6 +23,7 @@ contract BridgeBotTest is Test {
 
     address public constant NATIVE_TOKEN = address(1);
     address public owner = makeAddr("owner");
+    address public editor = makeAddr("editor");
     address public user = makeAddr("user");
     address public recipient = makeAddr("recipient");
     address public executor = makeAddr("executor");
@@ -76,8 +77,8 @@ contract BridgeBotTest is Test {
         // Update mock bridge with correct bridge verifier
         mockBridge = new MockBridge(address(bridgeVerifier));
 
-        // Deploy bridge bot (with 1 day admin delay)
-        bridgeBot = new BridgeBot(address(mockBridge), owner, executor, 0);
+        // Deploy bridge bot (with 0 admin delay for testing)
+        bridgeBot = new BridgeBot(address(mockBridge), owner, editor, executor, 0);
 
         console.log("BridgeBot address:", address(bridgeBot));
         console.log("BridgeBot owner:", bridgeBot.owner());
@@ -336,6 +337,7 @@ contract BridgeBotTest is Test {
         // Test initial roles
         assertTrue(bridgeBot.hasRole(defaultAdminRole, owner));
         assertTrue(bridgeBot.hasRole(editorRole, owner));
+        assertTrue(bridgeBot.hasRole(editorRole, editor));
         assertTrue(bridgeBot.hasRole(executorRole, owner));
         assertTrue(bridgeBot.hasRole(executorRole, executor));
 
