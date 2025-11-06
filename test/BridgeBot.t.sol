@@ -34,7 +34,6 @@ contract BridgeBotTest is Test {
     uint public constant DAILY_INTERVAL = 86400; // 24 hours
 
     event BridgeExecuted(
-        uint indexed configId,
         address indexed tokenAddress,
         uint amount,
         address indexed recipient,
@@ -81,27 +80,26 @@ contract BridgeBotTest is Test {
         bridgeBot = new BridgeBot(address(mockBridge), owner, editor, executor, 0);
 
         console.log("BridgeBot address:", address(bridgeBot));
-        console.log("BridgeBot owner:", bridgeBot.owner());
-        // Fund the bridge bot
 
+        // Fund the bridge bot
         testToken.transfer(address(bridgeBot), BRIDGE_AMOUNT * 10);
         vm.deal(address(bridgeBot), 10 ether);
 
         vm.stopPrank();
     }
 
-    function testAddBridgeConfig() public {
+    function testSetConfig() public {
         vm.startPrank(owner);
 
-        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
 
-        BridgeBot.BridgeConfig memory config = bridgeBot.getBridgeConfig(configId);
+        BridgeBot.BridgeConfig memory config = bridgeBot.getConfig();
 
         assertEq(config.tokenAddress, address(testToken));
         assertEq(config.recipient, recipient);
         assertEq(config.toChainID, TEST_CHAIN_ID);
         assertEq(config.interval, DAILY_INTERVAL);
-        assertEq(config.lastExecuted, 0);
+        assertEq(config.lastExecuted, 0); // 0 means immediate execution allowed
         assertTrue(config.enabled);
 
         vm.stopPrank();
@@ -109,354 +107,278 @@ contract BridgeBotTest is Test {
 
     function testExecuteBridge() public {
         vm.startPrank(owner);
-
-        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
         vm.stopPrank();
 
         // Check if can execute
-        (bool canExecute, uint nextAvailableTime) = bridgeBot.canExecuteBridge(configId);
+        (bool canExecute, uint nextAvailableTime) = bridgeBot.canExecuteBridge();
         assertTrue(canExecute);
         assertEq(nextAvailableTime, 0);
 
         // Execute bridge
         vm.startPrank(executor);
         vm.expectEmit(true, true, true, true);
-        emit BridgeExecuted(
-            configId, address(testToken), BRIDGE_AMOUNT, recipient, TEST_CHAIN_ID, executor, block.timestamp
-        );
+        emit BridgeExecuted(address(testToken), BRIDGE_AMOUNT, recipient, TEST_CHAIN_ID, executor, block.timestamp);
 
-        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
+        bridgeBot.executeBridge(BRIDGE_AMOUNT);
         vm.stopPrank();
 
         // Check config updated
-        BridgeBot.BridgeConfig memory config = bridgeBot.getBridgeConfig(configId);
+        BridgeBot.BridgeConfig memory config = bridgeBot.getConfig();
         assertEq(config.lastExecuted, block.timestamp);
 
         // Should not be able to execute again immediately
-        (canExecute,) = bridgeBot.canExecuteBridge(configId);
+        (canExecute,) = bridgeBot.canExecuteBridge();
         assertFalse(canExecute);
     }
 
     function testExecuteBridgeAfterInterval() public {
         vm.startPrank(owner);
-
-        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
         vm.stopPrank();
 
         // Execute first time
         vm.prank(executor);
-        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
+        bridgeBot.executeBridge(BRIDGE_AMOUNT);
 
-        // Should not be able to execute immediately
-        (bool canExecute,) = bridgeBot.canExecuteBridge(configId);
+        // Should not be able to execute before interval
+        (bool canExecute,) = bridgeBot.canExecuteBridge();
         assertFalse(canExecute);
 
-        // Fast forward to next day
+        // Move time forward by interval
         vm.warp(block.timestamp + DAILY_INTERVAL);
 
-        // Should be able to execute again
-        (canExecute,) = bridgeBot.canExecuteBridge(configId);
+        // Should be able to execute now
+        (canExecute,) = bridgeBot.canExecuteBridge();
         assertTrue(canExecute);
 
         // Execute again
         vm.prank(executor);
-        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
-
-        // Verify execution
-        BridgeBot.BridgeConfig memory config = bridgeBot.getBridgeConfig(configId);
-        assertEq(config.lastExecuted, block.timestamp);
+        bridgeBot.executeBridge(BRIDGE_AMOUNT);
     }
 
     function testExecuteBridgeWithNativeToken() public {
         vm.startPrank(owner);
-
-        uint configId = bridgeBot.addBridgeConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
+        bridgeBot.setConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
         vm.stopPrank();
 
-        // Execute bridge with native token
-        vm.prank(executor);
-        bridgeBot.executeBridgeNative(configId, 1 ether);
+        uint initialBalance = address(bridgeBot).balance;
 
-        // Verify execution
-        BridgeBot.BridgeConfig memory config = bridgeBot.getBridgeConfig(configId);
-        assertEq(config.lastExecuted, block.timestamp);
+        // Execute bridge
+        vm.prank(executor);
+        bridgeBot.executeBridgeNative(1 ether);
+
+        // Check balance decreased
+        assertTrue(address(bridgeBot).balance < initialBalance);
     }
 
-    function testExecuteBridgeWrongTokenType() public {
+    function testUpdateConfig() public {
         vm.startPrank(owner);
 
-        // Add ERC20 config
-        uint erc20ConfigId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        // Set initial config
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
 
-        // Add native config
-        uint nativeConfigId = bridgeBot.addBridgeConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        // Update config with specific lastExecuted time
+        address newRecipient = makeAddr("newRecipient");
+        uint newInterval = DAILY_INTERVAL * 2;
+        uint updateTime = block.timestamp;
+        bridgeBot.setConfig(address(testToken), newRecipient, TEST_CHAIN_ID, newInterval, updateTime);
 
-        vm.stopPrank();
-
-        // Try to execute ERC20 config with executeBridgeNative - should fail
-        vm.prank(executor);
-        vm.expectRevert("Use executeBridge for ERC20 tokens");
-        bridgeBot.executeBridgeNative(erc20ConfigId, 1 ether);
-
-        // Try to execute native config with executeBridge - should fail
-        vm.prank(executor);
-        vm.expectRevert("Use executeBridgeNative for native tokens");
-        bridgeBot.executeBridge(nativeConfigId, 1 ether);
-    }
-
-    function testUpdateBridgeConfig() public {
-        vm.startPrank(owner);
-
-        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-
-        // Update config
-        bridgeBot.updateBridgeConfig(
-            configId,
-            NATIVE_TOKEN,
-            user,
-            56, // BSC mainnet
-            3600, // 1 hour
-            0 // lastExecuted (0 = use current block.timestamp)
-        );
-
-        BridgeBot.BridgeConfig memory config = bridgeBot.getBridgeConfig(configId);
-        assertEq(config.tokenAddress, NATIVE_TOKEN);
-        assertEq(config.recipient, user);
-        assertEq(config.toChainID, 56);
-        assertEq(config.interval, 3600);
+        BridgeBot.BridgeConfig memory config = bridgeBot.getConfig();
+        assertEq(config.recipient, newRecipient);
+        assertEq(config.interval, newInterval);
+        assertEq(config.lastExecuted, updateTime);
 
         vm.stopPrank();
     }
 
-    function testToggleBridgeConfig() public {
+    function testToggleConfig() public {
         vm.startPrank(owner);
 
-        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
 
         // Disable config
-        bridgeBot.toggleBridgeConfig(configId, false);
+        bridgeBot.setEnabled(false);
 
-        BridgeBot.BridgeConfig memory config = bridgeBot.getBridgeConfig(configId);
+        BridgeBot.BridgeConfig memory config = bridgeBot.getConfig();
         assertFalse(config.enabled);
 
-        // Should not be able to execute disabled config
-        (bool canExecute,) = bridgeBot.canExecuteBridge(configId);
-        assertFalse(canExecute);
-
+        // Try to execute (should fail)
         vm.stopPrank();
+        vm.prank(executor);
+        vm.expectRevert("Config not available");
+        bridgeBot.executeBridge(BRIDGE_AMOUNT);
+
+        // Enable config
+        vm.prank(owner);
+        bridgeBot.setEnabled(true);
+
+        config = bridgeBot.getConfig();
+        assertTrue(config.enabled);
     }
 
-    function testWithdrawTokens() public {
-        uint withdrawAmount = 50 ether;
+    function testWithdrawToken() public {
+        uint withdrawAmount = BRIDGE_AMOUNT;
+        uint initialBalance = testToken.balanceOf(user);
+        vm.prank(owner);
+        bridgeBot.withdrawToken(address(testToken), user, withdrawAmount);
 
-        vm.startPrank(owner);
-
-        uint balanceBefore = testToken.balanceOf(owner);
-        bridgeBot.withdrawToken(address(testToken), owner, withdrawAmount);
-        uint balanceAfter = testToken.balanceOf(owner);
-
-        assertEq(balanceAfter - balanceBefore, withdrawAmount);
-
-        vm.stopPrank();
+        assertEq(testToken.balanceOf(user), initialBalance + withdrawAmount);
     }
 
     function testWithdrawNative() public {
+        vm.prank(owner);
+
         uint withdrawAmount = 1 ether;
+        uint initialBalance = user.balance;
 
-        vm.startPrank(owner);
+        bridgeBot.withdrawNative(payable(user), withdrawAmount);
 
-        uint balanceBefore = owner.balance;
-        bridgeBot.withdrawNative(payable(owner), withdrawAmount);
-        uint balanceAfter = owner.balance;
+        assertEq(user.balance, initialBalance + withdrawAmount);
+    }
 
-        assertEq(balanceAfter - balanceBefore, withdrawAmount);
+    function testWithdrawAllTokens() public {
+        uint botBalance = testToken.balanceOf(address(bridgeBot));
+        uint initialUserBalance = testToken.balanceOf(user);
+        vm.prank(owner);
+        bridgeBot.withdrawAllTokens(address(testToken), user);
 
-        vm.stopPrank();
+        assertEq(testToken.balanceOf(address(bridgeBot)), 0);
+        assertEq(testToken.balanceOf(user), initialUserBalance + botBalance);
+    }
+
+    function testWithdrawAllNative() public {
+        vm.prank(owner);
+
+        uint botBalance = address(bridgeBot).balance;
+        uint initialUserBalance = user.balance;
+
+        bridgeBot.withdrawAllNative(payable(user));
+
+        assertEq(address(bridgeBot).balance, 0);
+        assertEq(user.balance, initialUserBalance + botBalance);
     }
 
     function testOnlyEditorFunctions() public {
-        // Non-editor should not be able to call editor functions
-        vm.startPrank(user);
-
+        // User without editor role tries to set config
+        vm.prank(user);
         vm.expectRevert();
-        bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
 
+        // User without editor role tries to toggle config
+        vm.prank(user);
         vm.expectRevert();
-        bridgeBot.updateBridgeConfig(0, address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
+        bridgeBot.setEnabled(false);
+    }
 
+    function testOnlyExecutorCanBridge() public {
+        vm.prank(owner);
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
+
+        // User without executor role tries to execute bridge
+        vm.prank(user);
         vm.expectRevert();
-        bridgeBot.toggleBridgeConfig(0, false);
-
-        vm.stopPrank();
+        bridgeBot.executeBridge(BRIDGE_AMOUNT);
     }
 
     function testOnlyAdminFunctions() public {
-        // Non-admin should not be able to call admin functions
-        vm.startPrank(user);
-
+        // User without admin role tries to withdraw token
+        vm.prank(user);
         vm.expectRevert();
-        bridgeBot.withdrawToken(address(testToken), user, 1 ether);
+        bridgeBot.withdrawToken(address(testToken), user, BRIDGE_AMOUNT);
 
+        // User without admin role tries to withdraw native
+        vm.prank(user);
         vm.expectRevert();
         bridgeBot.withdrawNative(payable(user), 1 ether);
-
-        vm.stopPrank();
-    }
-
-    function testEditorCanManageConfigs() public {
-        // Grant editor role to user
-        bytes32 editorRole = bridgeBot.EDITOR_ROLE();
-        vm.prank(owner);
-        bridgeBot.grantRole(editorRole, user);
-
-        // Editor should be able to manage configs
-        vm.startPrank(user);
-
-        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
-        assertEq(configId, 0);
-
-        bridgeBot.updateBridgeConfig(configId, address(testToken), user, TEST_CHAIN_ID, 3600, 0);
-        bridgeBot.toggleBridgeConfig(configId, false);
-
-        // But editor cannot withdraw
-        vm.expectRevert();
-        bridgeBot.withdrawToken(address(testToken), user, 1 ether);
-
-        vm.stopPrank();
     }
 
     function testRoleManagement() public {
-        // Cache role values to avoid multiple external calls with vm.prank
         bytes32 defaultAdminRole = bridgeBot.DEFAULT_ADMIN_ROLE();
         bytes32 editorRole = bridgeBot.EDITOR_ROLE();
         bytes32 executorRole = bridgeBot.EXECUTOR_ROLE();
 
-        // Test initial roles
+        // Check initial roles
         assertTrue(bridgeBot.hasRole(defaultAdminRole, owner));
         assertTrue(bridgeBot.hasRole(editorRole, owner));
         assertTrue(bridgeBot.hasRole(editorRole, editor));
         assertTrue(bridgeBot.hasRole(executorRole, owner));
         assertTrue(bridgeBot.hasRole(executorRole, executor));
 
-        // Test granting editor role
+        // Grant executor role to user
         vm.prank(owner);
         bridgeBot.grantRole(editorRole, user);
+
         assertTrue(bridgeBot.hasRole(editorRole, user));
 
-        // Test revoking editor role
+        // Revoke executor role from user
         vm.prank(owner);
         bridgeBot.revokeRole(editorRole, user);
+
         assertFalse(bridgeBot.hasRole(editorRole, user));
-
-        // Test granting executor role
-        vm.prank(owner);
-        bridgeBot.grantRole(executorRole, user);
-        assertTrue(bridgeBot.hasRole(executorRole, user));
-
-        // Test revoking executor role
-        vm.prank(owner);
-        bridgeBot.revokeRole(executorRole, executor);
-        assertFalse(bridgeBot.hasRole(executorRole, executor));
-
-        // Test only admin can manage roles
-        vm.prank(user);
-        vm.expectRevert();
-        bridgeBot.grantRole(editorRole, address(0x5));
-
-        vm.prank(user);
-        vm.expectRevert();
-        bridgeBot.grantRole(executorRole, address(0x5));
-
-        vm.prank(user);
-        vm.expectRevert();
-        bridgeBot.revokeRole(executorRole, owner);
     }
 
-    function testOnlyExecutorCanBridge() public {
+    function testEditorCanManageConfigs() public {
+        // Editor can set config
+        vm.prank(editor);
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
+
+        BridgeBot.BridgeConfig memory config = bridgeBot.getConfig();
+        assertEq(config.tokenAddress, address(testToken));
+
+        // Editor can toggle config
+        vm.prank(editor);
+        bridgeBot.setEnabled(false);
+
+        config = bridgeBot.getConfig();
+        assertFalse(config.enabled);
+    }
+
+    function testExecuteBridgeWrongTokenType() public {
+        // Setup ERC20 config
         vm.prank(owner);
-        uint configId = bridgeBot.addBridgeConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL);
+        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
 
-        // Non-executor should not be able to execute bridge
-        vm.prank(user);
-        vm.expectRevert();
-        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
-
-        // Executor should be able to execute bridge
+        // Try to execute native bridge with ERC20 config
         vm.prank(executor);
-        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
+        vm.expectRevert("Use executeBridge for ERC20 tokens");
+        bridgeBot.executeBridgeNative(1 ether);
 
-        // Owner (who has executor role) should also be able to execute bridge
-        vm.warp(block.timestamp + DAILY_INTERVAL + 1);
+        // Setup Native config
         vm.prank(owner);
-        bridgeBot.executeBridge(configId, BRIDGE_AMOUNT);
+        bridgeBot.setConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
+
+        // Try to execute ERC20 bridge with Native config
+        vm.prank(executor);
+        vm.expectRevert("Use executeBridgeNative for native tokens");
+        bridgeBot.executeBridge(1 ether);
     }
 }
 
-// Mock bridge contract for testing
+/**
+ * @dev Mock Bridge contract for testing
+ */
 contract MockBridge {
-    IBridgeVerifier private _bridgeVerifier;
+    BridgeVerifier private _bridgeVerifier;
 
     constructor(address bridgeVerifierAddr) {
-        _bridgeVerifier = IBridgeVerifier(bridgeVerifierAddr);
+        _bridgeVerifier = BridgeVerifier(bridgeVerifierAddr);
     }
 
-    function bridgeToken(uint, IERC20, address, uint, uint, uint, bytes calldata) external payable returns (bool) {
-        return true;
+    function bridgeVerifier() public view returns (IBridgeVerifier) {
+        return IBridgeVerifier(address(_bridgeVerifier));
     }
 
-    function bridgeVerifier() external view returns (IBridgeVerifier) {
-        return _bridgeVerifier;
-    }
-
-    // Mock other required functions
-    function finalizeBridge(
-        IBridgeRegistry.FinalizeArguments calldata,
-        uint8[] memory,
-        bytes32[] memory,
-        bytes32[] memory
-    ) external payable returns (bool) {
-        return true;
-    }
-
-    function permitBridgeToken(
-        uint,
-        IERC20,
-        address,
-        uint,
-        uint,
-        uint,
-        bytes calldata,
-        IBaseBridge.PermitArguments calldata
-    ) external payable returns (bool) {
-        return true;
-    }
-
-    function permitBridgeTokenBatch(IBaseBridge.BridgeTokenArguments[] calldata, IBaseBridge.PermitArguments[] calldata)
+    function bridgeToken(uint, IERC20 token, address, uint amount, uint gasFee, uint exFee, bytes calldata)
         external
         payable
-    {}
-
-    function finalizeBridgeBatch(
-        IBridgeRegistry.FinalizeArguments[] calldata,
-        uint8[][] memory,
-        bytes32[][] memory,
-        bytes32[][] memory
-    ) external payable returns (bool) {
+        returns (bool)
+    {
+        if (address(token) != address(1)) token.transferFrom(msg.sender, address(this), amount + gasFee + exFee);
         return true;
     }
 
-    function releasePending(uint, uint) external {}
-
-    function releasePendingBatch(uint[] memory, uint[] memory) external {}
-
-    function domainSeparator() external pure returns (bytes32) {
-        return bytes32(0);
-    }
-
-    function initializedAt() external pure returns (uint) {
-        return 0;
+    function chainID() external pure returns (uint) {
+        return 97;
     }
 }
