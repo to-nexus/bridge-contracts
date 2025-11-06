@@ -47,7 +47,6 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
 
     /**
      * @notice Bridge execution event
-     * @param configId Configuration ID
      * @param tokenAddress Token address
      * @param amount Bridged amount
      * @param recipient Recipient address
@@ -56,7 +55,6 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param timestamp Execution timestamp
      */
     event BridgeExecuted(
-        uint indexed configId,
         address indexed tokenAddress,
         uint amount,
         address indexed recipient,
@@ -66,19 +64,14 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     );
 
     /**
-     * @notice Bridge configuration added event
-     */
-    event BridgeConfigAdded(uint indexed configId, BridgeConfig config);
-
-    /**
      * @notice Bridge configuration updated event
      */
-    event BridgeConfigUpdated(uint indexed configId, BridgeConfig config);
+    event ConfigSet(BridgeConfig config);
 
     /**
      * @notice Bridge configuration enabled/disabled event
      */
-    event BridgeConfigToggled(uint indexed configId, bool enabled);
+    event ConfigToggled(bool enabled);
 
     /**
      * @notice Token withdrawal event
@@ -102,11 +95,8 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     /// @dev Bridge contract
     BaseBridge public immutable bridge;
 
-    /// @dev Bridge configurations
-    mapping(uint => BridgeConfig) public bridgeConfigs;
-
-    /// @dev Next configuration ID
-    uint public nextConfigId;
+    /// @dev Bridge configuration
+    BridgeConfig public config;
 
     /**
      * @notice Contract constructor
@@ -136,88 +126,46 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     }
 
     /**
-     * @notice Add bridge configuration
+     * @notice Set bridge configuration
      * @param tokenAddress Token address
      * @param recipient Recipient address
      * @param toChainID Target chain ID
      * @param interval Execution interval in seconds
-     * @return configId Configuration ID
+     * @param lastExecuted Last execution timestamp (0 = allow immediate execution)
      */
-    function addBridgeConfig(address tokenAddress, address recipient, uint toChainID, uint interval)
+    function setConfig(address tokenAddress, address recipient, uint toChainID, uint interval, uint lastExecuted)
         external
         onlyRole(EDITOR_ROLE)
-        returns (uint configId)
     {
         require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
         require(recipient != address(0), BridgeBotCanNotZeroAddress());
         require(interval > 0, BridgeBotCanNotZeroValue());
 
-        configId = nextConfigId++;
+        config.tokenAddress = tokenAddress;
+        config.recipient = recipient;
+        config.toChainID = toChainID;
+        config.interval = interval;
+        config.lastExecuted = lastExecuted;
+        config.enabled = true;
 
-        bridgeConfigs[configId] = BridgeConfig({
-            tokenAddress: tokenAddress,
-            recipient: recipient,
-            toChainID: toChainID,
-            interval: interval,
-            lastExecuted: 0,
-            enabled: true
-        });
-
-        emit BridgeConfigAdded(configId, bridgeConfigs[configId]);
-    }
-
-    /**
-     * @notice Update bridge configuration
-     * @param configId Configuration ID
-     * @param tokenAddress Token address
-     * @param recipient Recipient address
-     * @param toChainID Target chain ID
-     * @param interval Execution interval in seconds
-     * @param lastExecuted Last execution timestamp (0 = use current block.timestamp)
-     */
-    function updateBridgeConfig(
-        uint configId,
-        address tokenAddress,
-        address recipient,
-        uint toChainID,
-        uint interval,
-        uint lastExecuted
-    ) external onlyRole(EDITOR_ROLE) {
-        require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
-        require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
-        require(recipient != address(0), BridgeBotCanNotZeroAddress());
-        require(interval > 0, BridgeBotCanNotZeroValue());
-
-        bridgeConfigs[configId].tokenAddress = tokenAddress;
-        bridgeConfigs[configId].recipient = recipient;
-        bridgeConfigs[configId].toChainID = toChainID;
-        bridgeConfigs[configId].interval = interval;
-        bridgeConfigs[configId].lastExecuted = lastExecuted == 0 ? block.timestamp : lastExecuted;
-
-        emit BridgeConfigUpdated(configId, bridgeConfigs[configId]);
+        emit ConfigSet(config);
     }
 
     /**
      * @notice Enable/disable bridge configuration
-     * @param configId Configuration ID
      * @param enabled Enable status
      */
-    function toggleBridgeConfig(uint configId, bool enabled) external onlyRole(EDITOR_ROLE) {
-        require(bridgeConfigs[configId].tokenAddress != address(0), "Config not exists");
-
-        bridgeConfigs[configId].enabled = enabled;
-        emit BridgeConfigToggled(configId, enabled);
+    function setEnabled(bool enabled) external onlyRole(EDITOR_ROLE) {
+        config.enabled = enabled;
+        emit ConfigToggled(enabled);
     }
 
     /**
      * @notice Check if bridge can be executed
-     * @param configId Configuration ID
      * @return canExecute Whether execution is possible
      * @return nextAvailableTime Next available execution time
      */
-    function canExecuteBridge(uint configId) public view returns (bool canExecute, uint nextAvailableTime) {
-        BridgeConfig memory config = bridgeConfigs[configId];
-
+    function canExecuteBridge() public view returns (bool canExecute, uint nextAvailableTime) {
         if (!config.enabled || config.tokenAddress == address(0)) return (false, 0);
 
         // First execution case (lastExecuted == 0)
@@ -232,38 +180,31 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
 
     /**
      * @notice Execute ERC20 token bridge (role restricted)
-     * @param configId Configuration ID
      * @param amount Amount to bridge
      */
-    function executeBridge(uint configId, uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
-        BridgeConfig storage config = bridgeConfigs[configId];
+    function executeBridge(uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
         require(config.tokenAddress != NATIVE_TOKEN, "Use executeBridgeNative for native tokens");
-        _executeBridgeERC20Internal(configId, amount);
+        _executeBridgeERC20Internal(amount);
     }
 
     /**
      * @notice Execute native token bridge (role restricted)
-     * @param configId Configuration ID
      * @param amount Amount to bridge
      */
-    function executeBridgeNative(uint configId, uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
-        BridgeConfig storage config = bridgeConfigs[configId];
+    function executeBridgeNative(uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
         require(config.tokenAddress == NATIVE_TOKEN, "Use executeBridge for ERC20 tokens");
-        _executeBridgeNativeInternal(configId, amount);
+        _executeBridgeNativeInternal(amount);
     }
 
     /**
      * @notice Internal ERC20 bridge execution function
-     * @param configId Configuration ID
      * @param amount Amount to bridge
      */
-    function _executeBridgeERC20Internal(uint configId, uint amount) internal {
+    function _executeBridgeERC20Internal(uint amount) internal {
         require(amount > 0, BridgeBotCanNotZeroValue());
-
-        BridgeConfig storage config = bridgeConfigs[configId];
         require(config.enabled && config.tokenAddress != address(0), "Config not available");
 
-        (bool canExecute, uint nextAvailableTime) = canExecuteBridge(configId);
+        (bool canExecute, uint nextAvailableTime) = canExecuteBridge();
         require(canExecute, BridgeBotNotTimeYet(nextAvailableTime));
 
         // Check balance
@@ -294,22 +235,19 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         config.lastExecuted = block.timestamp;
 
         emit BridgeExecuted(
-            configId, config.tokenAddress, amount, config.recipient, config.toChainID, msg.sender, block.timestamp
+            config.tokenAddress, amount, config.recipient, config.toChainID, msg.sender, block.timestamp
         );
     }
 
     /**
      * @notice Internal native token bridge execution function
-     * @param configId Configuration ID
      * @param amount Amount to bridge
      */
-    function _executeBridgeNativeInternal(uint configId, uint amount) internal {
+    function _executeBridgeNativeInternal(uint amount) internal {
         require(amount > 0, BridgeBotCanNotZeroValue());
-
-        BridgeConfig storage config = bridgeConfigs[configId];
         require(config.enabled, "Config not available");
 
-        (bool canExecute, uint nextAvailableTime) = canExecuteBridge(configId);
+        (bool canExecute, uint nextAvailableTime) = canExecuteBridge();
         require(canExecute, BridgeBotNotTimeYet(nextAvailableTime));
 
         // Check balance
@@ -334,9 +272,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         // Update last execution time
         config.lastExecuted = block.timestamp;
 
-        emit BridgeExecuted(
-            configId, NATIVE_TOKEN, amount, config.recipient, config.toChainID, msg.sender, block.timestamp
-        );
+        emit BridgeExecuted(NATIVE_TOKEN, amount, config.recipient, config.toChainID, msg.sender, block.timestamp);
     }
 
     /**
@@ -403,11 +339,10 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
 
     /**
      * @notice Get bridge configuration
-     * @param configId Configuration ID
-     * @return config Bridge configuration
+     * @return Bridge configuration
      */
-    function getBridgeConfig(uint configId) external view returns (BridgeConfig memory config) {
-        return bridgeConfigs[configId];
+    function getConfig() external view returns (BridgeConfig memory) {
+        return config;
     }
 
     /**
