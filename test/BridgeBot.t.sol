@@ -22,10 +22,10 @@ contract BridgeBotTest is Test {
     TestToken public testToken;
 
     address public constant NATIVE_TOKEN = address(1);
-    address public owner = address(0x1);
-    address public user = address(0x2);
-    address public recipient = address(0x3);
-    address public executor = address(0x4);
+    address public owner = makeAddr("owner");
+    address public user = makeAddr("user");
+    address public recipient = makeAddr("recipient");
+    address public executor = makeAddr("executor");
 
     uint public constant TEST_CHAIN_ID = 97; // BSC testnet
     uint public constant INITIAL_SUPPLY = 1000000 ether;
@@ -77,9 +77,12 @@ contract BridgeBotTest is Test {
         mockBridge = new MockBridge(address(bridgeVerifier));
 
         // Deploy bridge bot (with 1 day admin delay)
-        bridgeBot = new BridgeBot(address(mockBridge), owner, executor, 1 days);
+        bridgeBot = new BridgeBot(address(mockBridge), owner, executor, 0);
 
+        console.log("BridgeBot address:", address(bridgeBot));
+        console.log("BridgeBot owner:", bridgeBot.owner());
         // Fund the bridge bot
+
         testToken.transfer(address(bridgeBot), BRIDGE_AMOUNT * 10);
         vm.deal(address(bridgeBot), 10 ether);
 
@@ -304,8 +307,9 @@ contract BridgeBotTest is Test {
 
     function testEditorCanManageConfigs() public {
         // Grant editor role to user
+        bytes32 editorRole = bridgeBot.EDITOR_ROLE();
         vm.prank(owner);
-        bridgeBot.grantRole(bridgeBot.EDITOR_ROLE(), user);
+        bridgeBot.grantRole(editorRole, user);
 
         // Editor should be able to manage configs
         vm.startPrank(user);
@@ -324,52 +328,49 @@ contract BridgeBotTest is Test {
     }
 
     function testRoleManagement() public {
-        // Test initial roles
-        console.log("Owner address:", owner);
-        console.log("msg.sender:", msg.sender);
-        console.log("Has DEFAULT_ADMIN_ROLE:", bridgeBot.hasRole(bridgeBot.DEFAULT_ADMIN_ROLE(), owner));
-        console.log("DEFAULT_ADMIN:", bridgeBot.defaultAdmin());
-        console.log("EDITOR_ROLE admin:", uint(bridgeBot.getRoleAdmin(bridgeBot.EDITOR_ROLE())));
-        console.log("DEFAULT_ADMIN_ROLE value:", uint(bridgeBot.DEFAULT_ADMIN_ROLE()));
+        // Cache role values to avoid multiple external calls with vm.prank
+        bytes32 defaultAdminRole = bridgeBot.DEFAULT_ADMIN_ROLE();
+        bytes32 editorRole = bridgeBot.EDITOR_ROLE();
+        bytes32 executorRole = bridgeBot.EXECUTOR_ROLE();
 
-        assertTrue(bridgeBot.hasRole(bridgeBot.DEFAULT_ADMIN_ROLE(), owner));
-        assertTrue(bridgeBot.hasRole(bridgeBot.EDITOR_ROLE(), owner));
-        assertTrue(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), owner));
-        assertTrue(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), executor));
+        // Test initial roles
+        assertTrue(bridgeBot.hasRole(defaultAdminRole, owner));
+        assertTrue(bridgeBot.hasRole(editorRole, owner));
+        assertTrue(bridgeBot.hasRole(executorRole, owner));
+        assertTrue(bridgeBot.hasRole(executorRole, executor));
 
         // Test granting editor role
-        console.log("About to grant EDITOR_ROLE, msg.sender will be:", owner);
         vm.prank(owner);
-        bridgeBot.grantRole(bridgeBot.EDITOR_ROLE(), user);
-        assertTrue(bridgeBot.hasRole(bridgeBot.EDITOR_ROLE(), user));
+        bridgeBot.grantRole(editorRole, user);
+        assertTrue(bridgeBot.hasRole(editorRole, user));
 
         // Test revoking editor role
         vm.prank(owner);
-        bridgeBot.revokeRole(bridgeBot.EDITOR_ROLE(), user);
-        assertFalse(bridgeBot.hasRole(bridgeBot.EDITOR_ROLE(), user));
+        bridgeBot.revokeRole(editorRole, user);
+        assertFalse(bridgeBot.hasRole(editorRole, user));
 
         // Test granting executor role
         vm.prank(owner);
-        bridgeBot.grantRole(bridgeBot.EXECUTOR_ROLE(), user);
-        assertTrue(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), user));
+        bridgeBot.grantRole(executorRole, user);
+        assertTrue(bridgeBot.hasRole(executorRole, user));
 
         // Test revoking executor role
         vm.prank(owner);
-        bridgeBot.revokeRole(bridgeBot.EXECUTOR_ROLE(), executor);
-        assertFalse(bridgeBot.hasRole(bridgeBot.EXECUTOR_ROLE(), executor));
+        bridgeBot.revokeRole(executorRole, executor);
+        assertFalse(bridgeBot.hasRole(executorRole, executor));
 
         // Test only admin can manage roles
         vm.prank(user);
         vm.expectRevert();
-        bridgeBot.grantRole(bridgeBot.EDITOR_ROLE(), address(0x5));
+        bridgeBot.grantRole(editorRole, address(0x5));
 
         vm.prank(user);
         vm.expectRevert();
-        bridgeBot.grantRole(bridgeBot.EXECUTOR_ROLE(), address(0x5));
+        bridgeBot.grantRole(executorRole, address(0x5));
 
         vm.prank(user);
         vm.expectRevert();
-        bridgeBot.revokeRole(bridgeBot.EXECUTOR_ROLE(), owner);
+        bridgeBot.revokeRole(executorRole, owner);
     }
 
     function testOnlyExecutorCanBridge() public {
