@@ -9,6 +9,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 
 import {BaseBridge} from "./BaseBridge.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
+import {Const} from "./lib/Const.sol";
 
 /**
  * @title BridgeBot
@@ -82,9 +83,6 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @notice Native token withdrawal event
      */
     event NativeWithdrawn(address indexed to, uint amount);
-
-    /// @dev Native token address constant
-    address public constant NATIVE_TOKEN = address(1);
 
     /// @dev Role for editing bridge configurations
     bytes32 public constant EDITOR_ROLE = keccak256("EDITOR_ROLE");
@@ -183,7 +181,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param amount Amount to bridge
      */
     function executeBridge(uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
-        require(config.tokenAddress != NATIVE_TOKEN, "Use executeBridgeNative for native tokens");
+        require(config.tokenAddress != Const.NATIVE_TOKEN, "Use executeBridgeNative for native tokens");
         _executeBridgeERC20Internal(amount);
     }
 
@@ -192,7 +190,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @param amount Amount to bridge
      */
     function executeBridgeNative(uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
-        require(config.tokenAddress == NATIVE_TOKEN, "Use executeBridge for ERC20 tokens");
+        require(config.tokenAddress == Const.NATIVE_TOKEN, "Use executeBridge for ERC20 tokens");
         _executeBridgeNativeInternal(amount);
     }
 
@@ -256,7 +254,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         // Calculate fees
         IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
         (uint minimumValue, uint gasFee, uint exFee) =
-            bridgeVerifier.calculateFee(config.toChainID, IERC20(NATIVE_TOKEN), amount);
+            bridgeVerifier.calculateFee(config.toChainID, IERC20(Const.NATIVE_TOKEN), amount);
 
         uint totalRequired = amount + gasFee + exFee;
         require(balance >= totalRequired, BridgeBotInsufficientBalance(totalRequired, balance));
@@ -264,7 +262,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
 
         // Execute bridge with native token
         bool success = bridge.bridgeToken{value: totalRequired}(
-            config.toChainID, IERC20(NATIVE_TOKEN), config.recipient, amount, gasFee, exFee, ""
+            config.toChainID, IERC20(Const.NATIVE_TOKEN), config.recipient, amount, gasFee, exFee, ""
         );
 
         require(success, BridgeBotBridgeFailed());
@@ -272,7 +270,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         // Update last execution time
         config.lastExecuted = block.timestamp;
 
-        emit BridgeExecuted(NATIVE_TOKEN, amount, config.recipient, config.toChainID, msg.sender, block.timestamp);
+        emit BridgeExecuted(Const.NATIVE_TOKEN, amount, config.recipient, config.toChainID, msg.sender, block.timestamp);
     }
 
     /**
