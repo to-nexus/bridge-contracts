@@ -5,6 +5,7 @@ import {BaseBridge} from "../src/BaseBridge.sol";
 import {BridgeBot} from "../src/BridgeBot.sol";
 import {BridgeVerifier} from "../src/BridgeVerifier.sol";
 import {PriceFeed} from "../src/PriceFeed.sol";
+import {Const} from "../src/lib/Const.sol";
 
 import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
@@ -21,7 +22,6 @@ contract BridgeBotTest is Test {
     PriceFeed public priceFeed;
     TestToken public testToken;
 
-    address public constant NATIVE_TOKEN = address(1);
     address public owner = makeAddr("owner");
     address public editor = makeAddr("editor");
     address public user = makeAddr("user");
@@ -159,7 +159,7 @@ contract BridgeBotTest is Test {
 
     function testExecuteBridgeWithNativeToken() public {
         vm.startPrank(owner);
-        bridgeBot.setConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
+        bridgeBot.setConfig(Const.NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
         vm.stopPrank();
 
         uint initialBalance = address(bridgeBot).balance;
@@ -346,7 +346,7 @@ contract BridgeBotTest is Test {
 
         // Setup Native config
         vm.prank(owner);
-        bridgeBot.setConfig(NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
+        bridgeBot.setConfig(Const.NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
 
         // Try to execute ERC20 bridge with Native config
         vm.prank(executor);
