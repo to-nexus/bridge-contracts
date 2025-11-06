@@ -112,18 +112,25 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @notice Contract constructor
      * @param _bridge Bridge contract address
      * @param _owner Initial admin address
+     * @param _editor Initial editor address
      * @param _executor Initial executor address
      * @param _adminDelay Delay for admin role changes (in seconds)
      */
-    constructor(address _bridge, address _owner, address _executor, uint48 _adminDelay)
+    constructor(address _bridge, address _owner, address _editor, address _executor, uint48 _adminDelay)
         AccessControlDefaultAdminRules(_adminDelay, _owner)
     {
         require(_bridge != address(0), BridgeBotCanNotZeroAddress());
+        require(_editor != address(0), BridgeBotCanNotZeroAddress());
         require(_executor != address(0), BridgeBotCanNotZeroAddress());
         bridge = BaseBridge(payable(_bridge));
 
+        // Set DEFAULT_ADMIN_ROLE as the admin for EDITOR_ROLE and EXECUTOR_ROLE
+        _setRoleAdmin(EDITOR_ROLE, DEFAULT_ADMIN_ROLE);
+        _setRoleAdmin(EXECUTOR_ROLE, DEFAULT_ADMIN_ROLE);
+
         // Grant roles
         _grantRole(EDITOR_ROLE, _owner);
+        _grantRole(EDITOR_ROLE, _editor);
         _grantRole(EXECUTOR_ROLE, _owner);
         _grantRole(EXECUTOR_ROLE, _executor);
     }
