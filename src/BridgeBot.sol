@@ -278,8 +278,10 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         require(balance >= totalRequired, BridgeBotInsufficientBalance(totalRequired, balance));
         require(amount >= minimumValue, "Amount below minimum");
 
-        // Token approval
-        IERC20(config.tokenAddress).forceApprove(address(bridge), totalRequired);
+        // Token approval - check and approve max if needed
+        IERC20 token = IERC20(config.tokenAddress);
+        uint currentAllowance = token.allowance(address(this), address(bridge));
+        if (currentAllowance < totalRequired) token.forceApprove(address(bridge), type(uint).max);
 
         // Execute bridge
         bool success = bridge.bridgeToken(
