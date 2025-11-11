@@ -45,4 +45,5 @@ library Const {
     bytes32 internal constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
     bytes32 internal constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 internal constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
 }
