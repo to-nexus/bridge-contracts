@@ -164,9 +164,9 @@ contract BridgeBotTest is Test {
 
         uint initialBalance = address(bridgeBot).balance;
 
-        // Execute bridge
+        // Execute bridge (automatically detects native token)
         vm.prank(executor);
-        bridgeBot.executeBridgeNative(1 ether);
+        bridgeBot.executeBridge(1 ether);
 
         // Check balance decreased
         assertTrue(address(bridgeBot).balance < initialBalance);
@@ -295,8 +295,8 @@ contract BridgeBotTest is Test {
 
     function testRoleManagement() public {
         bytes32 defaultAdminRole = bridgeBot.DEFAULT_ADMIN_ROLE();
-        bytes32 editorRole = bridgeBot.EDITOR_ROLE();
-        bytes32 executorRole = bridgeBot.EXECUTOR_ROLE();
+        bytes32 editorRole = Const.EDITOR_ROLE;
+        bytes32 executorRole = Const.EXECUTOR_ROLE;
 
         // Check initial roles
         assertTrue(bridgeBot.hasRole(defaultAdminRole, owner));
@@ -332,26 +332,6 @@ contract BridgeBotTest is Test {
 
         config = bridgeBot.getConfig();
         assertFalse(config.enabled);
-    }
-
-    function testExecuteBridgeWrongTokenType() public {
-        // Setup ERC20 config
-        vm.prank(owner);
-        bridgeBot.setConfig(address(testToken), recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
-
-        // Try to execute native bridge with ERC20 config
-        vm.prank(executor);
-        vm.expectRevert("Use executeBridge for ERC20 tokens");
-        bridgeBot.executeBridgeNative(1 ether);
-
-        // Setup Native config
-        vm.prank(owner);
-        bridgeBot.setConfig(Const.NATIVE_TOKEN, recipient, TEST_CHAIN_ID, DAILY_INTERVAL, 0);
-
-        // Try to execute ERC20 bridge with Native config
-        vm.prank(executor);
-        vm.expectRevert("Use executeBridgeNative for native tokens");
-        bridgeBot.executeBridge(1 ether);
     }
 }
 

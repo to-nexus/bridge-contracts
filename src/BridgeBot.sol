@@ -75,20 +75,12 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     event ConfigToggled(bool enabled);
 
     /**
-     * @notice Token withdrawal event
+     * @notice Token/Native withdrawal event
+     * @param token Token address (Const.NATIVE_TOKEN for native coin)
+     * @param to Recipient address
+     * @param amount Withdrawal amount
      */
-    event TokenWithdrawn(address indexed token, address indexed to, uint amount);
-
-    /**
-     * @notice Native token withdrawal event
-     */
-    event NativeWithdrawn(address indexed to, uint amount);
-
-    /// @dev Role for editing bridge configurations
-    bytes32 public constant EDITOR_ROLE = keccak256("EDITOR_ROLE");
-
-    /// @dev Role for executing bridge operations
-    bytes32 public constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
+    event Withdrawn(address indexed token, address indexed to, uint amount);
 
     /// @dev Bridge contract
     BaseBridge public immutable bridge;
@@ -113,10 +105,10 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         bridge = BaseBridge(payable(_bridge));
 
         // Grant roles
-        _grantRole(EDITOR_ROLE, _owner);
-        _grantRole(EDITOR_ROLE, _editor);
-        _grantRole(EXECUTOR_ROLE, _owner);
-        _grantRole(EXECUTOR_ROLE, _executor);
+        _grantRole(Const.EDITOR_ROLE, _owner);
+        _grantRole(Const.EDITOR_ROLE, _editor);
+        _grantRole(Const.EXECUTOR_ROLE, _owner);
+        _grantRole(Const.EXECUTOR_ROLE, _executor);
     }
 
     /**
@@ -129,7 +121,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      */
     function setConfig(address tokenAddress, address recipient, uint toChainID, uint interval, uint lastExecuted)
         external
-        onlyRole(EDITOR_ROLE)
+        onlyRole(Const.EDITOR_ROLE)
     {
         require(tokenAddress != address(0), BridgeBotCanNotZeroAddress());
         require(recipient != address(0), BridgeBotCanNotZeroAddress());
@@ -149,7 +141,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
      * @notice Enable/disable bridge configuration
      * @param enabled Enable status
      */
-    function setEnabled(bool enabled) external onlyRole(EDITOR_ROLE) {
+    function setEnabled(bool enabled) external onlyRole(Const.EDITOR_ROLE) {
         config.enabled = enabled;
         emit ConfigToggled(enabled);
     }
@@ -173,21 +165,13 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
     }
 
     /**
-     * @notice Execute ERC20 token bridge (role restricted)
+     * @notice Execute token bridge (role restricted)
+     * @dev Automatically detects token type (native or ERC20) based on config
      * @param amount Amount to bridge
      */
-    function executeBridge(uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
-        require(config.tokenAddress != Const.NATIVE_TOKEN, "Use executeBridgeNative for native tokens");
-        _executeBridgeERC20Internal(amount);
-    }
-
-    /**
-     * @notice Execute native token bridge (role restricted)
-     * @param amount Amount to bridge
-     */
-    function executeBridgeNative(uint amount) external onlyRole(EXECUTOR_ROLE) nonReentrant {
-        require(config.tokenAddress == Const.NATIVE_TOKEN, "Use executeBridge for ERC20 tokens");
-        _executeBridgeNativeInternal(amount);
+    function executeBridge(uint amount) external onlyRole(Const.EXECUTOR_ROLE) nonReentrant {
+        if (config.tokenAddress == Const.NATIVE_TOKEN) _executeBridgeNativeInternal(amount);
+        else _executeBridgeERC20Internal(amount);
     }
 
     /**
@@ -281,7 +265,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         require(amount > 0, BridgeBotCanNotZeroValue());
 
         IERC20(token).safeTransfer(to, amount);
-        emit TokenWithdrawn(token, to, amount);
+        emit Withdrawn(token, to, amount);
     }
 
     /**
@@ -297,7 +281,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         (bool success,) = to.call{value: amount}("");
         require(success, "Transfer failed");
 
-        emit NativeWithdrawn(to, amount);
+        emit Withdrawn(Const.NATIVE_TOKEN, to, amount);
     }
 
     /**
@@ -312,7 +296,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         uint balance = IERC20(token).balanceOf(address(this));
         if (balance > 0) {
             IERC20(token).safeTransfer(to, balance);
-            emit TokenWithdrawn(token, to, balance);
+            emit Withdrawn(token, to, balance);
         }
     }
 
@@ -327,7 +311,7 @@ contract BridgeBot is AccessControlDefaultAdminRules, ReentrancyGuard {
         if (balance > 0) {
             (bool success,) = to.call{value: balance}("");
             require(success, "Transfer failed");
-            emit NativeWithdrawn(to, balance);
+            emit Withdrawn(Const.NATIVE_TOKEN, to, balance);
         }
     }
 
