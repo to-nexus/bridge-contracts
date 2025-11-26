@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Test, console} from "forge-std/Test.sol";
 
 import {IBridgeReceiver} from "../src/interface/IBridgeReceiver.sol";
 
@@ -133,11 +133,7 @@ contract RevertingReceiver is IBridgeReceiver {
 contract GasHeavyReceiver is IBridgeReceiver {
     uint public sum;
 
-    function onBridgeReceived(uint, uint, IERC20, uint, bytes calldata extraData)
-        external
-        override
-        returns (bytes4)
-    {
+    function onBridgeReceived(uint, uint, IERC20, uint, bytes calldata extraData) external override returns (bytes4) {
         uint iterations = abi.decode(extraData, (uint));
 
         // Consume gas
