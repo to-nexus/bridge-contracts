@@ -12,6 +12,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {BridgeRegistry} from "./abstract/BridgeRegistry.sol";
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IBaseBridge} from "./interface/IBaseBridge.sol";
+import {IBridgeReceiver} from "./interface/IBridgeReceiver.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
 import {Const} from "./lib/Const.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
@@ -150,6 +151,21 @@ contract BaseBridge is
      * @param dev The address of the new wallet
      */
     event DevSet(address indexed dev);
+
+    /**
+     * @notice Emitted when bridge receiver callback succeeds
+     * @param recipient Recipient address
+     * @param fromChainID Source chain ID
+     * @param index Bridge index
+     */
+    event BridgeReceiverSuccess(address indexed recipient, uint fromChainID, uint index);
+
+    /**
+     * @notice Emitted when bridge receiver callback fails
+     * @param recipient Recipient address
+     * @param reason Failure reason
+     */
+    event BridgeReceiverFailed(address indexed recipient, bytes reason);
 
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
@@ -378,7 +394,8 @@ contract BaseBridge is
         {
             (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, false);
             if (status == Const.FinalizeStatus.Success) {
-                status = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+                status =
+                    _finalizeBridge(args.fromChainID, args.index, args.toToken, args.to, args.value, args.extraData);
             }
         }
 
@@ -563,7 +580,8 @@ contract BaseBridge is
     function _releasePending(uint remoteChainID, uint index, address recipient) private {
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
         if (recipient == address(0)) recipient = args.to;
-        (Const.FinalizeStatus status) = _finalizeBridge(args.fromChainID, args.toToken, recipient, args.value);
+        (Const.FinalizeStatus status) =
+            _finalizeBridge(args.fromChainID, args.index, args.toToken, recipient, args.value, args.extraData);
         require(status == Const.FinalizeStatus.Success, BaseBridgeFailedRelease(status));
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, recipient, args.value, block.timestamp);
     }
@@ -667,20 +685,27 @@ contract BaseBridge is
      * @notice Executes token transfer or minting for bridge finalization
      * @dev Handles different token types (native, mintable, regular)
      * @param fromChainID Source chain ID
+     * @param index Bridge operation index
      * @param toToken Destination token
      * @param to Recipient address
      * @param value Amount to transfer/mint
+     * @param extraData Additional data for post-finalize callback
      * @return status Success status
      */
-    function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value)
-        internal
-        returns (Const.FinalizeStatus status)
-    {
+    function _finalizeBridge(
+        uint fromChainID,
+        uint index,
+        IERC20 toToken,
+        address to,
+        uint value,
+        bytes memory extraData
+    ) internal returns (Const.FinalizeStatus status) {
+        // 1. Execute token transfer/mint
         if (address(toToken) == Const.NATIVE_TOKEN) {
             (bool ok) = _safeCall(payable(to), value, "");
             if (!ok) return (Const.FinalizeStatus.TransferFailed);
             _withdrawToken(fromChainID, Const.NATIVE_TOKEN, value);
-            return (Const.FinalizeStatus.Success);
+            status = Const.FinalizeStatus.Success;
         } else if (value != 0) {
             bytes memory data;
             if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
@@ -694,8 +719,61 @@ contract BaseBridge is
             if (_safeCall(payable(address(toToken)), 0, data)) {
                 status = Const.FinalizeStatus.Success;
                 _withdrawToken(fromChainID, address(toToken), value);
+            } else {
+                return status;
             }
-            return status;
+        } else {
+            status = Const.FinalizeStatus.Success;
+        }
+
+        // 2. Post-finalize callback (if applicable)
+        // Only attempt callback if:
+        // - Transfer/mint was successful
+        // - extraData is not empty
+        // - Recipient is a contract
+        if (status == Const.FinalizeStatus.Success && extraData.length > 0 && to.code.length > 0) {
+            _callBridgeReceiver(fromChainID, index, toToken, to, value, extraData);
+        }
+
+        return status;
+    }
+
+    /**
+     * @notice Calls IBridgeReceiver callback on recipient contract
+     * @dev Non-reverting callback with gas limit for security
+     * - Callback failure does not revert finalization
+     * - Limited gas to prevent DoS attacks
+     * - Validates returned selector
+     * @param fromChainID Source chain ID
+     * @param index Bridge operation index
+     * @param token Token that was transferred
+     * @param recipient Recipient address
+     * @param amount Amount transferred
+     * @param extraData Additional data from bridge initiator
+     */
+    function _callBridgeReceiver(
+        uint fromChainID,
+        uint index,
+        IERC20 token,
+        address recipient,
+        uint amount,
+        bytes memory extraData
+    ) private {
+        // Gas limit to prevent DoS
+        uint callbackGasLimit = 200_000;
+
+        try IBridgeReceiver(recipient).onBridgeReceived{gas: callbackGasLimit}(
+            fromChainID, index, token, amount, extraData
+        ) returns (bytes4 selector) {
+            if (selector == IBridgeReceiver.onBridgeReceived.selector) {
+                emit BridgeReceiverSuccess(recipient, fromChainID, index);
+            } else {
+                emit BridgeReceiverFailed(recipient, "Invalid selector");
+            }
+        } catch (bytes memory reason) {
+            // Callback failure doesn't revert the finalization
+            // User still receives tokens even if callback fails
+            emit BridgeReceiverFailed(recipient, reason);
         }
     }
 
