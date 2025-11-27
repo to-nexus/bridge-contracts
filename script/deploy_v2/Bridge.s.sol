@@ -45,8 +45,6 @@ contract BridgeScript is Script {
     uint8 threshold;
     uint crossChainID;
     uint bscChainID;
-    address cross;
-    uint crossInitialSupply;
     uint finalizeBridgeGas;
     uint defaultTokenPrice;
     uint defaultExFeeRate;
@@ -72,8 +70,6 @@ contract BridgeScript is Script {
         owner = vm.envAddress(OWNER);
         dev = payable(vm.envAddress(BRIDGE_DEV));
         threshold = uint8(vm.envUint(BRIDGE_THRESHOLD));
-        cross = vm.envAddress(BRIDGE_CROSS);
-        crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
         finalizeBridgeGas = vm.envUint(VERIFIER_FINALIZE_BRIDGE_GAS);
         defaultTokenPrice = vm.envUint(VERIFIER_DEFAULT_TOKEN_PRICE);
         defaultExFeeRate = vm.envUint(VERIFIER_DEFAULT_EX_FEE_RATE);
@@ -93,8 +89,6 @@ contract BridgeScript is Script {
         console.log("owner", owner);
         console.log("dev", dev);
         console.log("threshold", threshold);
-        console.log("cross", cross);
-        console.log("crossInitialSupply", crossInitialSupply);
         console.log("finalizeBridgeGas", finalizeBridgeGas);
         console.log("defaultTokenPrice", defaultTokenPrice);
         console.log("defaultExFeeRate", defaultExFeeRate);
