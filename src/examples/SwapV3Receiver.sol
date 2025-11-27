@@ -27,11 +27,13 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
     error SwapV3InvalidRouter();
     error SwapV3AlreadyProcessed();
     error SwapV3InsufficientOutput();
+    error SwapV3InvalidBalanceState();
 
     event BridgeReceived(uint indexed fromChainID, uint indexed index, IERC20 indexed token, address to, uint amount);
     event Swapped(address indexed to, IERC20 tokenIn, IERC20 tokenOut, uint amountIn, uint amountOut);
     event SwapFailed(uint indexed fromChainID, uint indexed index, string reason);
     event TokenTransferred(address indexed to, IERC20 indexed token, uint amount);
+    event SwapRouterUpdated(address indexed oldRouter, address indexed newRouter);
 
     /// @notice Allowed bridge contract
     address public immutable bridge;
@@ -60,7 +62,7 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
      * @param index Bridge operation index
      * @param token Token received
      * @param amount Amount received
-     * @param extraData Encoded: (address to, address tokenOut, uint24 fee, uint amountOutMinimum)
+     * @param extraData Encoded: (address to, address tokenOut, uint24 fee, uint amountOutMinimum, uint deadline)
      * @return selector IBridgeReceiver.onBridgeReceived.selector
      */
     function onBridgeReceived(uint fromChainID, uint index, IERC20 token, uint amount, bytes calldata extraData)
@@ -80,11 +82,18 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
         emit BridgeReceived(fromChainID, index, token, msg.sender, amount);
 
         // 3. Decode extraData
-        (address to, address tokenOut, uint24 fee, uint amountOutMinimum) =
-            abi.decode(extraData, (address, address, uint24, uint));
+        (address to, address tokenOut, uint24 fee, uint amountOutMinimum, uint deadline) =
+            abi.decode(extraData, (address, address, uint24, uint, uint));
+
+        // Validate addresses
+        require(to != address(0), "Invalid recipient");
+        require(tokenOut != address(0), "Invalid tokenOut");
+
+        // Validate deadline
+        require(deadline >= block.timestamp, "Deadline expired");
 
         // 4. Try swap, if fails transfer original token to user
-        try this._processSwap(token, amount, to, tokenOut, fee, amountOutMinimum) {
+        try this._processSwap(token, amount, to, tokenOut, fee, amountOutMinimum, deadline) {
             // Success - swap completed
         } catch Error(string memory reason) {
             emit SwapFailed(fromChainID, index, reason);
@@ -104,12 +113,16 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
     /**
      * @notice Internal function to process swap
      * @dev Separated for better error handling with try-catch
+     * - Uses balance comparison to ensure only this transaction's tokens are refunded
+     * - Prevents mixing with accidentally sent tokens
+     * - Refunds exact remainder if swap consumes less than amountIn
      * @param tokenIn Input token
      * @param amountIn Input amount
      * @param to Recipient address
      * @param tokenOut Output token
      * @param fee Pool fee (500, 3000, 10000)
      * @param amountOutMinimum Minimum output amount (slippage protection)
+     * @param deadline Swap deadline timestamp
      */
     function _processSwap(
         IERC20 tokenIn,
@@ -117,32 +130,50 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
         address to,
         address tokenOut,
         uint24 fee,
-        uint amountOutMinimum
+        uint amountOutMinimum,
+        uint deadline
     ) external {
         require(msg.sender == address(this), "Only self");
 
-        // 1. Approve SwapRouter
+        // 1. Record balance before swap
+        uint balanceBefore = tokenIn.balanceOf(address(this));
+
+        // 2. Approve SwapRouter
         tokenIn.forceApprove(address(swapRouter), amountIn);
 
-        // 2. Setup swap parameters
+        // 3. Setup swap parameters
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: address(tokenIn),
             tokenOut: tokenOut,
             fee: fee,
             recipient: to,
-            deadline: block.timestamp,
+            deadline: deadline,
             amountIn: amountIn,
             amountOutMinimum: amountOutMinimum,
             sqrtPriceLimitX96: 0 // No price limit
         });
 
-        // 3. Execute swap
+        // 4. Execute swap
         uint amountOut = swapRouter.exactInputSingle(params);
 
-        // 4. Verify minimum output
+        // 5. Verify minimum output
         require(amountOut >= amountOutMinimum, SwapV3InsufficientOutput());
 
         emit Swapped(to, tokenIn, IERC20(tokenOut), amountIn, amountOut);
+
+        // 6. Calculate and return only the tokens from this transaction
+        uint balanceAfter = tokenIn.balanceOf(address(this));
+
+        // Safety check: balance should not increase after swap
+        if (balanceAfter > balanceBefore) revert SwapV3InvalidBalanceState();
+
+        uint consumed = balanceBefore - balanceAfter;
+
+        // If swap consumed less than amountIn, refund the difference
+        if (consumed < amountIn) {
+            uint refund = amountIn - consumed;
+            tokenIn.safeTransfer(to, refund);
+        }
     }
 
     /**
@@ -151,7 +182,9 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
      */
     function setSwapRouter(address _swapRouter) external onlyOwner {
         require(_swapRouter != address(0), SwapV3InvalidRouter());
+        address oldRouter = address(swapRouter);
         swapRouter = ISwapRouter(_swapRouter);
+        emit SwapRouterUpdated(oldRouter, _swapRouter);
     }
 
     /**

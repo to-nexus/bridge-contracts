@@ -42,8 +42,9 @@ contract SwapV3ReceiverTest is Test {
         // Arrange
         uint24 fee = 3000;
         uint amountOutMinimum = 900 ether; // 10% slippage tolerance
+        uint deadline = block.timestamp + 1 hours;
 
-        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum);
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
 
         // Act
         bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
@@ -59,7 +60,8 @@ contract SwapV3ReceiverTest is Test {
 
         for (uint i = 0; i < fees.length; i++) {
             address testUser = address(uint160(1000 + i));
-            bytes memory extraData = abi.encode(testUser, address(tokenOut), fees[i], 900 ether);
+            uint deadline = block.timestamp + 1 hours;
+            bytes memory extraData = abi.encode(testUser, address(tokenOut), fees[i], 900 ether, deadline);
 
             bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
 
@@ -72,7 +74,8 @@ contract SwapV3ReceiverTest is Test {
         // Arrange - Set very high minimum output (will fail)
         uint24 fee = 3000;
         uint amountOutMinimum = 1000 ether; // Higher than possible output
-        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum);
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
 
         // Act
         bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
@@ -83,7 +86,8 @@ contract SwapV3ReceiverTest is Test {
     }
 
     function testOnlyBridgeCanCall() public {
-        bytes memory extraData = abi.encode(user, address(tokenOut), uint24(3000), 900 ether);
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), uint24(3000), 900 ether, deadline);
 
         // Should fail when called directly
         vm.expectRevert(SwapV3Receiver.SwapV3InvalidBridge.selector);
@@ -93,7 +97,8 @@ contract SwapV3ReceiverTest is Test {
     function testReplayAttackPrevention() public {
         uint24 fee = 3000;
         uint amountOutMinimum = 900 ether;
-        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum);
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
 
         // First call succeeds with chainID=1, index=1
         bridge.finalizeWithChainId(1, 1, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
@@ -106,7 +111,8 @@ contract SwapV3ReceiverTest is Test {
     function testDifferentChainIdsDontConflict() public {
         uint24 fee = 3000;
         uint amountOutMinimum = 900 ether;
-        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum);
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
 
         // Call with different chain IDs should both succeed
         bridge.finalizeWithChainId(1, 1, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
@@ -123,7 +129,8 @@ contract SwapV3ReceiverTest is Test {
 
         uint24 fee = 3000;
         uint amountOutMinimum = 900 ether;
-        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum);
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
 
         // Act
         bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
@@ -169,17 +176,18 @@ contract SwapV3ReceiverTest is Test {
 
         uint24 fee = 3000;
         uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
 
         // User 1
-        bytes memory extraData1 = abi.encode(user1, address(tokenOut), fee, amountOutMinimum);
+        bytes memory extraData1 = abi.encode(user1, address(tokenOut), fee, amountOutMinimum, deadline);
         bridge.finalizeWithChainId(1, 1, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData1);
 
         // User 2
-        bytes memory extraData2 = abi.encode(user2, address(tokenOut), fee, amountOutMinimum);
+        bytes memory extraData2 = abi.encode(user2, address(tokenOut), fee, amountOutMinimum, deadline);
         bridge.finalizeWithChainId(1, 2, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData2);
 
         // User 3
-        bytes memory extraData3 = abi.encode(user3, address(tokenOut), fee, amountOutMinimum);
+        bytes memory extraData3 = abi.encode(user3, address(tokenOut), fee, amountOutMinimum, deadline);
         bridge.finalizeWithChainId(1, 3, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData3);
 
         // All users receive their swapped tokens
@@ -199,12 +207,204 @@ contract SwapV3ReceiverTest is Test {
         new SwapV3Receiver(address(bridge), address(0));
     }
 
+    function testZeroAddressInExtraData() public {
+        uint deadline = block.timestamp + 1 hours;
+
+        // Test with zero 'to' address
+        bytes memory extraDataZeroTo = abi.encode(address(0), address(tokenOut), uint24(3000), 900 ether, deadline);
+        vm.expectRevert("Invalid recipient");
+        bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraDataZeroTo);
+
+        // Test with zero 'tokenOut' address
+        bytes memory extraDataZeroToken = abi.encode(user, address(0), uint24(3000), 900 ether, deadline);
+        vm.expectRevert("Invalid tokenOut");
+        bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraDataZeroToken);
+    }
+
+    function testSwapRouterUpdatedEvent() public {
+        address newRouter = address(0x999);
+
+        // Expect event emission
+        vm.expectEmit(true, true, false, true);
+        emit SwapRouterUpdated(address(swapRouter), newRouter);
+
+        receiver.setSwapRouter(newRouter);
+    }
+
+    event SwapRouterUpdated(address indexed oldRouter, address indexed newRouter);
+
     function testReturnsCorrectSelector() public {
-        bytes memory extraData = abi.encode(user, address(tokenOut), uint24(3000), 900 ether);
+        bytes memory extraData = abi.encode(user, address(tokenOut), uint24(3000), 900 ether, block.timestamp + 1 hours);
 
         bytes4 selector = bridge.finalizeAndReturnSelector(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
 
         assertEq(selector, IBridgeReceiver.onBridgeReceived.selector);
+    }
+
+    function testDeadlineExpired() public {
+        // Arrange - Set deadline in the past
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp - 1; // Expired deadline
+
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        // Act & Assert - Should fail with expired deadline
+        vm.expectRevert("Deadline expired");
+        bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
+    }
+
+    function testDeadlineValidation() public {
+        // Arrange - Valid deadline
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
+
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        // Act
+        bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
+
+        // Assert - Should succeed
+        uint expectedOut = BRIDGE_AMOUNT * SWAP_RATE / 100;
+        assertEq(tokenOut.balanceOf(user), expectedOut);
+    }
+
+    function testPartialSwapReturnsRemainingTokens() public {
+        // Arrange - Router will only consume partial tokens
+        swapRouter.setPartialSwap(true, 50); // Only consume 50% of input
+
+        uint24 fee = 3000;
+        uint amountOutMinimum = 450 ether; // Lower minimum to allow partial swap
+        uint deadline = block.timestamp + 1 hours;
+
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        // Act
+        bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
+
+        // Assert
+        // User should receive:
+        // 1. Swapped output: 500 ether (50% of 1000) * 95% = 475 ether
+        // 2. Remaining input: 500 ether (returned)
+        uint expectedSwappedOut = (BRIDGE_AMOUNT * 50 / 100) * SWAP_RATE / 100;
+        uint expectedRemainingIn = BRIDGE_AMOUNT * 50 / 100;
+
+        assertEq(tokenOut.balanceOf(user), expectedSwappedOut, "Swapped output mismatch");
+        assertEq(tokenIn.balanceOf(user), expectedRemainingIn, "Remaining input mismatch");
+        assertEq(tokenIn.balanceOf(address(receiver)), 0, "Receiver should have no remaining tokens");
+    }
+
+    function testNoTokensStuckInReceiver() public {
+        // Test multiple swaps to ensure no token accumulation
+        for (uint i = 0; i < 3; i++) {
+            address testUser = address(uint160(2000 + i));
+            uint24 fee = 3000;
+            uint amountOutMinimum = 900 ether;
+            uint deadline = block.timestamp + 1 hours;
+
+            bytes memory extraData = abi.encode(testUser, address(tokenOut), fee, amountOutMinimum, deadline);
+
+            bridge.finalizeWithChainId(1, i + 1, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
+
+            // Check receiver has no stuck tokens
+            assertEq(tokenIn.balanceOf(address(receiver)), 0, "TokenIn stuck in receiver");
+            assertEq(tokenOut.balanceOf(address(receiver)), 0, "TokenOut stuck in receiver");
+        }
+    }
+
+    function testAccidentalTokenTransferDoesNotAffectOtherUsers() public {
+        address user1 = address(0x201);
+        address user2 = address(0x202);
+
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
+
+        // User 1 bridges normally
+        bytes memory extraData1 = abi.encode(user1, address(tokenOut), fee, amountOutMinimum, deadline);
+        bridge.finalizeWithChainId(1, 100, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData1);
+
+        uint user1OutBalance = tokenOut.balanceOf(user1);
+        uint expectedOut1 = BRIDGE_AMOUNT * SWAP_RATE / 100;
+        assertEq(user1OutBalance, expectedOut1, "User1 swap output mismatch");
+
+        // Someone accidentally sends 500 tokenIn to receiver
+        tokenIn.mint(address(0x999), 500 ether);
+        vm.prank(address(0x999));
+        tokenIn.transfer(address(receiver), 500 ether);
+
+        // Verify receiver has the accidental tokens
+        assertEq(tokenIn.balanceOf(address(receiver)), 500 ether, "Accidental tokens not in receiver");
+
+        // User 2 bridges - should NOT receive the accidental tokens
+        bytes memory extraData2 = abi.encode(user2, address(tokenOut), fee, amountOutMinimum, deadline);
+        bridge.finalizeWithChainId(1, 101, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData2);
+
+        uint user2OutBalance = tokenOut.balanceOf(user2);
+        uint expectedOut2 = BRIDGE_AMOUNT * SWAP_RATE / 100;
+        assertEq(user2OutBalance, expectedOut2, "User2 swap output mismatch");
+
+        // User 2 should NOT have received any tokenIn
+        assertEq(tokenIn.balanceOf(user2), 0, "User2 should not receive accidental tokens");
+
+        // Accidental tokens should still be in receiver
+        assertEq(tokenIn.balanceOf(address(receiver)), 500 ether, "Accidental tokens disappeared");
+    }
+
+    function testPartialSwapReturnsExactRemainder() public {
+        // Arrange - Router will only consume 70% of input
+        swapRouter.setPartialSwap(true, 70);
+
+        uint24 fee = 3000;
+        uint amountOutMinimum = 600 ether; // Lower to allow 70% swap
+        uint deadline = block.timestamp + 1 hours;
+
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        // Act
+        bridge.finalize(address(receiver), tokenIn, BRIDGE_AMOUNT, extraData);
+
+        // Assert
+        // Swapped: 700 ether (70% of 1000) * 95% = 665 ether
+        // Refunded: 300 ether (30% not consumed)
+        uint expectedSwappedOut = (BRIDGE_AMOUNT * 70 / 100) * SWAP_RATE / 100;
+        uint expectedRefund = BRIDGE_AMOUNT * 30 / 100;
+
+        assertEq(tokenOut.balanceOf(user), expectedSwappedOut, "Swapped output mismatch");
+        assertEq(tokenIn.balanceOf(user), expectedRefund, "Refund mismatch");
+        assertEq(tokenIn.balanceOf(address(receiver)), 0, "TokenIn stuck in receiver");
+    }
+
+    function testMultipleUsersWithDifferentTokensNoMixing() public {
+        // Create another token
+        MockToken tokenIn2 = new MockToken("Token In 2", "TIN2");
+        tokenIn2.mint(address(bridge), BRIDGE_AMOUNT * 10);
+        tokenIn2.mint(address(swapRouter), BRIDGE_AMOUNT * 10);
+
+        address user1 = address(0x301);
+        address user2 = address(0x302);
+
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
+
+        // User 1 bridges tokenIn
+        bytes memory extraData1 = abi.encode(user1, address(tokenOut), fee, amountOutMinimum, deadline);
+        bridge.finalizeWithChainId(1, 200, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData1);
+
+        // User 2 bridges tokenIn2 (different token)
+        bytes memory extraData2 = abi.encode(user2, address(tokenOut), fee, amountOutMinimum, deadline);
+        bridge.finalizeWithChainId(1, 201, address(receiver), tokenIn2, BRIDGE_AMOUNT, extraData2);
+
+        // Both should receive correct amounts independently
+        uint expectedOut = BRIDGE_AMOUNT * SWAP_RATE / 100;
+        assertEq(tokenOut.balanceOf(user1), expectedOut, "User1 output mismatch");
+        assertEq(tokenOut.balanceOf(user2), expectedOut, "User2 output mismatch");
+
+        // No tokens stuck
+        assertEq(tokenIn.balanceOf(address(receiver)), 0, "TokenIn stuck");
+        assertEq(tokenIn2.balanceOf(address(receiver)), 0, "TokenIn2 stuck");
     }
 }
 
@@ -252,6 +452,8 @@ contract MockBridge {
 contract MockSwapRouter {
     uint public swapRate = 100; // Default 1:1
     bool public shouldRevert = false;
+    bool public partialSwap = false;
+    uint public partialSwapPercentage = 100; // Default consume 100%
 
     function setSwapRate(uint _rate) external {
         swapRate = _rate;
@@ -261,14 +463,25 @@ contract MockSwapRouter {
         shouldRevert = _shouldRevert;
     }
 
+    function setPartialSwap(bool _partialSwap, uint _percentage) external {
+        partialSwap = _partialSwap;
+        partialSwapPercentage = _percentage;
+    }
+
     function exactInputSingle(ExactInputSingleParams calldata params) external returns (uint amountOut) {
         require(!shouldRevert, "Mock swap failed");
+        require(params.deadline >= block.timestamp, "Deadline expired");
 
-        // Transfer tokenIn from caller
-        IERC20(params.tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
+        uint actualAmountIn = params.amountIn;
 
-        // Calculate output amount
-        amountOut = params.amountIn * swapRate / 100;
+        // Simulate partial swap (router only consumes part of the input)
+        if (partialSwap) actualAmountIn = params.amountIn * partialSwapPercentage / 100;
+
+        // Transfer only the consumed amount from caller
+        IERC20(params.tokenIn).transferFrom(msg.sender, address(this), actualAmountIn);
+
+        // Calculate output amount based on consumed input
+        amountOut = actualAmountIn * swapRate / 100;
 
         // Check minimum
         require(amountOut >= params.amountOutMinimum, "Insufficient output");
