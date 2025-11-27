@@ -406,6 +406,89 @@ contract SwapV3ReceiverTest is Test {
         assertEq(tokenIn.balanceOf(address(receiver)), 0, "TokenIn stuck");
         assertEq(tokenIn2.balanceOf(address(receiver)), 0, "TokenIn2 stuck");
     }
+
+    function testPendingRefundOnGasShortage() public {
+        // Simulate gas shortage by setting very low gas limit
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
+
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        // Call with limited gas (will create pending refund)
+        bridge.finalizeWithChainIdLowGas(1, 300, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData, 150_000);
+
+        // Check pending refund was created
+        (bool hasPending, uint amount, address pendingUser, IERC20 pendingToken) = receiver.getPendingRefund(1, 300);
+
+        assertTrue(hasPending, "Should have pending refund");
+        assertEq(amount, BRIDGE_AMOUNT, "Pending amount mismatch");
+        assertEq(pendingUser, user, "Pending user mismatch");
+        assertEq(address(pendingToken), address(tokenIn), "Pending token mismatch");
+
+        // Tokens should be in receiver
+        assertEq(tokenIn.balanceOf(address(receiver)), BRIDGE_AMOUNT, "Tokens not in receiver");
+    }
+
+    function testClaimPendingRefund() public {
+        // Create pending refund
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        bridge.finalizeWithChainIdLowGas(1, 400, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData, 150_000);
+
+        // User claims refund
+        vm.prank(user);
+        receiver.claimPendingRefund(1, 400);
+
+        // Check tokens returned to user
+        assertEq(tokenIn.balanceOf(user), BRIDGE_AMOUNT, "User should receive tokens");
+        assertEq(tokenIn.balanceOf(address(receiver)), 0, "Receiver should have no tokens");
+
+        // Check pending refund cleared
+        (bool hasPending,,,) = receiver.getPendingRefund(1, 400);
+        assertFalse(hasPending, "Pending refund should be cleared");
+    }
+
+    function testOnlyUserCanClaimPendingRefund() public {
+        // Create pending refund
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        bridge.finalizeWithChainIdLowGas(1, 500, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData, 150_000);
+
+        // Another user tries to claim
+        address attacker = address(0x999);
+        vm.prank(attacker);
+        vm.expectRevert(SwapV3Receiver.SwapV3Unauthorized.selector);
+        receiver.claimPendingRefund(1, 500);
+    }
+
+    function testRetrySwapWithNewParameters() public {
+        // Create pending refund
+        uint24 fee = 3000;
+        uint amountOutMinimum = 900 ether;
+        uint deadline = block.timestamp + 1 hours;
+        bytes memory extraData = abi.encode(user, address(tokenOut), fee, amountOutMinimum, deadline);
+
+        bridge.finalizeWithChainIdLowGas(1, 600, address(receiver), tokenIn, BRIDGE_AMOUNT, extraData, 150_000);
+
+        // User retries with new parameters
+        vm.prank(user);
+        receiver.retrySwap(1, 600, address(tokenOut), 3000, 900 ether, block.timestamp + 1 hours);
+
+        // Check swap succeeded
+        uint expectedOut = BRIDGE_AMOUNT * SWAP_RATE / 100;
+        assertEq(tokenOut.balanceOf(user), expectedOut, "Swap should succeed");
+
+        // Check pending refund cleared
+        (bool hasPending,,,) = receiver.getPendingRefund(1, 600);
+        assertFalse(hasPending, "Pending refund should be cleared");
+    }
 }
 
 /**
@@ -433,6 +516,24 @@ contract MockBridge {
 
         // Call onBridgeReceived
         IBridgeReceiver(recipient).onBridgeReceived(fromChainID, index, IERC20(address(token)), amount, extraData);
+    }
+
+    function finalizeWithChainIdLowGas(
+        uint fromChainID,
+        uint index,
+        address recipient,
+        MockToken token,
+        uint amount,
+        bytes memory extraData,
+        uint gasLimit
+    ) public {
+        // Transfer tokens to recipient
+        token.transfer(recipient, amount);
+
+        // Call onBridgeReceived with limited gas
+        IBridgeReceiver(recipient).onBridgeReceived{gas: gasLimit}(
+            fromChainID, index, IERC20(address(token)), amount, extraData
+        );
     }
 
     function finalizeAndReturnSelector(address recipient, MockToken token, uint amount, bytes memory extraData)

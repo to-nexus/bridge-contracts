@@ -28,12 +28,26 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
     error SwapV3AlreadyProcessed();
     error SwapV3InsufficientOutput();
     error SwapV3InvalidBalanceState();
+    error SwapV3NoPendingRefund();
+    error SwapV3Unauthorized();
 
     event BridgeReceived(uint indexed fromChainID, uint indexed index, IERC20 indexed token, address to, uint amount);
     event Swapped(address indexed to, IERC20 tokenIn, IERC20 tokenOut, uint amountIn, uint amountOut);
     event SwapFailed(uint indexed fromChainID, uint indexed index, string reason);
     event TokenTransferred(address indexed to, IERC20 indexed token, uint amount);
     event SwapRouterUpdated(address indexed oldRouter, address indexed newRouter);
+    event PendingRefundCreated(
+        uint indexed fromChainID, uint indexed index, address indexed user, IERC20 token, uint amount
+    );
+    event PendingRefundClaimed(uint indexed fromChainID, uint indexed index, address indexed user, uint amount);
+
+    /// @notice Pending refund data for failed swaps
+    struct PendingRefund {
+        IERC20 token;
+        uint amount;
+        address user;
+        uint timestamp;
+    }
 
     /// @notice Allowed bridge contract
     address public immutable bridge;
@@ -43,6 +57,9 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
 
     /// @notice Track processed bridges to prevent replay
     mapping(bytes32 => bool) public processedBridges;
+
+    /// @notice Track pending refunds for users (fromChainID => index => PendingRefund)
+    mapping(uint => mapping(uint => PendingRefund)) public pendingRefunds;
 
     /**
      * @notice Constructor
@@ -54,6 +71,15 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
         require(_swapRouter != address(0), SwapV3InvalidRouter());
         bridge = _bridge;
         swapRouter = ISwapRouter(_swapRouter);
+    }
+
+    /**
+     * @notice Returns the required gas limit for callback execution
+     * @dev Bridge will use this value when calling onBridgeReceived
+     * @return gasLimit Gas limit required for swap operations (500,000)
+     */
+    function callbackGasLimit() external pure override returns (uint gasLimit) {
+        return 500_000;
     }
 
     /**
@@ -79,11 +105,11 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
         require(!processedBridges[bridgeId], SwapV3AlreadyProcessed());
         processedBridges[bridgeId] = true;
 
-        emit BridgeReceived(fromChainID, index, token, msg.sender, amount);
-
         // 3. Decode extraData
         (address to, address tokenOut, uint24 fee, uint amountOutMinimum, uint deadline) =
             abi.decode(extraData, (address, address, uint24, uint, uint));
+
+        emit BridgeReceived(fromChainID, index, token, to, amount);
 
         // Validate addresses
         require(to != address(0), "Invalid recipient");
@@ -92,8 +118,21 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
         // Validate deadline
         require(deadline >= block.timestamp, "Deadline expired");
 
-        // 4. Try swap, if fails transfer original token to user
-        try this._processSwap(token, amount, to, tokenOut, fee, amountOutMinimum, deadline) {
+        // 4. Check if we have enough gas for swap
+        // Reserve 100k gas for fallback refund logic
+        uint gasReserve = 100_000;
+
+        if (gasleft() < gasReserve + 300_000) {
+            // Not enough gas - store for later claim
+            pendingRefunds[fromChainID][index] =
+                PendingRefund({token: token, amount: amount, user: to, timestamp: block.timestamp});
+            emit PendingRefundCreated(fromChainID, index, to, token, amount);
+            return IBridgeReceiver.onBridgeReceived.selector;
+        }
+
+        // 5. Try swap with gas limit
+        try this._processSwap{gas: gasleft() - gasReserve}(token, amount, to, tokenOut, fee, amountOutMinimum, deadline)
+        {
             // Success - swap completed
         } catch Error(string memory reason) {
             emit SwapFailed(fromChainID, index, reason);
@@ -174,6 +213,9 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
             uint refund = amountIn - consumed;
             tokenIn.safeTransfer(to, refund);
         }
+
+        // 7. Clear approval to prevent any potential issues
+        tokenIn.forceApprove(address(swapRouter), 0);
     }
 
     /**
@@ -188,12 +230,83 @@ contract SwapV3Receiver is IBridgeReceiver, Ownable, ReentrancyGuard {
     }
 
     /**
+     * @notice Claim pending refund (user can call directly)
+     * @dev Allows users to claim their tokens if swap failed due to gas issues
+     * @param fromChainID Source chain ID
+     * @param index Bridge operation index
+     */
+    function claimPendingRefund(uint fromChainID, uint index) external nonReentrant {
+        PendingRefund memory refund = pendingRefunds[fromChainID][index];
+
+        require(refund.amount > 0, SwapV3NoPendingRefund());
+        require(msg.sender == refund.user, SwapV3Unauthorized());
+
+        // Clear storage before transfer (CEI pattern)
+        delete pendingRefunds[fromChainID][index];
+
+        // Transfer tokens to user
+        refund.token.safeTransfer(refund.user, refund.amount);
+
+        emit PendingRefundClaimed(fromChainID, index, refund.user, refund.amount);
+    }
+
+    /**
+     * @notice Retry swap for pending refund
+     * @dev Allows users to retry swap with different parameters
+     * @param fromChainID Source chain ID
+     * @param index Bridge operation index
+     * @param tokenOut Output token address
+     * @param fee Pool fee
+     * @param amountOutMinimum Minimum output amount
+     * @param deadline Swap deadline
+     */
+    function retrySwap(uint fromChainID, uint index, address tokenOut, uint24 fee, uint amountOutMinimum, uint deadline)
+        external
+        nonReentrant
+    {
+        PendingRefund memory refund = pendingRefunds[fromChainID][index];
+
+        require(refund.amount > 0, SwapV3NoPendingRefund());
+        require(msg.sender == refund.user, SwapV3Unauthorized());
+
+        // Clear storage before external call (CEI pattern)
+        delete pendingRefunds[fromChainID][index];
+
+        // Try swap with user's new parameters
+        try this._processSwap(refund.token, refund.amount, refund.user, tokenOut, fee, amountOutMinimum, deadline) {
+            // Success - swap completed
+        } catch {
+            // Swap failed - just refund the tokens
+            refund.token.safeTransfer(refund.user, refund.amount);
+            emit TokenTransferred(refund.user, refund.token, refund.amount);
+        }
+    }
+
+    /**
      * @notice Emergency withdraw (owner only)
+     * @dev Only for stuck tokens that don't belong to any pending refund
      * @param token Token to withdraw
      * @param amount Amount to withdraw
      */
     function emergencyWithdraw(IERC20 token, uint amount) external onlyOwner {
         token.safeTransfer(msg.sender, amount);
+    }
+
+    /**
+     * @notice Check if user has pending refund
+     * @param fromChainID Source chain ID
+     * @param index Bridge operation index
+     * @return hasPending Whether user has pending refund
+     * @return amount Pending amount
+     * @return user User address
+     */
+    function getPendingRefund(uint fromChainID, uint index)
+        external
+        view
+        returns (bool hasPending, uint amount, address user, IERC20 token)
+    {
+        PendingRefund memory refund = pendingRefunds[fromChainID][index];
+        return (refund.amount > 0, refund.amount, refund.user, refund.token);
     }
 }
 

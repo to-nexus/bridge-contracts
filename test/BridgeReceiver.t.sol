@@ -95,6 +95,44 @@ contract BridgeReceiverTest is Test {
         // Tokens still transferred
         assertEq(token.balanceOf(address(invalidReceiver)), BRIDGE_AMOUNT);
     }
+
+    function testDynamicGasLimitFromReceiver() public {
+        // Test that bridge uses receiver's custom gas limit
+        CustomGasLimitReceiver customReceiver = new CustomGasLimitReceiver(800_000);
+        bytes memory extraData = abi.encode("Custom gas limit");
+
+        bridge.finalize(address(customReceiver), token, BRIDGE_AMOUNT, extraData);
+
+        assertEq(token.balanceOf(address(customReceiver)), BRIDGE_AMOUNT);
+        assertEq(customReceiver.callCount(), 1);
+    }
+
+    function testGasLimitOutOfBoundsUsesDefault() public {
+        // Test that invalid gas limits are rejected and default is used
+        CustomGasLimitReceiver tooLow = new CustomGasLimitReceiver(10_000); // Too low
+        CustomGasLimitReceiver tooHigh = new CustomGasLimitReceiver(2_000_000); // Too high
+
+        bytes memory extraData = abi.encode("Test");
+
+        // Both should still work with default gas limit
+        bridge.finalize(address(tooLow), token, BRIDGE_AMOUNT, extraData);
+        bridge.finalize(address(tooHigh), token, BRIDGE_AMOUNT, extraData);
+
+        assertEq(token.balanceOf(address(tooLow)), BRIDGE_AMOUNT);
+        assertEq(token.balanceOf(address(tooHigh)), BRIDGE_AMOUNT);
+    }
+
+    function testCallbackGasLimitFunctionReverts() public {
+        // Test fallback to default when callbackGasLimit() reverts
+        RevertingGasLimitReceiver revertingGasReceiver = new RevertingGasLimitReceiver();
+        bytes memory extraData = abi.encode("Test");
+
+        // Should still work with default gas limit
+        bridge.finalize(address(revertingGasReceiver), token, BRIDGE_AMOUNT, extraData);
+
+        assertEq(token.balanceOf(address(revertingGasReceiver)), BRIDGE_AMOUNT);
+        assertEq(revertingGasReceiver.callCount(), 1);
+    }
 }
 
 /**
@@ -104,6 +142,10 @@ contract SimpleReceiver is IBridgeReceiver {
     uint public callCount;
     uint public lastAmount;
     bytes public lastExtraData;
+
+    function callbackGasLimit() external pure override returns (uint) {
+        return 200_000;
+    }
 
     function onBridgeReceived(uint, uint, IERC20, uint amount, bytes calldata extraData)
         external
@@ -122,6 +164,10 @@ contract SimpleReceiver is IBridgeReceiver {
  * @notice Receiver that always reverts
  */
 contract RevertingReceiver is IBridgeReceiver {
+    function callbackGasLimit() external pure override returns (uint) {
+        return 200_000;
+    }
+
     function onBridgeReceived(uint, uint, IERC20, uint, bytes calldata) external pure override returns (bytes4) {
         revert("Callback revert");
     }
@@ -132,6 +178,10 @@ contract RevertingReceiver is IBridgeReceiver {
  */
 contract GasHeavyReceiver is IBridgeReceiver {
     uint public sum;
+
+    function callbackGasLimit() external pure override returns (uint) {
+        return 300_000;
+    }
 
     function onBridgeReceived(uint, uint, IERC20, uint, bytes calldata extraData) external override returns (bytes4) {
         uint iterations = abi.decode(extraData, (uint));
@@ -149,8 +199,49 @@ contract GasHeavyReceiver is IBridgeReceiver {
  * @notice Receiver that returns wrong selector
  */
 contract InvalidSelectorReceiver is IBridgeReceiver {
+    function callbackGasLimit() external pure override returns (uint) {
+        return 200_000;
+    }
+
     function onBridgeReceived(uint, uint, IERC20, uint, bytes calldata) external pure override returns (bytes4) {
         return bytes4(keccak256("wrong()"));
+    }
+}
+
+/**
+ * @notice Receiver with custom gas limit
+ */
+contract CustomGasLimitReceiver is IBridgeReceiver {
+    uint public callCount;
+    uint private _gasLimit;
+
+    constructor(uint gasLimit_) {
+        _gasLimit = gasLimit_;
+    }
+
+    function callbackGasLimit() external view override returns (uint) {
+        return _gasLimit;
+    }
+
+    function onBridgeReceived(uint, uint, IERC20, uint, bytes calldata) external override returns (bytes4) {
+        callCount++;
+        return IBridgeReceiver.onBridgeReceived.selector;
+    }
+}
+
+/**
+ * @notice Receiver that reverts in callbackGasLimit()
+ */
+contract RevertingGasLimitReceiver is IBridgeReceiver {
+    uint public callCount;
+
+    function callbackGasLimit() external pure override returns (uint) {
+        revert("Gas limit revert");
+    }
+
+    function onBridgeReceived(uint, uint, IERC20, uint, bytes calldata) external override returns (bytes4) {
+        callCount++;
+        return IBridgeReceiver.onBridgeReceived.selector;
     }
 }
 

@@ -740,9 +740,11 @@ contract BaseBridge is
 
     /**
      * @notice Calls IBridgeReceiver callback on recipient contract
-     * @dev Non-reverting callback with gas limit for security
+     * @dev Non-reverting callback with dynamic gas limit
+     * - Gas limit is determined by recipient's callbackGasLimit() function
+     * - Falls back to 500,000 gas if callbackGasLimit() fails or returns invalid value
+     * - Valid range: 50,000 to 1,000,000 gas
      * - Callback failure does not revert finalization
-     * - Limited gas to prevent DoS attacks
      * - Validates returned selector
      * @param fromChainID Source chain ID
      * @param index Bridge operation index
@@ -759,8 +761,15 @@ contract BaseBridge is
         uint amount,
         bytes memory extraData
     ) private {
-        // Gas limit to prevent DoS
-        uint callbackGasLimit = 200_000;
+        // Get gas limit from receiver, with fallback to default
+        uint callbackGasLimit = 500_000; // Default
+
+        try IBridgeReceiver(recipient).callbackGasLimit() returns (uint gasLimit) {
+            // Validate gas limit is within reasonable bounds
+            if (gasLimit >= 50_000 && gasLimit <= 1_000_000) callbackGasLimit = gasLimit;
+        } catch {
+            // Use default if callbackGasLimit() fails
+        }
 
         try IBridgeReceiver(recipient).onBridgeReceived{gas: callbackGasLimit}(
             fromChainID, index, token, amount, extraData

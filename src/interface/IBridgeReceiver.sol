@@ -10,6 +10,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 interface IBridgeReceiver {
     /**
+     * @notice Returns the gas limit required for onBridgeReceived callback
+     * @dev Bridge will use this value to set gas limit for the callback
+     * @return gasLimit The amount of gas required for callback execution
+     */
+    function callbackGasLimit() external view returns (uint gasLimit);
+
+    /**
      * @notice Called after bridge finalization is complete
      * @dev This function is called by the bridge contract after tokens are transferred/minted
      * @param fromChainID Source chain identifier
