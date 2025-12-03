@@ -2,8 +2,10 @@
 pragma solidity 0.8.28;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 import {IBridgeExecuter} from "./interface/IBridgeExecuter.sol";
 import {Const} from "./lib/Const.sol";
@@ -23,7 +25,7 @@ import {Const} from "./lib/Const.sol";
  * - Only callable by authorized bridge contracts
  * - Target contracts must be whitelisted (to be implemented)
  */
-contract BridgeExecuter is AccessControl, IBridgeExecuter {
+contract BridgeExecuter is AccessControl, ReentrancyGuardTransient, IBridgeExecuter {
     using SafeERC20 for IERC20;
 
     error BETargetNotWhitelisted();
@@ -43,7 +45,9 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
      * @param to Original recipient address
      * @param value Amount of tokens
      * @param targetContract Contract that was called
+     * @param methodID Method ID of the called contract
      * @param success Whether the execution was successful
+     * @param reason Failure reason
      */
     event ExtraCallExecuted(
         uint indexed fromChainID,
@@ -52,6 +56,7 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
         address to,
         uint value,
         address targetContract,
+        bytes4 methodID,
         bool success,
         bytes reason
     );
@@ -82,16 +87,19 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
         _grantRole(Const.EXECUTOR_ROLE, bridge);
     }
 
-    function executeExtraCall( // @TODO: 재진입 방지
-    uint fromChainID, uint index, IERC20 toToken, address to, uint value, bytes calldata extraData)
-        external
-        payable
-        onlyRole(Const.EXECUTOR_ROLE)
-        returns (bool success)
-    {
+    function executeExtraCall(
+        uint fromChainID,
+        uint index,
+        IERC20 toToken,
+        address to,
+        uint value,
+        bytes calldata extraData
+    ) external payable onlyRole(Const.EXECUTOR_ROLE) nonReentrant returns (bool success) {
         address targetContract;
+        bytes4 methodID;
         assembly {
             targetContract := shr(96, calldataload(extraData.offset))
+            methodID := calldataload(add(extraData.offset, 20))
         }
         if (!_whitelistedTargets[targetContract]) revert BETargetNotWhitelisted();
 
@@ -110,7 +118,7 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
 
         // Call target contract
         bytes memory reason;
-        (success, reason) = targetContract.call{gas: remainingGas, value: isNative ? value : 0}(extraData[20:]); // @TODO: 외부 컨트랙트 call gas 제한 (100000) -> gasleft() 활용하기
+        (success, reason) = targetContract.call{gas: remainingGas, value: isNative ? value : 0}(extraData[20:]);
 
         // Handle failure
         if (!success) {
@@ -126,7 +134,7 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
             toToken.forceApprove(targetContract, 0);
         }
 
-        emit ExtraCallExecuted(fromChainID, index, toToken, to, value, targetContract, success, reason); // @TODO: method id 추가
+        emit ExtraCallExecuted(fromChainID, index, toToken, to, value, targetContract, methodID, success, reason);
         return success;
     }
 
@@ -171,7 +179,7 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
      */
     function recoverToken(address token, uint amount, address recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (recipient == address(0)) revert BEInvalidRecipient();
-        if (token == address(0)) payable(recipient).transfer(amount);
+        if (token == Const.NATIVE_TOKEN) payable(recipient).transfer(amount);
         else IERC20(token).safeTransfer(recipient, amount);
     }
 
