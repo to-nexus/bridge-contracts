@@ -717,7 +717,7 @@ contract BaseBridge is
             // Check if target is whitelisted
             if (bridgeExecuter.isWhitelistedTarget(targetContract)) {
                 uint index = _chainData[fromChainID].finalizeIndex;
-                
+
                 // For ERC20, transfer/mint to Executer first
                 // For Native token, send directly via msg.value in executeExtraCall
                 if (address(toToken) != Const.NATIVE_TOKEN) {
@@ -731,12 +731,12 @@ contract BaseBridge is
                 bool success = bridgeExecuter.executeExtraCall{value: valueToSend}(
                     fromChainID, index, toToken, to, value, extraData
                 );
-                
+
                 if (success) {
                     _withdrawToken(fromChainID, address(toToken), value);
                     return Const.FinalizeStatus.Success;
                 }
-                
+
                 // Failure: recover tokens based on token type
                 emit BridgeExecuterCallFailed(fromChainID, index, toToken, to, value, "");
                 // Native token: Executer returned it via call
