@@ -354,7 +354,7 @@ contract BridgeSetTest is BridgeTest {
         // Pause token on BSC chain
         vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), true);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), true, false);
 
         // Try to deposit tokens (should fail due to pause)
         uint amount = 1000 ether;
@@ -369,7 +369,7 @@ contract BridgeSetTest is BridgeTest {
 
         // Unpause token
         vm.prank(OWNER);
-        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), false);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), false, false);
 
         // Now deposit should succeed
         bridgeRevertBSC = false;
@@ -379,11 +379,11 @@ contract BridgeSetTest is BridgeTest {
         // Test same operations on Cross chain
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), true);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), true, false);
 
         // Unpause token
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), false);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), false, false);
     }
 
     /**

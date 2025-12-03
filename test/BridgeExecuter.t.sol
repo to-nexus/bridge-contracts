@@ -47,6 +47,23 @@ contract MockTargetContract {
 }
 
 /**
+ * @title MockGasConsumer
+ * @notice Mock contract that consumes a lot of gas to test gas limit protection
+ */
+contract MockGasConsumer {
+    uint public counter;
+
+    function consumeGas(uint iterations) external payable {
+        // Consume gas by doing storage writes
+        for (uint i = 0; i < iterations; i++) {
+            counter = i;
+        }
+    }
+
+    receive() external payable {}
+}
+
+/**
  * @title MockSwap
  * @notice Mock swap contract that exchanges tokenIn for tokenOut
  * @dev Simulates a DEX swap for testing bridge + swap flow
@@ -596,6 +613,138 @@ contract BridgeExecuterTest is BridgeTest {
         assertEq(weth.balanceOf(USER), beforeWethBalance + expectedOutput);
     }
 
+    /**
+     * @notice Test that gas limit protection works correctly
+     * @dev Verifies that BridgeExecuter reserves gas for post-call operations
+     */
+    function test_gasLimitProtection() public {
+        uint amount = 1000 * 1e18;
+
+        // Deploy gas consumer and whitelist it
+        vm.selectFork(crossForkID);
+        MockGasConsumer gasConsumer = new MockGasConsumer();
+        vm.prank(CrossOWNER);
+        bridgeExecuterCross.addWhitelistTarget(address(gasConsumer));
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata to consume a lot of gas (but not so much to deplete everything)
+        // Use moderate iterations so the call succeeds but tests gas reservation
+        bytes memory calldata_ = abi.encodeWithSelector(MockGasConsumer.consumeGas.selector, 1000);
+        bytes memory extraData = abi.encodePacked(address(gasConsumer), calldata_);
+
+        // Initiate bridge
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint total = value + gas + service;
+        assertTrue(total <= amount);
+
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS chain
+        vm.selectFork(crossForkID);
+        uint beforeTargetBalance = address(gasConsumer).balance;
+        uint beforeUserBalance = USER.balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Verify the call succeeded and gas consumer received the tokens
+        assertEq(address(gasConsumer).balance, beforeTargetBalance + value, "Gas consumer should receive tokens");
+        assertEq(USER.balance, beforeUserBalance, "User should not receive tokens on success");
+    }
+
+    /**
+     * @notice Test that gas limit is properly calculated and reserved
+     * @dev Verifies that BridgeExecuter reserves 200k gas for post-call operations
+     */
+    function test_gasLimitReservation() public {
+        uint amount = 1000 * 1e18;
+
+        // Deploy gas consumer and whitelist it
+        vm.selectFork(crossForkID);
+        MockGasConsumer gasConsumer = new MockGasConsumer();
+        vm.prank(CrossOWNER);
+        bridgeExecuterCross.addWhitelistTarget(address(gasConsumer));
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata with moderate gas consumption
+        bytes memory calldata_ = abi.encodeWithSelector(MockGasConsumer.consumeGas.selector, 500);
+        bytes memory extraData = abi.encodePacked(address(gasConsumer), calldata_);
+
+        // Initiate bridge
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint total = value + gas + service;
+        assertTrue(total <= amount);
+
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize with limited gas to test reservation
+        vm.selectFork(crossForkID);
+        uint beforeTargetBalance = address(gasConsumer).balance;
+        uint beforeUserBalance = USER.balance;
+
+        // Call finalize with enough gas for all operations
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Verify the call succeeded
+        assertEq(address(gasConsumer).balance, beforeTargetBalance + value, "Gas consumer should receive tokens");
+        assertEq(USER.balance, beforeUserBalance, "User should not receive tokens on success");
+
+        // Verify counter was updated (gas was consumed properly)
+        assertEq(gasConsumer.counter(), 499, "Counter should be updated to last iteration value");
+    }
+
+    /**
+     * @notice Test that gas exhaustion in target call causes fallback to user
+     * @dev Verifies that when target call runs out of gas, user receives tokens
+     */
+    function test_gasExhaustion_fallbackToUser() public {
+        uint amount = 1000 * 1e18;
+
+        // Deploy gas consumer and whitelist it
+        vm.selectFork(crossForkID);
+        MockGasConsumer gasConsumer = new MockGasConsumer();
+        vm.prank(CrossOWNER);
+        bridgeExecuterCross.addWhitelistTarget(address(gasConsumer));
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata to consume a LOT of gas (will fail due to limited gas)
+        bytes memory calldata_ = abi.encodeWithSelector(MockGasConsumer.consumeGas.selector, 50000);
+        bytes memory extraData = abi.encodePacked(address(gasConsumer), calldata_);
+
+        // Initiate bridge
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint total = value + gas + service;
+        assertTrue(total <= amount);
+
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS chain with LIMITED GAS
+        vm.selectFork(crossForkID);
+        uint beforeTargetBalance = address(gasConsumer).balance;
+        uint beforeUserBalance = USER.balance;
+        uint beforeBridgeBalance = address(bridgeCross).balance;
+
+        // Call finalize with limited gas (500k should be enough for bridge logic but not for 50000 iterations)
+        crossFinalizeWithGasLimit(index, address(NATIVE_TOKEN), USER, value, 5, extraData, 500_000);
+
+        // Due to gas exhaustion, target call should fail and user should receive tokens
+        assertEq(address(gasConsumer).balance, beforeTargetBalance, "Gas consumer should NOT receive tokens");
+        assertEq(USER.balance, beforeUserBalance + value, "User should receive tokens as fallback");
+        assertEq(
+            address(bridgeCross).balance,
+            beforeBridgeBalance - value,
+            "Bridge balance should decrease by value sent to user"
+        );
+    }
+
     // Helper function to bridge with extradata
     function bscBridge(
         address token,
@@ -637,6 +786,33 @@ contract BridgeExecuterTest is BridgeTest {
             signFinalize(BSC_CHAIN_ID, index, token, to, value, extraData, validatorCount);
         vm.recordLogs();
         bridgeCross.finalizeBridge(args, v, r, s);
+    }
+
+    function crossFinalizeWithGasLimit(
+        uint index,
+        address token,
+        address to,
+        uint value,
+        uint validatorCount,
+        bytes memory extraData,
+        uint gasLimit
+    ) internal {
+        IBridgeRegistry.FinalizeArguments memory args = IBridgeRegistry.FinalizeArguments({
+            fromChainID: BSC_CHAIN_ID,
+            index: index,
+            toToken: IERC20(token),
+            to: to,
+            value: value,
+            extraData: extraData
+        });
+        (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) =
+            signFinalize(BSC_CHAIN_ID, index, token, to, value, extraData, validatorCount);
+        vm.recordLogs();
+        // Call with limited gas
+        (bool success,) = address(bridgeCross).call{gas: gasLimit}(
+            abi.encodeWithSelector(bridgeCross.finalizeBridge.selector, args, v, r, s)
+        );
+        require(success, "finalizeBridge call failed");
     }
 
     function signFinalize(

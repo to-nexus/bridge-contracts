@@ -641,8 +641,8 @@ contract BaseBridge is
     {
         require(address(bridgeVerifier) != address(0), BaseBridgeVerifierNotSet());
 
-        TokenPair memory tokenPair = _tokenPairs[fromChainID][address(token)];
-        if (tokenPair.paused) return (Const.FinalizeStatus.TokenPaused, false);
+        // Check finalize pause status
+        if (_tokenFinalizePaused[fromChainID][address(token)]) return (Const.FinalizeStatus.TokenPaused, false);
 
         // Skip validation if this is a retry - validation was already completed in the initial attempt
         if (!retry) {
