@@ -82,14 +82,13 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
         _grantRole(Const.EXECUTOR_ROLE, bridge);
     }
 
-    function executeExtraCall(
-        uint fromChainID,
-        uint index,
-        IERC20 toToken,
-        address to,
-        uint value,
-        bytes calldata extraData
-    ) external payable onlyRole(Const.EXECUTOR_ROLE) returns (bool success) {
+    function executeExtraCall( // @TODO: 재진입 방지
+    uint fromChainID, uint index, IERC20 toToken, address to, uint value, bytes calldata extraData)
+        external
+        payable
+        onlyRole(Const.EXECUTOR_ROLE)
+        returns (bool success)
+    {
         address targetContract;
         assembly {
             targetContract := shr(96, calldataload(extraData.offset))
@@ -106,9 +105,12 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
             toToken.forceApprove(targetContract, value);
         }
 
+        // @DEV: extracall 이후의 로직을 수행하기 위해 최소 가스비용 마진
+        uint remainingGas = gasleft() < 200000 ? 0 : gasleft() - 200000;
+
         // Call target contract
         bytes memory reason;
-        (success, reason) = targetContract.call{value: isNative ? value : 0}(extraData[20:]);
+        (success, reason) = targetContract.call{gas: remainingGas, value: isNative ? value : 0}(extraData[20:]); // @TODO: 외부 컨트랙트 call gas 제한 (100000) -> gasleft() 활용하기
 
         // Handle failure
         if (!success) {
@@ -124,7 +126,7 @@ contract BridgeExecuter is AccessControl, IBridgeExecuter {
             toToken.forceApprove(targetContract, 0);
         }
 
-        emit ExtraCallExecuted(fromChainID, index, toToken, to, value, targetContract, success, reason);
+        emit ExtraCallExecuted(fromChainID, index, toToken, to, value, targetContract, success, reason); // @TODO: method id 추가
         return success;
     }
 

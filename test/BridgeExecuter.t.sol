@@ -310,8 +310,14 @@ contract BridgeExecuterTest is BridgeTest {
 
         // Verify tokens were minted to user (fallback behavior)
         assertEq(testTokenCross.balanceOf(USER), beforeUserBalance + value, "User should receive tokens");
-        assertEq(testTokenCross.balanceOf(address(mockTargetCross)), beforeTargetBalance, "Target should not receive tokens");
-        assertEq(testTokenCross.balanceOf(address(bridgeExecuterCross)), beforeExecuterBalance, "Executer should not hold tokens (burned)");
+        assertEq(
+            testTokenCross.balanceOf(address(mockTargetCross)), beforeTargetBalance, "Target should not receive tokens"
+        );
+        assertEq(
+            testTokenCross.balanceOf(address(bridgeExecuterCross)),
+            beforeExecuterBalance,
+            "Executer should not hold tokens (burned)"
+        );
         assertEq(testTokenCross.balanceOf(address(bridgeCross)), beforeBridgeBalance, "Bridge should not hold tokens");
     }
 
@@ -646,8 +652,7 @@ contract BridgeExecuterTest is BridgeTest {
         r = new bytes32[](validatorCount);
         s = new bytes32[](validatorCount);
 
-        bytes32 structHash =
-            keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, extraData));
+        bytes32 structHash = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, extraData));
         bytes32 digest = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), structHash);
 
         for (uint i = 0; i < validatorCount; ++i) {
