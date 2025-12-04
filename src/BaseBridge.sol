@@ -13,7 +13,7 @@ import {BridgeRegistry} from "./abstract/BridgeRegistry.sol";
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IBaseBridge} from "./interface/IBaseBridge.sol";
 
-import {IBridgeExecuter} from "./interface/IBridgeExecuter.sol";
+import {IBridgeExecutor} from "./interface/IBridgeExecutor.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
 import {Const} from "./lib/Const.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
@@ -154,13 +154,13 @@ contract BaseBridge is
     event DevSet(address indexed dev);
 
     /**
-     * @notice Emitted when the bridge executer is set
-     * @param bridgeExecuter The address of the new bridge executer
+     * @notice Emitted when the bridge executor is set
+     * @param bridgeExecutor The address of the new bridge executor
      */
-    event BridgeExecuterSet(address indexed bridgeExecuter);
+    event BridgeExecutorSet(address indexed bridgeExecutor);
 
     /**
-     * @notice Emitted when a bridge executer call fails
+     * @notice Emitted when a bridge executor call fails
      * @param fromChainID Source chain ID
      * @param index Unique identifier for the operation
      * @param toToken Token on destination chain
@@ -168,7 +168,7 @@ contract BaseBridge is
      * @param value Amount of tokens
      * @param reason Failure reason
      */
-    event BridgeExecuterCallFailed(
+    event BridgeExecutorCallFailed(
         uint indexed fromChainID, uint indexed index, IERC20 indexed toToken, address to, uint value, bytes reason
     );
 
@@ -180,14 +180,14 @@ contract BaseBridge is
     /// @dev Fee management contract
     IBridgeVerifier public bridgeVerifier;
 
-    /// @dev Bridge executer contract for handling extradata operations
-    IBridgeExecuter public bridgeExecuter;
-
     /// @dev dev wallet
     address payable private _dev;
 
     /// @dev Block number when contract was initialized
     uint private _initializedAt;
+
+    /// @dev Bridge executor contract for handling extradata operations
+    IBridgeExecutor public bridgeExecutor;
 
     /// @dev Storage gap for future upgrades
     uint[46] private __gap;
@@ -691,13 +691,13 @@ contract BaseBridge is
     /**
      * @notice Executes token transfer or minting for bridge finalization
      * @dev Handles different token types (native, mintable, regular)
-     * - If extraData is provided and bridgeExecuter is set, delegates to BridgeExecuter
-     * - On executer failure, reverts to normal token transfer to user
+     * - If extraData is provided and bridgeExecutor is set, delegates to BridgeExecutor
+     * - On executor failure, reverts to normal token transfer to user
      * @param fromChainID Source chain ID
      * @param toToken Destination token
      * @param to Recipient address
      * @param value Amount to transfer/mint
-     * @param extraData Additional data for bridge executer (contract address + calldata)
+     * @param extraData Additional data for bridge executor (contract address + calldata)
      * @return status Success status
      */
     function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value, bytes memory extraData)
@@ -707,7 +707,7 @@ contract BaseBridge is
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
 
         // Check if extraData is provided and long enough (> 20 bytes for contract address)
-        if (extraData.length > 20 && address(bridgeExecuter) != address(0)) {
+        if (extraData.length > 20 && address(bridgeExecutor) != address(0)) {
             // Parse target contract address from extraData
             address targetContract;
             assembly {
@@ -715,20 +715,20 @@ contract BaseBridge is
             }
 
             // Check if target is whitelisted
-            if (bridgeExecuter.isWhitelistedTarget(targetContract)) {
+            if (bridgeExecutor.isWhitelistedTarget(targetContract)) {
                 uint index = _chainData[fromChainID].finalizeIndex;
 
-                // For ERC20, transfer/mint to Executer first
+                // For ERC20, transfer/mint to Executor first
                 // For Native token, send directly via msg.value in executeExtraCall
                 if (address(toToken) != Const.NATIVE_TOKEN) {
-                    status = _transferOrMintToken(toToken, address(bridgeExecuter), value, isOrigin, false);
+                    status = _transferOrMintToken(toToken, address(bridgeExecutor), value, isOrigin, false);
                     if (status != Const.FinalizeStatus.Success) return status;
                 }
 
                 uint valueToSend = address(toToken) == Const.NATIVE_TOKEN ? value : 0;
 
                 // Call executeExtraCall and check result
-                bool success = bridgeExecuter.executeExtraCall{value: valueToSend}(
+                bool success = bridgeExecutor.executeExtraCall{value: valueToSend}(
                     fromChainID, index, toToken, to, value, extraData
                 );
 
@@ -738,13 +738,13 @@ contract BaseBridge is
                 }
 
                 // Failure: recover tokens based on token type
-                emit BridgeExecuterCallFailed(fromChainID, index, toToken, to, value, "");
-                // Native token: Executer returned it via call
-                // Origin token: Executer transferred it back
-                // Wrapped token: burn from Executer, then mint to user
+                emit BridgeExecutorCallFailed(fromChainID, index, toToken, to, value, "");
+                // Native token: Executor returned it via call
+                // Origin token: Executor transferred it back
+                // Wrapped token: burn from Executor, then mint to user
                 if (!isOrigin && address(toToken) != Const.NATIVE_TOKEN) {
-                    uint bal = toToken.balanceOf(address(bridgeExecuter));
-                    if (bal > 0) ICrossMintableERC20(address(toToken)).burn(address(bridgeExecuter), bal);
+                    uint bal = toToken.balanceOf(address(bridgeExecutor));
+                    if (bal > 0) ICrossMintableERC20(address(toToken)).burn(address(bridgeExecutor), bal);
                 }
                 status = _transferOrMintToken(toToken, to, value, isOrigin, false);
                 if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
@@ -892,21 +892,21 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Sets the bridge executer contract
+     * @notice Sets the bridge executor contract
      * @dev Updates the contract used for executing bridge operations with extradata
-     * @param _bridgeExecuter New bridge executer address
+     * @param _bridgeExecutor New bridge executor address
      */
-    function setBridgeExecuter(IBridgeExecuter _bridgeExecuter) external onlyRole(Const.ADMIN_ROLE) {
-        bridgeExecuter = _bridgeExecuter;
-        emit BridgeExecuterSet(address(_bridgeExecuter));
+    function setBridgeExecutor(IBridgeExecutor _bridgeExecutor) external onlyRole(Const.ADMIN_ROLE) {
+        bridgeExecutor = _bridgeExecutor;
+        emit BridgeExecutorSet(address(_bridgeExecutor));
     }
 
     /**
-     * @notice Receives native tokens from BridgeExecuter when extradata call fails
-     * @dev Only BridgeExecuter can send native tokens to this contract
+     * @notice Receives native tokens from BridgeExecutor when extradata call fails
+     * @dev Only BridgeExecutor can send native tokens to this contract
      */
     receive() external payable {
-        require(msg.sender == address(bridgeExecuter), "Only BridgeExecuter");
+        require(msg.sender == address(bridgeExecutor), "Only BridgeExecutor");
     }
 
     /**

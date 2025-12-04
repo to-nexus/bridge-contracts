@@ -7,11 +7,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
-import {IBridgeExecuter} from "./interface/IBridgeExecuter.sol";
+import {IBridgeExecutor} from "./interface/IBridgeExecutor.sol";
 import {Const} from "./lib/Const.sol";
 
 /**
- * @title BridgeExecuter
+ * @title BridgeExecutor
  * @notice Executes bridge operations with extra data
  * @dev This contract handles complex bridge finalizations that require calling external contracts
  *
@@ -25,7 +25,7 @@ import {Const} from "./lib/Const.sol";
  * - Only callable by authorized bridge contracts
  * - Target contracts must be whitelisted (to be implemented)
  */
-contract BridgeExecuter is AccessControl, ReentrancyGuardTransient, IBridgeExecuter {
+contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecutor {
     using SafeERC20 for IERC20;
 
     error BETargetNotWhitelisted();
@@ -79,7 +79,7 @@ contract BridgeExecuter is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /**
      * @notice Constructor
      * @param owner Address of the admin owner
-     * @param bridge Address of the bridge contract that can call this executer
+     * @param bridge Address of the bridge contract that can call this executor
      */
     constructor(address owner, address bridge) {
         if (owner == address(0) || bridge == address(0)) revert BEInvalidAddress();
