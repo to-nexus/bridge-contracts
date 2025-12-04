@@ -160,17 +160,12 @@ contract BaseBridge is
     event BridgeExecutorSet(address indexed bridgeExecutor);
 
     /**
-     * @notice Emitted when a bridge executor call fails
+     * @notice Emitted when extra call is executed via BridgeExecutor
      * @param fromChainID Source chain ID
      * @param index Unique identifier for the operation
-     * @param toToken Token on destination chain
-     * @param to Recipient address
-     * @param value Amount of tokens
-     * @param reason Failure reason
+     * @param success Whether the extra call succeeded
      */
-    event BridgeExecutorCallFailed(
-        uint indexed fromChainID, uint indexed index, IERC20 indexed toToken, address to, uint value, bytes reason
-    );
+    event ExtraCallExecuted(uint indexed fromChainID, uint indexed index, bool success);
 
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
@@ -706,8 +701,8 @@ contract BaseBridge is
     {
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
 
-        // Check if extraData is provided and long enough (> 20 bytes for contract address)
-        if (extraData.length > 20 && address(bridgeExecutor) != address(0)) {
+        // Check if extraData is provided and long enough (> 24 bytes for contract address and method ID)
+        if (extraData.length > 24 && address(bridgeExecutor) != address(0)) {
             // Parse target contract address from extraData
             address targetContract;
             assembly {
@@ -718,19 +713,20 @@ contract BaseBridge is
             if (bridgeExecutor.isWhitelistedTarget(targetContract)) {
                 uint index = _chainData[fromChainID].finalizeIndex;
 
+                bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
+
                 // For ERC20, transfer/mint to Executor first
                 // For Native token, send directly via msg.value in executeExtraCall
-                if (address(toToken) != Const.NATIVE_TOKEN) {
+                if (isERC20) {
                     status = _transferOrMintToken(toToken, address(bridgeExecutor), value, isOrigin, false);
                     if (status != Const.FinalizeStatus.Success) return status;
                 }
 
-                uint valueToSend = address(toToken) == Const.NATIVE_TOKEN ? value : 0;
-
                 // Call executeExtraCall and check result
-                bool success = bridgeExecutor.executeExtraCall{value: valueToSend}(
+                bool success = bridgeExecutor.executeExtraCall{value: isERC20 ? 0 : value}(
                     fromChainID, index, toToken, to, value, extraData
                 );
+                emit ExtraCallExecuted(fromChainID, index, success);
 
                 if (success) {
                     _withdrawToken(fromChainID, address(toToken), value);
@@ -738,21 +734,18 @@ contract BaseBridge is
                 }
 
                 // Failure: recover tokens based on token type
-                emit BridgeExecutorCallFailed(fromChainID, index, toToken, to, value, "");
                 // Native token: Executor returned it via call
-                // Origin token: Executor transferred it back
+                // Origin token: Bridge pulls back via transferFrom (Executor approved)
                 // Wrapped token: burn from Executor, then mint to user
-                if (!isOrigin && address(toToken) != Const.NATIVE_TOKEN) {
-                    uint bal = toToken.balanceOf(address(bridgeExecutor));
-                    if (bal > 0) ICrossMintableERC20(address(toToken)).burn(address(bridgeExecutor), bal);
+                if (isERC20) {
+                    if (isOrigin) toToken.transferFrom(address(bridgeExecutor), address(this), value);
+                    else ICrossMintableERC20(address(toToken)).burn(address(bridgeExecutor), value);
                 }
-                status = _transferOrMintToken(toToken, to, value, isOrigin, false);
-                if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
-                return status;
+                // Fall through to normal flow below
             }
         }
 
-        // Normal token transfer flow (no extraData or not whitelisted)
+        // Normal token transfer flow (no extraData, not whitelisted, or extraCall failed)
         status = _transferOrMintToken(toToken, to, value, isOrigin, false);
         if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
         return status;

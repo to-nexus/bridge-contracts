@@ -86,7 +86,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param initiatePause Whether to pause initiate (true) or unpause (false)
      * @param finalizePause Whether to pause finalize (true) or unpause (false)
      */
-    event TokenPauseSet(uint indexed remoteChainID, address indexed token, bool initiatePause, bool finalizePause); // @TODO: 백엔드에서 처리 필요. 기존 이벤트와 변경된 이벤트 모두를 처리해야함
+    event TokenPauseSet(uint indexed remoteChainID, address indexed token, bool initiatePause, bool finalizePause);
 
     /**
      * @notice Emitted when token finalize pause status is set

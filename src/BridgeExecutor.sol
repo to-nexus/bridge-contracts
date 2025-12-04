@@ -95,6 +95,9 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         uint value,
         bytes calldata extraData
     ) external payable onlyRole(Const.EXECUTOR_ROLE) nonReentrant returns (bool success) {
+        // Skip if value is 0
+        if (value == 0) return false;
+
         address targetContract;
         bytes4 methodID;
         assembly {
@@ -113,25 +116,25 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
             toToken.forceApprove(targetContract, value);
         }
 
-        // @DEV: extracall 이후의 로직을 수행하기 위해 최소 가스비용 마진
+        // Reserve minimum gas for post-extracall logic
         uint remainingGas = gasleft() < 200000 ? 0 : gasleft() - 200000;
 
         // Call target contract
         bytes memory reason;
         (success, reason) = targetContract.call{gas: remainingGas, value: isNative ? value : 0}(extraData[20:]);
 
-        // Handle failure
+        // Clear approval (always for ERC20)
+        if (!isNative) toToken.forceApprove(targetContract, 0);
+
+        // Handle failure: return tokens to bridge
         if (!success) {
             if (isNative) {
                 (bool sent,) = msg.sender.call{value: value}("");
                 if (!sent) revert BEFailedToReturnNative();
             } else {
-                toToken.forceApprove(targetContract, 0);
-                // Try to transfer back (works for origin tokens, fails for wrapped)
-                try toToken.transfer(msg.sender, value) {} catch {}
+                // Approve bridge to burn (for wrapped) or transfer back is handled by bridge
+                toToken.forceApprove(msg.sender, value);
             }
-        } else if (!isNative) {
-            toToken.forceApprove(targetContract, 0);
         }
 
         emit ExtraCallExecuted(fromChainID, index, toToken, to, value, targetContract, methodID, success, reason);
@@ -178,7 +181,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @param recipient Address to send recovered tokens to
      */
     function recoverToken(address token, uint amount, address recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (recipient == address(0)) revert BEInvalidRecipient();
+        if (recipient == address(0) || token == address(0)) revert BEInvalidRecipient();
         if (token == Const.NATIVE_TOKEN) payable(recipient).transfer(amount);
         else IERC20(token).safeTransfer(recipient, amount);
     }
