@@ -4,11 +4,11 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title IBridgeExecuter
+ * @title IBridgeExecutor
  * @notice Interface for executing bridge operations with extra data
  * @dev This interface is called by BaseBridge when extradata is provided during finalization
  */
-interface IBridgeExecuter {
+interface IBridgeExecutor {
     /**
      * @notice Executes extra call with bridge finalization data
      * @param fromChainID Source chain ID

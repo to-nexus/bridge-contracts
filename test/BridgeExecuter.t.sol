@@ -4,9 +4,9 @@ pragma solidity ^0.8.13;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {BridgeExecuter} from "../src/BridgeExecuter.sol";
+import {BridgeExecutor} from "../src/BridgeExecutor.sol";
 import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
-import {IBridgeExecuter} from "../src/interface/IBridgeExecuter.sol";
+import {IBridgeExecutor} from "../src/interface/IBridgeExecutor.sol";
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
 import {ICrossMintableERC20} from "../src/token/ICrossMintableERC20.sol";
 
@@ -15,7 +15,7 @@ import {BridgeTest} from "./Bridge.t.sol";
 
 /**
  * @title MockTargetContract
- * @notice Mock contract for testing BridgeExecuter functionality
+ * @notice Mock contract for testing BridgeExecutor functionality
  */
 contract MockTargetContract {
     event Received(address token, address from, uint value, bytes data);
@@ -35,7 +35,7 @@ contract MockTargetContract {
             require(msg.value == amount, "MockTargetContract: incorrect value");
             emit NativeReceived(user, amount, data);
         } else {
-            // ERC20 token - pull tokens from executer
+            // ERC20 token - pull tokens from executor
             require(
                 IERC20(token).transferFrom(msg.sender, address(this), amount), "MockTargetContract: transfer failed"
             );
@@ -98,7 +98,7 @@ contract MockSwap {
     {
         if (shouldRevert) revert("MockSwap: intentional revert");
 
-        // Pull tokenIn from caller (BridgeExecuter)
+        // Pull tokenIn from caller (BridgeExecutor)
         require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "MockSwap: transferFrom failed");
 
         // Calculate output amount (simple rate conversion)
@@ -121,9 +121,9 @@ contract MockSwap {
     }
 }
 
-contract BridgeExecuterTest is BridgeTest {
-    BridgeExecuter public bridgeExecuterCross;
-    BridgeExecuter public bridgeExecuterBSC;
+contract BridgeExecutorTest is BridgeTest {
+    BridgeExecutor public bridgeExecutorCross;
+    BridgeExecutor public bridgeExecutorBSC;
     MockTargetContract public mockTargetCross;
     MockTargetContract public mockTargetBSC;
     MockSwap public mockSwapCross;
@@ -132,37 +132,37 @@ contract BridgeExecuterTest is BridgeTest {
     function setUp() public override {
         super.setUp();
 
-        // Deploy BridgeExecuter for each chain
+        // Deploy BridgeExecutor for each chain
         vm.selectFork(crossForkID);
-        bridgeExecuterCross = new BridgeExecuter(CrossOWNER, address(bridgeCross));
+        bridgeExecutorCross = new BridgeExecutor(CrossOWNER, address(bridgeCross));
         mockTargetCross = new MockTargetContract();
         mockSwapCross = new MockSwap();
 
         vm.selectFork(bscForkID);
-        bridgeExecuterBSC = new BridgeExecuter(OWNER, address(bridgeBSC));
+        bridgeExecutorBSC = new BridgeExecutor(OWNER, address(bridgeBSC));
         mockTargetBSC = new MockTargetContract();
         mockSwapBSC = new MockSwap();
 
-        // Set BridgeExecuter on bridges
+        // Set BridgeExecutor on bridges
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setBridgeExecuter(IBridgeExecuter(address(bridgeExecuterCross)));
+        bridgeCross.setBridgeExecutor(IBridgeExecutor(address(bridgeExecutorCross)));
 
         // Whitelist mock contracts
         vm.prank(CrossOWNER);
-        bridgeExecuterCross.addWhitelistTarget(address(mockTargetCross));
+        bridgeExecutorCross.addWhitelistTarget(address(mockTargetCross));
         vm.prank(CrossOWNER);
-        bridgeExecuterCross.addWhitelistTarget(address(mockSwapCross));
+        bridgeExecutorCross.addWhitelistTarget(address(mockSwapCross));
 
         vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeBSC.setBridgeExecuter(IBridgeExecuter(address(bridgeExecuterBSC)));
+        bridgeBSC.setBridgeExecutor(IBridgeExecutor(address(bridgeExecutorBSC)));
 
         // Whitelist mock contracts
         vm.prank(OWNER);
-        bridgeExecuterBSC.addWhitelistTarget(address(mockTargetBSC));
+        bridgeExecutorBSC.addWhitelistTarget(address(mockTargetBSC));
         vm.prank(OWNER);
-        bridgeExecuterBSC.addWhitelistTarget(address(mockSwapBSC));
+        bridgeExecutorBSC.addWhitelistTarget(address(mockSwapBSC));
     }
 
     /**
@@ -272,7 +272,7 @@ contract BridgeExecuterTest is BridgeTest {
         vm.selectFork(crossForkID);
         uint beforeUserBalance = USER.balance;
         uint beforeTargetBalance = address(mockTargetCross).balance;
-        uint beforeExecuterBalance = address(bridgeExecuterCross).balance;
+        uint beforeExecutorBalance = address(bridgeExecutorCross).balance;
         uint beforeBridgeBalance = address(bridgeCross).balance;
 
         crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
@@ -280,7 +280,7 @@ contract BridgeExecuterTest is BridgeTest {
         // Verify tokens were sent to user (fallback behavior)
         assertEq(USER.balance, beforeUserBalance + value, "User should receive tokens");
         assertEq(address(mockTargetCross).balance, beforeTargetBalance, "Target should not receive tokens");
-        assertEq(address(bridgeExecuterCross).balance, beforeExecuterBalance, "Executer should return all tokens");
+        assertEq(address(bridgeExecutorCross).balance, beforeExecutorBalance, "Executor should return all tokens");
         // Bridge sends value to user, so balance decreases by value
         assertEq(address(bridgeCross).balance, beforeBridgeBalance - value, "Bridge should send value to user");
     }
@@ -320,7 +320,7 @@ contract BridgeExecuterTest is BridgeTest {
         vm.selectFork(crossForkID);
         uint beforeUserBalance = testTokenCross.balanceOf(USER);
         uint beforeTargetBalance = testTokenCross.balanceOf(address(mockTargetCross));
-        uint beforeExecuterBalance = testTokenCross.balanceOf(address(bridgeExecuterCross));
+        uint beforeExecutorBalance = testTokenCross.balanceOf(address(bridgeExecutorCross));
         uint beforeBridgeBalance = testTokenCross.balanceOf(address(bridgeCross));
 
         crossFinalize(index, address(testTokenCross), USER, value, 5, extraData);
@@ -331,9 +331,9 @@ contract BridgeExecuterTest is BridgeTest {
             testTokenCross.balanceOf(address(mockTargetCross)), beforeTargetBalance, "Target should not receive tokens"
         );
         assertEq(
-            testTokenCross.balanceOf(address(bridgeExecuterCross)),
-            beforeExecuterBalance,
-            "Executer should not hold tokens (burned)"
+            testTokenCross.balanceOf(address(bridgeExecutorCross)),
+            beforeExecutorBalance,
+            "Executor should not hold tokens (burned)"
         );
         assertEq(testTokenCross.balanceOf(address(bridgeCross)), beforeBridgeBalance, "Bridge should not hold tokens");
     }
@@ -541,17 +541,17 @@ contract BridgeExecuterTest is BridgeTest {
         address testTarget = address(0x1234);
 
         // Check initial state
-        assertFalse(bridgeExecuterCross.isWhitelistedTarget(testTarget));
+        assertFalse(bridgeExecutorCross.isWhitelistedTarget(testTarget));
 
         // Add to whitelist
         vm.prank(CrossOWNER);
-        bridgeExecuterCross.addWhitelistTarget(testTarget);
-        assertTrue(bridgeExecuterCross.isWhitelistedTarget(testTarget));
+        bridgeExecutorCross.addWhitelistTarget(testTarget);
+        assertTrue(bridgeExecutorCross.isWhitelistedTarget(testTarget));
 
         // Remove from whitelist
         vm.prank(CrossOWNER);
-        bridgeExecuterCross.removeWhitelistTarget(testTarget);
-        assertFalse(bridgeExecuterCross.isWhitelistedTarget(testTarget));
+        bridgeExecutorCross.removeWhitelistTarget(testTarget);
+        assertFalse(bridgeExecutorCross.isWhitelistedTarget(testTarget));
     }
 
     /**
@@ -615,7 +615,7 @@ contract BridgeExecuterTest is BridgeTest {
 
     /**
      * @notice Test that gas limit protection works correctly
-     * @dev Verifies that BridgeExecuter reserves gas for post-call operations
+     * @dev Verifies that BridgeExecutor reserves gas for post-call operations
      */
     function test_gasLimitProtection() public {
         uint amount = 1000 * 1e18;
@@ -624,7 +624,7 @@ contract BridgeExecuterTest is BridgeTest {
         vm.selectFork(crossForkID);
         MockGasConsumer gasConsumer = new MockGasConsumer();
         vm.prank(CrossOWNER);
-        bridgeExecuterCross.addWhitelistTarget(address(gasConsumer));
+        bridgeExecutorCross.addWhitelistTarget(address(gasConsumer));
 
         vm.selectFork(bscForkID);
         vm.deal(USER, amount);
@@ -656,7 +656,7 @@ contract BridgeExecuterTest is BridgeTest {
 
     /**
      * @notice Test that gas limit is properly calculated and reserved
-     * @dev Verifies that BridgeExecuter reserves 200k gas for post-call operations
+     * @dev Verifies that BridgeExecutor reserves 200k gas for post-call operations
      */
     function test_gasLimitReservation() public {
         uint amount = 1000 * 1e18;
@@ -665,7 +665,7 @@ contract BridgeExecuterTest is BridgeTest {
         vm.selectFork(crossForkID);
         MockGasConsumer gasConsumer = new MockGasConsumer();
         vm.prank(CrossOWNER);
-        bridgeExecuterCross.addWhitelistTarget(address(gasConsumer));
+        bridgeExecutorCross.addWhitelistTarget(address(gasConsumer));
 
         vm.selectFork(bscForkID);
         vm.deal(USER, amount);
@@ -709,7 +709,7 @@ contract BridgeExecuterTest is BridgeTest {
         vm.selectFork(crossForkID);
         MockGasConsumer gasConsumer = new MockGasConsumer();
         vm.prank(CrossOWNER);
-        bridgeExecuterCross.addWhitelistTarget(address(gasConsumer));
+        bridgeExecutorCross.addWhitelistTarget(address(gasConsumer));
 
         vm.selectFork(bscForkID);
         vm.deal(USER, amount);

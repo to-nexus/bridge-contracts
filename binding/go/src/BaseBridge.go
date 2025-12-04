@@ -4464,6 +4464,160 @@ func (_BaseBridge *BaseBridgeFilterer) ParseThresholdChanged(log types.Log) (*Ba
 	return event, nil
 }
 
+// BaseBridgeTokenFinalizePauseSetIterator is returned from FilterTokenFinalizePauseSet and is used to iterate over the raw logs and unpacked data for TokenFinalizePauseSet events raised by the BaseBridge contract.
+type BaseBridgeTokenFinalizePauseSetIterator struct {
+	Event *BaseBridgeTokenFinalizePauseSet // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BaseBridgeTokenFinalizePauseSetIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BaseBridgeTokenFinalizePauseSet)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BaseBridgeTokenFinalizePauseSet)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BaseBridgeTokenFinalizePauseSetIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BaseBridgeTokenFinalizePauseSetIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BaseBridgeTokenFinalizePauseSet represents a TokenFinalizePauseSet event raised by the BaseBridge contract.
+type BaseBridgeTokenFinalizePauseSet struct {
+	RemoteChainID *big.Int
+	Token         common.Address
+	Pause         bool
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterTokenFinalizePauseSet is a free log retrieval operation binding the contract event 0x02c5bc0a5f43e2797484ce130ba7fd2ade9dfa8e41f4a78240c0b08817727188.
+//
+// Solidity: event TokenFinalizePauseSet(uint256 indexed remoteChainID, address indexed token, bool pause)
+func (_BaseBridge *BaseBridgeFilterer) FilterTokenFinalizePauseSet(opts *bind.FilterOpts, remoteChainID []*big.Int, token []common.Address) (*BaseBridgeTokenFinalizePauseSetIterator, error) {
+
+	var remoteChainIDRule []interface{}
+	for _, remoteChainIDItem := range remoteChainID {
+		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _BaseBridge.contract.FilterLogs(opts, "TokenFinalizePauseSet", remoteChainIDRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return &BaseBridgeTokenFinalizePauseSetIterator{contract: _BaseBridge.contract, event: "TokenFinalizePauseSet", logs: logs, sub: sub}, nil
+}
+
+// WatchTokenFinalizePauseSet is a free log subscription operation binding the contract event 0x02c5bc0a5f43e2797484ce130ba7fd2ade9dfa8e41f4a78240c0b08817727188.
+//
+// Solidity: event TokenFinalizePauseSet(uint256 indexed remoteChainID, address indexed token, bool pause)
+func (_BaseBridge *BaseBridgeFilterer) WatchTokenFinalizePauseSet(opts *bind.WatchOpts, sink chan<- *BaseBridgeTokenFinalizePauseSet, remoteChainID []*big.Int, token []common.Address) (event.Subscription, error) {
+
+	var remoteChainIDRule []interface{}
+	for _, remoteChainIDItem := range remoteChainID {
+		remoteChainIDRule = append(remoteChainIDRule, remoteChainIDItem)
+	}
+	var tokenRule []interface{}
+	for _, tokenItem := range token {
+		tokenRule = append(tokenRule, tokenItem)
+	}
+
+	logs, sub, err := _BaseBridge.contract.WatchLogs(opts, "TokenFinalizePauseSet", remoteChainIDRule, tokenRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BaseBridgeTokenFinalizePauseSet)
+				if err := _BaseBridge.contract.UnpackLog(event, "TokenFinalizePauseSet", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTokenFinalizePauseSet is a log parse operation binding the contract event 0x02c5bc0a5f43e2797484ce130ba7fd2ade9dfa8e41f4a78240c0b08817727188.
+//
+// Solidity: event TokenFinalizePauseSet(uint256 indexed remoteChainID, address indexed token, bool pause)
+func (_BaseBridge *BaseBridgeFilterer) ParseTokenFinalizePauseSet(log types.Log) (*BaseBridgeTokenFinalizePauseSet, error) {
+	event := new(BaseBridgeTokenFinalizePauseSet)
+	if err := _BaseBridge.contract.UnpackLog(event, "TokenFinalizePauseSet", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // BaseBridgeTokenPairRegisteredIterator is returned from FilterTokenPairRegistered and is used to iterate over the raw logs and unpacked data for TokenPairRegistered events raised by the BaseBridge contract.
 type BaseBridgeTokenPairRegisteredIterator struct {
 	Event *BaseBridgeTokenPairRegistered // Event containing the contract specifics and raw log

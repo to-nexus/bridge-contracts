@@ -176,9 +176,6 @@ contract BaseBridge is
     /// @dev Fee management contract
     IBridgeVerifier public bridgeVerifier;
 
-    /// @dev Bridge executer contract for handling extradata operations
-    IBridgeExecuter public bridgeExecuter;
-
     /// @dev dev wallet
     address payable private _dev;
 
