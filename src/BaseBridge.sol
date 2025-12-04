@@ -720,6 +720,8 @@ contract BaseBridge is
             if (bridgeExecutor.isWhitelistedTarget(targetContract)) {
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
 
+                bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
+
                 // For ERC20, transfer/mint to Executor first
                 // For Native token, send directly via msg.value in executeExtraCall
                 if (isERC20) {
