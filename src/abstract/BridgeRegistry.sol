@@ -111,9 +111,10 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
 
     /**
      * @notice Emitted when the CrossMintableERC20Factory is set
-     * @param code Address of the CrossMintableERC20 Code contract
+     * @param oldCode Address of the old CrossMintableERC20 Code contract
+     * @param newCode Address of the new CrossMintableERC20 Code contract
      */
-    event CrossMintableERC20CodeSet(address indexed code);
+    event CrossMintableERC20CodeSet(ICrossMintableERC20Code indexed oldCode, ICrossMintableERC20Code indexed newCode);
 
     /// @dev Factory contract for creating new CrossMintable tokens
     ICrossMintableERC20Code public crossMintableERC20Code;
@@ -231,11 +232,12 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         external
         onlyRole(Const.ADMIN_ROLE)
     {
-        require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
+        // Allow update: removed check that prevented overwriting crossMintableERC20Code
+        // require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
         require(address(_crossMintableERC20Code) != address(0), RegistryCanNotZeroValue());
 
+        emit CrossMintableERC20CodeSet(crossMintableERC20Code, _crossMintableERC20Code);
         crossMintableERC20Code = _crossMintableERC20Code;
-        emit CrossMintableERC20CodeSet(address(crossMintableERC20Code));
     }
 
     /**
