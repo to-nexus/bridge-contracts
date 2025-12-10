@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {BridgeExecutor} from "../src/BridgeExecutor.sol";
 import {IBaseBridge} from "../src/interface/IBaseBridge.sol";
@@ -41,6 +42,36 @@ contract MockTargetContract {
             );
             emit Received(token, user, amount, data);
         }
+    }
+
+    /**
+     * @notice Callback function with return value for testing returnData in events
+     * @param token Token address
+     * @param user User address
+     * @param amount Amount
+     * @param data Extra data
+     * @return hash Keccak256 hash of the input parameters
+     */
+    function handleBridgeCallbackWithReturn(address token, address user, uint amount, bytes calldata data)
+        external
+        payable
+        returns (bytes32 hash)
+    {
+        if (shouldRevert) revert("MockTargetContract: intentional revert");
+
+        if (token == address(1)) {
+            // Native token
+            require(msg.value == amount, "MockTargetContract: incorrect value");
+            emit NativeReceived(user, amount, data);
+        } else {
+            // ERC20 token - pull tokens from executor
+            require(
+                IERC20(token).transferFrom(msg.sender, address(this), amount), "MockTargetContract: transfer failed"
+            );
+            emit Received(token, user, amount, data);
+        }
+
+        return keccak256(abi.encode(token, user, amount, data));
     }
 
     receive() external payable {}
@@ -834,5 +865,212 @@ contract BridgeExecutorTest is BridgeTest {
         for (uint i = 0; i < validatorCount; ++i) {
             (v[i], r[i], s[i]) = vm.sign(VALIDATOR_PKs[i], digest);
         }
+    }
+
+    /**
+     * @notice Test that ExtraCallExecuted event emits correct returnData on success
+     * @dev Verifies that the return value from target contract is properly captured in event
+     */
+    function test_extraCallEvent_returnData_onSuccess() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata with function that returns data
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallbackWithReturn.selector, address(1), USER, amount, bytes("test data")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        // Calculate expected return value
+        bytes32 expectedReturnValue = keccak256(abi.encode(address(1), USER, amount, bytes("test data")));
+
+        // Initiate bridge
+        vm.selectFork(bscForkID);
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint total = value + gas + service;
+        assertTrue(total <= amount);
+
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS chain and capture logs
+        vm.selectFork(crossForkID);
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Get recorded logs and find ExtraCallExecuted event
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool foundEvent = false;
+        bytes memory returnData;
+
+        for (uint i = 0; i < logs.length; i++) {
+            // ExtraCallExecuted event signature
+            if (
+                logs[i].topics[0]
+                    == keccak256("ExtraCallExecuted(uint256,uint256,address,address,uint256,address,bytes4,bool,bytes)")
+            ) {
+                foundEvent = true;
+                // Decode non-indexed parameters: to, value, targetContract, methodID, success, returnData
+                (,,,, bool success, bytes memory data) =
+                    abi.decode(logs[i].data, (address, uint, address, bytes4, bool, bytes));
+                returnData = data;
+
+                // Verify success is true
+                assertTrue(success, "ExtraCall should succeed");
+
+                // Verify returnData contains the expected return value (abi-encoded bytes32)
+                bytes32 decodedReturnValue = abi.decode(returnData, (bytes32));
+                assertEq(decodedReturnValue, expectedReturnValue, "Return data should match expected hash");
+                break;
+            }
+        }
+
+        assertTrue(foundEvent, "ExtraCallExecuted event should be emitted");
+    }
+
+    /**
+     * @notice Test that ExtraCallExecuted event emits revert reason on failure
+     * @dev Verifies that the revert reason from target contract is properly captured in event
+     */
+    function test_extraCallEvent_returnData_onFailure() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Set mock to revert
+        vm.selectFork(crossForkID);
+        mockTargetCross.setShouldRevert(true);
+
+        // Prepare extradata
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallbackWithReturn.selector, address(1), USER, amount, bytes("test data")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        // Initiate bridge
+        vm.selectFork(bscForkID);
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint total = value + gas + service;
+        assertTrue(total <= amount);
+
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS chain and capture logs
+        vm.selectFork(crossForkID);
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Get recorded logs and find ExtraCallExecuted event
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool foundEvent = false;
+
+        for (uint i = 0; i < logs.length; i++) {
+            // ExtraCallExecuted event signature
+            if (
+                logs[i].topics[0]
+                    == keccak256("ExtraCallExecuted(uint256,uint256,address,address,uint256,address,bytes4,bool,bytes)")
+            ) {
+                foundEvent = true;
+                // Decode non-indexed parameters: to, value, targetContract, methodID, success, returnData
+                (,,,, bool success, bytes memory returnData) =
+                    abi.decode(logs[i].data, (address, uint, address, bytes4, bool, bytes));
+
+                // Verify success is false
+                assertFalse(success, "ExtraCall should fail");
+
+                // Verify returnData contains revert reason
+                // The revert reason is encoded as Error(string) selector + abi-encoded string
+                assertTrue(returnData.length > 0, "Return data should contain revert reason");
+
+                // Check that the revert reason contains our expected message
+                // Error(string) selector is 0x08c379a0
+                bytes4 errorSelector;
+                assembly {
+                    errorSelector := mload(add(returnData, 32))
+                }
+                assertEq(errorSelector, bytes4(0x08c379a0), "Should be Error(string) selector");
+
+                // Decode the error message
+                // Skip the selector (4 bytes) and decode the string
+                bytes memory errorData = new bytes(returnData.length - 4);
+                for (uint j = 4; j < returnData.length; j++) {
+                    errorData[j - 4] = returnData[j];
+                }
+                string memory errorMessage = abi.decode(errorData, (string));
+                assertEq(errorMessage, "MockTargetContract: intentional revert", "Revert reason should match");
+                break;
+            }
+        }
+
+        assertTrue(foundEvent, "ExtraCallExecuted event should be emitted");
+    }
+
+    /**
+     * @notice Test that ExtraCallExecuted event emits correct returnData for ERC20 token success
+     * @dev Verifies return value capture works for ERC20 tokens as well
+     */
+    function test_extraCallEvent_returnData_onSuccess_erc20() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        // Prepare extradata with function that returns data
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallbackWithReturn.selector,
+            address(testTokenCross),
+            USER,
+            amount,
+            bytes("erc20 test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        // Calculate expected return value
+        bytes32 expectedReturnValue = keccak256(abi.encode(address(testTokenCross), USER, amount, bytes("erc20 test")));
+
+        // Initiate bridge
+        vm.selectFork(bscForkID);
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+        uint total = value + gas + service;
+        assertTrue(total <= amount);
+
+        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS chain and capture logs
+        vm.selectFork(crossForkID);
+        crossFinalize(index, address(testTokenCross), USER, value, 5, extraData);
+
+        // Get recorded logs and find ExtraCallExecuted event
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool foundEvent = false;
+
+        for (uint i = 0; i < logs.length; i++) {
+            // ExtraCallExecuted event signature
+            if (
+                logs[i].topics[0]
+                    == keccak256("ExtraCallExecuted(uint256,uint256,address,address,uint256,address,bytes4,bool,bytes)")
+            ) {
+                foundEvent = true;
+                // Decode non-indexed parameters
+                (,,,, bool success, bytes memory returnData) =
+                    abi.decode(logs[i].data, (address, uint, address, bytes4, bool, bytes));
+
+                // Verify success is true
+                assertTrue(success, "ExtraCall should succeed");
+
+                // Verify returnData contains the expected return value
+                bytes32 decodedReturnValue = abi.decode(returnData, (bytes32));
+                assertEq(decodedReturnValue, expectedReturnValue, "Return data should match expected hash");
+                break;
+            }
+        }
+
+        assertTrue(foundEvent, "ExtraCallExecuted event should be emitted");
     }
 }

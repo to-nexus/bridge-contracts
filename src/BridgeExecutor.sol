@@ -47,7 +47,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @param targetContract Contract that was called
      * @param methodID Method ID of the called contract
      * @param success Whether the execution was successful
-     * @param reason Failure reason
+     * @param returnData Call response data (success: return value, failure: revert reason)
      */
     event ExtraCallExecuted(
         uint indexed fromChainID,
@@ -58,7 +58,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         address targetContract,
         bytes4 methodID,
         bool success,
-        bytes reason
+        bytes returnData
     );
 
     /**
@@ -82,7 +82,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @param bridge Address of the bridge contract that can call this executor
      */
     constructor(address owner, address bridge) {
-        if (owner == address(0) || bridge == address(0)) revert BEInvalidAddress();
+        require(owner != address(0) && bridge != address(0), BEInvalidAddress());
         _grantRole(DEFAULT_ADMIN_ROLE, owner);
         _grantRole(Const.EXECUTOR_ROLE, bridge);
     }
@@ -104,15 +104,15 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
             targetContract := shr(96, calldataload(extraData.offset))
             methodID := calldataload(add(extraData.offset, 20))
         }
-        if (!_whitelistedTargets[targetContract]) revert BETargetNotWhitelisted();
+        require(_whitelistedTargets[targetContract], BETargetNotWhitelisted());
 
         bool isNative = address(toToken) == Const.NATIVE_TOKEN;
 
         // Validate balance and approve if needed
         if (isNative) {
-            if (msg.value != value) revert BEInvalidValue();
+            require(msg.value == value, BEInvalidValue());
         } else {
-            if (toToken.balanceOf(address(this)) < value) revert BEInsufficientBalance();
+            require(toToken.balanceOf(address(this)) >= value, BEInsufficientBalance());
             toToken.forceApprove(targetContract, value);
         }
 
@@ -120,8 +120,8 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         uint remainingGas = gasleft() < 200000 ? 0 : gasleft() - 200000;
 
         // Call target contract
-        bytes memory reason;
-        (success, reason) = targetContract.call{gas: remainingGas, value: isNative ? value : 0}(extraData[20:]);
+        bytes memory returnData;
+        (success, returnData) = targetContract.call{gas: remainingGas, value: isNative ? value : 0}(extraData[20:]);
 
         // Clear approval (always for ERC20)
         if (!isNative) toToken.forceApprove(targetContract, 0);
@@ -130,14 +130,14 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         if (!success) {
             if (isNative) {
                 (bool sent,) = msg.sender.call{value: value}("");
-                if (!sent) revert BEFailedToReturnNative();
+                require(sent, BEFailedToReturnNative());
             } else {
                 // Approve bridge to burn (for wrapped) or transfer back is handled by bridge
                 toToken.forceApprove(msg.sender, value);
             }
         }
 
-        emit ExtraCallExecuted(fromChainID, index, toToken, to, value, targetContract, methodID, success, reason);
+        emit ExtraCallExecuted(fromChainID, index, toToken, to, value, targetContract, methodID, success, returnData);
         return success;
     }
 
@@ -147,8 +147,8 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @param target Target contract address to whitelist
      */
     function addWhitelistTarget(address target) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (target == address(0)) revert BEInvalidAddress();
-        if (_whitelistedTargets[target]) revert BEAlreadyWhitelisted();
+        require(target != address(0), BEInvalidAddress());
+        require(!_whitelistedTargets[target], BEAlreadyWhitelisted());
         _whitelistedTargets[target] = true;
         emit TargetWhitelisted(target);
     }
@@ -159,7 +159,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @param target Target contract address to remove
      */
     function removeWhitelistTarget(address target) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!_whitelistedTargets[target]) revert BENotWhitelisted();
+        require(_whitelistedTargets[target], BENotWhitelisted());
         _whitelistedTargets[target] = false;
         emit TargetRemovedFromWhitelist(target);
     }
@@ -181,7 +181,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @param recipient Address to send recovered tokens to
      */
     function recoverToken(address token, uint amount, address recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (recipient == address(0) || token == address(0)) revert BEInvalidRecipient();
+        require(recipient != address(0) && token != address(0), BEInvalidRecipient());
         if (token == Const.NATIVE_TOKEN) payable(recipient).transfer(amount);
         else IERC20(token).safeTransfer(recipient, amount);
     }
