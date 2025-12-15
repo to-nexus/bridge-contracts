@@ -30,7 +30,7 @@ contract BSCBridgeV2Test is BridgeTest {
         );
         vm.stopPrank();
 
-        bridgeBSCV2 = BSCBridgeV2(address(bridgeBSC));
+        bridgeBSCV2 = BSCBridgeV2(payable(address(bridgeBSC)));
     }
 
     function test_burn_cross_to_dead_wallet() public {

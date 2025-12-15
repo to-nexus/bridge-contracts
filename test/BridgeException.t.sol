@@ -81,7 +81,7 @@ contract BridgeExceptionTest is BridgeTest {
         // token pause
         vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), true);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), true, false);
 
         uint amount = 1000 ether;
 
@@ -96,14 +96,14 @@ contract BridgeExceptionTest is BridgeTest {
         // token unpause
         vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), false);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), false, false);
 
         deposit(false, amount, 5);
 
         // token pause
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), true);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), true, false);
 
         bridgeRevertCross = true;
         withdraw(true, amount, 5);
@@ -111,8 +111,46 @@ contract BridgeExceptionTest is BridgeTest {
         // token unpause
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, false);
 
         withdraw(false, amount, 5);
+    }
+
+    function test_finalize_at_token_paused() public {
+        uint amount = 1000 ether;
+
+        // First deposit tokens normally (BSC -> Cross)
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        // Set finalize pause on Cross chain for NATIVE_TOKEN before deposit
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, true);
+
+        // Initiate on BSC
+        vm.selectFork(bscForkID);
+        vm.prank(USER);
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(cross)), USER, amount, 0, 0, "");
+        bscIncrementIndex();
+
+        // Finalize on Cross should go to pending due to finalize pause
+        vm.selectFork(crossForkID);
+        uint userBalanceBefore = USER.balance;
+        crossFinalize(1, address(NATIVE_TOKEN), USER, amount, 5);
+
+        // User should NOT receive tokens (pending)
+        assertEq(USER.balance, userBalanceBefore, "User should not receive tokens when finalize paused");
+
+        // Unpause finalize
+        vm.prank(CrossOWNER);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, false);
+
+        // Release pending - now user should receive
+        bridgeCross.releasePending(BSC_CHAIN_ID, 1);
+        assertEq(USER.balance, userBalanceBefore + amount, "User should receive tokens after unpause");
     }
 }

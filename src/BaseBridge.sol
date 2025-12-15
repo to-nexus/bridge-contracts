@@ -12,6 +12,8 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {BridgeRegistry} from "./abstract/BridgeRegistry.sol";
 import {ValidatorManager} from "./abstract/ValidatorManager.sol";
 import {IBaseBridge} from "./interface/IBaseBridge.sol";
+
+import {IBridgeExecutor} from "./interface/IBridgeExecutor.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
 import {Const} from "./lib/Const.sol";
 import {ICrossMintableERC20} from "./token/ICrossMintableERC20.sol";
@@ -55,6 +57,7 @@ contract BaseBridge is
     error BaseBridgeFailedCall();
     error BaseBridgeMismatchPermitAccount();
     error BaseBridgeFailedRelease(Const.FinalizeStatus status);
+    error BaseBridgeOnlyExecutor();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -151,6 +154,20 @@ contract BaseBridge is
      */
     event DevSet(address indexed dev);
 
+    /**
+     * @notice Emitted when the bridge executor is set
+     * @param bridgeExecutor The address of the new bridge executor
+     */
+    event BridgeExecutorSet(address indexed bridgeExecutor);
+
+    /**
+     * @notice Emitted when extra call is executed via BridgeExecutor
+     * @param fromChainID Source chain ID
+     * @param index Unique identifier for the operation
+     * @param success Whether the extra call succeeded
+     */
+    event ExtraCallExecuted(uint indexed fromChainID, uint indexed index, bool success);
+
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
         "FinalizeBridge(uint256 fromChainID,uint256 index,address toToken,address to,uint256 value,bytes extraData)"
@@ -165,8 +182,11 @@ contract BaseBridge is
     /// @dev Block number when contract was initialized
     uint private _initializedAt;
 
+    /// @dev Bridge executor contract for handling extradata operations
+    IBridgeExecutor public bridgeExecutor;
+
     /// @dev Storage gap for future upgrades
-    uint[47] private __gap;
+    uint[46] private __gap;
 
     /**
      * @notice Contract constructor
@@ -378,7 +398,8 @@ contract BaseBridge is
         {
             (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, false);
             if (status == Const.FinalizeStatus.Success) {
-                status = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value);
+                status =
+                    _finalizeBridge(args.fromChainID, args.index, args.toToken, args.to, args.value, args.extraData);
             }
         }
 
@@ -563,7 +584,8 @@ contract BaseBridge is
     function _releasePending(uint remoteChainID, uint index, address recipient) private {
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
         if (recipient == address(0)) recipient = args.to;
-        (Const.FinalizeStatus status) = _finalizeBridge(args.fromChainID, args.toToken, recipient, args.value);
+        (Const.FinalizeStatus status) =
+            _finalizeBridge(args.fromChainID, args.index, args.toToken, recipient, args.value, args.extraData);
         require(status == Const.FinalizeStatus.Success, BaseBridgeFailedRelease(status));
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, recipient, args.value, block.timestamp);
     }
@@ -616,8 +638,8 @@ contract BaseBridge is
     {
         require(address(bridgeVerifier) != address(0), BaseBridgeVerifierNotSet());
 
-        TokenPair memory tokenPair = _tokenPairs[fromChainID][address(token)];
-        if (tokenPair.paused) return (Const.FinalizeStatus.TokenPaused, false);
+        // Check finalize pause status
+        if (_tokenFinalizePaused[fromChainID][address(token)]) return (Const.FinalizeStatus.TokenPaused, false);
 
         // Skip validation if this is a retry - validation was already completed in the initial attempt
         if (!retry) {
@@ -666,37 +688,102 @@ contract BaseBridge is
     /**
      * @notice Executes token transfer or minting for bridge finalization
      * @dev Handles different token types (native, mintable, regular)
+     * - If extraData is provided and bridgeExecutor is set, delegates to BridgeExecutor
+     * - On executor failure, reverts to normal token transfer to user
      * @param fromChainID Source chain ID
+     * @param index Finalize operation index
      * @param toToken Destination token
      * @param to Recipient address
      * @param value Amount to transfer/mint
+     * @param extraData Additional data for bridge executor (contract address + calldata)
      * @return status Success status
      */
-    function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value)
-        internal
+    function _finalizeBridge(
+        uint fromChainID,
+        uint index,
+        IERC20 toToken,
+        address to,
+        uint value,
+        bytes memory extraData
+    ) internal returns (Const.FinalizeStatus status) {
+        bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
+
+        // Check if extraData is provided and long enough (> 24 bytes for contract address and method ID)
+        if (extraData.length > 24 && address(bridgeExecutor) != address(0)) {
+            // Parse target contract address from extraData
+            address targetContract;
+            assembly {
+                targetContract := shr(96, mload(add(extraData, 32)))
+            }
+
+            // Check if target is whitelisted
+            if (bridgeExecutor.isWhitelistedTarget(targetContract)) {
+                bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
+
+                // For ERC20, transfer/mint to Executor first
+                // For Native token, send directly via msg.value in executeExtraCall
+                if (isERC20) {
+                    status = _transferOrMintToken(toToken, address(bridgeExecutor), value, isOrigin, false);
+                    if (status != Const.FinalizeStatus.Success) return status;
+                }
+
+                // Call executeExtraCall and check result
+                bool success = bridgeExecutor.executeExtraCall{value: isERC20 ? 0 : value}(
+                    fromChainID, index, toToken, to, value, extraData
+                );
+                emit ExtraCallExecuted(fromChainID, index, success);
+
+                if (success) {
+                    _withdrawToken(fromChainID, address(toToken), value);
+                    return Const.FinalizeStatus.Success;
+                }
+
+                // Failure: recover tokens based on token type
+                // Native token: Executor returned it via call
+                // Origin token: Bridge pulls back via transferFrom (Executor approved)
+                // Wrapped token: burn from Executor, then mint to user
+                if (isERC20) {
+                    if (isOrigin) toToken.safeTransferFrom(address(bridgeExecutor), address(this), value);
+                    else ICrossMintableERC20(address(toToken)).burn(address(bridgeExecutor), value);
+                }
+                // Fall through to normal flow below
+            }
+        }
+
+        // Normal token transfer flow (no extraData, not whitelisted, or extraCall failed)
+        status = _transferOrMintToken(toToken, to, value, isOrigin, false);
+        if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
+        return status;
+    }
+
+    /**
+     * @notice Transfers or mints tokens to recipient
+     * @param toToken Token to transfer/mint
+     * @param to Recipient address
+     * @param value Amount to transfer/mint
+     * @param isOrigin Whether token is origin token
+     * @param forceTransfer If true, always use transfer (token already minted)
+     * @return status Success status
+     */
+    function _transferOrMintToken(IERC20 toToken, address to, uint value, bool isOrigin, bool forceTransfer)
+        private
         returns (Const.FinalizeStatus status)
     {
         if (address(toToken) == Const.NATIVE_TOKEN) {
-            (bool ok) = _safeCall(payable(to), value, "");
-            if (!ok) return (Const.FinalizeStatus.TransferFailed);
-            _withdrawToken(fromChainID, Const.NATIVE_TOKEN, value);
-            return (Const.FinalizeStatus.Success);
-        } else if (value != 0) {
-            bytes memory data;
-            if (_tokenPairs[fromChainID][address(toToken)].isOrigin) {
-                data = abi.encodeCall(IERC20.transfer, (to, value));
-                status = Const.FinalizeStatus.TransferFailed;
-            } else {
-                data = abi.encodeCall(ICrossMintableERC20.mint, (to, value));
-                status = Const.FinalizeStatus.MintFailed;
-            }
-
-            if (_safeCall(payable(address(toToken)), 0, data)) {
-                status = Const.FinalizeStatus.Success;
-                _withdrawToken(fromChainID, address(toToken), value);
-            }
-            return status;
+            if (!_safeCall(payable(to), value, "")) return Const.FinalizeStatus.TransferFailed;
+            return Const.FinalizeStatus.Success;
         }
+        if (value == 0) return Const.FinalizeStatus.Success;
+
+        bytes memory data;
+        if (forceTransfer || isOrigin) {
+            data = abi.encodeCall(IERC20.transfer, (to, value));
+            status = Const.FinalizeStatus.TransferFailed;
+        } else {
+            data = abi.encodeCall(ICrossMintableERC20.mint, (to, value));
+            status = Const.FinalizeStatus.MintFailed;
+        }
+        return _safeCall(payable(address(toToken)), 0, data) ? Const.FinalizeStatus.Success : status;
     }
 
     /**
@@ -800,6 +887,24 @@ contract BaseBridge is
         require(address(_bridgeVerifier) != address(0), BaseBridgeCanNotZeroAddress());
         bridgeVerifier = _bridgeVerifier;
         emit BridgeVerifierSet(address(_bridgeVerifier));
+    }
+
+    /**
+     * @notice Sets the bridge executor contract
+     * @dev Updates the contract used for executing bridge operations with extradata
+     * @param _bridgeExecutor New bridge executor address
+     */
+    function setBridgeExecutor(IBridgeExecutor _bridgeExecutor) external onlyRole(Const.ADMIN_ROLE) {
+        bridgeExecutor = _bridgeExecutor;
+        emit BridgeExecutorSet(address(_bridgeExecutor));
+    }
+
+    /**
+     * @notice Receives native tokens from BridgeExecutor when extradata call fails
+     * @dev Only BridgeExecutor can send native tokens to this contract
+     */
+    receive() external payable {
+        require(msg.sender == address(bridgeExecutor), BaseBridgeOnlyExecutor());
     }
 
     /**

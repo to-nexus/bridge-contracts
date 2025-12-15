@@ -186,7 +186,7 @@ contract BSCTest is CrossChainTest {
             vm.expectRevert();
         }
 
-        ok = BSCBridgeV2(address(bridgeBSC)).burnCrossToDeadWallet(to, value, alreadyTransferred);
+        ok = BSCBridgeV2(payable(address(bridgeBSC))).burnCrossToDeadWallet(to, value, alreadyTransferred);
     }
 
     function bscCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {
