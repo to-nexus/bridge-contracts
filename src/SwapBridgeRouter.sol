@@ -37,6 +37,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     error SBRInvalidValue();
     error SBRRefundFailed();
     error SBRInvalidAmountIn();
+    error SBRInvalidPath();
 
     /// @notice Uniswap V3 SwapRouter address
     ISwapRouter public immutable swapRouter;
@@ -81,13 +82,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         checkDeadline(deadline)
         returns (uint amountOut)
     {
-        // Transfer tokenIn from user
-        IERC20(params.tokenIn).safeTransferFrom(msg.sender, address(this), params.amountIn);
+        _prepareSwap(params.tokenIn, params.amountIn);
 
-        // Approve swapRouter
-        IERC20(params.tokenIn).forceApprove(address(swapRouter), params.amountIn);
-
-        // Execute swap
         amountOut = swapRouter.exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: params.tokenIn,
@@ -101,7 +97,6 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
 
@@ -127,16 +122,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         checkDeadline(deadline)
         returns (uint amountOut)
     {
-        // Extract tokenIn and tokenOut from path
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, false);
+        _prepareSwap(tokenIn, params.amountIn);
 
-        // Transfer tokenIn from user
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), params.amountIn);
-
-        // Approve swapRouter
-        IERC20(tokenIn).forceApprove(address(swapRouter), params.amountIn);
-
-        // Execute swap
         amountOut = swapRouter.exactInput(
             ISwapRouter.ExactInputParams({
                 path: params.path,
@@ -147,7 +135,6 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
 
@@ -173,13 +160,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         checkDeadline(deadline)
         returns (uint amountIn)
     {
-        // Transfer max tokenIn from user
-        IERC20(params.tokenIn).safeTransferFrom(msg.sender, address(this), params.amountInMaximum);
+        _prepareSwap(params.tokenIn, params.amountInMaximum);
 
-        // Approve swapRouter
-        IERC20(params.tokenIn).forceApprove(address(swapRouter), params.amountInMaximum);
-
-        // Execute swap
         amountIn = swapRouter.exactOutputSingle(
             ISwapRouter.ExactOutputSingleParams({
                 tokenIn: params.tokenIn,
@@ -193,15 +175,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Clear approval
-        IERC20(params.tokenIn).forceApprove(address(swapRouter), 0);
+        _refundExcess(params.tokenIn, params.amountInMaximum, amountIn);
 
-        // Refund excess tokenIn
-        if (amountIn < params.amountInMaximum) {
-            IERC20(params.tokenIn).safeTransfer(msg.sender, params.amountInMaximum - amountIn);
-        }
-
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, params.amountOut, params.bridgeParams);
 
@@ -227,16 +202,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         checkDeadline(deadline)
         returns (uint amountIn)
     {
-        // For exactOutput, path is reversed: tokenOut is first, tokenIn is last
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, true);
+        _prepareSwap(tokenIn, params.amountInMaximum);
 
-        // Transfer max tokenIn from user
-        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), params.amountInMaximum);
-
-        // Approve swapRouter
-        IERC20(tokenIn).forceApprove(address(swapRouter), params.amountInMaximum);
-
-        // Execute swap
         amountIn = swapRouter.exactOutput(
             ISwapRouter.ExactOutputParams({
                 path: params.path,
@@ -247,15 +215,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Clear approval
-        IERC20(tokenIn).forceApprove(address(swapRouter), 0);
+        _refundExcess(tokenIn, params.amountInMaximum, amountIn);
 
-        // Refund excess tokenIn
-        if (amountIn < params.amountInMaximum) {
-            IERC20(tokenIn).safeTransfer(msg.sender, params.amountInMaximum - amountIn);
-        }
-
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
 
@@ -287,13 +248,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         require(msg.value == params.amountIn, SBRInvalidValue());
         require(params.tokenIn == address(WETH9), SBRInvalidAddress());
 
-        // Wrap ETH to WETH
-        WETH9.deposit{value: msg.value}();
+        _prepareSwapETH(params.amountIn);
 
-        // Approve swapRouter
-        WETH9.approve(address(swapRouter), params.amountIn);
-
-        // Execute swap
         amountOut = swapRouter.exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: params.tokenIn,
@@ -307,7 +263,6 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
 
@@ -336,17 +291,11 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     {
         require(msg.value == params.amountIn, SBRInvalidValue());
 
-        // Extract tokenIn and tokenOut from path
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, false);
         require(tokenIn == address(WETH9), SBRInvalidAddress());
 
-        // Wrap ETH to WETH
-        WETH9.deposit{value: msg.value}();
+        _prepareSwapETH(params.amountIn);
 
-        // Approve swapRouter
-        WETH9.approve(address(swapRouter), params.amountIn);
-
-        // Execute swap
         amountOut = swapRouter.exactInput(
             ISwapRouter.ExactInputParams({
                 path: params.path,
@@ -357,7 +306,6 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
 
@@ -387,13 +335,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         require(msg.value >= params.amountInMaximum, SBRInvalidValue());
         require(params.tokenIn == address(WETH9), SBRInvalidAddress());
 
-        // Wrap ETH to WETH
-        WETH9.deposit{value: params.amountInMaximum}();
+        _prepareSwapETH(params.amountInMaximum);
 
-        // Approve swapRouter
-        WETH9.approve(address(swapRouter), params.amountInMaximum);
-
-        // Execute swap
         amountIn = swapRouter.exactOutputSingle(
             ISwapRouter.ExactOutputSingleParams({
                 tokenIn: params.tokenIn,
@@ -407,24 +350,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Clear approval
-        WETH9.approve(address(swapRouter), 0);
+        _refundExcessETH(params.amountInMaximum, amountIn);
 
-        // Refund excess WETH as ETH
-        if (amountIn < params.amountInMaximum) {
-            uint refundAmount = params.amountInMaximum - amountIn;
-            WETH9.withdraw(refundAmount);
-            (bool success,) = msg.sender.call{value: refundAmount}("");
-            require(success, SBRRefundFailed());
-        }
-
-        // Refund any extra ETH sent beyond amountInMaximum
-        if (msg.value > params.amountInMaximum) {
-            (bool success,) = msg.sender.call{value: msg.value - params.amountInMaximum}("");
-            require(success, SBRRefundFailed());
-        }
-
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, params.amountOut, params.bridgeParams);
 
@@ -453,17 +380,11 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     {
         require(msg.value >= params.amountInMaximum, SBRInvalidValue());
 
-        // For exactOutput, path is reversed: tokenOut is first, tokenIn is last
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, true);
         require(tokenIn == address(WETH9), SBRInvalidAddress());
 
-        // Wrap ETH to WETH
-        WETH9.deposit{value: params.amountInMaximum}();
+        _prepareSwapETH(params.amountInMaximum);
 
-        // Approve swapRouter
-        WETH9.approve(address(swapRouter), params.amountInMaximum);
-
-        // Execute swap
         amountIn = swapRouter.exactOutput(
             ISwapRouter.ExactOutputParams({
                 path: params.path,
@@ -474,24 +395,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        // Clear approval
-        WETH9.approve(address(swapRouter), 0);
+        _refundExcessETH(params.amountInMaximum, amountIn);
 
-        // Refund excess WETH as ETH
-        if (amountIn < params.amountInMaximum) {
-            uint refundAmount = params.amountInMaximum - amountIn;
-            WETH9.withdraw(refundAmount);
-            (bool success,) = msg.sender.call{value: refundAmount}("");
-            require(success, SBRRefundFailed());
-        }
-
-        // Refund any extra ETH sent beyond amountInMaximum
-        if (msg.value > params.amountInMaximum) {
-            (bool success,) = msg.sender.call{value: msg.value - params.amountInMaximum}("");
-            require(success, SBRRefundFailed());
-        }
-
-        // Bridge the swapped tokens
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
 
@@ -637,6 +542,68 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
     // ============ Internal Functions ============
 
+    // ============ Internal Helper Functions ============
+
+    /**
+     * @notice Prepare ERC20 swap by transferring tokens and setting approval
+     * @param tokenIn Input token address
+     * @param amountIn Amount to transfer and approve
+     */
+    function _prepareSwap(address tokenIn, uint amountIn) internal {
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).forceApprove(address(swapRouter), amountIn);
+    }
+
+    /**
+     * @notice Prepare ETH swap by wrapping to WETH and setting approval
+     * @param amountIn Amount to wrap and approve
+     */
+    function _prepareSwapETH(uint amountIn) internal {
+        WETH9.deposit{value: amountIn}();
+        WETH9.approve(address(swapRouter), amountIn);
+    }
+
+    /**
+     * @notice Refund excess ERC20 tokens after exactOutput swap
+     * @param tokenIn Input token address
+     * @param amountInMaximum Maximum amount that was approved
+     * @param amountIn Actual amount used
+     */
+    function _refundExcess(address tokenIn, uint amountInMaximum, uint amountIn) internal {
+        IERC20(tokenIn).forceApprove(address(swapRouter), 0);
+        if (amountIn < amountInMaximum) IERC20(tokenIn).safeTransfer(msg.sender, amountInMaximum - amountIn);
+    }
+
+    /**
+     * @notice Refund excess ETH after exactOutput swap
+     * @param amountInMaximum Maximum amount that was wrapped
+     * @param amountIn Actual amount used
+     */
+    function _refundExcessETH(uint amountInMaximum, uint amountIn) internal {
+        WETH9.approve(address(swapRouter), 0);
+        if (amountIn < amountInMaximum) {
+            uint refundAmount = amountInMaximum - amountIn;
+            WETH9.withdraw(refundAmount);
+            (bool success,) = msg.sender.call{value: refundAmount}("");
+            require(success, SBRRefundFailed());
+        }
+        // Refund any extra ETH sent beyond amountInMaximum
+        if (msg.value > amountInMaximum) {
+            (bool success,) = msg.sender.call{value: msg.value - amountInMaximum}("");
+            require(success, SBRRefundFailed());
+        }
+    }
+
+    /**
+     * @notice Validate V3 path length format
+     * @dev V3 path format: 20 + n*(3+20) bytes where n >= 1
+     * @param pathLength Length of the path bytes
+     */
+    function _validatePathLength(uint pathLength) internal pure {
+        require(pathLength >= 43, SBRInvalidAddress()); // minimum: 20 + 3 + 20
+        require((pathLength - 20) % 23 == 0, SBRInvalidPath()); // V3 path format
+    }
+
     /**
      * @notice Decode tokenIn and tokenOut from path bytes
      * @param path The swap path
@@ -649,7 +616,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         pure
         returns (address tokenIn, address tokenOut)
     {
-        require(path.length >= 43, SBRInvalidAddress()); // minimum: 20 + 3 + 20
+        _validatePathLength(path.length);
 
         if (reversed) {
             // exactOutput path: tokenOut -> fee -> ... -> tokenIn
@@ -669,7 +636,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
      * @return token The extracted token address
      */
     function _extractTokenFromPath(bytes memory path, bool first) internal pure returns (address token) {
-        require(path.length >= 43, SBRInvalidAddress());
+        _validatePathLength(path.length);
 
         if (first) {
             // Extract first 20 bytes (address at the beginning of path)
@@ -773,11 +740,19 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             _getExpectedBridgeAmount(bridgeParams.toChainID, IERC20(token), totalAmount);
         require(ok, SBRInsufficientOutput());
 
+        // Rounding dust handling:
+        // - Quote math uses floor division, so `bridgeValue + networkFee + exFee` can be < totalAmount.
+        // - We cannot "stuff" dust into `exFee` because BaseBridge clamps fees to the minimum calculated fee.
+        // Strategy:
+        // - Bridge only the spendable amount (`bridgeValue + minimum fees`)
+        // - Refund any leftover dust back to the user to avoid locking tokens in this router
+        uint spendAmount = bridgeValue_ + networkFee_ + exFee_;
+
         // Get the initiate index before bridge call
         initiateIndex_ = bridge.getNextInitiateIndex(bridgeParams.toChainID);
 
         // Approve bridge to spend tokens
-        IERC20(token).forceApprove(address(bridge), totalAmount);
+        IERC20(token).forceApprove(address(bridge), spendAmount);
 
         // Execute bridge
         bridge.bridgeToken(
@@ -789,6 +764,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             exFee_,
             bridgeParams.extraData
         );
+
+        // Refund any remaining dust so it doesn't get stuck in the router
+        if (totalAmount > spendAmount) IERC20(token).safeTransfer(msg.sender, totalAmount - spendAmount);
     }
 
     /**

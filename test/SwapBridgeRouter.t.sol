@@ -1150,6 +1150,13 @@ contract SwapBridgeRouterTest is BridgeTest {
             "Bridge balance should increase by bridgeValue only (fees go to _dev)"
         );
 
+        // Ensure no rounding dust is trapped in the router contract
+        assertEq(
+            swapOutputTokenBSC.balanceOf(address(swapBridgeRouterBSC)),
+            0,
+            "SwapBridgeRouter should not retain tokenOut dust after bridging"
+        );
+
         // Clean up
         vm.prank(OWNER);
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 0);
