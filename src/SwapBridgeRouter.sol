@@ -3,12 +3,18 @@ pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IBaseBridge} from "./interface/IBaseBridge.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
-import {ISwapBridgeRouter, IUniswapV3SwapRouter, IUniswapV3Quoter, IWETH9} from "./interface/ISwapBridgeRouter.sol";
+import {
+    IPeripheryImmutableState,
+    IQuoterV2,
+    ISwapBridgeRouter,
+    ISwapRouter,
+    IWETH9
+} from "./interface/ISwapBridgeRouter.sol";
 
 /**
  * @title SwapBridgeRouter
@@ -21,7 +27,7 @@ import {ISwapBridgeRouter, IUniswapV3SwapRouter, IUniswapV3Quoter, IWETH9} from 
  * - Single pool and multi-hop swaps
  * - Automatic fee calculation for bridge operations
  */
-contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
+contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     using SafeERC20 for IERC20;
     using Math for uint;
 
@@ -33,10 +39,10 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
     error SBRInvalidAmountIn();
 
     /// @notice Uniswap V3 SwapRouter address
-    IUniswapV3SwapRouter public immutable swapRouter;
+    ISwapRouter public immutable swapRouter;
 
-    /// @notice Uniswap V3 Quoter address
-    IUniswapV3Quoter public immutable quoter;
+    /// @notice Uniswap V3 QuoterV2 address
+    IQuoterV2 public immutable quoter;
 
     /// @notice Bridge contract address
     IBaseBridge public immutable bridge;
@@ -59,10 +65,10 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
     constructor(address _swapRouter, address _quoter, address _bridge) {
         require(_swapRouter != address(0) && _quoter != address(0) && _bridge != address(0), SBRInvalidAddress());
 
-        swapRouter = IUniswapV3SwapRouter(_swapRouter);
-        quoter = IUniswapV3Quoter(_quoter);
+        swapRouter = ISwapRouter(_swapRouter);
+        quoter = IQuoterV2(_quoter);
         bridge = IBaseBridge(_bridge);
-        WETH9 = IWETH9(IUniswapV3SwapRouter(_swapRouter).WETH9());
+        WETH9 = IWETH9(IPeripheryImmutableState(_swapRouter).WETH9());
     }
 
     // ============ ERC20 Swap + Bridge Functions ============
@@ -83,7 +89,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountOut = swapRouter.exactInputSingle(
-            IUniswapV3SwapRouter.ExactInputSingleParams({
+            ISwapRouter.ExactInputSingleParams({
                 tokenIn: params.tokenIn,
                 tokenOut: params.tokenOut,
                 fee: params.fee,
@@ -96,7 +102,8 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         );
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) = _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
+            _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
             msg.sender,
@@ -105,6 +112,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             params.amountIn,
             amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -130,7 +138,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountOut = swapRouter.exactInput(
-            IUniswapV3SwapRouter.ExactInputParams({
+            ISwapRouter.ExactInputParams({
                 path: params.path,
                 recipient: address(this),
                 deadline: deadline,
@@ -140,7 +148,8 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         );
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) = _bridgeToken(tokenOut, amountOut, params.bridgeParams);
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
+            _bridgeToken(tokenOut, amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
             msg.sender,
@@ -149,6 +158,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             params.amountIn,
             amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -171,7 +181,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountIn = swapRouter.exactOutputSingle(
-            IUniswapV3SwapRouter.ExactOutputSingleParams({
+            ISwapRouter.ExactOutputSingleParams({
                 tokenIn: params.tokenIn,
                 tokenOut: params.tokenOut,
                 fee: params.fee,
@@ -192,7 +202,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         }
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) =
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, params.amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
@@ -202,6 +212,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             amountIn,
             params.amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -227,7 +238,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountIn = swapRouter.exactOutput(
-            IUniswapV3SwapRouter.ExactOutputParams({
+            ISwapRouter.ExactOutputParams({
                 path: params.path,
                 recipient: address(this),
                 deadline: deadline,
@@ -245,7 +256,8 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         }
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) = _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
+            _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
             msg.sender,
@@ -254,6 +266,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             amountIn,
             params.amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -282,7 +295,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountOut = swapRouter.exactInputSingle(
-            IUniswapV3SwapRouter.ExactInputSingleParams({
+            ISwapRouter.ExactInputSingleParams({
                 tokenIn: params.tokenIn,
                 tokenOut: params.tokenOut,
                 fee: params.fee,
@@ -295,7 +308,8 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         );
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) = _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
+            _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
             msg.sender,
@@ -304,6 +318,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             params.amountIn,
             amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -333,7 +348,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountOut = swapRouter.exactInput(
-            IUniswapV3SwapRouter.ExactInputParams({
+            ISwapRouter.ExactInputParams({
                 path: params.path,
                 recipient: address(this),
                 deadline: deadline,
@@ -343,7 +358,8 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         );
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) = _bridgeToken(tokenOut, amountOut, params.bridgeParams);
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
+            _bridgeToken(tokenOut, amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
             msg.sender,
@@ -352,6 +368,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             params.amountIn,
             amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -378,7 +395,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountIn = swapRouter.exactOutputSingle(
-            IUniswapV3SwapRouter.ExactOutputSingleParams({
+            ISwapRouter.ExactOutputSingleParams({
                 tokenIn: params.tokenIn,
                 tokenOut: params.tokenOut,
                 fee: params.fee,
@@ -408,7 +425,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         }
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) =
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, params.amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
@@ -418,6 +435,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             amountIn,
             params.amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -447,7 +465,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
 
         // Execute swap
         amountIn = swapRouter.exactOutput(
-            IUniswapV3SwapRouter.ExactOutputParams({
+            ISwapRouter.ExactOutputParams({
                 path: params.path,
                 recipient: address(this),
                 deadline: deadline,
@@ -474,7 +492,8 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         }
 
         // Bridge the swapped tokens
-        (uint bridgeValue, uint networkFee, uint exFee) = _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
+        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
+            _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
 
         emit SwapAndBridge(
             msg.sender,
@@ -483,6 +502,7 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
             amountIn,
             params.amountOut,
             params.bridgeParams.toChainID,
+            initiateIndex,
             bridgeValue,
             networkFee,
             exFee
@@ -519,8 +539,16 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         override
         returns (bool ok, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee)
     {
-        // Get swap quote from Uniswap V3 Quoter
-        try quoter.quoteExactInputSingle(tokenIn, tokenOut, fee, amountIn, 0) returns (uint _swapAmountOut) {
+        // Get swap quote from Uniswap V3 QuoterV2
+        try quoter.quoteExactInputSingle(
+            IQuoterV2.QuoteExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                amountIn: amountIn,
+                fee: fee,
+                sqrtPriceLimitX96: 0
+            })
+        ) returns (uint _swapAmountOut, uint160, uint32, uint) {
             swapAmountOut = _swapAmountOut;
         } catch {
             return (false, 0, 0, 0, 0);
@@ -540,8 +568,10 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         require(path.length >= 43, SBRInvalidAddress());
         address tokenOut = _extractTokenFromPath(path, false);
 
-        // Get swap quote from Uniswap V3 Quoter
-        try quoter.quoteExactInput(path, amountIn) returns (uint _swapAmountOut) {
+        // Get swap quote from Uniswap V3 QuoterV2
+        try quoter.quoteExactInput(path, amountIn) returns (
+            uint _swapAmountOut, uint160[] memory, uint32[] memory, uint
+        ) {
             swapAmountOut = _swapAmountOut;
         } catch {
             return (false, 0, 0, 0, 0);
@@ -561,8 +591,16 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         (ok, swapAmountOut, networkFee, exFee) = _getRequiredSwapOutput(toChainID, IERC20(tokenOut), bridgeValue);
         if (!ok) return (false, 0, 0, 0, 0);
 
-        // Get required input from Uniswap V3 Quoter
-        try quoter.quoteExactOutputSingle(tokenIn, tokenOut, fee, swapAmountOut, 0) returns (uint _amountIn) {
+        // Get required input from Uniswap V3 QuoterV2
+        try quoter.quoteExactOutputSingle(
+            IQuoterV2.QuoteExactOutputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                amount: swapAmountOut,
+                fee: fee,
+                sqrtPriceLimitX96: 0
+            })
+        ) returns (uint _amountIn, uint160, uint32, uint) {
             amountIn = _amountIn;
         } catch {
             return (false, 0, 0, 0, 0);
@@ -585,8 +623,10 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
         (ok, swapAmountOut, networkFee, exFee) = _getRequiredSwapOutput(toChainID, IERC20(tokenOut), bridgeValue);
         if (!ok) return (false, 0, 0, 0, 0);
 
-        // Get required input from Uniswap V3 Quoter
-        try quoter.quoteExactOutput(path, swapAmountOut) returns (uint _amountIn) {
+        // Get required input from Uniswap V3 QuoterV2
+        try quoter.quoteExactOutput(path, swapAmountOut) returns (
+            uint _amountIn, uint160[] memory, uint32[] memory, uint
+        ) {
             amountIn = _amountIn;
         } catch {
             return (false, 0, 0, 0, 0);
@@ -718,19 +758,23 @@ contract SwapBridgeRouter is ReentrancyGuard, ISwapBridgeRouter {
      * @param token Token to bridge
      * @param totalAmount Total amount received from swap
      * @param bridgeParams Bridge parameters
+     * @return initiateIndex_ The bridge initiate index for tracking
      * @return bridgeValue_ The amount that will be bridged (after fees)
      * @return networkFee_ The network fee
      * @return exFee_ The exchange fee
      */
     function _bridgeToken(address token, uint totalAmount, SwapAndBridgeParams calldata bridgeParams)
         internal
-        returns (uint bridgeValue_, uint networkFee_, uint exFee_)
+        returns (uint initiateIndex_, uint bridgeValue_, uint networkFee_, uint exFee_)
     {
         // Calculate fees and bridge value (gas optimized: internal call instead of external)
         bool ok;
         (ok, bridgeValue_, networkFee_, exFee_) =
             _getExpectedBridgeAmount(bridgeParams.toChainID, IERC20(token), totalAmount);
         require(ok, SBRInsufficientOutput());
+
+        // Get the initiate index before bridge call
+        initiateIndex_ = bridge.getNextInitiateIndex(bridgeParams.toChainID);
 
         // Approve bridge to spend tokens
         IERC20(token).forceApprove(address(bridge), totalAmount);

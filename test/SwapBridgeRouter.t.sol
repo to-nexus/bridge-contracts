@@ -7,9 +7,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {SwapBridgeRouter} from "../src/SwapBridgeRouter.sol";
 
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
-import {
-    ISwapBridgeRouter, IUniswapV3Quoter, IUniswapV3SwapRouter, IWETH9
-} from "../src/interface/ISwapBridgeRouter.sol";
+import {IQuoterV2, ISwapBridgeRouter, ISwapRouter, IWETH9} from "../src/interface/ISwapBridgeRouter.sol";
 import {Const} from "../src/lib/Const.sol";
 import {BridgeTest} from "./Bridge.t.sol";
 import {TestToken} from "./token/TestToken.sol";
@@ -39,9 +37,10 @@ contract MockWETH9 is TestToken {
 /**
  * @title MockUniswapV3Router
  * @notice Mock Uniswap V3 Router for testing swap functionality
+ * @dev Implements ISwapRouter and provides WETH9() via IPeripheryImmutableState
  */
-contract MockUniswapV3Router is IUniswapV3SwapRouter {
-    address public immutable override WETH9;
+contract MockUniswapV3Router is ISwapRouter {
+    address public immutable WETH9;
     uint public swapRate = 1e18; // 1:1 default rate
 
     constructor(address _weth9) {
@@ -50,6 +49,11 @@ contract MockUniswapV3Router is IUniswapV3SwapRouter {
 
     function setSwapRate(uint _rate) external {
         swapRate = _rate;
+    }
+
+    // IUniswapV3SwapCallback implementation (required by ISwapRouter)
+    function uniswapV3SwapCallback(int, int, bytes calldata) external pure override {
+        // Mock implementation - do nothing
     }
 
     function exactInputSingle(ExactInputSingleParams calldata params)
@@ -126,41 +130,71 @@ contract MockUniswapV3Router is IUniswapV3SwapRouter {
 
 /**
  * @title MockUniswapV3Quoter
- * @notice Mock Uniswap V3 Quoter for testing quote functionality
+ * @notice Mock Uniswap V3 QuoterV2 for testing quote functionality
  */
-contract MockUniswapV3Quoter is IUniswapV3Quoter {
+contract MockUniswapV3Quoter is IQuoterV2 {
     uint public swapRate = 1e18; // 1:1 default rate
 
     function setSwapRate(uint _rate) external {
         swapRate = _rate;
     }
 
-    function quoteExactInputSingle(
-        address, /* tokenIn */
-        address, /* tokenOut */
-        uint24, /* fee */
-        uint amountIn,
-        uint160 /* sqrtPriceLimitX96 */
-    ) external view override returns (uint amountOut) {
+    function quoteExactInputSingle(QuoteExactInputSingleParams memory params)
+        external
+        view
+        override
+        returns (uint amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint gasEstimate)
+    {
+        amountOut = params.amountIn * swapRate / 1e18;
+        sqrtPriceX96After = 0;
+        initializedTicksCrossed = 0;
+        gasEstimate = 100000;
+    }
+
+    function quoteExactInput(bytes memory, /* path */ uint amountIn)
+        external
+        view
+        override
+        returns (
+            uint amountOut,
+            uint160[] memory sqrtPriceX96AfterList,
+            uint32[] memory initializedTicksCrossedList,
+            uint gasEstimate
+        )
+    {
         amountOut = amountIn * swapRate / 1e18;
+        sqrtPriceX96AfterList = new uint160[](1);
+        initializedTicksCrossedList = new uint32[](1);
+        gasEstimate = 100000;
     }
 
-    function quoteExactInput(bytes memory, /* path */ uint amountIn) external view override returns (uint amountOut) {
-        amountOut = amountIn * swapRate / 1e18;
+    function quoteExactOutputSingle(QuoteExactOutputSingleParams memory params)
+        external
+        view
+        override
+        returns (uint amountIn, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint gasEstimate)
+    {
+        amountIn = params.amount * 1e18 / swapRate;
+        sqrtPriceX96After = 0;
+        initializedTicksCrossed = 0;
+        gasEstimate = 100000;
     }
 
-    function quoteExactOutputSingle(
-        address, /* tokenIn */
-        address, /* tokenOut */
-        uint24, /* fee */
-        uint amountOut,
-        uint160 /* sqrtPriceLimitX96 */
-    ) external view override returns (uint amountIn) {
+    function quoteExactOutput(bytes memory, /* path */ uint amountOut)
+        external
+        view
+        override
+        returns (
+            uint amountIn,
+            uint160[] memory sqrtPriceX96AfterList,
+            uint32[] memory initializedTicksCrossedList,
+            uint gasEstimate
+        )
+    {
         amountIn = amountOut * 1e18 / swapRate;
-    }
-
-    function quoteExactOutput(bytes memory, /* path */ uint amountOut) external view override returns (uint amountIn) {
-        amountIn = amountOut * 1e18 / swapRate;
+        sqrtPriceX96AfterList = new uint160[](1);
+        initializedTicksCrossedList = new uint32[](1);
+        gasEstimate = 100000;
     }
 }
 
@@ -605,6 +639,59 @@ contract SwapBridgeRouterTest is BridgeTest {
         assertEq(amountOut, amountIn * 2, "Should get 2x output with 2:1 rate");
     }
 
+    /**
+     * @notice Test SwapAndBridge event includes correct initiateIndex
+     */
+    function test_swapAndBridgeEvent_emitsInitiateIndex() public {
+        uint amountIn = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+
+        // Get the expected initiateIndex before the swap
+        uint expectedInitiateIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
+
+        // Approve SwapBridgeRouter to spend CROSS tokens
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
+            .ExactInputSingleAndBridgeParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Expect the SwapAndBridge event with correct initiateIndex
+        vm.expectEmit(true, true, true, true);
+        emit ISwapBridgeRouter.SwapAndBridge(
+            USER,
+            address(cross),
+            address(swapOutputTokenBSC),
+            amountIn,
+            amountIn, // 1:1 rate
+            CROSS_CHAIN_ID,
+            expectedInitiateIndex,
+            amountIn, // bridgeValue (no fees)
+            0, // networkFee
+            0 // exFee
+        );
+
+        // Execute swap and bridge
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapExactInputSingleAndBridge(params, block.timestamp + 1 hours);
+
+        // Verify the initiateIndex was incremented
+        assertEq(
+            bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID),
+            expectedInitiateIndex + 1,
+            "Initiate index should be incremented"
+        );
+    }
+
     // ============ Quote Function Tests ============
 
     /**
@@ -990,9 +1077,12 @@ contract SwapBridgeRouterTest is BridgeTest {
         // Verify exchange fee is approximately 2% of bridgeValue
         assertGt(exFee, 0, "Exchange fee should be positive");
         assertLt(bridgeValue, swapAmountOut, "Bridge value should be less than swap output");
+        assertEq(networkFee, 0, "Network fee should be 0 (gas price not configured)");
 
-        // bridgeValue + exFee should approximately equal swapAmountOut (networkFee is 0)
-        assertApproxEqAbs(bridgeValue + exFee, swapAmountOut, 1, "bridgeValue + exFee should equal swapAmountOut");
+        // bridgeValue + exFee + networkFee should equal swapAmountOut
+        assertApproxEqAbs(
+            bridgeValue + exFee + networkFee, swapAmountOut, 1, "bridgeValue + fees should equal swapAmountOut"
+        );
 
         // Verify the ratio: exFee / bridgeValue ≈ exFeeRate / denominator
         uint actualRatio = (exFee * denominator) / bridgeValue;
@@ -1025,6 +1115,7 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         // Verify expected values have fees applied
         assertGt(expectedExFee, 0, "Expected exchange fee should be positive");
+        assertEq(expectedNetworkFee, 0, "Expected network fee should be 0 (gas price not configured)");
         assertLt(expectedBridgeValue, expectedSwapOut, "Expected bridge value should be less than swap output");
 
         // Approve and execute
@@ -1123,12 +1214,14 @@ contract SwapBridgeRouterTest is BridgeTest {
     function test_getAmountSwapBridgeOut_variousFeeRates() public {
         uint amountIn = 1000 * 1e18;
         uint denominator = 10000;
+        uint feeRate1 = 50; // 0.5%
+        uint feeRate2 = 500; // 5%
 
         vm.selectFork(bscForkID);
 
         // Test with 0.5% fee
         vm.prank(OWNER);
-        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 50); // 0.5%
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, feeRate1);
 
         (bool ok1,, uint bridgeValue1,, uint exFee1) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
             CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
@@ -1136,15 +1229,23 @@ contract SwapBridgeRouterTest is BridgeTest {
         assertTrue(ok1, "Quote should succeed");
         assertApproxEqAbs(bridgeValue1 + exFee1, amountIn, 1, "Total should equal input");
 
+        // Verify fee ratio for 0.5%
+        uint actualRatio1 = (exFee1 * denominator) / bridgeValue1;
+        assertApproxEqAbs(actualRatio1, feeRate1, 1, "Fee ratio should match 0.5%");
+
         // Test with 5% fee
         vm.prank(OWNER);
-        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 500); // 5%
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, feeRate2);
 
         (bool ok2,, uint bridgeValue2,, uint exFee2) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
             CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
         );
         assertTrue(ok2, "Quote should succeed");
         assertApproxEqAbs(bridgeValue2 + exFee2, amountIn, 1, "Total should equal input");
+
+        // Verify fee ratio for 5%
+        uint actualRatio2 = (exFee2 * denominator) / bridgeValue2;
+        assertApproxEqAbs(actualRatio2, feeRate2, 1, "Fee ratio should match 5%");
 
         // Higher fee rate should result in lower bridgeValue
         assertLt(bridgeValue2, bridgeValue1, "Higher fee should result in lower bridge value");
