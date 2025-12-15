@@ -89,14 +89,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     event TokenPauseSet(uint indexed remoteChainID, address indexed token, bool initiatePause, bool finalizePause);
 
     /**
-     * @notice Emitted when token finalize pause status is set
-     * @param remoteChainID Chain ID of the token pair
-     * @param token Token address
-     * @param pause New pause status
-     */
-    event TokenFinalizePauseSet(uint indexed remoteChainID, address indexed token, bool pause);
-
-    /**
      * @notice Emitted when a chain is paused or unpaused
      * @param remoteChainID ID of the remote chain
      * @param pause New pause status

@@ -176,7 +176,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /**
      * @notice Emergency function to recover stuck tokens
      * @dev Only callable by admin
-     * @param token Token to recover (address(0) for native token)
+     * @param token Token to recover (address(1) for native token, i.e., Const.NATIVE_TOKEN)
      * @param amount Amount to recover
      * @param recipient Address to send recovered tokens to
      */

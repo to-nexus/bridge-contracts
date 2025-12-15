@@ -57,6 +57,7 @@ contract BaseBridge is
     error BaseBridgeFailedCall();
     error BaseBridgeMismatchPermitAccount();
     error BaseBridgeFailedRelease(Const.FinalizeStatus status);
+    error BaseBridgeOnlyExecutor();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -397,7 +398,8 @@ contract BaseBridge is
         {
             (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, false);
             if (status == Const.FinalizeStatus.Success) {
-                status = _finalizeBridge(args.fromChainID, args.toToken, args.to, args.value, args.extraData);
+                status =
+                    _finalizeBridge(args.fromChainID, args.index, args.toToken, args.to, args.value, args.extraData);
             }
         }
 
@@ -583,7 +585,7 @@ contract BaseBridge is
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
         if (recipient == address(0)) recipient = args.to;
         (Const.FinalizeStatus status) =
-            _finalizeBridge(args.fromChainID, args.toToken, recipient, args.value, args.extraData);
+            _finalizeBridge(args.fromChainID, args.index, args.toToken, recipient, args.value, args.extraData);
         require(status == Const.FinalizeStatus.Success, BaseBridgeFailedRelease(status));
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, recipient, args.value, block.timestamp);
     }
@@ -689,16 +691,21 @@ contract BaseBridge is
      * - If extraData is provided and bridgeExecutor is set, delegates to BridgeExecutor
      * - On executor failure, reverts to normal token transfer to user
      * @param fromChainID Source chain ID
+     * @param index Finalize operation index
      * @param toToken Destination token
      * @param to Recipient address
      * @param value Amount to transfer/mint
      * @param extraData Additional data for bridge executor (contract address + calldata)
      * @return status Success status
      */
-    function _finalizeBridge(uint fromChainID, IERC20 toToken, address to, uint value, bytes memory extraData)
-        internal
-        returns (Const.FinalizeStatus status)
-    {
+    function _finalizeBridge(
+        uint fromChainID,
+        uint index,
+        IERC20 toToken,
+        address to,
+        uint value,
+        bytes memory extraData
+    ) internal returns (Const.FinalizeStatus status) {
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
 
         // Check if extraData is provided and long enough (> 24 bytes for contract address and method ID)
@@ -711,8 +718,6 @@ contract BaseBridge is
 
             // Check if target is whitelisted
             if (bridgeExecutor.isWhitelistedTarget(targetContract)) {
-                uint index = _chainData[fromChainID].finalizeIndex;
-
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
 
                 // For ERC20, transfer/mint to Executor first
@@ -738,7 +743,7 @@ contract BaseBridge is
                 // Origin token: Bridge pulls back via transferFrom (Executor approved)
                 // Wrapped token: burn from Executor, then mint to user
                 if (isERC20) {
-                    if (isOrigin) toToken.transferFrom(address(bridgeExecutor), address(this), value);
+                    if (isOrigin) toToken.safeTransferFrom(address(bridgeExecutor), address(this), value);
                     else ICrossMintableERC20(address(toToken)).burn(address(bridgeExecutor), value);
                 }
                 // Fall through to normal flow below
@@ -899,7 +904,7 @@ contract BaseBridge is
      * @dev Only BridgeExecutor can send native tokens to this contract
      */
     receive() external payable {
-        require(msg.sender == address(bridgeExecutor), "Only BridgeExecutor");
+        require(msg.sender == address(bridgeExecutor), BaseBridgeOnlyExecutor());
     }
 
     /**
