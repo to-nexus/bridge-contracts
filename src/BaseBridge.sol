@@ -731,8 +731,6 @@ contract BaseBridge is
             if (isWhitelisted) {
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
 
-                bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
-
                 // For ERC20, transfer/mint to Executor first
                 // For Native token, send directly via msg.value in executeExtraCall
                 if (isERC20) {
@@ -746,8 +744,8 @@ contract BaseBridge is
                 uint remaining;
                 {
                     (bool ok, bytes memory returndata) = executor.call{value: isERC20 ? 0 : value}(
-                        abi.encodeWithSelector(
-                            IBridgeExecutor.executeExtraCall.selector, fromChainID, index, toToken, to, value, extraData
+                        abi.encodeCall(
+                            IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
                         )
                     );
                     if (ok && returndata.length >= 64) {

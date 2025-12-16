@@ -19,54 +19,54 @@ interface IWETH9 is IERC20 {
 /// @title ISwapBridgeRouter
 /// @notice Interface for SwapBridgeRouter that combines Uniswap V3 swaps with bridge operations
 interface ISwapBridgeRouter {
-    /// @notice Parameters for swap and bridge operations
-    struct SwapAndBridgeParams {
+    /// @notice Bridge parameters for swap and bridge operations
+    struct BridgeParams {
         uint toChainID;
         address recipient;
         bytes extraData;
     }
 
-    /// @notice Parameters for exact input single swap and bridge
-    struct ExactInputSingleAndBridgeParams {
+    /// @notice Parameters for swapBridgeExactInputSingle
+    struct SwapBridgeExactInputSingleParams {
         address tokenIn;
         address tokenOut;
         uint24 fee;
         uint amountIn;
         uint amountOutMinimum;
         uint160 sqrtPriceLimitX96;
-        SwapAndBridgeParams bridgeParams;
+        BridgeParams bridgeParams;
     }
 
-    /// @notice Parameters for exact input multi-hop swap and bridge
-    struct ExactInputAndBridgeParams {
+    /// @notice Parameters for swapBridgeExactInput (multi-hop)
+    struct SwapBridgeExactInputParams {
         bytes path;
         uint amountIn;
         uint amountOutMinimum;
-        SwapAndBridgeParams bridgeParams;
+        BridgeParams bridgeParams;
     }
 
-    /// @notice Parameters for exact output single swap and bridge
-    struct ExactOutputSingleAndBridgeParams {
+    /// @notice Parameters for swapBridgeExactOutputSingle
+    struct SwapBridgeExactOutputSingleParams {
         address tokenIn;
         address tokenOut;
         uint24 fee;
-        uint amountOut;
+        uint amountOut; // Exact amount user wants to receive after bridge
         uint amountInMaximum;
         uint160 sqrtPriceLimitX96;
-        SwapAndBridgeParams bridgeParams;
+        BridgeParams bridgeParams;
     }
 
-    /// @notice Parameters for exact output multi-hop swap and bridge
-    struct ExactOutputAndBridgeParams {
-        bytes path;
+    /// @notice Parameters for swapBridgeExactOutput (multi-hop)
+    struct SwapBridgeExactOutputParams {
+        bytes path; // Reversed path (tokenOut first for exactOutput)
         uint amountOut;
         uint amountInMaximum;
-        SwapAndBridgeParams bridgeParams;
+        BridgeParams bridgeParams;
     }
 
     // ============ Events ============
 
-    event SwapAndBridge(
+    event SwapBridge(
         address indexed user,
         address indexed tokenIn,
         address indexed tokenOut,
@@ -85,7 +85,7 @@ interface ISwapBridgeRouter {
     /// @param params The parameters for the swap and bridge
     /// @param deadline Transaction deadline
     /// @return amountOut The amount of tokenOut received from swap
-    function swapExactInputSingleAndBridge(ExactInputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInputSingle(SwapBridgeExactInputSingleParams calldata params, uint deadline)
         external
         returns (uint amountOut);
 
@@ -93,23 +93,23 @@ interface ISwapBridgeRouter {
     /// @param params The parameters for the swap and bridge
     /// @param deadline Transaction deadline
     /// @return amountOut The amount of output token received from swap
-    function swapExactInputAndBridge(ExactInputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInput(SwapBridgeExactInputParams calldata params, uint deadline)
         external
         returns (uint amountOut);
 
-    /// @notice Swap exact output single pool and bridge
+    /// @notice Swap to receive exact output (single pool)
     /// @param params The parameters for the swap and bridge
     /// @param deadline Transaction deadline
     /// @return amountIn The amount of tokenIn spent
-    function swapExactOutputSingleAndBridge(ExactOutputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutputSingle(SwapBridgeExactOutputSingleParams calldata params, uint deadline)
         external
         returns (uint amountIn);
 
-    /// @notice Swap exact output multi-hop and bridge
+    /// @notice Swap to receive exact output (multi-hop)
     /// @param params The parameters for the swap and bridge
     /// @param deadline Transaction deadline
     /// @return amountIn The amount of input token spent
-    function swapExactOutputAndBridge(ExactOutputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutput(SwapBridgeExactOutputParams calldata params, uint deadline)
         external
         returns (uint amountIn);
 
@@ -119,7 +119,7 @@ interface ISwapBridgeRouter {
     /// @param params The parameters for the swap and bridge (tokenIn should be WETH)
     /// @param deadline Transaction deadline
     /// @return amountOut The amount of tokenOut received from swap
-    function swapExactInputSingleETHAndBridge(ExactInputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInputSingleETH(SwapBridgeExactInputSingleParams calldata params, uint deadline)
         external
         payable
         returns (uint amountOut);
@@ -128,25 +128,25 @@ interface ISwapBridgeRouter {
     /// @param params The parameters for the swap and bridge (path should start with WETH)
     /// @param deadline Transaction deadline
     /// @return amountOut The amount of output token received from swap
-    function swapExactInputETHAndBridge(ExactInputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInputETH(SwapBridgeExactInputParams calldata params, uint deadline)
         external
         payable
         returns (uint amountOut);
 
-    /// @notice Swap exact output with ETH input single pool and bridge
+    /// @notice Swap ETH to receive exact output (single pool)
     /// @param params The parameters for the swap and bridge
     /// @param deadline Transaction deadline
     /// @return amountIn The amount of ETH spent (excess refunded)
-    function swapExactOutputSingleETHAndBridge(ExactOutputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutputSingleETH(SwapBridgeExactOutputSingleParams calldata params, uint deadline)
         external
         payable
         returns (uint amountIn);
 
-    /// @notice Swap exact output with ETH input multi-hop and bridge
+    /// @notice Swap ETH to receive exact output (multi-hop)
     /// @param params The parameters for the swap and bridge
     /// @param deadline Transaction deadline
     /// @return amountIn The amount of ETH spent (excess refunded)
-    function swapExactOutputETHAndBridge(ExactOutputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutputETH(SwapBridgeExactOutputParams calldata params, uint deadline)
         external
         payable
         returns (uint amountIn);

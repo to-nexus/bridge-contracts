@@ -33,8 +33,6 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     error BETargetNotWhitelisted();
     error BEMethodNotWhitelisted();
     error BEInvalidAddress();
-    error BEInvalidValue();
-    error BEInsufficientBalance();
     error BEAlreadyWhitelisted();
     error BENotWhitelisted();
     error BEInvalidRecipient();

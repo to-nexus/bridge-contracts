@@ -36,7 +36,6 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     error SBRInsufficientOutput();
     error SBRInvalidValue();
     error SBRRefundFailed();
-    error SBRInvalidAmountIn();
     error SBRInvalidPath();
 
     /// @notice Uniswap V3 SwapRouter address
@@ -75,7 +74,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     // ============ ERC20 Swap + Bridge Functions ============
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactInputSingleAndBridge(ExactInputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInputSingle(SwapBridgeExactInputSingleParams calldata params, uint deadline)
         external
         override
         nonReentrant
@@ -100,7 +99,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             params.tokenIn,
             params.tokenOut,
@@ -115,7 +114,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactInputAndBridge(ExactInputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInput(SwapBridgeExactInputParams calldata params, uint deadline)
         external
         override
         nonReentrant
@@ -138,7 +137,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             tokenIn,
             tokenOut,
@@ -153,13 +152,18 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactOutputSingleAndBridge(ExactOutputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutputSingle(SwapBridgeExactOutputSingleParams calldata params, uint deadline)
         external
         override
         nonReentrant
         checkDeadline(deadline)
         returns (uint amountIn)
     {
+        // Calculate required swap output for exact amountOut (bridgeValue)
+        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+            _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(params.tokenOut), params.amountOut);
+        require(ok, SBRInsufficientOutput());
+
         _prepareSwap(params.tokenIn, params.amountInMaximum);
 
         amountIn = swapRouter.exactOutputSingle(
@@ -169,7 +173,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 fee: params.fee,
                 recipient: address(this),
                 deadline: deadline,
-                amountOut: params.amountOut,
+                amountOut: totalAmount,
                 amountInMaximum: params.amountInMaximum,
                 sqrtPriceLimitX96: params.sqrtPriceLimitX96
             })
@@ -177,25 +181,24 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         _refundExcess(params.tokenIn, params.amountInMaximum, amountIn);
 
-        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
-            _bridgeToken(params.tokenOut, params.amountOut, params.bridgeParams);
+        (uint initiateIndex,,,) = _bridgeToken(params.tokenOut, totalAmount, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             params.tokenIn,
             params.tokenOut,
             amountIn,
-            params.amountOut,
+            totalAmount,
             params.bridgeParams.toChainID,
             initiateIndex,
-            bridgeValue,
+            params.amountOut,
             networkFee,
             exFee
         );
     }
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactOutputAndBridge(ExactOutputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutput(SwapBridgeExactOutputParams calldata params, uint deadline)
         external
         override
         nonReentrant
@@ -203,6 +206,12 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         returns (uint amountIn)
     {
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, true);
+
+        // Calculate required swap output for exact amountOut (bridgeValue)
+        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+            _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(tokenOut), params.amountOut);
+        require(ok, SBRInsufficientOutput());
+
         _prepareSwap(tokenIn, params.amountInMaximum);
 
         amountIn = swapRouter.exactOutput(
@@ -210,25 +219,24 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 path: params.path,
                 recipient: address(this),
                 deadline: deadline,
-                amountOut: params.amountOut,
+                amountOut: totalAmount,
                 amountInMaximum: params.amountInMaximum
             })
         );
 
         _refundExcess(tokenIn, params.amountInMaximum, amountIn);
 
-        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
-            _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
+        (uint initiateIndex,,,) = _bridgeToken(tokenOut, totalAmount, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             tokenIn,
             tokenOut,
             amountIn,
-            params.amountOut,
+            totalAmount,
             params.bridgeParams.toChainID,
             initiateIndex,
-            bridgeValue,
+            params.amountOut,
             networkFee,
             exFee
         );
@@ -237,7 +245,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     // ============ Native Token (ETH) Swap + Bridge Functions ============
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactInputSingleETHAndBridge(ExactInputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInputSingleETH(SwapBridgeExactInputSingleParams calldata params, uint deadline)
         external
         payable
         override
@@ -266,7 +274,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             params.tokenIn,
             params.tokenOut,
@@ -281,7 +289,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactInputETHAndBridge(ExactInputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactInputETH(SwapBridgeExactInputParams calldata params, uint deadline)
         external
         payable
         override
@@ -309,7 +317,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             tokenIn,
             tokenOut,
@@ -324,7 +332,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactOutputSingleETHAndBridge(ExactOutputSingleAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutputSingleETH(SwapBridgeExactOutputSingleParams calldata params, uint deadline)
         external
         payable
         override
@@ -335,6 +343,11 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         require(msg.value >= params.amountInMaximum, SBRInvalidValue());
         require(params.tokenIn == address(WETH9), SBRInvalidAddress());
 
+        // Calculate required swap output for exact amountOut (bridgeValue)
+        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+            _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(params.tokenOut), params.amountOut);
+        require(ok, SBRInsufficientOutput());
+
         _prepareSwapETH(params.amountInMaximum);
 
         amountIn = swapRouter.exactOutputSingle(
@@ -344,7 +357,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 fee: params.fee,
                 recipient: address(this),
                 deadline: deadline,
-                amountOut: params.amountOut,
+                amountOut: totalAmount,
                 amountInMaximum: params.amountInMaximum,
                 sqrtPriceLimitX96: params.sqrtPriceLimitX96
             })
@@ -352,25 +365,24 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         _refundExcessETH(params.amountInMaximum, amountIn);
 
-        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
-            _bridgeToken(params.tokenOut, params.amountOut, params.bridgeParams);
+        (uint initiateIndex,,,) = _bridgeToken(params.tokenOut, totalAmount, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             params.tokenIn,
             params.tokenOut,
             amountIn,
-            params.amountOut,
+            totalAmount,
             params.bridgeParams.toChainID,
             initiateIndex,
-            bridgeValue,
+            params.amountOut,
             networkFee,
             exFee
         );
     }
 
     /// @inheritdoc ISwapBridgeRouter
-    function swapExactOutputETHAndBridge(ExactOutputAndBridgeParams calldata params, uint deadline)
+    function swapBridgeExactOutputETH(SwapBridgeExactOutputParams calldata params, uint deadline)
         external
         payable
         override
@@ -383,6 +395,11 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, true);
         require(tokenIn == address(WETH9), SBRInvalidAddress());
 
+        // Calculate required swap output for exact amountOut (bridgeValue)
+        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+            _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(tokenOut), params.amountOut);
+        require(ok, SBRInsufficientOutput());
+
         _prepareSwapETH(params.amountInMaximum);
 
         amountIn = swapRouter.exactOutput(
@@ -390,25 +407,24 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 path: params.path,
                 recipient: address(this),
                 deadline: deadline,
-                amountOut: params.amountOut,
+                amountOut: totalAmount,
                 amountInMaximum: params.amountInMaximum
             })
         );
 
         _refundExcessETH(params.amountInMaximum, amountIn);
 
-        (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
-            _bridgeToken(tokenOut, params.amountOut, params.bridgeParams);
+        (uint initiateIndex,,,) = _bridgeToken(tokenOut, totalAmount, params.bridgeParams);
 
-        emit SwapAndBridge(
+        emit SwapBridge(
             msg.sender,
             tokenIn,
             tokenOut,
             amountIn,
-            params.amountOut,
+            totalAmount,
             params.bridgeParams.toChainID,
             initiateIndex,
-            bridgeValue,
+            params.amountOut,
             networkFee,
             exFee
         );
@@ -539,8 +555,6 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         ok = true;
     }
-
-    // ============ Internal Functions ============
 
     // ============ Internal Helper Functions ============
 
@@ -730,7 +744,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
      * @return networkFee_ The network fee
      * @return exFee_ The exchange fee
      */
-    function _bridgeToken(address token, uint totalAmount, SwapAndBridgeParams calldata bridgeParams)
+    function _bridgeToken(address token, uint totalAmount, BridgeParams calldata bridgeParams)
         internal
         returns (uint initiateIndex_, uint bridgeValue_, uint networkFee_, uint exFee_)
     {

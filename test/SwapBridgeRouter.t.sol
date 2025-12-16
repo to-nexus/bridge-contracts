@@ -264,9 +264,9 @@ contract SwapBridgeRouterTest is BridgeTest {
     }
 
     /**
-     * @notice Test swapExactInputSingleAndBridge
+     * @notice Test swapBridgeExactInputSingle
      */
-    function test_swapExactInputSingleAndBridge() public {
+    function test_swapBridgeExactInputSingle() public {
         uint amountIn = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -279,20 +279,20 @@ contract SwapBridgeRouterTest is BridgeTest {
         uint beforeBridgeOutputBalance = swapOutputTokenBSC.balanceOf(address(bridgeBSC));
 
         // Build params
-        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactInputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
             tokenIn: address(cross),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
             amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute swap and bridge
         vm.prank(USER);
-        uint amountOut = swapBridgeRouterBSC.swapExactInputSingleAndBridge(params, block.timestamp + 1 hours);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
 
         // Verify
         assertEq(cross.balanceOf(USER), beforeUserCrossBalance - amountIn, "User CROSS balance should decrease");
@@ -305,9 +305,9 @@ contract SwapBridgeRouterTest is BridgeTest {
     }
 
     /**
-     * @notice Test swapExactInputAndBridge (multi-hop)
+     * @notice Test swapBridgeExactInput (multi-hop)
      */
-    function test_swapExactInputAndBridge() public {
+    function test_swapBridgeExactInput() public {
         uint amountIn = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -319,18 +319,18 @@ contract SwapBridgeRouterTest is BridgeTest {
         // Build path: CROSS -> (fee) -> SwapOutputToken
         bytes memory path = abi.encodePacked(address(cross), uint24(3000), address(swapOutputTokenBSC));
 
-        ISwapBridgeRouter.ExactInputAndBridgeParams memory params = ISwapBridgeRouter.ExactInputAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = ISwapBridgeRouter.SwapBridgeExactInputParams({
             path: path,
             amountIn: amountIn,
             amountOutMinimum: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         uint beforeUserCrossBalance = cross.balanceOf(USER);
 
         // Execute
         vm.prank(USER);
-        uint amountOut = swapBridgeRouterBSC.swapExactInputAndBridge(params, block.timestamp + 1 hours);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
 
         // Verify
         assertEq(cross.balanceOf(USER), beforeUserCrossBalance - amountIn, "User CROSS balance should decrease");
@@ -338,10 +338,11 @@ contract SwapBridgeRouterTest is BridgeTest {
     }
 
     /**
-     * @notice Test swapExactOutputSingleAndBridge
+     * @notice Test swapBridgeExactOutputSingle
+     * @dev User specifies exact bridgeValue they want to receive
      */
-    function test_swapExactOutputSingleAndBridge() public {
-        uint amountOut = 500 * 1e18;
+    function test_swapBridgeExactOutputSingle() public {
+        uint desiredBridgeValue = 500 * 1e18;
         uint amountInMaximum = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -352,32 +353,33 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserCrossBalance = cross.balanceOf(USER);
 
-        ISwapBridgeRouter.ExactOutputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactOutputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
             tokenIn: address(cross),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
-            amountOut: amountOut,
+            amountOut: desiredBridgeValue,
             amountInMaximum: amountInMaximum,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute
         vm.prank(USER);
-        uint amountIn = swapBridgeRouterBSC.swapExactOutputSingleAndBridge(params, block.timestamp + 1 hours);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
 
-        // Verify: with 1:1 rate, amountIn should equal amountOut
-        assertEq(amountIn, amountOut, "Amount in should equal amount out with 1:1 rate");
+        // Verify: with 1:1 rate and no fees, amountIn should equal desiredBridgeValue
+        assertEq(amountIn, desiredBridgeValue, "Amount in should equal bridge value with 1:1 rate and no fees");
         // User should have been refunded excess tokens
         assertEq(cross.balanceOf(USER), beforeUserCrossBalance - amountIn, "User should only spend amountIn");
     }
 
     /**
-     * @notice Test swapExactOutputAndBridge (multi-hop)
+     * @notice Test swapBridgeExactOutput (multi-hop)
+     * @dev User specifies exact bridgeValue they want to receive
      */
-    function test_swapExactOutputAndBridge() public {
-        uint amountOut = 500 * 1e18;
+    function test_swapBridgeExactOutput() public {
+        uint desiredBridgeValue = 500 * 1e18;
         uint amountInMaximum = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -391,26 +393,27 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserCrossBalance = cross.balanceOf(USER);
 
-        ISwapBridgeRouter.ExactOutputAndBridgeParams memory params = ISwapBridgeRouter.ExactOutputAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputParams({
             path: path,
-            amountOut: amountOut,
+            amountOut: desiredBridgeValue,
             amountInMaximum: amountInMaximum,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute
         vm.prank(USER);
-        uint amountIn = swapBridgeRouterBSC.swapExactOutputAndBridge(params, block.timestamp + 1 hours);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutput(params, block.timestamp + 1 hours);
 
-        // Verify
-        assertEq(amountIn, amountOut, "Amount in should equal amount out with 1:1 rate");
+        // Verify: with 1:1 rate and no fees, amountIn should equal desiredBridgeValue
+        assertEq(amountIn, desiredBridgeValue, "Amount in should equal bridge value with 1:1 rate and no fees");
         assertEq(cross.balanceOf(USER), beforeUserCrossBalance - amountIn, "User should only spend amountIn");
     }
 
     /**
-     * @notice Test swapExactInputSingleETHAndBridge
+     * @notice Test swapBridgeExactInputSingleETH
      */
-    function test_swapExactInputSingleETHAndBridge() public {
+    function test_swapBridgeExactInputSingleETH() public {
         uint amountIn = 1 ether;
 
         vm.selectFork(bscForkID);
@@ -418,21 +421,21 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserETHBalance = USER.balance;
 
-        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactInputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
             tokenIn: address(mockWETHBSC),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
             amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute with ETH
         vm.prank(USER);
         uint amountOut =
-            swapBridgeRouterBSC.swapExactInputSingleETHAndBridge{value: amountIn}(params, block.timestamp + 1 hours);
+            swapBridgeRouterBSC.swapBridgeExactInputSingleETH{value: amountIn}(params, block.timestamp + 1 hours);
 
         // Verify
         assertEq(USER.balance, beforeUserETHBalance - amountIn, "User ETH balance should decrease");
@@ -440,9 +443,9 @@ contract SwapBridgeRouterTest is BridgeTest {
     }
 
     /**
-     * @notice Test swapExactInputETHAndBridge (multi-hop with ETH)
+     * @notice Test swapBridgeExactInputETH (multi-hop with ETH)
      */
-    function test_swapExactInputETHAndBridge() public {
+    function test_swapBridgeExactInputETH() public {
         uint amountIn = 1 ether;
 
         vm.selectFork(bscForkID);
@@ -453,17 +456,17 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserETHBalance = USER.balance;
 
-        ISwapBridgeRouter.ExactInputAndBridgeParams memory params = ISwapBridgeRouter.ExactInputAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = ISwapBridgeRouter.SwapBridgeExactInputParams({
             path: path,
             amountIn: amountIn,
             amountOutMinimum: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute
         vm.prank(USER);
         uint amountOut =
-            swapBridgeRouterBSC.swapExactInputETHAndBridge{value: amountIn}(params, block.timestamp + 1 hours);
+            swapBridgeRouterBSC.swapBridgeExactInputETH{value: amountIn}(params, block.timestamp + 1 hours);
 
         // Verify
         assertEq(USER.balance, beforeUserETHBalance - amountIn, "User ETH balance should decrease");
@@ -471,10 +474,11 @@ contract SwapBridgeRouterTest is BridgeTest {
     }
 
     /**
-     * @notice Test swapExactOutputSingleETHAndBridge
+     * @notice Test swapBridgeExactOutputSingleETH
+     * @dev User specifies exact bridgeValue they want to receive with ETH input
      */
-    function test_swapExactOutputSingleETHAndBridge() public {
-        uint amountOut = 0.5 ether;
+    function test_swapBridgeExactOutputSingleETH() public {
+        uint desiredBridgeValue = 0.5 ether;
         uint amountInMaximum = 1 ether;
 
         vm.selectFork(bscForkID);
@@ -482,33 +486,34 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserETHBalance = USER.balance;
 
-        ISwapBridgeRouter.ExactOutputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactOutputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
             tokenIn: address(mockWETHBSC),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
-            amountOut: amountOut,
+            amountOut: desiredBridgeValue,
             amountInMaximum: amountInMaximum,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute
         vm.prank(USER);
-        uint amountIn = swapBridgeRouterBSC.swapExactOutputSingleETHAndBridge{value: amountInMaximum}(
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingleETH{value: amountInMaximum}(
             params, block.timestamp + 1 hours
         );
 
-        // Verify: with 1:1 rate, amountIn should equal amountOut, and excess should be refunded
-        assertEq(amountIn, amountOut, "Amount in should equal amount out with 1:1 rate");
+        // Verify: with 1:1 rate and no fees, amountIn should equal desiredBridgeValue
+        assertEq(amountIn, desiredBridgeValue, "Amount in should equal bridge value with 1:1 rate and no fees");
         assertEq(USER.balance, beforeUserETHBalance - amountIn, "User should be refunded excess ETH");
     }
 
     /**
-     * @notice Test swapExactOutputETHAndBridge (multi-hop)
+     * @notice Test swapBridgeExactOutputETH (multi-hop)
+     * @dev User specifies exact bridgeValue they want to receive with ETH input
      */
-    function test_swapExactOutputETHAndBridge() public {
-        uint amountOut = 0.5 ether;
+    function test_swapBridgeExactOutputETH() public {
+        uint desiredBridgeValue = 0.5 ether;
         uint amountInMaximum = 1 ether;
 
         vm.selectFork(bscForkID);
@@ -519,20 +524,22 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserETHBalance = USER.balance;
 
-        ISwapBridgeRouter.ExactOutputAndBridgeParams memory params = ISwapBridgeRouter.ExactOutputAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputParams({
             path: path,
-            amountOut: amountOut,
+            amountOut: desiredBridgeValue,
             amountInMaximum: amountInMaximum,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute
         vm.prank(USER);
-        uint amountIn =
-            swapBridgeRouterBSC.swapExactOutputETHAndBridge{value: amountInMaximum}(params, block.timestamp + 1 hours);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputETH{value: amountInMaximum}(
+            params, block.timestamp + 1 hours
+        );
 
-        // Verify
-        assertEq(amountIn, amountOut, "Amount in should equal amount out with 1:1 rate");
+        // Verify: with 1:1 rate and no fees, amountIn should equal desiredBridgeValue
+        assertEq(amountIn, desiredBridgeValue, "Amount in should equal bridge value with 1:1 rate and no fees");
         assertEq(USER.balance, beforeUserETHBalance - amountIn, "User should be refunded excess ETH");
     }
 
@@ -587,21 +594,21 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(USER);
         cross.approve(address(swapBridgeRouterBSC), amountIn);
 
-        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactInputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
             tokenIn: address(cross),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
             amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Set deadline to past
         vm.prank(USER);
         vm.expectRevert(SwapBridgeRouter.SBRDeadlineExpired.selector);
-        swapBridgeRouterBSC.swapExactInputSingleAndBridge(params, block.timestamp - 1);
+        swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp - 1);
     }
 
     /**
@@ -620,27 +627,27 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(USER);
         cross.approve(address(swapBridgeRouterBSC), amountIn);
 
-        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactInputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
             tokenIn: address(cross),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
             amountIn: amountIn,
             amountOutMinimum: amountIn * 2, // Expect 2x output
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute
         vm.prank(USER);
-        uint amountOut = swapBridgeRouterBSC.swapExactInputSingleAndBridge(params, block.timestamp + 1 hours);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
 
         // Verify: should get 2x output
         assertEq(amountOut, amountIn * 2, "Should get 2x output with 2:1 rate");
     }
 
     /**
-     * @notice Test SwapAndBridge event includes correct initiateIndex
+     * @notice Test SwapBridge event includes correct initiateIndex
      */
     function test_swapAndBridgeEvent_emitsInitiateIndex() public {
         uint amountIn = 1000 * 1e18;
@@ -654,20 +661,20 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(USER);
         cross.approve(address(swapBridgeRouterBSC), amountIn);
 
-        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactInputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
             tokenIn: address(cross),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
             amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
-        // Expect the SwapAndBridge event with correct initiateIndex
+        // Expect the SwapBridge event with correct initiateIndex
         vm.expectEmit(true, true, true, true);
-        emit ISwapBridgeRouter.SwapAndBridge(
+        emit ISwapBridgeRouter.SwapBridge(
             USER,
             address(cross),
             address(swapOutputTokenBSC),
@@ -682,7 +689,7 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         // Execute swap and bridge
         vm.prank(USER);
-        swapBridgeRouterBSC.swapExactInputSingleAndBridge(params, block.timestamp + 1 hours);
+        swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
 
         // Verify the initiateIndex was incremented
         assertEq(
@@ -893,9 +900,9 @@ contract SwapBridgeRouterTest is BridgeTest {
     // ============ Enhanced Existing Test Verifications ============
 
     /**
-     * @notice Test swapExactInputSingleAndBridge with full return value verification
+     * @notice Test swapBridgeExactInputSingle with full return value verification
      */
-    function test_swapExactInputSingleAndBridge_fullVerification() public {
+    function test_swapBridgeExactInputSingle_fullVerification() public {
         uint amountIn = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -915,20 +922,20 @@ contract SwapBridgeRouterTest is BridgeTest {
         uint beforeBridgeOutputBalance = swapOutputTokenBSC.balanceOf(address(bridgeBSC));
 
         // Build params
-        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactInputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
             tokenIn: address(cross),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
             amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         // Execute swap and bridge
         vm.prank(USER);
-        uint amountOut = swapBridgeRouterBSC.swapExactInputSingleAndBridge(params, block.timestamp + 1 hours);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
 
         // Verify swap output matches expected
         assertEq(amountOut, expectedSwapOut, "Swap output should match quote");
@@ -1096,7 +1103,7 @@ contract SwapBridgeRouterTest is BridgeTest {
     /**
      * @notice Test actual swap+bridge execution with fees configured
      */
-    function test_swapExactInputSingleAndBridge_withFees() public {
+    function test_swapBridgeExactInputSingle_withFees() public {
         uint amountIn = 1000 * 1e18;
         uint exFeeRate = 100; // 1%
 
@@ -1124,19 +1131,19 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeBridgeBalance = swapOutputTokenBSC.balanceOf(address(bridgeBSC));
 
-        ISwapBridgeRouter.ExactInputSingleAndBridgeParams memory params = ISwapBridgeRouter
-            .ExactInputSingleAndBridgeParams({
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
             tokenIn: address(cross),
             tokenOut: address(swapOutputTokenBSC),
             fee: 3000,
             amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0,
-            bridgeParams: ISwapBridgeRouter.SwapAndBridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
         });
 
         vm.prank(USER);
-        uint amountOut = swapBridgeRouterBSC.swapExactInputSingleAndBridge(params, block.timestamp + 1 hours);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
 
         // Verify swap output matches quote
         assertEq(amountOut, expectedSwapOut, "Swap output should match quote");
@@ -1257,6 +1264,310 @@ contract SwapBridgeRouterTest is BridgeTest {
         // Higher fee rate should result in lower bridgeValue
         assertLt(bridgeValue2, bridgeValue1, "Higher fee should result in lower bridge value");
         assertGt(exFee2, exFee1, "Higher fee rate should result in higher fee");
+
+        // Clean up
+        vm.prank(OWNER);
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 0);
+    }
+
+    // ============ swapExactBridgeValue Tests with Fees ============
+
+    /**
+     * @notice Test swapBridgeExactOutputSingle with fees configured
+     * @dev Verifies user receives EXACTLY the specified bridgeValue
+     */
+    function test_swapBridgeExactOutputSingle_withFees() public {
+        uint desiredBridgeValue = 500 * 1e18;
+        uint amountInMaximum = 1000 * 1e18;
+        uint exFeeRate = 100; // 1%
+
+        vm.selectFork(bscForkID);
+
+        // Set exchange fee
+        vm.prank(OWNER);
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
+
+        // Get expected amountIn from quote
+        (bool quoteOk, uint expectedAmountIn,,, uint expectedExFee) = swapBridgeRouterBSC.getAmountSwapBridgeIn(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
+        );
+        assertTrue(quoteOk, "Quote should succeed");
+        assertGt(expectedExFee, 0, "Expected exchange fee should be positive");
+
+        // Approve SwapBridgeRouter
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountInMaximum);
+
+        uint beforeUserCrossBalance = cross.balanceOf(USER);
+        uint beforeBridgeBalance = swapOutputTokenBSC.balanceOf(address(bridgeBSC));
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountOut: desiredBridgeValue,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Execute
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
+
+        // Verify amountIn matches quote
+        assertEq(amountIn, expectedAmountIn, "Actual amountIn should match quote");
+
+        // Verify user spent correct amount
+        assertEq(cross.balanceOf(USER), beforeUserCrossBalance - amountIn, "User should spend amountIn");
+
+        // Verify bridge balance increase equals desiredBridgeValue (fees go to _dev)
+        uint bridgeBalanceIncrease = swapOutputTokenBSC.balanceOf(address(bridgeBSC)) - beforeBridgeBalance;
+        assertEq(bridgeBalanceIncrease, desiredBridgeValue, "Bridge should receive exactly desiredBridgeValue");
+
+        // Clean up
+        vm.prank(OWNER);
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 0);
+    }
+
+    /**
+     * @notice Test swapBridgeExactOutputSingle verifies exact bridgeValue in event
+     */
+    function test_swapBridgeExactOutputSingle_eventVerification() public {
+        uint desiredBridgeValue = 500 * 1e18;
+        uint amountInMaximum = 1000 * 1e18;
+        uint exFeeRate = 100; // 1%
+
+        vm.selectFork(bscForkID);
+
+        // Set exchange fee
+        vm.prank(OWNER);
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
+
+        // Get expected values from quote
+        (bool quoteOk, uint expectedAmountIn, uint expectedSwapOutput, uint expectedNetworkFee, uint expectedExFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeIn(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
+        );
+        assertTrue(quoteOk, "Quote should succeed");
+
+        // Get expected initiateIndex
+        uint expectedInitiateIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
+
+        // Approve
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountInMaximum);
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountOut: desiredBridgeValue,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Expect event with exact bridgeValue
+        vm.expectEmit(true, true, true, true);
+        emit ISwapBridgeRouter.SwapBridge(
+            USER,
+            address(cross),
+            address(swapOutputTokenBSC),
+            expectedAmountIn,
+            expectedSwapOutput,
+            CROSS_CHAIN_ID,
+            expectedInitiateIndex,
+            desiredBridgeValue, // KEY: bridgeValue should be EXACTLY what user specified
+            expectedNetworkFee,
+            expectedExFee
+        );
+
+        // Execute
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
+
+        // Clean up
+        vm.prank(OWNER);
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 0);
+    }
+
+    /**
+     * @notice Test swapBridgeExactOutputSingle refunds excess input
+     */
+    function test_swapExactBridgeValue_refundsExcess() public {
+        uint desiredBridgeValue = 100 * 1e18;
+        uint amountInMaximum = 1000 * 1e18; // Way more than needed
+
+        vm.selectFork(bscForkID);
+
+        // Approve
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountInMaximum);
+
+        uint beforeUserCrossBalance = cross.balanceOf(USER);
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountOut: desiredBridgeValue,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Execute
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
+
+        // With 1:1 rate and no fees: amountIn should equal desiredBridgeValue
+        assertEq(amountIn, desiredBridgeValue, "Amount in should equal bridge value");
+
+        // User should be refunded excess (amountInMaximum - amountIn)
+        uint expectedRefund = amountInMaximum - amountIn;
+        assertEq(
+            cross.balanceOf(USER),
+            beforeUserCrossBalance - amountIn,
+            "User should only spend amountIn, excess refunded"
+        );
+        assertEq(expectedRefund, 900 * 1e18, "Refund should be 900 tokens");
+    }
+
+    /**
+     * @notice Test swapBridgeExactOutputSingleETH refunds excess ETH
+     */
+    function test_swapExactBridgeValueETH_refundsExcess() public {
+        uint desiredBridgeValue = 0.1 ether;
+        uint amountInMaximum = 1 ether; // Way more than needed
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, 10 ether);
+
+        uint beforeUserETHBalance = USER.balance;
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
+            tokenIn: address(mockWETHBSC),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountOut: desiredBridgeValue,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Execute
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingleETH{value: amountInMaximum}(
+            params, block.timestamp + 1 hours
+        );
+
+        // With 1:1 rate and no fees: amountIn should equal desiredBridgeValue
+        assertEq(amountIn, desiredBridgeValue, "Amount in should equal bridge value");
+
+        // User should be refunded excess ETH
+        assertEq(USER.balance, beforeUserETHBalance - amountIn, "User should be refunded excess ETH");
+    }
+
+    /**
+     * @notice Test swapExactBridgeValue with different swap rates
+     */
+    function test_swapExactBridgeValue_differentSwapRate() public {
+        uint desiredBridgeValue = 500 * 1e18;
+        uint amountInMaximum = 1000 * 1e18;
+        uint swapRate = 2 * 1e18; // 1 input = 2 output
+
+        vm.selectFork(bscForkID);
+
+        // Set swap rate (2:1 output/input ratio)
+        mockSwapRouterBSC.setSwapRate(swapRate);
+        mockQuoterBSC.setSwapRate(swapRate);
+
+        // With 2:1 rate and no fees: to get 500 bridgeValue, need 250 input
+        uint expectedAmountIn = desiredBridgeValue * 1e18 / swapRate; // 250 * 1e18
+
+        // Approve
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountInMaximum);
+
+        uint beforeUserCrossBalance = cross.balanceOf(USER);
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountOut: desiredBridgeValue,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Execute
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
+
+        // Verify: with 2:1 rate, should only need 250 input for 500 bridgeValue
+        assertEq(amountIn, expectedAmountIn, "Amount in should be half of bridge value with 2:1 rate");
+        assertEq(cross.balanceOf(USER), beforeUserCrossBalance - amountIn, "User should only spend amountIn");
+
+        // Reset swap rate
+        mockSwapRouterBSC.setSwapRate(1e18);
+        mockQuoterBSC.setSwapRate(1e18);
+    }
+
+    /**
+     * @notice Test swapExactBridgeValue consistency - quote matches execution
+     */
+    function test_swapExactBridgeValue_quoteMatchesExecution() public {
+        uint desiredBridgeValue = 500 * 1e18;
+        uint amountInMaximum = 1000 * 1e18;
+        uint exFeeRate = 200; // 2%
+
+        vm.selectFork(bscForkID);
+
+        // Set exchange fee
+        vm.prank(OWNER);
+        bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
+
+        // Get quote first
+        (bool quoteOk, uint quotedAmountIn, uint quotedSwapOutput, uint quotedNetworkFee, uint quotedExFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeIn(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
+        );
+        assertTrue(quoteOk, "Quote should succeed");
+
+        // Verify quote math: swapOutput = bridgeValue + networkFee + exFee
+        assertEq(
+            quotedSwapOutput,
+            desiredBridgeValue + quotedNetworkFee + quotedExFee,
+            "Swap output should equal bridgeValue + fees"
+        );
+
+        // Approve and execute
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountInMaximum);
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountOut: desiredBridgeValue,
+            amountInMaximum: amountInMaximum,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        vm.prank(USER);
+        uint actualAmountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
+
+        // Verify execution matches quote
+        assertEq(actualAmountIn, quotedAmountIn, "Actual amountIn should match quoted amountIn");
 
         // Clean up
         vm.prank(OWNER);
