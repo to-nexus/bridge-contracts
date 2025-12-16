@@ -23,24 +23,39 @@ contract MockTargetContract {
     event NativeReceived(address from, uint value, bytes data);
 
     bool public shouldRevert;
+    uint public consumePercent = 100; // How much % of tokens to consume (default 100%)
 
     function setShouldRevert(bool _shouldRevert) external {
         shouldRevert = _shouldRevert;
     }
 
+    function setConsumePercent(uint _percent) external {
+        consumePercent = _percent;
+    }
+
     function handleBridgeCallback(address token, address user, uint amount, bytes calldata data) external payable {
         if (shouldRevert) revert("MockTargetContract: intentional revert");
+
+        uint consumeAmount = amount * consumePercent / 100;
 
         if (token == address(1)) {
             // Native token
             require(msg.value == amount, "MockTargetContract: incorrect value");
-            emit NativeReceived(user, amount, data);
+            // Return unconsumed portion to sender
+            if (consumeAmount < amount) {
+                (bool ok,) = msg.sender.call{value: amount - consumeAmount}("");
+                require(ok, "MockTargetContract: refund failed");
+            }
+            emit NativeReceived(user, consumeAmount, data);
         } else {
-            // ERC20 token - pull tokens from executor
-            require(
-                IERC20(token).transferFrom(msg.sender, address(this), amount), "MockTargetContract: transfer failed"
-            );
-            emit Received(token, user, amount, data);
+            // ERC20 token - pull only the consumed amount from executor
+            if (consumeAmount > 0) {
+                require(
+                    IERC20(token).transferFrom(msg.sender, address(this), consumeAmount),
+                    "MockTargetContract: transfer failed"
+                );
+            }
+            emit Received(token, user, consumeAmount, data);
         }
     }
 
@@ -59,16 +74,26 @@ contract MockTargetContract {
     {
         if (shouldRevert) revert("MockTargetContract: intentional revert");
 
+        uint consumeAmount = amount * consumePercent / 100;
+
         if (token == address(1)) {
             // Native token
             require(msg.value == amount, "MockTargetContract: incorrect value");
-            emit NativeReceived(user, amount, data);
+            // Return unconsumed portion to sender
+            if (consumeAmount < amount) {
+                (bool ok,) = msg.sender.call{value: amount - consumeAmount}("");
+                require(ok, "MockTargetContract: refund failed");
+            }
+            emit NativeReceived(user, consumeAmount, data);
         } else {
-            // ERC20 token - pull tokens from executor
-            require(
-                IERC20(token).transferFrom(msg.sender, address(this), amount), "MockTargetContract: transfer failed"
-            );
-            emit Received(token, user, amount, data);
+            // ERC20 token - pull only the consumed amount from executor
+            if (consumeAmount > 0) {
+                require(
+                    IERC20(token).transferFrom(msg.sender, address(this), consumeAmount),
+                    "MockTargetContract: transfer failed"
+                );
+            }
+            emit Received(token, user, consumeAmount, data);
         }
 
         return keccak256(abi.encode(token, user, amount, data));
@@ -899,21 +924,19 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(crossForkID);
         crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
 
-        // Get recorded logs and find ExtraCallExecuted event
+        // Get recorded logs and find ExtraCallExecuted event from BridgeExecutor
+        // New event signature: ExtraCallExecuted(uint256 indexed, uint256 indexed, address indexed, bytes4, bool, uint256, bytes)
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool foundEvent = false;
         bytes memory returnData;
 
         for (uint i = 0; i < logs.length; i++) {
-            // ExtraCallExecuted event signature
-            if (
-                logs[i].topics[0]
-                    == keccak256("ExtraCallExecuted(uint256,uint256,address,address,uint256,address,bytes4,bool,bytes)")
-            ) {
+            // ExtraCallExecuted event signature (updated)
+            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)"))
+            {
                 foundEvent = true;
-                // Decode non-indexed parameters: to, value, targetContract, methodID, success, returnData
-                (,,,, bool success, bytes memory data) =
-                    abi.decode(logs[i].data, (address, uint, address, bytes4, bool, bytes));
+                // Decode non-indexed parameters: methodID, success, remaining, returnData
+                (, bool success,, bytes memory data) = abi.decode(logs[i].data, (bytes4, bool, uint, bytes));
                 returnData = data;
 
                 // Verify success is true
@@ -962,20 +985,18 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(crossForkID);
         crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
 
-        // Get recorded logs and find ExtraCallExecuted event
+        // Get recorded logs and find ExtraCallExecuted event from BridgeExecutor
+        // New event signature: ExtraCallExecuted(uint256 indexed, uint256 indexed, address indexed, bytes4, bool, uint256, bytes)
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool foundEvent = false;
 
         for (uint i = 0; i < logs.length; i++) {
-            // ExtraCallExecuted event signature
-            if (
-                logs[i].topics[0]
-                    == keccak256("ExtraCallExecuted(uint256,uint256,address,address,uint256,address,bytes4,bool,bytes)")
-            ) {
+            // ExtraCallExecuted event signature (updated)
+            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)"))
+            {
                 foundEvent = true;
-                // Decode non-indexed parameters: to, value, targetContract, methodID, success, returnData
-                (,,,, bool success, bytes memory returnData) =
-                    abi.decode(logs[i].data, (address, uint, address, bytes4, bool, bytes));
+                // Decode non-indexed parameters: methodID, success, remaining, returnData
+                (, bool success,, bytes memory returnData) = abi.decode(logs[i].data, (bytes4, bool, uint, bytes));
 
                 // Verify success is false
                 assertFalse(success, "ExtraCall should fail");
@@ -1046,20 +1067,18 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(crossForkID);
         crossFinalize(index, address(testTokenCross), USER, value, 5, extraData);
 
-        // Get recorded logs and find ExtraCallExecuted event
+        // Get recorded logs and find ExtraCallExecuted event from BridgeExecutor
+        // New event signature: ExtraCallExecuted(uint256 indexed, uint256 indexed, address indexed, bytes4, bool, uint256, bytes)
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool foundEvent = false;
 
         for (uint i = 0; i < logs.length; i++) {
-            // ExtraCallExecuted event signature
-            if (
-                logs[i].topics[0]
-                    == keccak256("ExtraCallExecuted(uint256,uint256,address,address,uint256,address,bytes4,bool,bytes)")
-            ) {
+            // ExtraCallExecuted event signature (updated)
+            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)"))
+            {
                 foundEvent = true;
-                // Decode non-indexed parameters
-                (,,,, bool success, bytes memory returnData) =
-                    abi.decode(logs[i].data, (address, uint, address, bytes4, bool, bytes));
+                // Decode non-indexed parameters: methodID, success, remaining, returnData
+                (, bool success,, bytes memory returnData) = abi.decode(logs[i].data, (bytes4, bool, uint, bytes));
 
                 // Verify success is true
                 assertTrue(success, "ExtraCall should succeed");
@@ -1072,5 +1091,260 @@ contract BridgeExecutorTest is BridgeTest {
         }
 
         assertTrue(foundEvent, "ExtraCallExecuted event should be emitted");
+    }
+
+    // ============ New Test Cases ============
+
+    /**
+     * @notice Test method whitelist - allowed selector
+     */
+    function test_methodWhitelist_allowedSelector() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(crossForkID);
+
+        // Enable method check for mockTargetCross
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.setMethodCheckEnabled(address(mockTargetCross), true);
+
+        // Add allowed method selector
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = MockTargetContract.handleBridgeCallback.selector;
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistMethods(address(mockTargetCross), selectors);
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata with allowed selector
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test data")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        // Initiate bridge
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize - should succeed since selector is whitelisted
+        vm.selectFork(crossForkID);
+        uint beforeTargetBalance = address(mockTargetCross).balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        assertEq(address(mockTargetCross).balance, beforeTargetBalance + value, "Target should receive tokens");
+    }
+
+    /**
+     * @notice Test method whitelist - disallowed selector should fallback to user
+     */
+    function test_methodWhitelist_disallowedSelector() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(crossForkID);
+
+        // Enable method check for mockTargetCross
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.setMethodCheckEnabled(address(mockTargetCross), true);
+
+        // Don't whitelist any methods - all selectors should be rejected
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata with non-whitelisted selector
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test data")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        // Initiate bridge
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize - should fallback to user since selector is not whitelisted
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+        uint beforeTargetBalance = address(mockTargetCross).balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        assertEq(USER.balance, beforeUserBalance + value, "User should receive tokens");
+        assertEq(address(mockTargetCross).balance, beforeTargetBalance, "Target should NOT receive tokens");
+    }
+
+    /**
+     * @notice Test remaining tokens - partial consume
+     */
+    function test_remaining_partialConsume() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(crossForkID);
+        // Set mock to consume only 50%
+        mockTargetCross.setConsumePercent(50);
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test data")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+        uint beforeTargetBalance = address(mockTargetCross).balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Target receives 50%, user receives remaining 50%
+        uint expectedTargetAmount = value * 50 / 100;
+        uint expectedUserAmount = value - expectedTargetAmount;
+        assertEq(
+            address(mockTargetCross).balance, beforeTargetBalance + expectedTargetAmount, "Target should receive 50%"
+        );
+        assertEq(USER.balance, beforeUserBalance + expectedUserAmount, "User should receive remaining 50%");
+    }
+
+    /**
+     * @notice Test remaining tokens - zero consume (target doesn't pull tokens)
+     */
+    function test_remaining_zeroConsume() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(crossForkID);
+        // Set mock to consume 0%
+        mockTargetCross.setConsumePercent(0);
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test data")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+        uint beforeTargetBalance = address(mockTargetCross).balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Target receives 0%, user receives all 100%
+        assertEq(address(mockTargetCross).balance, beforeTargetBalance, "Target should receive 0%");
+        assertEq(USER.balance, beforeUserBalance + value, "User should receive all 100%");
+    }
+
+    /**
+     * @notice Test remaining tokens - ERC20 partial consume
+     */
+    function test_remaining_partialConsume_erc20() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(crossForkID);
+        // Set mock to consume only 70%
+        mockTargetCross.setConsumePercent(70);
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenCross), USER, amount, bytes("erc20 test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = testTokenCross.balanceOf(USER);
+        uint beforeTargetBalance = testTokenCross.balanceOf(address(mockTargetCross));
+
+        crossFinalize(index, address(testTokenCross), USER, value, 5, extraData);
+
+        // Target receives 70%, user receives remaining 30%
+        uint expectedTargetAmount = value * 70 / 100;
+        uint expectedUserAmount = value - expectedTargetAmount;
+        assertEq(
+            testTokenCross.balanceOf(address(mockTargetCross)),
+            beforeTargetBalance + expectedTargetAmount,
+            "Target should receive 70%"
+        );
+        assertEq(
+            testTokenCross.balanceOf(USER), beforeUserBalance + expectedUserAmount, "User should receive remaining 30%"
+        );
+    }
+
+    /**
+     * @notice Test GAS_RESERVE admin change
+     */
+    function test_gasReserve_adminChange() public {
+        vm.selectFork(crossForkID);
+
+        // Check initial value
+        assertEq(bridgeExecutorCross.postCallGasReserve(), 200_000);
+
+        // Change gas reserve
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.setPostCallGasReserve(300_000);
+
+        assertEq(bridgeExecutorCross.postCallGasReserve(), 300_000);
+
+        // Test invalid values
+        vm.prank(CrossOWNER);
+        vm.expectRevert();
+        bridgeExecutorCross.setPostCallGasReserve(10_000); // Too low
+
+        vm.prank(CrossOWNER);
+        vm.expectRevert();
+        bridgeExecutorCross.setPostCallGasReserve(2_000_000); // Too high
+    }
+
+    /**
+     * @notice Test batch method whitelist management
+     */
+    function test_batchMethodWhitelist() public {
+        vm.selectFork(crossForkID);
+
+        address target = address(mockTargetCross);
+
+        // Add multiple methods
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = MockTargetContract.handleBridgeCallback.selector;
+        selectors[1] = MockTargetContract.handleBridgeCallbackWithReturn.selector;
+        selectors[2] = bytes4(keccak256("customFunction()"));
+
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistMethods(target, selectors);
+
+        assertTrue(bridgeExecutorCross.isWhitelistedMethod(target, selectors[0]));
+        assertTrue(bridgeExecutorCross.isWhitelistedMethod(target, selectors[1]));
+        assertTrue(bridgeExecutorCross.isWhitelistedMethod(target, selectors[2]));
+
+        // Remove methods
+        bytes4[] memory removeSelectors = new bytes4[](2);
+        removeSelectors[0] = selectors[0];
+        removeSelectors[1] = selectors[2];
+
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.removeWhitelistMethods(target, removeSelectors);
+
+        assertFalse(bridgeExecutorCross.isWhitelistedMethod(target, selectors[0]));
+        assertTrue(bridgeExecutorCross.isWhitelistedMethod(target, selectors[1]));
+        assertFalse(bridgeExecutorCross.isWhitelistedMethod(target, selectors[2]));
     }
 }

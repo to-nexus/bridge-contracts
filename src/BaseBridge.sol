@@ -708,33 +708,68 @@ contract BaseBridge is
     ) internal returns (Const.FinalizeStatus status) {
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
 
-        // Check if extraData is provided and long enough (> 24 bytes for contract address and method ID)
-        if (extraData.length > 24 && address(bridgeExecutor) != address(0)) {
+        // Check if extraData is provided and long enough (>= 24 bytes for contract address and method ID)
+        address executor = address(bridgeExecutor);
+        if (extraData.length >= 24 && executor != address(0) && executor.code.length != 0) {
             // Parse target contract address from extraData
             address targetContract;
             assembly {
                 targetContract := shr(96, mload(add(extraData, 32)))
             }
 
-            // Check if target is whitelisted
-            if (bridgeExecutor.isWhitelistedTarget(targetContract)) {
+            // Check if target is whitelisted (NO try/catch - use low-level staticcall and safe bool parsing)
+            bool isWhitelisted;
+            {
+                (bool ok, bytes memory returndata) =
+                    executor.staticcall(abi.encodeCall(IBridgeExecutor.isWhitelistedTarget, (targetContract)));
+                if (ok && returndata.length >= 32) {
+                    assembly {
+                        isWhitelisted := mload(add(returndata, 32))
+                    }
+                }
+            }
+            if (isWhitelisted) {
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
 
                 // For ERC20, transfer/mint to Executor first
                 // For Native token, send directly via msg.value in executeExtraCall
                 if (isERC20) {
-                    status = _transferOrMintToken(toToken, address(bridgeExecutor), value, isOrigin, false);
+                    status = _transferOrMintToken(toToken, executor, value, isOrigin, false);
                     if (status != Const.FinalizeStatus.Success) return status;
                 }
 
                 // Call executeExtraCall and check result
-                bool success = bridgeExecutor.executeExtraCall{value: isERC20 ? 0 : value}(
-                    fromChainID, index, toToken, to, value, extraData
-                );
+                // Returns (bool success, uint remaining)
+                bool success;
+                uint remaining;
+                {
+                    (bool ok, bytes memory returndata) = executor.call{value: isERC20 ? 0 : value}(
+                        abi.encodeCall(
+                            IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
+                        )
+                    );
+                    if (ok && returndata.length >= 64) {
+                        assembly {
+                            success := mload(add(returndata, 32))
+                            remaining := mload(add(returndata, 64))
+                        }
+                    }
+                }
                 emit ExtraCallExecuted(fromChainID, index, success);
 
                 if (success) {
                     _withdrawToken(fromChainID, address(toToken), value);
+
+                    // Transfer remaining tokens to user if any
+                    if (remaining > 0) {
+                        if (isERC20) {
+                            // Executor approved remaining tokens for bridge to pull
+                            toToken.safeTransferFrom(executor, to, remaining);
+                        } else {
+                            // Native: executor already sent remaining back to bridge
+                            _safeCall(payable(to), remaining, "");
+                        }
+                    }
                     return Const.FinalizeStatus.Success;
                 }
 
@@ -743,8 +778,8 @@ contract BaseBridge is
                 // Origin token: Bridge pulls back via transferFrom (Executor approved)
                 // Wrapped token: burn from Executor, then mint to user
                 if (isERC20) {
-                    if (isOrigin) toToken.safeTransferFrom(address(bridgeExecutor), address(this), value);
-                    else ICrossMintableERC20(address(toToken)).burn(address(bridgeExecutor), value);
+                    if (isOrigin) toToken.safeTransferFrom(executor, address(this), value);
+                    else ICrossMintableERC20(address(toToken)).burn(executor, value);
                 }
                 // Fall through to normal flow below
             }
