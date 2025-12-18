@@ -48,7 +48,7 @@ contract BridgeVerifierScript is Script {
 
     function setUp() public virtual {
         // load env variables
-        bridge = BaseBridge(vm.envAddress(BRIDGE));
+        bridge = BaseBridge(payable(vm.envAddress(BRIDGE)));
         priceFeed = vm.envAddress(PRICE_FEED);
         owner = vm.envAddress(OWNER);
         finalizeBridgeGas = vm.envUint(FINALIZE_BRIDGE_GAS);

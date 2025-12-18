@@ -147,7 +147,7 @@ contract BridgeScript is Script {
      * @notice bridge setup after initialize
      */
     function _setupBridge(address bridge) internal {
-        BaseBridge baseBridge = BaseBridge(bridge);
+        BaseBridge baseBridge = BaseBridge(payable(bridge));
 
         vm.startBroadcast();
         // set bridge

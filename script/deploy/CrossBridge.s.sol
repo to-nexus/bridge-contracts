@@ -22,7 +22,7 @@ contract CrossBridgeScript is Script, BridgeScript {
     function setUp() public override {
         super.setUp();
 
-        crossBridge = CrossBridge(address(0xb81d6e000000000000000000000000000000C0de));
+        crossBridge = CrossBridge(payable(address(0xb81d6e000000000000000000000000000000C0de)));
 
         crossSupplyLimit = vm.envUint(CROSS_SUPPLY_LIMIT) * 1 ether;
         console.log("crossSupplyLimit", crossSupplyLimit);

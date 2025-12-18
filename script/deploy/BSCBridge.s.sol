@@ -19,7 +19,7 @@ contract BSCBridgeScript is Script, BridgeScript {
 
     function setUp() public override {
         super.setUp();
-        
+
         // load env variables
         impl = vm.envAddress(IMPLEMENTATION);
 
@@ -39,7 +39,7 @@ contract BSCBridgeScript is Script, BridgeScript {
         crossChainID = vm.envUint(BridgeScript.BRIDGE_CROSS_CHAIN_ID);
         console.log("crossChainID", crossChainID);
 
-        BSCBridge bscBridge = BSCBridge(deployBSCBridgeProxy());
+        BSCBridge bscBridge = BSCBridge(payable(deployBSCBridgeProxy()));
 
         _setupBridge(address(bscBridge));
     }

@@ -160,7 +160,7 @@ contract BridgeScript is Script {
         crossChainID = vm.envUint(BridgeScript.BRIDGE_CROSS_CHAIN_ID);
         console.log("crossChainID", crossChainID);
 
-        BaseBridge baseBridge = BaseBridge(deployBaseBridgeProxy());
+        BaseBridge baseBridge = BaseBridge(payable(deployBaseBridgeProxy()));
 
         _setupBridge(address(baseBridge));
     }
@@ -176,7 +176,7 @@ contract BridgeScript is Script {
      * @notice bridge setup after initialize
      */
     function _setupBridge(address bridge) internal {
-        BaseBridge baseBridge = BaseBridge(bridge);
+        BaseBridge baseBridge = BaseBridge(payable(bridge));
 
         vm.startBroadcast();
         // set bridge
