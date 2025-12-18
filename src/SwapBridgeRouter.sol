@@ -31,11 +31,22 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     using SafeERC20 for IERC20;
     using Math for uint;
 
+    /// @notice Thrown when an invalid address (zero address) is provided
     error SBRInvalidAddress();
+
+    /// @notice Thrown when transaction deadline has expired
     error SBRDeadlineExpired();
+
+    /// @notice Thrown when swap/bridge output is insufficient (below minimum)
     error SBRInsufficientOutput();
+
+    /// @notice Thrown when msg.value doesn't match expected value
     error SBRInvalidValue();
+
+    /// @notice Thrown when ETH refund transfer fails
     error SBRRefundFailed();
+
+    /// @notice Thrown when Uniswap V3 path format is invalid
     error SBRInvalidPath();
 
     /// @notice Uniswap V3 SwapRouter address

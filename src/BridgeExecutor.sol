@@ -30,13 +30,28 @@ import {Const} from "./lib/Const.sol";
 contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecutor {
     using SafeERC20 for IERC20;
 
+    /// @notice Thrown when target contract is not in the whitelist
     error BETargetNotWhitelisted();
+
+    /// @notice Thrown when method selector is not whitelisted for the target
     error BEMethodNotWhitelisted();
+
+    /// @notice Thrown when an invalid address (zero address) is provided
     error BEInvalidAddress();
+
+    /// @notice Thrown when trying to add a target that is already whitelisted
     error BEAlreadyWhitelisted();
+
+    /// @notice Thrown when trying to remove a target that is not whitelisted
     error BENotWhitelisted();
+
+    /// @notice Thrown when recipient address is invalid for token recovery
     error BEInvalidRecipient();
+
+    /// @notice Thrown when native token transfer fails during recovery
     error BEFailedToReturnNative();
+
+    /// @notice Thrown when gas reserve value is out of valid range (50k-1M)
     error BEInvalidGasReserve();
 
     /**
@@ -386,11 +401,24 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     // Internal helpers (no revert)
     // =========================
 
+    /**
+     * @dev Attempts to send native tokens without reverting
+     * @param recipient Address to send native tokens to
+     * @param amount Amount of native tokens to send
+     * @return ok True if transfer succeeded
+     */
     function _trySendNative(address recipient, uint amount) private returns (bool ok) {
         if (amount == 0) return true;
         (ok,) = payable(recipient).call{value: amount}("");
     }
 
+    /**
+     * @dev Attempts to get token balance without reverting
+     * @param token ERC20 token to query
+     * @param account Account to check balance for
+     * @return ok True if call succeeded
+     * @return bal Token balance
+     */
     function _tryBalanceOf(IERC20 token, address account) private view returns (bool ok, uint bal) {
         bytes memory returndata;
         (ok, returndata) = address(token).staticcall(abi.encodeCall(IERC20.balanceOf, (account)));
@@ -399,6 +427,12 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         return (true, bal);
     }
 
+    /**
+     * @dev Calls token function and safely parses optional bool return
+     * @param token ERC20 token to call
+     * @param data Encoded function call data
+     * @return True if call succeeded and returned true (or no data with code)
+     */
     function _callOptionalReturnBool(IERC20 token, bytes memory data) private returns (bool) {
         (bool ok, bytes memory returndata) = address(token).call(data);
         if (!ok) return false;
@@ -410,10 +444,24 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         return false;
     }
 
+    /**
+     * @dev Attempts to approve token spending without reverting
+     * @param token ERC20 token to approve
+     * @param spender Address to approve spending for
+     * @param amount Amount to approve
+     * @return True if approval succeeded
+     */
     function _tryApprove(IERC20 token, address spender, uint amount) private returns (bool) {
         return _callOptionalReturnBool(token, abi.encodeCall(IERC20.approve, (spender, amount)));
     }
 
+    /**
+     * @dev Attempts to force approve (handles tokens that require 0 allowance first)
+     * @param token ERC20 token to approve
+     * @param spender Address to approve spending for
+     * @param amount Amount to approve
+     * @return True if approval succeeded
+     */
     function _tryForceApprove(IERC20 token, address spender, uint amount) private returns (bool) {
         // Try direct approve first
         if (_tryApprove(token, spender, amount)) return true;
