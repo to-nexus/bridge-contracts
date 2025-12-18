@@ -120,15 +120,17 @@ contract CrossBridge is BaseBridge {
     }
 
     /**
-     * @notice Verifies proxy delegation
-     * @dev Ensures contract is called via proper proxy
-     * - Prevents direct calls to implementation
-     * - Verifies implementation address matches predeploy address
+     * @notice Verifies proxy delegation (PREDEPLOY ONLY)
+     * @dev This function is ONLY used for the initial predeploy deployment.
+     *      MUST be removed or commented out before the first upgrade.
+     *      Failure to remove will permanently lock the contract from future upgrades.
+     *
+     *      [WARNING] Remove this override or uncomment below before the 1st upgrade.
      */
-    function _checkProxy() internal view override {
-        if (
-            address(this) == PREDEPLOYED_IMPLEMENTATION_ADDRESS // Must be called through delegatecall
-                || ERC1967Utils.getImplementation() != PREDEPLOYED_IMPLEMENTATION_ADDRESS // Must be called through an active proxy
-        ) revert UUPSUnauthorizedCallContext();
-    }
+    // function _checkProxy() internal view override {
+    //     if (
+    //         address(this) == PREDEPLOYED_IMPLEMENTATION_ADDRESS // Must be called through delegatecall
+    //             || ERC1967Utils.getImplementation() != PREDEPLOYED_IMPLEMENTATION_ADDRESS // Must be called through an active proxy
+    //     ) revert UUPSUnauthorizedCallContext();
+    // }
 }
