@@ -25,6 +25,20 @@ interface IWETH9 is IERC20 {
 /// @dev Supports both exact input and exact output swap modes with single pool and multi-hop paths
 interface ISwapBridgeRouter {
     /**
+     * @notice Status codes for bridge calculation results
+     * @dev Used to provide detailed error information in view/quote functions
+     */
+    enum QuoteStatus {
+        Invalid, // 0 - Default/uninitialized value
+        Success, // 1 - Calculation succeeded
+        NoPair, // 2 - Token pair not registered for target chain
+        InsufficientForFee, // 3 - Amount too low to cover network fee
+        InsufficientValue, // 4 - Bridge value below minimum required
+        InvalidSwap // 5 - Quoter failed (no pool, insufficient liquidity, etc.)
+
+    }
+
+    /**
      * @notice Bridge parameters for swap and bridge operations
      * @param toChainID Target chain ID for the bridge operation
      * @param recipient Address to receive tokens on the target chain
@@ -235,7 +249,7 @@ interface ISwapBridgeRouter {
      * @param toChainID Target chain ID
      * @param token Token to bridge
      * @param totalAmount Total amount before fees
-     * @return ok Whether the calculation succeeded
+     * @return status Calculation result status (Success, NoPair, InsufficientForFee, InsufficientValue)
      * @return bridgeValue The amount that will be bridged (after fees)
      * @return networkFee The network fee
      * @return exFee The exchange fee
@@ -243,7 +257,7 @@ interface ISwapBridgeRouter {
     function getExpectedBridgeAmount(uint toChainID, IERC20 token, uint totalAmount)
         external
         view
-        returns (bool ok, uint bridgeValue, uint networkFee, uint exFee);
+        returns (QuoteStatus status, uint bridgeValue, uint networkFee, uint exFee);
 
     /**
      * @notice Calculate bridge fees for a given bridge value
@@ -269,7 +283,7 @@ interface ISwapBridgeRouter {
      * @param tokenOut Token to swap to (and bridge)
      * @param fee Pool fee tier
      * @param amountIn Amount of tokenIn to swap
-     * @return ok Whether the operation would succeed
+     * @return status Calculation result status (Success, NoPair, InsufficientForFee, InsufficientValue)
      * @return swapAmountOut Amount received from swap
      * @return bridgeValue Amount that will be bridged (after fees)
      * @return networkFee Network fee for bridge
@@ -277,7 +291,7 @@ interface ISwapBridgeRouter {
      */
     function getAmountSwapBridgeOut(uint toChainID, address tokenIn, address tokenOut, uint24 fee, uint amountIn)
         external
-        returns (bool ok, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee);
+        returns (QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee);
 
     /**
      * @notice Get expected bridge output for a multi-hop swap
@@ -285,7 +299,7 @@ interface ISwapBridgeRouter {
      * @param toChainID Target chain ID for bridge
      * @param path The swap path (tokenIn -> fee -> ... -> tokenOut)
      * @param amountIn Amount of first token to swap
-     * @return ok Whether the operation would succeed
+     * @return status Calculation result status (Success, NoPair, InsufficientForFee, InsufficientValue)
      * @return swapAmountOut Amount received from swap
      * @return bridgeValue Amount that will be bridged (after fees)
      * @return networkFee Network fee for bridge
@@ -293,7 +307,7 @@ interface ISwapBridgeRouter {
      */
     function getAmountSwapBridgeOutMultihop(uint toChainID, bytes memory path, uint amountIn)
         external
-        returns (bool ok, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee);
+        returns (QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee);
 
     /**
      * @notice Get required swap input for a desired bridge output (single pool)
@@ -303,7 +317,7 @@ interface ISwapBridgeRouter {
      * @param tokenOut Token to swap to (and bridge)
      * @param fee Pool fee tier
      * @param bridgeValue Desired amount to be bridged (after fees)
-     * @return ok Whether the operation would succeed
+     * @return status Calculation result status (Success, NoPair, InsufficientForFee, InsufficientValue)
      * @return amountIn Amount of tokenIn required
      * @return swapAmountOut Total amount from swap (before bridge fees)
      * @return networkFee Network fee for bridge
@@ -311,7 +325,7 @@ interface ISwapBridgeRouter {
      */
     function getAmountSwapBridgeIn(uint toChainID, address tokenIn, address tokenOut, uint24 fee, uint bridgeValue)
         external
-        returns (bool ok, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee);
+        returns (QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee);
 
     /**
      * @notice Get required swap input for a desired bridge output (multi-hop)
@@ -319,7 +333,7 @@ interface ISwapBridgeRouter {
      * @param toChainID Target chain ID for bridge
      * @param path The swap path (tokenOut -> fee -> ... -> tokenIn for exactOutput)
      * @param bridgeValue Desired amount to be bridged (after fees)
-     * @return ok Whether the operation would succeed
+     * @return status Calculation result status (Success, NoPair, InsufficientForFee, InsufficientValue)
      * @return amountIn Amount of first token required
      * @return swapAmountOut Total amount from swap (before bridge fees)
      * @return networkFee Network fee for bridge
@@ -327,5 +341,5 @@ interface ISwapBridgeRouter {
      */
     function getAmountSwapBridgeInMultihop(uint toChainID, bytes memory path, uint bridgeValue)
         external
-        returns (bool ok, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee);
+        returns (QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee);
 }

@@ -7,6 +7,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IBaseBridge} from "./interface/IBaseBridge.sol";
+import {IBridgeRegistry} from "./interface/IBridgeRegistry.sol";
 import {IBridgeVerifier} from "./interface/IBridgeVerifier.sol";
 import {
     IPeripheryImmutableState,
@@ -37,9 +38,6 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     /// @notice Thrown when transaction deadline has expired
     error SBRDeadlineExpired();
 
-    /// @notice Thrown when swap/bridge output is insufficient (below minimum)
-    error SBRInsufficientOutput();
-
     /// @notice Thrown when msg.value doesn't match expected value
     error SBRInvalidValue();
 
@@ -48,6 +46,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
     /// @notice Thrown when Uniswap V3 path format is invalid
     error SBRInvalidPath();
+
+    /// @notice Thrown when bridge calculation fails (includes failure reason)
+    error SBRQuoteFailed(QuoteStatus status);
 
     /// @notice Uniswap V3 SwapRouter address
     ISwapRouter public immutable swapRouter;
@@ -171,9 +172,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         returns (uint amountIn)
     {
         // Calculate required swap output for exact amountOut (bridgeValue)
-        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+        (QuoteStatus status, uint totalAmount, uint networkFee, uint exFee) =
             _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(params.tokenOut), params.amountOut);
-        require(ok, SBRInsufficientOutput());
+        require(status == QuoteStatus.Success, SBRQuoteFailed(status));
 
         _prepareSwap(params.tokenIn, params.amountInMaximum);
 
@@ -219,9 +220,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, true);
 
         // Calculate required swap output for exact amountOut (bridgeValue)
-        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+        (QuoteStatus status, uint totalAmount, uint networkFee, uint exFee) =
             _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(tokenOut), params.amountOut);
-        require(ok, SBRInsufficientOutput());
+        require(status == QuoteStatus.Success, SBRQuoteFailed(status));
 
         _prepareSwap(tokenIn, params.amountInMaximum);
 
@@ -355,9 +356,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         require(params.tokenIn == address(WETH9), SBRInvalidAddress());
 
         // Calculate required swap output for exact amountOut (bridgeValue)
-        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+        (QuoteStatus status, uint totalAmount, uint networkFee, uint exFee) =
             _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(params.tokenOut), params.amountOut);
-        require(ok, SBRInsufficientOutput());
+        require(status == QuoteStatus.Success, SBRQuoteFailed(status));
 
         _prepareSwapETH(params.amountInMaximum);
 
@@ -407,9 +408,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         require(tokenIn == address(WETH9), SBRInvalidAddress());
 
         // Calculate required swap output for exact amountOut (bridgeValue)
-        (bool ok, uint totalAmount, uint networkFee, uint exFee) =
+        (QuoteStatus status, uint totalAmount, uint networkFee, uint exFee) =
             _getRequiredSwapOutput(params.bridgeParams.toChainID, IERC20(tokenOut), params.amountOut);
-        require(ok, SBRInsufficientOutput());
+        require(status == QuoteStatus.Success, SBRQuoteFailed(status));
 
         _prepareSwapETH(params.amountInMaximum);
 
@@ -448,7 +449,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         external
         view
         override
-        returns (bool ok, uint bridgeValue, uint networkFee, uint exFee)
+        returns (QuoteStatus status, uint bridgeValue, uint networkFee, uint exFee)
     {
         return _getExpectedBridgeAmount(toChainID, token, totalAmount);
     }
@@ -469,7 +470,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     function getAmountSwapBridgeOut(uint toChainID, address tokenIn, address tokenOut, uint24 fee, uint amountIn)
         external
         override
-        returns (bool ok, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee)
+        returns (QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee)
     {
         // Get swap quote from Uniswap V3 QuoterV2
         try quoter.quoteExactInputSingle(
@@ -483,18 +484,18 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         ) returns (uint _swapAmountOut, uint160, uint32, uint) {
             swapAmountOut = _swapAmountOut;
         } catch {
-            return (false, 0, 0, 0, 0);
+            return (QuoteStatus.InvalidSwap, 0, 0, 0, 0);
         }
 
         // Calculate bridge fees
-        (ok, bridgeValue, networkFee, exFee) = _getExpectedBridgeAmount(toChainID, IERC20(tokenOut), swapAmountOut);
+        (status, bridgeValue, networkFee, exFee) = _getExpectedBridgeAmount(toChainID, IERC20(tokenOut), swapAmountOut);
     }
 
     /// @inheritdoc ISwapBridgeRouter
     function getAmountSwapBridgeOutMultihop(uint toChainID, bytes memory path, uint amountIn)
         external
         override
-        returns (bool ok, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee)
+        returns (QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee)
     {
         // Extract tokenOut from path (last 20 bytes)
         require(path.length >= 43, SBRInvalidAddress());
@@ -506,22 +507,22 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         ) {
             swapAmountOut = _swapAmountOut;
         } catch {
-            return (false, 0, 0, 0, 0);
+            return (QuoteStatus.InvalidSwap, 0, 0, 0, 0);
         }
 
         // Calculate bridge fees
-        (ok, bridgeValue, networkFee, exFee) = _getExpectedBridgeAmount(toChainID, IERC20(tokenOut), swapAmountOut);
+        (status, bridgeValue, networkFee, exFee) = _getExpectedBridgeAmount(toChainID, IERC20(tokenOut), swapAmountOut);
     }
 
     /// @inheritdoc ISwapBridgeRouter
     function getAmountSwapBridgeIn(uint toChainID, address tokenIn, address tokenOut, uint24 fee, uint bridgeValue)
         external
         override
-        returns (bool ok, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee)
+        returns (QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee)
     {
         // Calculate required swap output for desired bridge value
-        (ok, swapAmountOut, networkFee, exFee) = _getRequiredSwapOutput(toChainID, IERC20(tokenOut), bridgeValue);
-        if (!ok) return (false, 0, 0, 0, 0);
+        (status, swapAmountOut, networkFee, exFee) = _getRequiredSwapOutput(toChainID, IERC20(tokenOut), bridgeValue);
+        if (status != QuoteStatus.Success) return (status, 0, 0, networkFee, exFee);
 
         // Get required input from Uniswap V3 QuoterV2
         try quoter.quoteExactOutputSingle(
@@ -535,25 +536,25 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         ) returns (uint _amountIn, uint160, uint32, uint) {
             amountIn = _amountIn;
         } catch {
-            return (false, 0, 0, 0, 0);
+            return (QuoteStatus.InvalidSwap, 0, 0, 0, 0);
         }
 
-        ok = true;
+        status = QuoteStatus.Success;
     }
 
     /// @inheritdoc ISwapBridgeRouter
     function getAmountSwapBridgeInMultihop(uint toChainID, bytes memory path, uint bridgeValue)
         external
         override
-        returns (bool ok, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee)
+        returns (QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee)
     {
         // For exactOutput path, tokenOut is first 20 bytes
         require(path.length >= 43, SBRInvalidAddress());
         address tokenOut = _extractTokenFromPath(path, true);
 
         // Calculate required swap output for desired bridge value
-        (ok, swapAmountOut, networkFee, exFee) = _getRequiredSwapOutput(toChainID, IERC20(tokenOut), bridgeValue);
-        if (!ok) return (false, 0, 0, 0, 0);
+        (status, swapAmountOut, networkFee, exFee) = _getRequiredSwapOutput(toChainID, IERC20(tokenOut), bridgeValue);
+        if (status != QuoteStatus.Success) return (status, 0, 0, networkFee, exFee);
 
         // Get required input from Uniswap V3 QuoterV2
         try quoter.quoteExactOutput(path, swapAmountOut) returns (
@@ -561,10 +562,10 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         ) {
             amountIn = _amountIn;
         } catch {
-            return (false, 0, 0, 0, 0);
+            return (QuoteStatus.InvalidSwap, 0, 0, 0, 0);
         }
 
-        ok = true;
+        status = QuoteStatus.Success;
     }
 
     // ============ Internal Helper Functions ============
@@ -684,7 +685,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
      * @param toChainID Target chain ID
      * @param token Token to bridge
      * @param totalAmount Total amount before fees
-     * @return ok Whether the calculation succeeded
+     * @return status Calculation result status
      * @return bridgeValue The amount that will be bridged (after fees)
      * @return networkFee The network fee
      * @return exFee The exchange fee
@@ -692,15 +693,19 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     function _getExpectedBridgeAmount(uint toChainID, IERC20 token, uint totalAmount)
         internal
         view
-        returns (bool ok, uint bridgeValue, uint networkFee, uint exFee)
+        returns (QuoteStatus status, uint bridgeValue, uint networkFee, uint exFee)
     {
+        // Validate token pair exists for the target chain
+        IBridgeRegistry.TokenPair memory pair = bridge.getTokenPair(toChainID, address(token));
+        if (pair.localToken != address(token)) return (QuoteStatus.NoPair, 0, 0, 0);
+
         IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
 
         uint minimumValue;
         uint exFeeRate;
         (minimumValue, networkFee, exFeeRate) = bridgeVerifier.getTokenConfig(toChainID, token);
 
-        if (totalAmount <= networkFee) return (false, 0, 0, 0);
+        if (totalAmount <= networkFee) return (QuoteStatus.InsufficientForFee, 0, networkFee, 0);
 
         uint denominator = bridgeVerifier.denominator();
         uint remaining = totalAmount - networkFee;
@@ -709,7 +714,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         bridgeValue = remaining.mulDiv(denominator, denominator + exFeeRate);
         exFee = bridgeValue.mulDiv(exFeeRate, denominator);
 
-        ok = bridgeValue >= minimumValue;
+        status = bridgeValue >= minimumValue ? QuoteStatus.Success : QuoteStatus.InsufficientValue;
     }
 
     /**
@@ -717,7 +722,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
      * @param toChainID Target chain ID
      * @param token Token to bridge
      * @param bridgeValue Desired bridge value (after fees)
-     * @return ok Whether the calculation succeeded
+     * @return status Calculation result status
      * @return totalAmount Required total amount (swap output) to achieve desired bridge value
      * @return networkFee The network fee
      * @return exFee The exchange fee
@@ -725,15 +730,19 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     function _getRequiredSwapOutput(uint toChainID, IERC20 token, uint bridgeValue)
         internal
         view
-        returns (bool ok, uint totalAmount, uint networkFee, uint exFee)
+        returns (QuoteStatus status, uint totalAmount, uint networkFee, uint exFee)
     {
+        // Validate token pair exists for the target chain
+        IBridgeRegistry.TokenPair memory pair = bridge.getTokenPair(toChainID, address(token));
+        if (pair.localToken != address(token)) return (QuoteStatus.NoPair, 0, 0, 0);
+
         IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
 
         uint minimumValue;
         uint exFeeRate;
         (minimumValue, networkFee, exFeeRate) = bridgeVerifier.getTokenConfig(toChainID, token);
 
-        if (bridgeValue < minimumValue) return (false, 0, 0, 0);
+        if (bridgeValue < minimumValue) return (QuoteStatus.InsufficientValue, 0, networkFee, 0);
 
         uint denominator = bridgeVerifier.denominator();
 
@@ -742,7 +751,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         // totalAmount = bridgeValue + exFee + networkFee
         totalAmount = bridgeValue + exFee + networkFee;
-        ok = true;
+        status = QuoteStatus.Success;
     }
 
     /**
@@ -760,10 +769,10 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         returns (uint initiateIndex_, uint bridgeValue_, uint networkFee_, uint exFee_)
     {
         // Calculate fees and bridge value (gas optimized: internal call instead of external)
-        bool ok;
-        (ok, bridgeValue_, networkFee_, exFee_) =
+        QuoteStatus status;
+        (status, bridgeValue_, networkFee_, exFee_) =
             _getExpectedBridgeAmount(bridgeParams.toChainID, IERC20(token), totalAmount);
-        require(ok, SBRInsufficientOutput());
+        require(status == QuoteStatus.Success, SBRQuoteFailed(status));
 
         // Rounding dust handling:
         // - Quote math uses floor division, so `bridgeValue + networkFee + exFee` can be < totalAmount.
