@@ -150,6 +150,25 @@ contract MockBadApproveToken {
 }
 
 /**
+ * @title MockExtraETHReturn
+ * @notice Mock contract that returns MORE ETH than it received
+ * @dev underflow protection in consumed calculation
+ */
+contract MockExtraETHReturn {
+    /**
+     * @notice Handler that returns all ETH (pre-funded + msg.value)
+     * @dev This simulates a scenario where target returns more than value
+     */
+    function handleWithExtraReturn(address, address, uint, bytes calldata) external payable {
+        uint totalReturn = address(this).balance; // includes msg.value + pre-funded
+        (bool ok,) = msg.sender.call{value: totalReturn}("");
+        require(ok, "Extra return failed");
+    }
+
+    receive() external payable {}
+}
+
+/**
  * @title MockSwap
  * @notice Mock swap contract that exchanges tokenIn for tokenOut
  * @dev Simulates a DEX swap for testing bridge + swap flow
@@ -1981,5 +2000,145 @@ contract BridgeExecutorTest is BridgeTest {
         for (uint i = 0; i < validatorCount; ++i) {
             (v[i], r[i], s[i]) = vm.sign(VALIDATOR_PKs[i], digest);
         }
+    }
+
+    // ============ Underflow Protection Tests ============
+
+    /**
+     * @notice Test consumed calculation when target returns MORE ETH than value
+     * @dev Ensures no underflow when balAfter - balBefore > value
+     *      Scenario: Target contract is pre-funded and returns all its balance
+     */
+    function test_nativeConsumed_noUnderflow_extraETHReturned() public {
+        uint amount = 1000 * 1e18;
+        uint extraETH = 500 * 1e18; // Extra ETH pre-funded to mock
+
+        // Deploy and whitelist MockExtraETHReturn on CROSS
+        vm.selectFork(crossForkID);
+        MockExtraETHReturn extraReturnMock = new MockExtraETHReturn();
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(extraReturnMock));
+
+        // Pre-fund the mock contract with extra ETH
+        vm.deal(address(extraReturnMock), extraETH);
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata targeting the mock that returns extra ETH
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockExtraETHReturn.handleWithExtraReturn.selector, address(1), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(extraReturnMock), calldata_);
+
+        // Initiate bridge
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS chain - should NOT underflow
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+
+        // This should succeed without underflow
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Mock returned value + extraETH, so:
+        // - balAfter - balBefore = value + extraETH > value
+        // - consumed should be 0 (protected from underflow)
+        // - remaining = value - 0 = value
+        // User receives value (full amount) since consumed = 0
+        assertEq(USER.balance, beforeUserBalance + value, "User should receive full value");
+        // Mock should have 0 balance (sent everything back)
+        assertEq(address(extraReturnMock).balance, 0, "Mock should have sent all ETH");
+    }
+
+    /**
+     * @notice Test consumed calculation via executor direct call
+     * @dev More direct test of the consumed calculation logic
+     */
+    function test_executor_nativeConsumed_underflowProtection() public {
+        uint value = 100 ether;
+        uint extraETH = 50 ether;
+
+        vm.selectFork(crossForkID);
+
+        // Deploy and whitelist MockExtraETHReturn
+        MockExtraETHReturn extraReturnMock = new MockExtraETHReturn();
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(extraReturnMock));
+
+        // Pre-fund the mock contract with extra ETH
+        vm.deal(address(extraReturnMock), extraETH);
+
+        // Prepare extradata
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockExtraETHReturn.handleWithExtraReturn.selector, address(1), USER, value, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(extraReturnMock), calldata_);
+
+        uint beforeUserBalance = USER.balance;
+
+        // Call executor directly with native token
+        vm.deal(address(bridgeCross), value);
+        vm.prank(address(bridgeCross));
+        (bool success, uint remaining) = bridgeExecutorCross.executeExtraCall{value: value}(
+            BSC_CHAIN_ID, 12345, IERC20(Const.NATIVE_TOKEN), USER, value, extraData
+        );
+
+        // Call should succeed (target executed)
+        assertTrue(success, "Target call should succeed");
+
+        // Since target returned value + extraETH:
+        // - returned = (value + extraETH) - 0 = value + extraETH
+        // - consumed = returned >= value ? 0 : value - returned = 0
+        // - remaining = value - consumed = value
+        // But target successfully executed, so remaining should reflect that
+        // The user receives remaining directly or via bridge
+
+        // Mock sent all its ETH back to executor, executor sent remaining to user
+        assertEq(address(extraReturnMock).balance, 0, "Mock should be empty");
+
+        // User should have received remaining (value since consumed = 0)
+        // Either remaining = 0 (sent to user) or remaining > 0 (for bridge to handle)
+        uint userReceived = USER.balance - beforeUserBalance;
+        assertTrue(
+            userReceived == value || remaining == value, "User should receive value or remaining should be value"
+        );
+    }
+
+    /**
+     * @notice Test edge case: target returns exactly what it received
+     * @dev consumed should equal value, remaining = 0
+     */
+    function test_nativeConsumed_exactReturn() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(crossForkID);
+        // Set mock to consume 0% (returns everything)
+        mockTargetCross.setConsumePercent(0);
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Target returned value, so:
+        // - consumed = 0
+        // - remaining = value
+        // User receives all value
+        assertEq(USER.balance, beforeUserBalance + value, "User should receive full value when target returns all");
     }
 }

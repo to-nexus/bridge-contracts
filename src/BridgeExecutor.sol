@@ -242,9 +242,8 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         // consumed = what was actually spent
         uint consumed;
         if (isNative) {
-            // We received msg.value, so actual consumed = value - (balAfter - balBefore)
-            // If balAfter > balBefore, target returned some
-            consumed = balAfter >= balBefore ? value - (balAfter - balBefore) : value;
+            uint returned = balAfter > balBefore ? balAfter - balBefore : 0;
+            consumed = returned >= value ? 0 : value - returned;
         } else {
             consumed = balBefore > balAfter ? balBefore - balAfter : 0;
         }
