@@ -69,9 +69,8 @@ contract MockUniswapV3Router is ISwapRouter {
         returns (uint amountOut)
     {
         // Simulate partial consumption when sqrtPriceLimitX96 is non-zero
-        uint consumedAmount = params.sqrtPriceLimitX96 != 0
-            ? params.amountIn * partialConsumeRate / 1e18
-            : params.amountIn;
+        uint consumedAmount =
+            params.sqrtPriceLimitX96 != 0 ? params.amountIn * partialConsumeRate / 1e18 : params.amountIn;
 
         // Transfer tokenIn from sender (only consumed amount)
         IERC20(params.tokenIn).transferFrom(msg.sender, address(this), consumedAmount);
@@ -404,8 +403,7 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserCrossBalance = cross.balanceOf(USER);
 
-        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter
-            .SwapBridgeExactOutputParams({
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter.SwapBridgeExactOutputParams({
             path: path,
             amountOut: desiredBridgeValue,
             amountInMaximum: amountInMaximum,
@@ -476,8 +474,7 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         // Execute
         vm.prank(USER);
-        uint amountOut =
-            swapBridgeRouterBSC.swapBridgeExactInputETH{value: amountIn}(params, block.timestamp + 1 hours);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputETH{value: amountIn}(params, block.timestamp + 1 hours);
 
         // Verify
         assertEq(USER.balance, beforeUserETHBalance - amountIn, "User ETH balance should decrease");
@@ -535,8 +532,7 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         uint beforeUserETHBalance = USER.balance;
 
-        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter
-            .SwapBridgeExactOutputParams({
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter.SwapBridgeExactOutputParams({
             path: path,
             amountOut: desiredBridgeValue,
             amountInMaximum: amountInMaximum,
@@ -545,9 +541,8 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         // Execute
         vm.prank(USER);
-        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputETH{value: amountInMaximum}(
-            params, block.timestamp + 1 hours
-        );
+        uint amountIn =
+            swapBridgeRouterBSC.swapBridgeExactOutputETH{value: amountInMaximum}(params, block.timestamp + 1 hours);
 
         // Verify: with 1:1 rate and no fees, amountIn should equal desiredBridgeValue
         assertEq(amountIn, desiredBridgeValue, "Amount in should equal bridge value with 1:1 rate and no fees");
@@ -1441,9 +1436,7 @@ contract SwapBridgeRouterTest is BridgeTest {
         // User should be refunded excess (amountInMaximum - amountIn)
         uint expectedRefund = amountInMaximum - amountIn;
         assertEq(
-            cross.balanceOf(USER),
-            beforeUserCrossBalance - amountIn,
-            "User should only spend amountIn, excess refunded"
+            cross.balanceOf(USER), beforeUserCrossBalance - amountIn, "User should only spend amountIn, excess refunded"
         );
         assertEq(expectedRefund, 900 * 1e18, "Refund should be 900 tokens");
     }
@@ -1801,9 +1794,8 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         // Execute swap with ETH
         vm.prank(USER);
-        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingleETH{value: amountIn}(
-            params, block.timestamp + 1 hours
-        );
+        uint amountOut =
+            swapBridgeRouterBSC.swapBridgeExactInputSingleETH{value: amountIn}(params, block.timestamp + 1 hours);
 
         // Verify only 60% was consumed for swap output
         uint expectedConsumed = amountIn * partialRate / 1e18;

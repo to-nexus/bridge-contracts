@@ -941,4 +941,3 @@ contract BaseBridge is
      */
     function _authorizeUpgrade(address _newImplementation) internal override onlyRole(Const.ADMIN_ROLE) {}
 }
-

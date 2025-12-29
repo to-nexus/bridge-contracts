@@ -60,6 +60,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
     error RegistryFactoryNotSet();
+    error RegistryTokenInUse(address token);
 
     /**
      * @notice Emitted when a token pair is registered
@@ -208,6 +209,13 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     function unregisterToken(uint remoteChainID, address token) external onlyRole(Const.ADMIN_ROLE) {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
+
+        // Prevent unregister while funds are locked or pending
+        TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
+        require(
+            tokenPair.pendingAmount == 0 && tokenPair.deposited == 0 && tokenPair.minted == 0, RegistryTokenInUse(token)
+        );
+
         delete (_tokenPairs[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
     }
