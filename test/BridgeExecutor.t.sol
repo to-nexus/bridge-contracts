@@ -291,7 +291,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS chain
@@ -330,7 +330,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize
@@ -370,7 +370,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - should fall back to sending tokens to user
@@ -418,7 +418,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - should fall back to minting to user
@@ -481,7 +481,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - should use normal flow
@@ -507,7 +507,7 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(bscForkID);
         vm.deal(CrossOWNER, amount * 20);
         (uint swapValue, uint swapGas, uint swapService) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount * 10);
-        uint swapIndex =
+        (uint swapIndex,) =
             bscBridge(Const.NATIVE_TOKEN, CrossOWNER, address(mockSwapCross), swapValue, swapGas, swapService, "");
         bscIncrementIndex();
         vm.selectFork(crossForkID);
@@ -536,7 +536,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - should swap testTokenCross to weth
@@ -577,7 +577,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - swap should fail, user gets testTokenCross instead
@@ -621,7 +621,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - should fallback to giving tokens to user (not calling non-whitelisted target)
@@ -671,7 +671,7 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(bscForkID);
         vm.deal(CrossOWNER, amount * 20);
         (uint swapValue, uint swapGas, uint swapService) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount * 10);
-        uint swapIndex =
+        (uint swapIndex,) =
             bscBridge(Const.NATIVE_TOKEN, CrossOWNER, address(mockSwapCross), swapValue, swapGas, swapService, "");
         bscIncrementIndex();
         vm.selectFork(crossForkID);
@@ -705,7 +705,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize
@@ -744,7 +744,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS chain
@@ -784,7 +784,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize with limited gas to test reservation
@@ -828,7 +828,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS chain with LIMITED GAS
@@ -850,47 +850,14 @@ contract BridgeExecutorTest is BridgeTest {
         );
     }
 
-    // Helper function to bridge with extradata
-    function bscBridge(
-        address token,
-        address from,
-        address to,
-        uint value,
-        uint networkFee,
-        uint exFee,
-        bytes memory extraData
-    ) internal returns (uint index) {
-        index = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
-        vm.prank(from);
-        if (token == Const.NATIVE_TOKEN) {
-            bridgeBSC.bridgeToken{value: value + networkFee + exFee}(
-                CROSS_CHAIN_ID, IERC20(token), to, value, networkFee, exFee, extraData
-            );
-        } else {
-            bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(token), to, value, networkFee, exFee, extraData);
-        }
-    }
-
-    function crossFinalize(
-        uint index,
-        address token,
-        address to,
-        uint value,
-        uint validatorCount,
-        bytes memory extraData
-    ) internal {
-        IBridgeRegistry.FinalizeArguments memory args = IBridgeRegistry.FinalizeArguments({
-            fromChainID: BSC_CHAIN_ID,
-            index: index,
-            toToken: IERC20(token),
-            to: to,
-            value: value,
-            extraData: extraData
-        });
-        (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) =
-            signFinalize(BSC_CHAIN_ID, index, token, to, value, extraData, validatorCount);
+    // Override to add vm.recordLogs() for event verification
+    function crossFinalize(uint index, address token, address to, uint value, uint sigCount, bytes memory extraData)
+        public
+        override
+        returns (bool ok)
+    {
         vm.recordLogs();
-        bridgeCross.finalizeBridge(args, v, r, s);
+        return super.crossFinalize(index, token, to, value, sigCount, extraData);
     }
 
     function crossFinalizeWithGasLimit(
@@ -933,7 +900,8 @@ contract BridgeExecutorTest is BridgeTest {
         r = new bytes32[](validatorCount);
         s = new bytes32[](validatorCount);
 
-        bytes32 structHash = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, extraData));
+        bytes32 structHash =
+            keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
         bytes32 digest = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), structHash);
 
         for (uint i = 0; i < validatorCount; ++i) {
@@ -966,7 +934,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS chain and capture logs
@@ -1027,7 +995,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS chain and capture logs
@@ -1109,7 +1077,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint total = value + gas + service;
         assertTrue(total <= amount);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS chain and capture logs
@@ -1173,7 +1141,7 @@ contract BridgeExecutorTest is BridgeTest {
 
         // Initiate bridge
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - should succeed since selector is whitelisted
@@ -1210,7 +1178,7 @@ contract BridgeExecutorTest is BridgeTest {
 
         // Initiate bridge
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize - should fallback to user since selector is not whitelisted
@@ -1243,7 +1211,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1280,7 +1248,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1316,7 +1284,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1413,7 +1381,7 @@ contract BridgeExecutorTest is BridgeTest {
         testTokenBSC.approve(address(bridgeBSC), amount);
 
         (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
-        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        (uint depositIndex,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
         bscIncrementIndex();
 
         // Finalize on CROSS to get testTokenCross for USER
@@ -1446,7 +1414,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint beforeUserBalance = testTokenBSC.balanceOf(USER);
         uint beforeExecutorBalance = testTokenBSC.balanceOf(address(bridgeExecutorBSC));
 
-        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
+        bscFinalize(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
 
         // Verify: User receives tokens directly from executor
         assertEq(
@@ -1476,7 +1444,7 @@ contract BridgeExecutorTest is BridgeTest {
         testTokenBSC.approve(address(bridgeBSC), amount);
 
         (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
-        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        (uint depositIndex,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1509,7 +1477,7 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(bscForkID);
         uint beforeUserBalance = testTokenBSC.balanceOf(USER);
 
-        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
+        bscFinalize(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
 
         // Verify user receives tokens directly from executor
         assertEq(
@@ -1534,7 +1502,7 @@ contract BridgeExecutorTest is BridgeTest {
         testTokenBSC.approve(address(bridgeBSC), amount);
 
         (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
-        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        (uint depositIndex,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1559,7 +1527,7 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(bscForkID);
         uint beforeUserBalance = testTokenBSC.balanceOf(USER);
 
-        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, shortExtraData);
+        bscFinalize(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, shortExtraData);
 
         // Verify user receives tokens directly from executor
         assertEq(
@@ -1593,7 +1561,7 @@ contract BridgeExecutorTest is BridgeTest {
         );
         bytes memory extraData = abi.encodePacked(nonWhitelistedTarget, calldata_);
 
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS - executor transfers directly to user
@@ -1720,7 +1688,7 @@ contract BridgeExecutorTest is BridgeTest {
 
         // Initiate bridge with native token
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS - executor sends directly to user
@@ -1756,7 +1724,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1784,7 +1752,7 @@ contract BridgeExecutorTest is BridgeTest {
         testTokenBSC.approve(address(bridgeBSC), amount);
 
         (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
-        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        (uint depositIndex,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1816,7 +1784,7 @@ contract BridgeExecutorTest is BridgeTest {
         uint beforeUserBalance = testTokenBSC.balanceOf(USER);
         uint beforeTargetBalance = testTokenBSC.balanceOf(address(mockTargetBSC));
 
-        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
+        bscFinalize(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
 
         // Target receives 60%, user receives remaining 40% via bridge recovery
         uint targetReceived = testTokenBSC.balanceOf(address(mockTargetBSC)) - beforeTargetBalance;
@@ -1853,7 +1821,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
-        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS
@@ -1900,7 +1868,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1940,7 +1908,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
@@ -1957,49 +1925,6 @@ contract BridgeExecutorTest is BridgeTest {
             address(mockTargetCross).balance, beforeTargetBalance + expectedTargetAmount, "Target should receive 25%"
         );
         assertEq(USER.balance, beforeUserBalance + expectedUserAmount, "User should receive remaining 75%");
-    }
-
-    // Helper function for BSC finalize with extraData
-    function bscFinalizeWithExtraData(
-        uint index,
-        address token,
-        address to,
-        uint value,
-        uint validatorCount,
-        bytes memory extraData
-    ) internal {
-        IBridgeRegistry.FinalizeArguments memory args = IBridgeRegistry.FinalizeArguments({
-            fromChainID: CROSS_CHAIN_ID,
-            index: index,
-            toToken: IERC20(token),
-            to: to,
-            value: value,
-            extraData: extraData
-        });
-        (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) =
-            signFinalizeBSC(CROSS_CHAIN_ID, index, token, to, value, extraData, validatorCount);
-        bridgeBSC.finalizeBridge(args, v, r, s);
-    }
-
-    function signFinalizeBSC(
-        uint fromChainID,
-        uint index,
-        address token,
-        address to,
-        uint value,
-        bytes memory extraData,
-        uint validatorCount
-    ) internal view returns (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) {
-        v = new uint8[](validatorCount);
-        r = new bytes32[](validatorCount);
-        s = new bytes32[](validatorCount);
-
-        bytes32 structHash = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, extraData));
-        bytes32 digest = MessageHashUtils.toTypedDataHash(bridgeBSC.domainSeparator(), structHash);
-
-        for (uint i = 0; i < validatorCount; ++i) {
-            (v[i], r[i], s[i]) = vm.sign(VALIDATOR_PKs[i], digest);
-        }
     }
 
     // ============ Underflow Protection Tests ============
@@ -2033,7 +1958,7 @@ contract BridgeExecutorTest is BridgeTest {
 
         // Initiate bridge
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         // Finalize on CROSS chain - should NOT underflow
@@ -2127,7 +2052,7 @@ contract BridgeExecutorTest is BridgeTest {
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
-        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
         bscIncrementIndex();
 
         vm.selectFork(crossForkID);
