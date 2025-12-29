@@ -136,6 +136,9 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /// @dev Native transfer gas limit (sufficient for receive/fallback)
     uint private constant NATIVE_TRANSFER_GAS = 30_000;
 
+    /// @dev Maximum return data size to prevent OOG from unbounded returndata
+    uint private constant MAX_RETURN_DATA_SIZE = 1024;
+
     /**
      * @notice Constructor
      * @param owner Address of the admin owner
@@ -223,9 +226,9 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         uint gasReserve = _postCallGasReserve;
         uint remainingGas = gasleft() < gasReserve ? 0 : gasleft() - gasReserve;
 
-        // Call target contract
+        // Call target contract with bounded returndata to prevent OOG
         bytes memory returnData;
-        (success, returnData) = targetContract.call{gas: remainingGas, value: isNative ? value : 0}(extraData[20:]);
+        (success, returnData) = _safeCall(targetContract, remainingGas, isNative ? value : 0, extraData[20:]);
 
         // Clear approval (always for ERC20) - best-effort (no revert)
         if (!isNative) _tryForceApprove(toToken, targetContract, 0);
@@ -426,6 +429,40 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     function _trySendNative(address recipient, uint amount, uint gasLimit) private returns (bool ok) {
         if (amount == 0) return true;
         (ok,) = payable(recipient).call{value: amount, gas: gasLimit}("");
+    }
+
+    /**
+     * @dev Makes external call with bounded return data size to prevent OOG
+     * @param target Target contract address
+     * @param gasLimit Gas limit for the call
+     * @param value Native value to send
+     * @param data Calldata to send
+     * @return success True if call succeeded
+     * @return returnData Return data (capped at MAX_RETURN_DATA_SIZE)
+     */
+    function _safeCall(address target, uint gasLimit, uint value, bytes memory data)
+        private
+        returns (bool success, bytes memory returnData)
+    {
+        uint maxSize = MAX_RETURN_DATA_SIZE;
+        assembly {
+            // Allocate memory for returnData
+            returnData := mload(0x40)
+
+            // Make the call
+            success := call(gasLimit, target, value, add(data, 0x20), mload(data), 0, 0)
+
+            // Cap returndata size
+            let size := returndatasize()
+            if gt(size, maxSize) { size := maxSize }
+
+            // Store length and copy limited data
+            mstore(returnData, size)
+            returndatacopy(add(returnData, 0x20), 0, size)
+
+            // Update free memory pointer (32-byte aligned)
+            mstore(0x40, add(add(returnData, 0x20), and(add(size, 31), not(31))))
+        }
     }
 
     /**

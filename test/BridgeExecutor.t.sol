@@ -169,6 +169,28 @@ contract MockExtraETHReturn {
 }
 
 /**
+ * @title MockLargeReturnData
+ * @notice Mock contract that returns large data to test returnData size cap
+ * @dev Tests CBU-11 fix for unbounded returnData OOG vulnerability
+ */
+contract MockLargeReturnData {
+    /**
+     * @notice Returns large data of specified size
+     * @param size Size of data to return (in bytes)
+     */
+    function returnLargeData(uint size) external payable returns (bytes memory) {
+        bytes memory data = new bytes(size);
+        // Fill with some pattern
+        for (uint i = 0; i < size; i++) {
+            data[i] = bytes1(uint8(i % 256));
+        }
+        return data;
+    }
+
+    receive() external payable {}
+}
+
+/**
  * @title MockSwap
  * @notice Mock swap contract that exchanges tokenIn for tokenOut
  * @dev Simulates a DEX swap for testing bridge + swap flow
@@ -2065,5 +2087,107 @@ contract BridgeExecutorTest is BridgeTest {
         // - remaining = value
         // User receives all value
         assertEq(USER.balance, beforeUserBalance + value, "User should receive full value when target returns all");
+    }
+
+    // ============ Return Data Size Cap Tests (CBU-11) ============
+
+    /**
+     * @notice Test that large return data is capped and doesn't cause OOG
+     * @dev Verifies CBU-11 fix: returnData should be limited to MAX_RETURN_DATA_SIZE (1KB)
+     */
+    function test_returnDataSizeCap_largeReturn() public {
+        uint amount = 1000 * 1e18;
+
+        // Deploy and whitelist MockLargeReturnData
+        vm.selectFork(crossForkID);
+        MockLargeReturnData largeReturnMock = new MockLargeReturnData();
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(largeReturnMock));
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata to return 10KB of data (should be capped to 1KB)
+        bytes memory calldata_ = abi.encodeWithSelector(MockLargeReturnData.returnLargeData.selector, 10 * 1024);
+        bytes memory extraData = abi.encodePacked(address(largeReturnMock), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize should NOT revert even with large return data
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+
+        // This should succeed without OOG
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // User should receive tokens (target consumed the native, returned large data)
+        assertGe(USER.balance, beforeUserBalance, "User balance should not decrease");
+    }
+
+    /**
+     * @notice Test normal return data size (under cap) works correctly
+     * @dev Small return data should be captured fully
+     */
+    function test_returnDataSizeCap_normalReturn() public {
+        uint amount = 1000 * 1e18;
+
+        // Deploy and whitelist MockLargeReturnData
+        vm.selectFork(crossForkID);
+        MockLargeReturnData largeReturnMock = new MockLargeReturnData();
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(largeReturnMock));
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extradata to return 100 bytes (under 1KB cap)
+        bytes memory calldata_ = abi.encodeWithSelector(MockLargeReturnData.returnLargeData.selector, 100);
+        bytes memory extraData = abi.encodePacked(address(largeReturnMock), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        (uint index,) = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+
+        // This should succeed
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // User should receive tokens
+        assertGe(USER.balance, beforeUserBalance, "User balance should not decrease");
+    }
+
+    /**
+     * @notice Test executor directly with large return data
+     * @dev Direct call to verify returnData is capped
+     */
+    function test_executor_returnDataCapped_directCall() public {
+        uint value = 100 ether;
+
+        vm.selectFork(crossForkID);
+
+        // Deploy and whitelist MockLargeReturnData
+        MockLargeReturnData largeReturnMock = new MockLargeReturnData();
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(largeReturnMock));
+
+        // Prepare extradata to return 50KB (way over 1KB cap)
+        bytes memory calldata_ = abi.encodeWithSelector(MockLargeReturnData.returnLargeData.selector, 50 * 1024);
+        bytes memory extraData = abi.encodePacked(address(largeReturnMock), calldata_);
+
+        // Fund bridge and call executor directly
+        vm.deal(address(bridgeCross), value);
+        vm.prank(address(bridgeCross));
+
+        // This should NOT revert due to OOG
+        (bool success,) = bridgeExecutorCross.executeExtraCall{value: value}(
+            BSC_CHAIN_ID, 99999, IERC20(Const.NATIVE_TOKEN), USER, value, extraData
+        );
+
+        // Call should succeed (returnData capped internally)
+        assertTrue(success, "Executor should handle large return data without OOG");
     }
 }
