@@ -149,6 +149,18 @@ contract CrossChainTest is SettingTest {
         public
         returns (uint index, bool ok)
     {
+        return crossBridge(token, from, to, value, gas, service, NULLDATA);
+    }
+
+    function crossBridge(
+        address token,
+        address from,
+        address to,
+        uint value,
+        uint gas,
+        uint service,
+        bytes memory extraData
+    ) public returns (uint index, bool ok) {
         vm.selectFork(crossForkID);
 
         // bridge
@@ -159,7 +171,7 @@ contract CrossChainTest is SettingTest {
             if (bridgeRevertCross) {
                 bridgeRevertCross = false;
                 try bridgeCross.bridgeToken{value: value + gas + service}(
-                    BSC_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                    BSC_CHAIN_ID, IERC20(token), to, value, gas, service, extraData
                 ) {
                     ok = true;
                 } catch {
@@ -167,20 +179,29 @@ contract CrossChainTest is SettingTest {
                 }
             } else {
                 ok = bridgeCross.bridgeToken{value: value + gas + service}(
-                    BSC_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                    BSC_CHAIN_ID, IERC20(token), to, value, gas, service, extraData
                 );
             }
         } else {
-            ok = bridgeCross.bridgeToken(BSC_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA);
+            ok = bridgeCross.bridgeToken(BSC_CHAIN_ID, IERC20(token), to, value, gas, service, extraData);
         }
     }
 
     function crossFinalize(uint index, address token, address to, uint value, uint sigCount) public returns (bool ok) {
+        return crossFinalize(index, token, to, value, sigCount, NULLDATA);
+    }
+
+    function crossFinalize(uint index, address token, address to, uint value, uint sigCount, bytes memory extraData)
+        public
+        virtual
+        returns (bool ok)
+    {
         vm.selectFork(crossForkID);
         if (sigCount > threshold) sigCount = threshold;
 
         // create finalize validator signature
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, BSC_CHAIN_ID, index, token, to, value, NULLDATA));
+        bytes32 h =
+            keccak256(abi.encode(FINALIZE_TYPEHASH, BSC_CHAIN_ID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -203,7 +224,7 @@ contract CrossChainTest is SettingTest {
                 toToken: IERC20(token),
                 to: to,
                 value: value,
-                extraData: NULLDATA
+                extraData: extraData
             }),
             v,
             r,

@@ -116,6 +116,18 @@ contract BSCTest is CrossChainTest {
         public
         returns (uint index, bool ok)
     {
+        return bscBridge(token, from, to, value, gas, service, NULLDATA);
+    }
+
+    function bscBridge(
+        address token,
+        address from,
+        address to,
+        uint value,
+        uint gas,
+        uint service,
+        bytes memory extraData
+    ) public returns (uint index, bool ok) {
         vm.selectFork(bscForkID);
         // bridge
         index = nextIndexBSC;
@@ -129,19 +141,27 @@ contract BSCTest is CrossChainTest {
         if (token == address(NATIVE_TOKEN)) {
             assertTrue(from.balance >= value + gas + service);
             ok = bridgeBSC.bridgeToken{value: value + gas + service}(
-                CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, extraData
             );
         } else {
-            ok = bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA);
+            ok = bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, extraData);
         }
     }
 
     function bscFinalize(uint index, address token, address to, uint value, uint sigCount) public returns (bool ok) {
+        return bscFinalize(index, token, to, value, sigCount, NULLDATA);
+    }
+
+    function bscFinalize(uint index, address token, address to, uint value, uint sigCount, bytes memory extraData)
+        public
+        returns (bool ok)
+    {
         vm.selectFork(bscForkID);
         if (sigCount > threshold) sigCount = threshold;
 
         // create finalize validator signature
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, CROSS_CHAIN_ID, index, token, to, value, NULLDATA));
+        bytes32 h =
+            keccak256(abi.encode(FINALIZE_TYPEHASH, CROSS_CHAIN_ID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeBSC.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -164,7 +184,7 @@ contract BSCTest is CrossChainTest {
                 toToken: IERC20(token),
                 to: to,
                 value: value,
-                extraData: NULLDATA
+                extraData: extraData
             }),
             v,
             r,
