@@ -5,6 +5,7 @@ import {BridgeVerifier, IBridgeVerifier} from "../src/BridgeVerifier.sol";
 import {IPriceFeed} from "../src/PriceFeed.sol";
 import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
 import {BridgeTest} from "./Bridge.t.sol";
+import {TestToken} from "./token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BridgeSetTest is BridgeTest {
@@ -402,5 +403,71 @@ contract BridgeSetTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         bridgeCross.setVerificationDelay(newDelay);
+    }
+
+    // ============ Token Unregistration Guard Tests ============
+
+    /**
+     * @notice Test unregisterToken reverts when token has deposited amount (origin chain)
+     * @dev Prevent DoS by blocking unregister while deposited > 0
+     */
+    function test_unregisterToken_reverts_whenDepositedExists() public {
+        uint amount = 1000 ether;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        // Complete a deposit - this increases deposited on BSC (origin chain)
+        deposit(false, amount, 5);
+
+        // Try to unregister token with deposited amount - should revert
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSignature("RegistryTokenInUse(address)", address(cross)));
+        bridgeBSC.unregisterToken(CROSS_CHAIN_ID, address(cross));
+    }
+
+    /**
+     * @notice Test unregisterToken reverts when token has minted amount (wrapped chain)
+     * @dev Prevent DoS by blocking unregister while minted > 0
+     */
+    function test_unregisterToken_reverts_whenMintedExists() public {
+        uint amount = 1000 ether;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        // Complete a deposit of ERC20 token - this increases minted on Cross chain (wrapped chain)
+        depositToken(false, amount, 5);
+
+        // Try to unregister wrapped token with minted amount - should revert
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        vm.expectRevert(abi.encodeWithSignature("RegistryTokenInUse(address)", address(testTokenCross)));
+        bridgeCross.unregisterToken(BSC_CHAIN_ID, address(testTokenCross));
+    }
+
+    /**
+     * @notice Test unregisterToken succeeds when all amounts are zero
+     * @dev Unregister should work when pendingAmount, deposited, and minted are all 0
+     */
+    function test_unregisterToken_succeeds_whenAllZero() public {
+        vm.selectFork(bscForkID);
+        vm.startPrank(OWNER);
+
+        // Register a new token pair with zero amounts
+        address newToken = address(new TestToken("New Token", "NEW", 18));
+        bridgeBSC.registerToken(CROSS_CHAIN_ID, true, newToken, address(0x123));
+
+        // Unregister should succeed since all amounts are zero
+        bridgeBSC.unregisterToken(CROSS_CHAIN_ID, newToken);
+
+        vm.stopPrank();
     }
 }

@@ -1378,8 +1378,6 @@ contract BridgeExecutorTest is BridgeTest {
         assertFalse(bridgeExecutorCross.isWhitelistedMethod(target, selectors[2]));
     }
 
-    // ============ CBU-02 Fix Tests ============
-
     /**
      * @notice Test early-return: Origin ERC20 with non-whitelisted target
      * @dev When executor encounters non-whitelisted target, it sends tokens directly to user.
@@ -1896,15 +1894,9 @@ contract BridgeExecutorTest is BridgeTest {
         uint expectedTargetAmount = value * 40 / 100;
         uint expectedUserAmount = value - expectedTargetAmount;
         assertEq(
-            address(mockTargetCross).balance,
-            beforeTargetBalance + expectedTargetAmount,
-            "Target should receive 40%"
+            address(mockTargetCross).balance, beforeTargetBalance + expectedTargetAmount, "Target should receive 40%"
         );
-        assertEq(
-            USER.balance,
-            beforeUserBalance + expectedUserAmount,
-            "User should receive remaining 60% via bridge"
-        );
+        assertEq(USER.balance, beforeUserBalance + expectedUserAmount, "User should receive remaining 60% via bridge");
     }
 
     /**
@@ -1943,15 +1935,9 @@ contract BridgeExecutorTest is BridgeTest {
         uint expectedTargetAmount = value * 25 / 100;
         uint expectedUserAmount = value - expectedTargetAmount;
         assertEq(
-            address(mockTargetCross).balance,
-            beforeTargetBalance + expectedTargetAmount,
-            "Target should receive 25%"
+            address(mockTargetCross).balance, beforeTargetBalance + expectedTargetAmount, "Target should receive 25%"
         );
-        assertEq(
-            USER.balance,
-            beforeUserBalance + expectedUserAmount,
-            "User should receive remaining 75%"
-        );
+        assertEq(USER.balance, beforeUserBalance + expectedUserAmount, "User should receive remaining 75%");
     }
 
     // Helper function for BSC finalize with extraData
