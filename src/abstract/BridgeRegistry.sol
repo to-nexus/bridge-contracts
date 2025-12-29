@@ -217,6 +217,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         );
 
         delete (_tokenPairs[remoteChainID][token]);
+        delete (_tokenFinalizePaused[remoteChainID][token]);
         emit TokenPairUnregistered(remoteChainID, token);
     }
 

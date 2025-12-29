@@ -470,4 +470,38 @@ contract BridgeSetTest is BridgeTest {
 
         vm.stopPrank();
     }
+
+    /**
+     * @notice Test finalizePause is cleared on unregister
+     * @dev After unregister and re-register, finalizePause should be false
+     */
+    function test_unregisterToken_clearsFinalizePause() public {
+        vm.selectFork(bscForkID);
+        vm.startPrank(OWNER);
+
+        // Register a new token
+        address newToken = address(new TestToken("Pause Test", "PT", 18));
+        bridgeBSC.registerToken(CROSS_CHAIN_ID, true, newToken, address(0x456));
+
+        // Set finalize pause to true
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, newToken, false, true);
+        assertTrue(bridgeBSC.isTokenFinalizePaused(CROSS_CHAIN_ID, newToken), "Should be finalize paused");
+
+        // Unregister token
+        bridgeBSC.unregisterToken(CROSS_CHAIN_ID, newToken);
+
+        // Verify finalize pause is cleared
+        assertFalse(bridgeBSC.isTokenFinalizePaused(CROSS_CHAIN_ID, newToken), "Finalize pause should be cleared");
+
+        // Re-register the same token
+        bridgeBSC.registerToken(CROSS_CHAIN_ID, true, newToken, address(0x789));
+
+        // Verify finalize pause is still false (not persisted from before)
+        assertFalse(
+            bridgeBSC.isTokenFinalizePaused(CROSS_CHAIN_ID, newToken),
+            "Finalize pause should be false after re-register"
+        );
+
+        vm.stopPrank();
+    }
 }
