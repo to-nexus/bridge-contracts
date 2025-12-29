@@ -120,6 +120,36 @@ contract MockGasConsumer {
 }
 
 /**
+ * @title MockBadApproveToken
+ * @notice Mock ERC20 token that always fails on approve (for testing forceApprove failure)
+ */
+contract MockBadApproveToken {
+    mapping(address => uint) public balanceOf;
+    mapping(address => mapping(address => uint)) public allowance;
+
+    function transfer(address to, uint amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function approve(address, uint) external pure returns (bool) {
+        return false; // Always fail
+    }
+
+    function mint(address to, uint amount) external {
+        balanceOf[to] += amount;
+    }
+}
+
+/**
  * @title MockSwap
  * @notice Mock swap contract that exchanges tokenIn for tokenOut
  * @dev Simulates a DEX swap for testing bridge + swap flow
@@ -1346,5 +1376,624 @@ contract BridgeExecutorTest is BridgeTest {
         assertFalse(bridgeExecutorCross.isWhitelistedMethod(target, selectors[0]));
         assertTrue(bridgeExecutorCross.isWhitelistedMethod(target, selectors[1]));
         assertFalse(bridgeExecutorCross.isWhitelistedMethod(target, selectors[2]));
+    }
+
+    // ============ CBU-02 Fix Tests ============
+
+    /**
+     * @notice Test early-return: Origin ERC20 with non-whitelisted target
+     * @dev When executor encounters non-whitelisted target, it sends tokens directly to user.
+     *      Returns (false, 0) to indicate user already received tokens.
+     */
+    function test_earlyReturn_originERC20_nonWhitelistedTarget() public {
+        uint amount = 1000 * 1e18;
+
+        // First, deposit testToken from BSC to CROSS to get some testTokenCross
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        bscIncrementIndex();
+
+        // Finalize on CROSS to get testTokenCross for USER
+        vm.selectFork(crossForkID);
+        crossFinalize(depositIndex, address(testTokenCross), USER, value, 5, "");
+
+        // Now bridge back CROSS -> BSC with extraData targeting a NON-whitelisted contract
+        vm.selectFork(crossForkID);
+        address nonWhitelistedTarget = address(0xDEADBEEF);
+
+        // Prepare extraData with non-whitelisted target
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenBSC), USER, value, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(nonWhitelistedTarget, calldata_);
+
+        // Calculate fee and bridge from CROSS
+        (uint crossValue, uint crossGas, uint crossService) = crossCalcFee(testTokenCross, value);
+
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), value);
+
+        uint bridgeIndex = bridgeCross.getNextInitiateIndex(BSC_CHAIN_ID);
+        vm.prank(USER);
+        bridgeCross.bridgeToken(BSC_CHAIN_ID, testTokenCross, USER, crossValue, crossGas, crossService, extraData);
+        crossIncrementIndex();
+
+        // Finalize on BSC - executor sends directly to user, returns (false, 0)
+        vm.selectFork(bscForkID);
+        uint beforeUserBalance = testTokenBSC.balanceOf(USER);
+        uint beforeExecutorBalance = testTokenBSC.balanceOf(address(bridgeExecutorBSC));
+
+        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
+
+        // Verify: User receives tokens directly from executor
+        assertEq(
+            testTokenBSC.balanceOf(USER),
+            beforeUserBalance + crossValue,
+            "User should receive origin tokens directly from executor"
+        );
+        assertEq(
+            testTokenBSC.balanceOf(address(bridgeExecutorBSC)),
+            beforeExecutorBalance,
+            "Executor should not hold any tokens"
+        );
+    }
+
+    /**
+     * @notice Test early-return: Origin ERC20 with method not whitelisted
+     * @dev When method selector is not whitelisted, executor sends tokens directly to user.
+     */
+    function test_earlyReturn_originERC20_methodNotWhitelisted() public {
+        uint amount = 1000 * 1e18;
+
+        // Setup: deposit testToken from BSC to CROSS
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        crossFinalize(depositIndex, address(testTokenCross), USER, value, 5, "");
+
+        // Enable method check for mockTargetBSC but don't whitelist any methods
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        bridgeExecutorBSC.setMethodCheckEnabled(address(mockTargetBSC), true);
+
+        // Bridge from CROSS -> BSC with extraData
+        vm.selectFork(crossForkID);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenBSC), USER, value, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetBSC), calldata_);
+
+        // Calculate fee
+        (uint crossValue, uint crossGas, uint crossService) = crossCalcFee(testTokenCross, value);
+
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), value);
+
+        uint bridgeIndex = bridgeCross.getNextInitiateIndex(BSC_CHAIN_ID);
+        vm.prank(USER);
+        bridgeCross.bridgeToken(BSC_CHAIN_ID, testTokenCross, USER, crossValue, crossGas, crossService, extraData);
+        crossIncrementIndex();
+
+        // Finalize on BSC - executor sends directly to user
+        vm.selectFork(bscForkID);
+        uint beforeUserBalance = testTokenBSC.balanceOf(USER);
+
+        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
+
+        // Verify user receives tokens directly from executor
+        assertEq(
+            testTokenBSC.balanceOf(USER),
+            beforeUserBalance + crossValue,
+            "User should receive tokens directly from executor"
+        );
+    }
+
+    /**
+     * @notice Test early-return: Origin ERC20 with short extraData
+     * @dev When extraData is too short (< 24 bytes), executor sends tokens directly to user.
+     */
+    function test_earlyReturn_originERC20_shortExtraData() public {
+        uint amount = 1000 * 1e18;
+
+        // Setup: deposit testToken from BSC to CROSS
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        crossFinalize(depositIndex, address(testTokenCross), USER, value, 5, "");
+
+        // Bridge from CROSS -> BSC with SHORT extraData (< 24 bytes)
+        // This should cause early-return in executor
+        bytes memory shortExtraData = bytes("short"); // Only 5 bytes
+
+        // Calculate fee
+        (uint crossValue, uint crossGas, uint crossService) = crossCalcFee(testTokenCross, value);
+
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), value);
+
+        uint bridgeIndex = bridgeCross.getNextInitiateIndex(BSC_CHAIN_ID);
+        vm.prank(USER);
+        bridgeCross.bridgeToken(BSC_CHAIN_ID, testTokenCross, USER, crossValue, crossGas, crossService, shortExtraData);
+        crossIncrementIndex();
+
+        // Finalize on BSC - executor sends directly to user
+        vm.selectFork(bscForkID);
+        uint beforeUserBalance = testTokenBSC.balanceOf(USER);
+
+        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, shortExtraData);
+
+        // Verify user receives tokens directly from executor
+        assertEq(
+            testTokenBSC.balanceOf(USER),
+            beforeUserBalance + crossValue,
+            "User should receive tokens directly from executor"
+        );
+    }
+
+    /**
+     * @notice Test early-return: Wrapped ERC20 with non-whitelisted target
+     * @dev When executor encounters non-whitelisted target with wrapped token,
+     *      it transfers directly to user (CrossMintableERC20 supports transfer).
+     */
+    function test_earlyReturn_wrappedERC20_nonWhitelistedTarget() public {
+        uint amount = 1000 * 1e18;
+
+        // BSC -> CROSS: bridge testTokenBSC to get testTokenCross (wrapped)
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+
+        // Prepare extraData with NON-whitelisted target
+        address nonWhitelistedTarget = address(0xDEADBEEF);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenCross), USER, value, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(nonWhitelistedTarget, calldata_);
+
+        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS - executor transfers directly to user
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = testTokenCross.balanceOf(USER);
+        uint beforeExecutorBalance = testTokenCross.balanceOf(address(bridgeExecutorCross));
+
+        crossFinalize(index, address(testTokenCross), USER, value, 5, extraData);
+
+        // Verify: User receives wrapped tokens directly from executor
+        assertEq(
+            testTokenCross.balanceOf(USER),
+            beforeUserBalance + value,
+            "User should receive wrapped tokens directly from executor"
+        );
+        assertEq(
+            testTokenCross.balanceOf(address(bridgeExecutorCross)),
+            beforeExecutorBalance,
+            "Executor should not hold any wrapped tokens"
+        );
+    }
+
+    /**
+     * @notice Test executor: Insufficient balance sends directly to user
+     * @dev When executor has less tokens than expected, it sends actual balance directly to user.
+     *      Returns (false, 0) since user received tokens.
+     */
+    function test_executor_insufficientBalance_sendsDirectlyToUser() public {
+        vm.selectFork(crossForkID);
+
+        uint value = 1000 * 1e18;
+        uint actualBalance = 500 * 1e18; // Less than value
+
+        // Mint testTokenCross to executor (less than expected value)
+        vm.prank(address(bridgeCross));
+        ICrossMintableERC20(address(testTokenCross)).mint(address(bridgeExecutorCross), actualBalance);
+
+        // Prepare valid extraData
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenCross), USER, value, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        uint beforeUserBalance = testTokenCross.balanceOf(USER);
+
+        // Call executor directly - should send actualBalance to user and return (false, 0)
+        vm.prank(address(bridgeCross));
+        (bool success, uint remaining) =
+            bridgeExecutorCross.executeExtraCall(BSC_CHAIN_ID, 999, testTokenCross, USER, value, extraData);
+
+        assertFalse(success, "Should fail due to insufficient balance");
+        assertEq(remaining, 0, "Remaining should be 0 (user received tokens)");
+
+        // Verify user received tokens directly
+        assertEq(
+            testTokenCross.balanceOf(USER),
+            beforeUserBalance + actualBalance,
+            "User should receive actual balance directly"
+        );
+        assertEq(
+            testTokenCross.balanceOf(address(bridgeExecutorCross)),
+            0,
+            "Executor should have 0 balance after direct transfer"
+        );
+    }
+
+    /**
+     * @notice Test executor: Approve fails but transfer succeeds
+     * @dev When target approval fails, executor tries to transfer directly to user.
+     *      If transfer succeeds, returns (false, 0). User receives tokens.
+     */
+    function test_executor_approveFails_transferSucceeds_sendsToUser() public {
+        vm.selectFork(crossForkID);
+
+        // Deploy bad approve token (approve always fails, but transfer works)
+        MockBadApproveToken badToken = new MockBadApproveToken();
+        uint value = 1000 * 1e18;
+
+        // Mint tokens to executor
+        badToken.mint(address(bridgeExecutorCross), value);
+
+        // Prepare valid extraData targeting whitelisted contract
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(badToken), USER, value, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        uint beforeUserBalance = badToken.balanceOf(USER);
+
+        // Call executor directly - approve to target fails, but transfer to user succeeds
+        vm.prank(address(bridgeCross));
+        (bool success, uint remaining) =
+            bridgeExecutorCross.executeExtraCall(BSC_CHAIN_ID, 998, IERC20(address(badToken)), USER, value, extraData);
+
+        assertFalse(success, "Should fail due to forceApprove failure");
+        assertEq(remaining, 0, "Remaining should be 0 (user received tokens via transfer)");
+
+        // User received tokens via direct transfer
+        assertEq(
+            badToken.balanceOf(USER),
+            beforeUserBalance + value,
+            "User should receive tokens via transfer when approve fails"
+        );
+        assertEq(badToken.balanceOf(address(bridgeExecutorCross)), 0, "Executor should have 0 balance after transfer");
+    }
+
+    /**
+     * @notice Test early-return: Native token with non-whitelisted target
+     * @dev When executor encounters non-whitelisted target with native token,
+     *      it sends ETH directly to user and returns (false, 0).
+     */
+    function test_earlyReturn_nativeToken_nonWhitelistedTarget() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Prepare extraData with NON-whitelisted target for native token
+        address nonWhitelistedTarget = address(0xDEADBEEF);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(nonWhitelistedTarget, calldata_);
+
+        // Initiate bridge with native token
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS - executor sends directly to user
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Verify user receives native tokens directly from executor
+        assertEq(USER.balance, beforeUserBalance + value, "User should receive native tokens directly");
+    }
+
+    /**
+     * @notice Test target revert: User receives remaining after target failure
+     * @dev When target reverts, user receives the remaining tokens (not consumed by target).
+     *      In this case target is set to consume 100% but revert, so remaining = value.
+     */
+    function test_targetReverts_userReceivesRemaining() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Set mock to revert AFTER consuming tokens
+        vm.selectFork(crossForkID);
+        mockTargetCross.setShouldRevert(true);
+        mockTargetCross.setConsumePercent(100);
+
+        vm.selectFork(bscForkID);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Target reverts, so user should receive all tokens
+        assertEq(USER.balance, beforeUserBalance + value, "User should receive all tokens on target revert");
+    }
+
+    /**
+     * @notice Test remaining bridge recovery: Origin ERC20
+     * @dev When remaining > 0 and direct transfer to user fails, bridge recovers via transferFrom
+     *      and transfers to user via normal flow.
+     */
+    function test_remaining_bridgeRecovery_originERC20() public {
+        uint amount = 1000 * 1e18;
+
+        // Setup: deposit testToken from BSC to CROSS
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+        uint depositIndex = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, "");
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        crossFinalize(depositIndex, address(testTokenCross), USER, value, 5, "");
+
+        // Set mock to consume 60% on BSC
+        vm.selectFork(bscForkID);
+        mockTargetBSC.setConsumePercent(60);
+
+        // Bridge from CROSS -> BSC with extraData
+        vm.selectFork(crossForkID);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenBSC), USER, value, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetBSC), calldata_);
+
+        (uint crossValue, uint crossGas, uint crossService) = crossCalcFee(testTokenCross, value);
+
+        vm.prank(USER);
+        testTokenCross.approve(address(bridgeCross), value);
+
+        uint bridgeIndex = bridgeCross.getNextInitiateIndex(BSC_CHAIN_ID);
+        vm.prank(USER);
+        bridgeCross.bridgeToken(BSC_CHAIN_ID, testTokenCross, USER, crossValue, crossGas, crossService, extraData);
+        crossIncrementIndex();
+
+        // Finalize on BSC
+        vm.selectFork(bscForkID);
+        uint beforeUserBalance = testTokenBSC.balanceOf(USER);
+        uint beforeTargetBalance = testTokenBSC.balanceOf(address(mockTargetBSC));
+
+        bscFinalizeWithExtraData(bridgeIndex, address(testTokenBSC), USER, crossValue, 5, extraData);
+
+        // Target receives 60%, user receives remaining 40% via bridge recovery
+        uint targetReceived = testTokenBSC.balanceOf(address(mockTargetBSC)) - beforeTargetBalance;
+        uint userReceived = testTokenBSC.balanceOf(USER) - beforeUserBalance;
+
+        // Verify target got ~60% and user got ~40%
+        assertApproxEqRel(targetReceived, crossValue * 60 / 100, 0.01e18, "Target should receive ~60%");
+        assertApproxEqRel(userReceived, crossValue * 40 / 100, 0.01e18, "User should receive ~40% via bridge recovery");
+        assertEq(targetReceived + userReceived, crossValue, "Total should equal crossValue");
+    }
+
+    /**
+     * @notice Test remaining bridge recovery: Wrapped ERC20
+     * @dev When remaining > 0 for wrapped token, bridge burns from executor and mints to user.
+     */
+    function test_remaining_bridgeRecovery_wrappedERC20() public {
+        uint amount = 1000 * 1e18;
+
+        // BSC -> CROSS: bridge testTokenBSC to get testTokenCross (wrapped)
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+
+        // Set mock to consume 80%
+        vm.selectFork(crossForkID);
+        mockTargetCross.setConsumePercent(80);
+
+        vm.selectFork(bscForkID);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenCross), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+        uint index = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on CROSS
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = testTokenCross.balanceOf(USER);
+        uint beforeTargetBalance = testTokenCross.balanceOf(address(mockTargetCross));
+
+        crossFinalize(index, address(testTokenCross), USER, value, 5, extraData);
+
+        // Target receives 80%, user receives remaining 20% via bridge (burn/mint)
+        uint expectedTargetAmount = value * 80 / 100;
+        uint expectedUserAmount = value - expectedTargetAmount;
+        assertEq(
+            testTokenCross.balanceOf(address(mockTargetCross)),
+            beforeTargetBalance + expectedTargetAmount,
+            "Target should receive 80%"
+        );
+        assertEq(
+            testTokenCross.balanceOf(USER),
+            beforeUserBalance + expectedUserAmount,
+            "User should receive remaining 20% via bridge burn/mint"
+        );
+    }
+
+    /**
+     * @notice Test remaining bridge recovery: Native token
+     * @dev When remaining > 0 for native token and direct transfer fails,
+     *      executor sends to bridge and bridge forwards to user.
+     */
+    function test_remaining_bridgeRecovery_native() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Set mock to consume 40%
+        vm.selectFork(crossForkID);
+        mockTargetCross.setConsumePercent(40);
+
+        vm.selectFork(bscForkID);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+        uint beforeTargetBalance = address(mockTargetCross).balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Target receives 40%, user receives remaining 60% via bridge
+        uint expectedTargetAmount = value * 40 / 100;
+        uint expectedUserAmount = value - expectedTargetAmount;
+        assertEq(
+            address(mockTargetCross).balance,
+            beforeTargetBalance + expectedTargetAmount,
+            "Target should receive 40%"
+        );
+        assertEq(
+            USER.balance,
+            beforeUserBalance + expectedUserAmount,
+            "User should receive remaining 60% via bridge"
+        );
+    }
+
+    /**
+     * @notice Test: remaining == 0 means executor already sent to user
+     * @dev When executor successfully sends remaining directly to user,
+     *      it returns remaining = 0 and bridge completes without additional transfer.
+     */
+    function test_remaining_executorDirectTransfer_success() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.deal(USER, amount);
+
+        // Set mock to consume 25%
+        vm.selectFork(crossForkID);
+        mockTargetCross.setConsumePercent(25);
+
+        vm.selectFork(bscForkID);
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(Const.NATIVE_TOKEN), amount);
+        uint index = bscBridge(Const.NATIVE_TOKEN, USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint beforeUserBalance = USER.balance;
+        uint beforeTargetBalance = address(mockTargetCross).balance;
+
+        crossFinalize(index, address(NATIVE_TOKEN), USER, value, 5, extraData);
+
+        // Target receives 25%, user receives remaining 75%
+        // (either directly from executor or via bridge - same result)
+        uint expectedTargetAmount = value * 25 / 100;
+        uint expectedUserAmount = value - expectedTargetAmount;
+        assertEq(
+            address(mockTargetCross).balance,
+            beforeTargetBalance + expectedTargetAmount,
+            "Target should receive 25%"
+        );
+        assertEq(
+            USER.balance,
+            beforeUserBalance + expectedUserAmount,
+            "User should receive remaining 75%"
+        );
+    }
+
+    // Helper function for BSC finalize with extraData
+    function bscFinalizeWithExtraData(
+        uint index,
+        address token,
+        address to,
+        uint value,
+        uint validatorCount,
+        bytes memory extraData
+    ) internal {
+        IBridgeRegistry.FinalizeArguments memory args = IBridgeRegistry.FinalizeArguments({
+            fromChainID: CROSS_CHAIN_ID,
+            index: index,
+            toToken: IERC20(token),
+            to: to,
+            value: value,
+            extraData: extraData
+        });
+        (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) =
+            signFinalizeBSC(CROSS_CHAIN_ID, index, token, to, value, extraData, validatorCount);
+        bridgeBSC.finalizeBridge(args, v, r, s);
+    }
+
+    function signFinalizeBSC(
+        uint fromChainID,
+        uint index,
+        address token,
+        address to,
+        uint value,
+        bytes memory extraData,
+        uint validatorCount
+    ) internal view returns (uint8[] memory v, bytes32[] memory r, bytes32[] memory s) {
+        v = new uint8[](validatorCount);
+        r = new bytes32[](validatorCount);
+        s = new bytes32[](validatorCount);
+
+        bytes32 structHash = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, extraData));
+        bytes32 digest = MessageHashUtils.toTypedDataHash(bridgeBSC.domainSeparator(), structHash);
+
+        for (uint i = 0; i < validatorCount; ++i) {
+            (v[i], r[i], s[i]) = vm.sign(VALIDATOR_PKs[i], digest);
+        }
     }
 }
