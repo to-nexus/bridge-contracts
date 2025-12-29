@@ -13,6 +13,7 @@ import {ICrossMintableERC20} from "../src/token/ICrossMintableERC20.sol";
 
 import {Const} from "../src/lib/Const.sol";
 import {BridgeTest} from "./Bridge.t.sol";
+import {TestToken} from "./token/TestToken.sol";
 
 /**
  * @title MockTargetContract
@@ -142,6 +143,44 @@ contract MockBadApproveToken {
 
     function approve(address, uint) external pure returns (bool) {
         return false; // Always fail
+    }
+
+    function mint(address to, uint amount) external {
+        balanceOf[to] += amount;
+    }
+}
+
+/**
+ * @title MockNonStandardApproveToken
+ * @notice Mock ERC20 token that returns non-standard values on approve
+ * @dev Returns 0x02 (non-standard bool) to test assembly-based _callOptionalReturnBool
+ */
+contract MockNonStandardApproveToken {
+    mapping(address => uint) public balanceOf;
+    mapping(address => mapping(address => uint)) public allowance;
+
+    function transfer(address to, uint amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    /// @notice Returns 0x02 instead of 0x01 (non-standard "success" value)
+    /// @dev Uses assembly to ensure raw 32-byte return value of 2
+    function approve(address spender, uint amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        // Return raw 32 bytes with value 2 (non-standard)
+        assembly {
+            mstore(0x00, 2)
+            return(0x00, 0x20)
+        }
     }
 
     function mint(address to, uint amount) external {
@@ -2189,5 +2228,118 @@ contract BridgeExecutorTest is BridgeTest {
 
         // Call should succeed (returnData capped internally)
         assertTrue(success, "Executor should handle large return data without OOG");
+    }
+
+    // ==================== CBU-12: Non-standard ERC20 approve return ====================
+
+    /**
+     * @notice Test that non-standard approve return (e.g., 0x02) doesn't revert
+     * @dev Token returns 2 instead of 1, old abi.decode would revert, new assembly returns false
+     */
+    function test_nonStandardApproveReturn_noRevert() public {
+        vm.selectFork(crossForkID);
+
+        // Deploy non-standard token
+        MockNonStandardApproveToken nonStdToken = new MockNonStandardApproveToken();
+        nonStdToken.mint(address(bridgeExecutorCross), 1000 ether);
+
+        // Deploy and whitelist a mock target
+        MockTargetContract target = new MockTargetContract();
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(target));
+
+        // Register the non-standard token
+        vm.prank(CrossOWNER);
+        bridgeCross.registerToken(BSC_CHAIN_ID, true, address(nonStdToken), address(nonStdToken));
+
+        uint value = 100 ether;
+        uint userBalanceBefore = nonStdToken.balanceOf(USER);
+
+        // Build extraData
+        bytes memory calldata_ =
+            abi.encodeWithSelector(MockTargetContract.handleBridgeCallback.selector, address(nonStdToken), USER, value, "");
+        bytes memory extraData = abi.encodePacked(address(target), calldata_);
+
+        // Whitelist the method
+        bytes4 selector = MockTargetContract.handleBridgeCallback.selector;
+        bytes4[] memory methods = new bytes4[](1);
+        methods[0] = selector;
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistMethods(address(target), methods);
+
+        // Call executor directly with non-standard token
+        vm.prank(address(bridgeCross));
+
+        // This should NOT revert even though token.approve returns 2 instead of 1
+        // The new assembly-based _callOptionalReturnBool treats this as false (approve failed)
+        // and the executor should handle the fallback gracefully via _failAndRefund
+        (bool success, uint remaining) = bridgeExecutorCross.executeExtraCall(
+            BSC_CHAIN_ID, 99999, IERC20(address(nonStdToken)), USER, value, extraData
+        );
+
+        // Since approve returns non-standard value (2), _tryForceApprove returns false
+        // _failAndRefund is called and directly transfers tokens to user
+        // success=false (extraCall failed), remaining=0 (already sent to user via direct transfer)
+        assertFalse(success, "ExtraCall should fail due to approve returning non-standard value");
+        assertEq(remaining, 0, "Remaining should be 0 (tokens sent directly to user)");
+        assertEq(nonStdToken.balanceOf(USER), userBalanceBefore + value, "User should receive tokens via fallback");
+    }
+
+    /**
+     * @notice Test that standard approve return (0x01) still works correctly
+     * @dev Ensure the assembly-based approach doesn't break normal ERC20 tokens
+     */
+    function test_standardApproveReturn_stillWorks() public {
+        // This test verifies that the assembly-based _callOptionalReturnBool
+        // still correctly handles standard ERC20 tokens that return true (0x01)
+        // by checking existing ERC20 extraCall tests work
+        uint value = 10 ether;
+        uint gas = 0.1 ether;
+        uint service = 0.01 ether;
+        uint totalAmount = value + gas + service;
+
+        // Mint tokens for USER on BSC
+        vm.selectFork(bscForkID);
+        TestToken(address(testTokenBSC)).mint(USER, totalAmount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), totalAmount);
+
+        vm.selectFork(crossForkID);
+
+        // Build extraData for mockTargetCross (already whitelisted in setUp)
+        bytes memory calldata_ =
+            abi.encodeWithSelector(MockTargetContract.handleBridgeCallback.selector, address(testTokenCross), USER, value, "");
+        bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
+
+        // Whitelist the method
+        bytes4 selector = MockTargetContract.handleBridgeCallback.selector;
+        bytes4[] memory methods = new bytes4[](1);
+        methods[0] = selector;
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistMethods(address(mockTargetCross), methods);
+
+        // Bridge from BSC to Cross with extraData
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        // Finalize on Cross chain
+        vm.selectFork(crossForkID);
+        vm.recordLogs();
+        crossFinalize(index, address(testTokenCross), USER, value, 5, extraData);
+
+        // Verify ExtraCallExecuted event was emitted with success=true
+        // Event signature: ExtraCallExecuted(uint256 indexed, uint256 indexed, address indexed, bytes4, bool, uint256, bytes)
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool foundEvent = false;
+        for (uint i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)")) {
+                (bytes4 methodID, bool success, uint remaining, bytes memory returnData) =
+                    abi.decode(logs[i].data, (bytes4, bool, uint, bytes));
+                assertTrue(success, "ExtraCallExecuted should show success=true for standard token");
+                foundEvent = true;
+                break;
+            }
+        }
+        assertTrue(foundEvent, "ExtraCallExecuted event should be emitted");
     }
 }
