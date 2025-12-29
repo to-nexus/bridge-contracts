@@ -715,8 +715,10 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         vm.selectFork(bscForkID);
 
-        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) = swapBridgeRouterBSC
-            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
+        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeOut(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
+        );
 
         // Verify all return values
         assertTrue(status == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -731,8 +733,12 @@ contract SwapBridgeRouterTest is BridgeTest {
         assertEq(bridgeValue + networkFee + exFee, swapAmountOut, "Fees should sum to swap output");
 
         // Verify bridge value calculation matches getExpectedBridgeAmount
-        (ISwapBridgeRouter.QuoteStatus expectedStatus, uint expectedBridgeValue, uint expectedNetworkFee, uint expectedExFee) =
-            swapBridgeRouterBSC.getExpectedBridgeAmount(CROSS_CHAIN_ID, swapOutputTokenBSC, swapAmountOut);
+        (
+            ISwapBridgeRouter.QuoteStatus expectedStatus,
+            uint expectedBridgeValue,
+            uint expectedNetworkFee,
+            uint expectedExFee
+        ) = swapBridgeRouterBSC.getExpectedBridgeAmount(CROSS_CHAIN_ID, swapOutputTokenBSC, swapAmountOut);
         assertTrue(expectedStatus == ISwapBridgeRouter.QuoteStatus.Success, "Expected calculation should succeed");
         assertEq(bridgeValue, expectedBridgeValue, "Bridge value should match expected");
         assertEq(networkFee, expectedNetworkFee, "Network fee should match expected");
@@ -752,8 +758,10 @@ contract SwapBridgeRouterTest is BridgeTest {
         // Set swap rate on quoter
         mockQuoterBSC.setSwapRate(swapRate);
 
-        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) = swapBridgeRouterBSC
-            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
+        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeOut(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
+        );
 
         // Verify
         assertTrue(status == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -804,8 +812,10 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         vm.selectFork(bscForkID);
 
-        (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) = swapBridgeRouterBSC
-            .getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue);
+        (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeIn(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
+        );
 
         // Verify all return values
         assertTrue(status == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -821,9 +831,8 @@ contract SwapBridgeRouterTest is BridgeTest {
         assertEq(amountIn, swapAmountOut, "Amount in should equal swap output with 1:1 rate");
 
         // Cross-verify: if we use this amountIn for getAmountSwapBridgeOut, we should get back the desired bridgeValue
-        (ISwapBridgeRouter.QuoteStatus statusVerify, uint swapOutVerify, uint bridgeValueVerify,,) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
-            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
-        );
+        (ISwapBridgeRouter.QuoteStatus statusVerify, uint swapOutVerify, uint bridgeValueVerify,,) = swapBridgeRouterBSC
+            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
         assertTrue(statusVerify == ISwapBridgeRouter.QuoteStatus.Success, "Verification quote should succeed");
         assertEq(swapOutVerify, swapAmountOut, "Swap output should match");
         assertEq(bridgeValueVerify, desiredBridgeValue, "Bridge value should match desired");
@@ -866,8 +875,10 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         vm.selectFork(bscForkID);
 
-        (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) = swapBridgeRouterBSC
-            .getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue);
+        (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeIn(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
+        );
 
         // With zero bridgeValue and zero minimumValue, the quote succeeds with zero amounts
         assertTrue(status == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed when minimumValue is 0");
@@ -886,15 +897,13 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.selectFork(bscForkID);
 
         // First get the output for a given input
-        (ISwapBridgeRouter.QuoteStatus status1, uint swapAmountOut, uint bridgeValue,,) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
-            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
-        );
+        (ISwapBridgeRouter.QuoteStatus status1, uint swapAmountOut, uint bridgeValue,,) = swapBridgeRouterBSC
+            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
         assertTrue(status1 == ISwapBridgeRouter.QuoteStatus.Success, "First quote should succeed");
 
         // Now get the required input for that bridge value
-        (ISwapBridgeRouter.QuoteStatus status2, uint requiredAmountIn, uint swapAmountOut2,,) = swapBridgeRouterBSC.getAmountSwapBridgeIn(
-            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, bridgeValue
-        );
+        (ISwapBridgeRouter.QuoteStatus status2, uint requiredAmountIn, uint swapAmountOut2,,) = swapBridgeRouterBSC
+            .getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, bridgeValue);
         assertTrue(status2 == ISwapBridgeRouter.QuoteStatus.Success, "Second quote should succeed");
 
         // With 1:1 rate, the required input should equal the swap output needed
@@ -914,8 +923,13 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.selectFork(bscForkID);
 
         // Get expected values first
-        (ISwapBridgeRouter.QuoteStatus expectedStatus, uint expectedSwapOut, uint expectedBridgeValue, uint expectedNetworkFee, uint expectedExFee) =
-        swapBridgeRouterBSC.getAmountSwapBridgeOut(
+        (
+            ISwapBridgeRouter.QuoteStatus expectedStatus,
+            uint expectedSwapOut,
+            uint expectedBridgeValue,
+            uint expectedNetworkFee,
+            uint expectedExFee
+        ) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
             CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
         );
         assertTrue(expectedStatus == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -990,8 +1004,10 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(OWNER);
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
-        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) = swapBridgeRouterBSC
-            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
+        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeOut(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
+        );
 
         // Verify quote succeeded
         assertTrue(status == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -1036,8 +1052,10 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(OWNER);
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
-        (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) = swapBridgeRouterBSC
-            .getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue);
+        (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeIn(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
+        );
 
         // Verify quote succeeded
         assertTrue(status == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -1055,9 +1073,8 @@ contract SwapBridgeRouterTest is BridgeTest {
         assertEq(amountIn, swapAmountOut, "Amount in should equal swap output with 1:1 rate");
 
         // Cross-verify: using this amountIn should give back the desired bridgeValue
-        (ISwapBridgeRouter.QuoteStatus statusVerify,, uint bridgeValueVerify,,) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
-            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
-        );
+        (ISwapBridgeRouter.QuoteStatus statusVerify,, uint bridgeValueVerify,,) = swapBridgeRouterBSC
+            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
         assertTrue(statusVerify == ISwapBridgeRouter.QuoteStatus.Success, "Verification quote should succeed");
         assertEq(bridgeValueVerify, desiredBridgeValue, "Bridge value should match desired");
 
@@ -1081,8 +1098,10 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(OWNER);
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
-        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) = swapBridgeRouterBSC
-            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
+        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) =
+        swapBridgeRouterBSC.getAmountSwapBridgeOut(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
+        );
 
         assertTrue(status == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
         assertEq(swapAmountOut, amountIn, "Swap output should equal input with 1:1 rate");
@@ -1120,8 +1139,13 @@ contract SwapBridgeRouterTest is BridgeTest {
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
         // Get expected values with fees
-        (ISwapBridgeRouter.QuoteStatus expectedStatus, uint expectedSwapOut, uint expectedBridgeValue, uint expectedNetworkFee, uint expectedExFee) =
-        swapBridgeRouterBSC.getAmountSwapBridgeOut(
+        (
+            ISwapBridgeRouter.QuoteStatus expectedStatus,
+            uint expectedSwapOut,
+            uint expectedBridgeValue,
+            uint expectedNetworkFee,
+            uint expectedExFee
+        ) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
             CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
         );
         assertTrue(expectedStatus == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -1192,8 +1216,10 @@ contract SwapBridgeRouterTest is BridgeTest {
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
         // Step 1: Get bridgeValue for given amountIn
-        (ISwapBridgeRouter.QuoteStatus status1, uint swapAmountOut1, uint bridgeValue1, uint networkFee1, uint exFee1) = swapBridgeRouterBSC
-            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
+        (ISwapBridgeRouter.QuoteStatus status1, uint swapAmountOut1, uint bridgeValue1, uint networkFee1, uint exFee1) =
+        swapBridgeRouterBSC.getAmountSwapBridgeOut(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
+        );
         assertTrue(status1 == ISwapBridgeRouter.QuoteStatus.Success, "First quote should succeed");
         assertGt(exFee1, 0, "Exchange fee should be positive");
 
@@ -1201,8 +1227,15 @@ contract SwapBridgeRouterTest is BridgeTest {
         assertEq(swapAmountOut1, amountIn, "Swap output should equal input with 1:1 rate");
 
         // Step 2: Get required amountIn for the same bridgeValue
-        (ISwapBridgeRouter.QuoteStatus status2, uint requiredAmountIn, uint swapAmountOut2, uint networkFee2, uint exFee2) = swapBridgeRouterBSC
-            .getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, bridgeValue1);
+        (
+            ISwapBridgeRouter.QuoteStatus status2,
+            uint requiredAmountIn,
+            uint swapAmountOut2,
+            uint networkFee2,
+            uint exFee2
+        ) = swapBridgeRouterBSC.getAmountSwapBridgeIn(
+            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, bridgeValue1
+        );
         assertTrue(status2 == ISwapBridgeRouter.QuoteStatus.Success, "Second quote should succeed");
 
         // Key verification: requiredAmountIn should equal original amountIn
@@ -1243,9 +1276,8 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(OWNER);
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, feeRate1);
 
-        (ISwapBridgeRouter.QuoteStatus status1,, uint bridgeValue1,, uint exFee1) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
-            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
-        );
+        (ISwapBridgeRouter.QuoteStatus status1,, uint bridgeValue1,, uint exFee1) = swapBridgeRouterBSC
+            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
         assertTrue(status1 == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
         assertApproxEqAbs(bridgeValue1 + exFee1, amountIn, 1, "Total should equal input");
 
@@ -1257,9 +1289,8 @@ contract SwapBridgeRouterTest is BridgeTest {
         vm.prank(OWNER);
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, feeRate2);
 
-        (ISwapBridgeRouter.QuoteStatus status2,, uint bridgeValue2,, uint exFee2) = swapBridgeRouterBSC.getAmountSwapBridgeOut(
-            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn
-        );
+        (ISwapBridgeRouter.QuoteStatus status2,, uint bridgeValue2,, uint exFee2) = swapBridgeRouterBSC
+            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, amountIn);
         assertTrue(status2 == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
         assertApproxEqAbs(bridgeValue2 + exFee2, amountIn, 1, "Total should equal input");
 
@@ -1294,9 +1325,8 @@ contract SwapBridgeRouterTest is BridgeTest {
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
         // Get expected amountIn from quote
-        (ISwapBridgeRouter.QuoteStatus quoteStatus, uint expectedAmountIn,,, uint expectedExFee) = swapBridgeRouterBSC.getAmountSwapBridgeIn(
-            CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
-        );
+        (ISwapBridgeRouter.QuoteStatus quoteStatus, uint expectedAmountIn,,, uint expectedExFee) = swapBridgeRouterBSC
+            .getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue);
         assertTrue(quoteStatus == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
         assertGt(expectedExFee, 0, "Expected exchange fee should be positive");
 
@@ -1352,8 +1382,13 @@ contract SwapBridgeRouterTest is BridgeTest {
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
         // Get expected values from quote
-        (ISwapBridgeRouter.QuoteStatus quoteStatus, uint expectedAmountIn, uint expectedSwapOutput, uint expectedNetworkFee, uint expectedExFee) =
-        swapBridgeRouterBSC.getAmountSwapBridgeIn(
+        (
+            ISwapBridgeRouter.QuoteStatus quoteStatus,
+            uint expectedAmountIn,
+            uint expectedSwapOutput,
+            uint expectedNetworkFee,
+            uint expectedExFee
+        ) = swapBridgeRouterBSC.getAmountSwapBridgeIn(
             CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
         );
         assertTrue(quoteStatus == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -1539,8 +1574,13 @@ contract SwapBridgeRouterTest is BridgeTest {
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, exFeeRate);
 
         // Get quote first
-        (ISwapBridgeRouter.QuoteStatus quoteStatus, uint quotedAmountIn, uint quotedSwapOutput, uint quotedNetworkFee, uint quotedExFee) =
-        swapBridgeRouterBSC.getAmountSwapBridgeIn(
+        (
+            ISwapBridgeRouter.QuoteStatus quoteStatus,
+            uint quotedAmountIn,
+            uint quotedSwapOutput,
+            uint quotedNetworkFee,
+            uint quotedExFee
+        ) = swapBridgeRouterBSC.getAmountSwapBridgeIn(
             CROSS_CHAIN_ID, address(cross), address(swapOutputTokenBSC), 3000, desiredBridgeValue
         );
         assertTrue(quoteStatus == ISwapBridgeRouter.QuoteStatus.Success, "Quote should succeed");
@@ -1578,7 +1618,7 @@ contract SwapBridgeRouterTest is BridgeTest {
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 0);
     }
 
-// ============ QuoteStatus Tests ============
+    // ============ QuoteStatus Tests ============
 
     /**
      * @notice Test getExpectedBridgeAmount returns NoPair for unregistered token
@@ -1626,7 +1666,11 @@ contract SwapBridgeRouterTest is BridgeTest {
         (ISwapBridgeRouter.QuoteStatus status, uint bridgeValue, uint networkFee,) =
             swapBridgeRouterBSC.getExpectedBridgeAmount(CROSS_CHAIN_ID, swapOutputTokenBSC, totalAmount);
 
-        assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.InsufficientForFee), "Should return InsufficientForFee status");
+        assertEq(
+            uint(status),
+            uint(ISwapBridgeRouter.QuoteStatus.InsufficientForFee),
+            "Should return InsufficientForFee status"
+        );
         assertEq(bridgeValue, 0, "Bridge value should be 0");
         assertTrue(networkFee > 0, "Network fee should be positive");
     }
@@ -1661,7 +1705,11 @@ contract SwapBridgeRouterTest is BridgeTest {
         (ISwapBridgeRouter.QuoteStatus status, uint bridgeValue,,) =
             swapBridgeRouterBSC.getExpectedBridgeAmount(CROSS_CHAIN_ID, swapOutputTokenBSC, totalAmount);
 
-        assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.InsufficientValue), "Should return InsufficientValue status");
+        assertEq(
+            uint(status),
+            uint(ISwapBridgeRouter.QuoteStatus.InsufficientValue),
+            "Should return InsufficientValue status"
+        );
         assertTrue(bridgeValue < minimumTokenAmount, "Bridge value should be below minimum");
 
         // Clean up
@@ -1680,8 +1728,8 @@ contract SwapBridgeRouterTest is BridgeTest {
         address unregisteredToken = address(0xdEADbeEF00000000000000000000000000000001);
         uint amountIn = 1000 * 1e18;
 
-        (ISwapBridgeRouter.QuoteStatus status,, uint bridgeValue, uint networkFee, uint exFee) =
-            swapBridgeRouterBSC.getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), unregisteredToken, 3000, amountIn);
+        (ISwapBridgeRouter.QuoteStatus status,, uint bridgeValue, uint networkFee, uint exFee) = swapBridgeRouterBSC
+            .getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), unregisteredToken, 3000, amountIn);
 
         assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.NoPair), "Should return NoPair status");
         // Note: swapAmountOut may have value from quoter, but bridge values should be 0
@@ -1701,7 +1749,7 @@ contract SwapBridgeRouterTest is BridgeTest {
         uint bridgeValue = 1000 * 1e18;
 
         (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) =
-            swapBridgeRouterBSC.getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), unregisteredToken, 3000, bridgeValue);
+        swapBridgeRouterBSC.getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), unregisteredToken, 3000, bridgeValue);
 
         assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.NoPair), "Should return NoPair status");
         assertEq(amountIn, 0, "Amount in should be 0");

@@ -268,13 +268,13 @@ contract BaseBridge is
 
     /**
      * @notice Bridges tokens using permit functionality
+     * @dev extraData parameter is intentionally ignored to prevent front-running attacks
      * @param toChainID Target chain ID
      * @param fromToken Token to bridge
      * @param to Recipient address (must match permit account)
      * @param value Amount to bridge
      * @param networkFee Network fee
      * @param exFee Exchange fee
-     * @param extraData Additional data
      * @param permitArgs Permit signature parameters
      * @return success Operation status
      */
@@ -285,7 +285,7 @@ contract BaseBridge is
         uint value,
         uint networkFee,
         uint exFee,
-        bytes calldata extraData,
+        bytes calldata, // extraData ignored to prevent front-running attacks
         PermitArguments calldata permitArgs
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
         require(
@@ -325,7 +325,7 @@ contract BaseBridge is
                 value: value,
                 networkFee: networkFee,
                 exFee: exFee,
-                extraData: extraData
+                extraData: "" // Empty: extraData not supported in permit flow
             })
         );
         return true;
