@@ -388,7 +388,7 @@ contract BaseBridge is
                 address(args.toToken),
                 args.to,
                 args.value,
-                args.extraData
+                keccak256(args.extraData)
             )
         );
         _validateSignature(messageHash, v, r, s);
