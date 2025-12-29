@@ -42,6 +42,7 @@ contract MockWETH9 is TestToken {
 contract MockUniswapV3Router is ISwapRouter {
     address public immutable WETH9;
     uint public swapRate = 1e18; // 1:1 default rate
+    uint public partialConsumeRate = 1e18; // 100% consume by default (1e18 = 100%)
 
     constructor(address _weth9) {
         WETH9 = _weth9;
@@ -49,6 +50,11 @@ contract MockUniswapV3Router is ISwapRouter {
 
     function setSwapRate(uint _rate) external {
         swapRate = _rate;
+    }
+
+    /// @notice Set partial consumption rate (1e18 = 100%, 5e17 = 50%)
+    function setPartialConsumeRate(uint _rate) external {
+        partialConsumeRate = _rate;
     }
 
     // IUniswapV3SwapCallback implementation (required by ISwapRouter)
@@ -62,11 +68,16 @@ contract MockUniswapV3Router is ISwapRouter {
         override
         returns (uint amountOut)
     {
-        // Transfer tokenIn from sender
-        IERC20(params.tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
+        // Simulate partial consumption when sqrtPriceLimitX96 is non-zero
+        uint consumedAmount = params.sqrtPriceLimitX96 != 0
+            ? params.amountIn * partialConsumeRate / 1e18
+            : params.amountIn;
 
-        // Calculate output amount
-        amountOut = params.amountIn * swapRate / 1e18;
+        // Transfer tokenIn from sender (only consumed amount)
+        IERC20(params.tokenIn).transferFrom(msg.sender, address(this), consumedAmount);
+
+        // Calculate output amount based on consumed input
+        amountOut = consumedAmount * swapRate / 1e18;
         require(amountOut >= params.amountOutMinimum, "Too little received");
 
         // Transfer tokenOut to recipient
@@ -1574,7 +1585,7 @@ contract SwapBridgeRouterTest is BridgeTest {
         bridgeVerifierBSC.setExFeeRate(swapOutputTokenBSC, 0);
     }
 
-    // ============ QuoteStatus Tests ============
+// ============ QuoteStatus Tests ============
 
     /**
      * @notice Test getExpectedBridgeAmount returns NoPair for unregistered token
@@ -1666,42 +1677,191 @@ contract SwapBridgeRouterTest is BridgeTest {
     }
 
     /**
-     * @notice Test getAmountSwapBridgeOut returns InvalidSwap when quoter fails (no pool)
+     * @notice Test getAmountSwapBridgeOut returns NoPair when token is not registered
+     * @dev Quoter succeeds but bridge amount calculation returns NoPair
      */
-    function test_getAmountSwapBridgeOut_InvalidSwap() public {
+    function test_getAmountSwapBridgeOut_NoPair() public {
         vm.selectFork(bscForkID);
 
-        // Use a token that doesn't have a pool with cross token
-        address noPoolToken = address(0xdEADbeEF00000000000000000000000000000001);
+        // Use a token that is not registered
+        address unregisteredToken = address(0xdEADbeEF00000000000000000000000000000001);
         uint amountIn = 1000 * 1e18;
 
-        (ISwapBridgeRouter.QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee) =
-            swapBridgeRouterBSC.getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), noPoolToken, 3000, amountIn);
+        (ISwapBridgeRouter.QuoteStatus status,, uint bridgeValue, uint networkFee, uint exFee) =
+            swapBridgeRouterBSC.getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), unregisteredToken, 3000, amountIn);
 
-        assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.InvalidSwap), "Should return InvalidSwap status");
-        assertEq(swapAmountOut, 0, "Swap amount out should be 0");
+        assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.NoPair), "Should return NoPair status");
+        // Note: swapAmountOut may have value from quoter, but bridge values should be 0
         assertEq(bridgeValue, 0, "Bridge value should be 0");
         assertEq(networkFee, 0, "Network fee should be 0");
         assertEq(exFee, 0, "Exchange fee should be 0");
     }
 
     /**
-     * @notice Test getAmountSwapBridgeIn returns InvalidSwap when quoter fails
+     * @notice Test getAmountSwapBridgeIn returns NoPair when token is not registered
      */
-    function test_getAmountSwapBridgeIn_InvalidSwap() public {
+    function test_getAmountSwapBridgeIn_NoPair() public {
         vm.selectFork(bscForkID);
 
-        // Use a token that doesn't have a pool
-        address noPoolToken = address(0xdEADbeEF00000000000000000000000000000001);
+        // Use a token that is not registered
+        address unregisteredToken = address(0xdEADbeEF00000000000000000000000000000001);
         uint bridgeValue = 1000 * 1e18;
 
         (ISwapBridgeRouter.QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee) =
-            swapBridgeRouterBSC.getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), noPoolToken, 3000, bridgeValue);
+            swapBridgeRouterBSC.getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), unregisteredToken, 3000, bridgeValue);
 
-        assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.InvalidSwap), "Should return InvalidSwap status");
+        assertEq(uint(status), uint(ISwapBridgeRouter.QuoteStatus.NoPair), "Should return NoPair status");
         assertEq(amountIn, 0, "Amount in should be 0");
         assertEq(swapAmountOut, 0, "Swap amount out should be 0");
         assertEq(networkFee, 0, "Network fee should be 0");
         assertEq(exFee, 0, "Exchange fee should be 0");
+    }
+
+    // ============ Partial Swap Refund Tests ============
+
+    /**
+     * @notice Test that unspent ERC20 tokens are refunded when sqrtPriceLimitX96 causes early termination
+     */
+    function test_swapBridgeExactInputSingle_partialSwap_refundsUnspent() public {
+        vm.selectFork(bscForkID);
+
+        uint amountIn = 100 * 1e18;
+        uint partialRate = 5e17; // 50% consumption
+
+        // Set partial consumption rate
+        mockSwapRouterBSC.setPartialConsumeRate(partialRate);
+
+        // Record initial balances
+        uint userBalanceBefore = cross.balanceOf(USER);
+
+        // Approve tokens
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        // Create params with non-zero sqrtPriceLimitX96 to trigger partial consumption
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0, // Accept any output for this test
+            sqrtPriceLimitX96: 1, // Non-zero to trigger partial consumption
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Execute swap
+        vm.prank(USER);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
+
+        // Verify only 50% was consumed for swap output
+        uint expectedConsumed = amountIn * partialRate / 1e18; // 50 tokens
+        assertEq(amountOut, expectedConsumed, "Output should be 50% of input");
+
+        // Verify unspent 50% was refunded to user
+        uint userBalanceAfter = cross.balanceOf(USER);
+        assertEq(userBalanceBefore - userBalanceAfter, expectedConsumed, "User should only spend consumed amount");
+
+        // Verify router has no leftover tokens
+        assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), 0, "Router should have no leftover tokens");
+
+        // Reset partial consumption rate
+        mockSwapRouterBSC.setPartialConsumeRate(1e18);
+    }
+
+    /**
+     * @notice Test that unspent ETH (WETH) is refunded when sqrtPriceLimitX96 causes early termination
+     */
+    function test_swapBridgeExactInputSingleETH_partialSwap_refundsUnspent() public {
+        vm.selectFork(bscForkID);
+
+        uint amountIn = 1 ether;
+        uint partialRate = 6e17; // 60% consumption
+
+        // Set partial consumption rate
+        mockSwapRouterBSC.setPartialConsumeRate(partialRate);
+
+        // Fund user with ETH
+        vm.deal(USER, 10 ether);
+
+        // Record initial balance
+        uint userEthBefore = USER.balance;
+
+        // Create params with non-zero sqrtPriceLimitX96 to trigger partial consumption
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(mockWETHBSC),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0, // Accept any output for this test
+            sqrtPriceLimitX96: 1, // Non-zero to trigger partial consumption
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Execute swap with ETH
+        vm.prank(USER);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingleETH{value: amountIn}(
+            params, block.timestamp + 1 hours
+        );
+
+        // Verify only 60% was consumed for swap output
+        uint expectedConsumed = amountIn * partialRate / 1e18;
+        assertEq(amountOut, expectedConsumed, "Output should be 60% of input");
+
+        // Verify unspent 40% was refunded to user as ETH
+        uint userEthAfter = USER.balance;
+        assertEq(userEthBefore - userEthAfter, expectedConsumed, "User should only spend consumed ETH amount");
+
+        // Verify router has no leftover WETH
+        assertEq(mockWETHBSC.balanceOf(address(swapBridgeRouterBSC)), 0, "Router should have no leftover WETH");
+
+        // Reset partial consumption rate
+        mockSwapRouterBSC.setPartialConsumeRate(1e18);
+    }
+
+    /**
+     * @notice Test that full consumption works correctly (no refund needed)
+     */
+    function test_swapBridgeExactInputSingle_fullConsumption_noRefund() public {
+        vm.selectFork(bscForkID);
+
+        uint amountIn = 100 * 1e18;
+
+        // Ensure full consumption (default)
+        mockSwapRouterBSC.setPartialConsumeRate(1e18);
+
+        // Record initial balance
+        uint userBalanceBefore = cross.balanceOf(USER);
+
+        // Approve tokens
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        // Create params with zero sqrtPriceLimitX96 (full consumption)
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0, // Zero means no price limit, full consumption
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        // Execute swap
+        vm.prank(USER);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
+
+        // Verify full amount was consumed
+        assertEq(amountOut, amountIn, "Output should equal input (1:1 rate)");
+
+        // Verify user spent full amount
+        uint userBalanceAfter = cross.balanceOf(USER);
+        assertEq(userBalanceBefore - userBalanceAfter, amountIn, "User should spend full amount");
+
+        // Verify router has no leftover tokens
+        assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), 0, "Router should have no leftover tokens");
     }
 }

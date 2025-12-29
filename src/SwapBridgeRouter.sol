@@ -108,6 +108,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
+        // Refund unspent tokens (when sqrtPriceLimitX96 causes early termination)
+        _refundUnspent(params.tokenIn);
+
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
 
@@ -282,6 +285,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 sqrtPriceLimitX96: params.sqrtPriceLimitX96
             })
         );
+
+        // Refund unspent WETH as ETH (when sqrtPriceLimitX96 causes early termination)
+        _refundUnspentETH();
 
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
@@ -616,6 +622,35 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         // Refund any extra ETH sent beyond amountInMaximum
         if (msg.value > amountInMaximum) {
             (bool success,) = msg.sender.call{value: msg.value - amountInMaximum}("");
+            require(success, SBRRefundFailed());
+        }
+    }
+
+    /**
+     * @notice Refund unspent ERC20 tokens after exactInputSingle swap
+     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent tokens
+     * @param tokenIn Input token address
+     */
+    function _refundUnspent(address tokenIn) internal {
+        // Clear allowance
+        IERC20(tokenIn).forceApprove(address(swapRouter), 0);
+        // Refund any unspent tokens
+        uint remaining = IERC20(tokenIn).balanceOf(address(this));
+        if (remaining > 0) IERC20(tokenIn).safeTransfer(msg.sender, remaining);
+    }
+
+    /**
+     * @notice Refund unspent WETH as ETH after exactInputSingle swap
+     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent WETH
+     */
+    function _refundUnspentETH() internal {
+        // Clear allowance
+        WETH9.approve(address(swapRouter), 0);
+        // Refund any unspent WETH as ETH
+        uint remaining = WETH9.balanceOf(address(this));
+        if (remaining > 0) {
+            WETH9.withdraw(remaining);
+            (bool success,) = msg.sender.call{value: remaining}("");
             require(success, SBRRefundFailed());
         }
     }
