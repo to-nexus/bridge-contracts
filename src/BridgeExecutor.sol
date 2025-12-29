@@ -482,19 +482,21 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
 
     /**
      * @dev Calls token function and safely parses optional bool return
+     * Uses assembly to avoid revert on non-standard return values (OZ SafeERC20 pattern)
      * @param token ERC20 token to call
      * @param data Encoded function call data
      * @return True if call succeeded and returned true (or no data with code)
      */
     function _callOptionalReturnBool(IERC20 token, bytes memory data) private returns (bool) {
-        (bool ok, bytes memory returndata) = address(token).call(data);
-        if (!ok) return false;
-
-        // Tokens may return no data, assume success if target is a contract
-        if (returndata.length == 0) return address(token).code.length != 0;
-
-        if (returndata.length >= 32) return abi.decode(returndata, (bool));
-        return false;
+        bool success;
+        uint returnSize;
+        uint returnValue;
+        assembly ("memory-safe") {
+            success := call(gas(), token, 0, add(data, 0x20), mload(data), 0, 0x20)
+            returnSize := returndatasize()
+            returnValue := mload(0)
+        }
+        return success && (returnSize == 0 ? address(token).code.length > 0 : returnValue == 1);
     }
 
     /**
