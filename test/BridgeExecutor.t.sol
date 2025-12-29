@@ -210,7 +210,7 @@ contract MockExtraETHReturn {
 /**
  * @title MockLargeReturnData
  * @notice Mock contract that returns large data to test returnData size cap
- * @dev Tests CBU-11 fix for unbounded returnData OOG vulnerability
+ * @dev Tests unbounded returnData OOG vulnerability
  */
 contract MockLargeReturnData {
     /**
@@ -2128,11 +2128,11 @@ contract BridgeExecutorTest is BridgeTest {
         assertEq(USER.balance, beforeUserBalance + value, "User should receive full value when target returns all");
     }
 
-    // ============ Return Data Size Cap Tests (CBU-11) ============
+    // ============ Return Data Size Cap Tests ============
 
     /**
      * @notice Test that large return data is capped and doesn't cause OOG
-     * @dev Verifies CBU-11 fix: returnData should be limited to MAX_RETURN_DATA_SIZE (1KB)
+     * @dev Verifies: returnData should be limited to MAX_RETURN_DATA_SIZE (1KB)
      */
     function test_returnDataSizeCap_largeReturn() public {
         uint amount = 1000 * 1e18;
@@ -2230,7 +2230,7 @@ contract BridgeExecutorTest is BridgeTest {
         assertTrue(success, "Executor should handle large return data without OOG");
     }
 
-    // ==================== CBU-12: Non-standard ERC20 approve return ====================
+    // ==================== Non-standard ERC20 approve return ====================
 
     /**
      * @notice Test that non-standard approve return (e.g., 0x02) doesn't revert
@@ -2256,8 +2256,9 @@ contract BridgeExecutorTest is BridgeTest {
         uint userBalanceBefore = nonStdToken.balanceOf(USER);
 
         // Build extraData
-        bytes memory calldata_ =
-            abi.encodeWithSelector(MockTargetContract.handleBridgeCallback.selector, address(nonStdToken), USER, value, "");
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(nonStdToken), USER, value, ""
+        );
         bytes memory extraData = abi.encodePacked(address(target), calldata_);
 
         // Whitelist the method
@@ -2307,8 +2308,9 @@ contract BridgeExecutorTest is BridgeTest {
         vm.selectFork(crossForkID);
 
         // Build extraData for mockTargetCross (already whitelisted in setUp)
-        bytes memory calldata_ =
-            abi.encodeWithSelector(MockTargetContract.handleBridgeCallback.selector, address(testTokenCross), USER, value, "");
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(testTokenCross), USER, value, ""
+        );
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         // Whitelist the method
@@ -2332,7 +2334,8 @@ contract BridgeExecutorTest is BridgeTest {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool foundEvent = false;
         for (uint i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)")) {
+            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)"))
+            {
                 (bytes4 methodID, bool success, uint remaining, bytes memory returnData) =
                     abi.decode(logs[i].data, (bytes4, bool, uint, bytes));
                 assertTrue(success, "ExtraCallExecuted should show success=true for standard token");

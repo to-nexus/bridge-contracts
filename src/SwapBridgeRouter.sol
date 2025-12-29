@@ -825,7 +825,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /**
-/**
+     * /**
      * @notice Internal function to bridge tokens after swap
      * @param token Token to bridge
      * @param totalAmount Total amount received from swap
