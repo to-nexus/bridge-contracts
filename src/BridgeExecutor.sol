@@ -133,6 +133,9 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /// @dev Post-call gas reserve (adjustable by admin)
     uint private _postCallGasReserve = 200_000;
 
+    /// @dev Native transfer gas limit (sufficient for receive/fallback)
+    uint private constant NATIVE_TRANSFER_GAS = 30_000;
+
     /**
      * @notice Constructor
      * @param owner Address of the admin owner
@@ -153,7 +156,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         uint fromChainID,
         uint index,
         IERC20 toToken,
-        address, // to (unused, kept for interface compatibility)
+        address to,
         uint value,
         bytes calldata extraData
     ) external payable onlyRole(Const.EXECUTOR_ROLE) nonReentrant returns (bool success, uint remaining) {
@@ -173,8 +176,9 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
             }
         } else {
             // Refund any unexpected native value (best-effort) and fail
-            if (msg.value != 0) _trySendNative(msg.sender, msg.value);
-            return (false, 0);
+            if (msg.value != 0) _trySendNative(msg.sender, msg.value, NATIVE_TRANSFER_GAS);
+            // Send tokens directly to user on failure
+            return _failAndRefund(toToken, value, to);
         }
 
         bool isNative = address(toToken) == Const.NATIVE_TOKEN;
@@ -182,14 +186,14 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
 
         // Reject non-whitelisted targets (no revert)
         if (!target.isWhitelisted) {
-            if (isNative && msg.value != 0) _trySendNative(msg.sender, msg.value);
-            return (false, 0);
+            // Send tokens directly to user on failure
+            return _failAndRefund(toToken, value, to);
         }
 
         // Optional: methodID check per target (no revert)
         if (target.methodCheckEnabled && !_whitelistedMethods[targetContract][methodID]) {
-            if (isNative && msg.value != 0) _trySendNative(msg.sender, msg.value);
-            return (false, 0);
+            // Send tokens directly to user on failure
+            return _failAndRefund(toToken, value, to);
         }
 
         // Record balance before call
@@ -199,18 +203,20 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
             balBefore = address(this).balance - msg.value;
             if (msg.value != value) {
                 // Refund whatever was sent (best-effort) and fail
-                if (msg.value != 0) _trySendNative(msg.sender, msg.value);
+                _trySendNative(msg.sender, msg.value, NATIVE_TRANSFER_GAS);
                 return (false, 0);
             }
         } else {
             // Any unexpected msg.value is refunded to the bridge (best-effort)
-            if (msg.value != 0) _trySendNative(msg.sender, msg.value);
+            if (msg.value != 0) _trySendNative(msg.sender, msg.value, NATIVE_TRANSFER_GAS);
 
             (bool okBal, uint bal) = _tryBalanceOf(toToken, address(this));
-            if (!okBal || bal < value) return (false, 0);
+            // Send actual balance to user on failure
+            if (!okBal || bal < value) return _failAndRefund(toToken, bal, to);
             balBefore = bal;
 
-            if (!_tryForceApprove(toToken, targetContract, value)) return (false, 0);
+            // Send tokens to user if target approval fails
+            if (!_tryForceApprove(toToken, targetContract, value)) return _failAndRefund(toToken, value, to);
         }
 
         // Reserve minimum gas for post-extracall logic
@@ -234,19 +240,29 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         }
 
         // consumed = what was actually spent
-        uint consumed = balBefore < balAfter ? 0 : balBefore - balAfter;
-        // For native, we need to account for the msg.value we received
+        uint consumed;
         if (isNative) {
-            // We received msg.value, so actual consumed = msg.value - (balAfter - balBefore)
+            // We received msg.value, so actual consumed = value - (balAfter - balBefore)
             // If balAfter > balBefore, target returned some
             consumed = balAfter >= balBefore ? value - (balAfter - balBefore) : value;
+        } else {
+            consumed = balBefore > balAfter ? balBefore - balAfter : 0;
         }
         remaining = value > consumed ? value - consumed : 0;
 
-        // Return remaining to bridge
+        // Return remaining to user (try direct), fallback to bridge
         if (remaining > 0) {
-            if (isNative) _trySendNative(msg.sender, remaining);
-            else _tryForceApprove(toToken, msg.sender, remaining);
+            if (isNative) {
+                uint reserve = _postCallGasReserve + NATIVE_TRANSFER_GAS;
+                uint gasForTransfer = gasleft() > reserve ? gasleft() - reserve : NATIVE_TRANSFER_GAS;
+                if (_trySendNative(to, remaining, gasForTransfer)) remaining = 0; // user received directly
+
+                else _trySendNative(msg.sender, remaining, NATIVE_TRANSFER_GAS);
+            } else {
+                if (_tryTransfer(toToken, to, remaining)) remaining = 0; // user received directly
+
+                else _tryForceApprove(toToken, msg.sender, remaining);
+            }
         }
 
         emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, success, remaining, returnData);
@@ -405,11 +421,12 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @dev Attempts to send native tokens without reverting
      * @param recipient Address to send native tokens to
      * @param amount Amount of native tokens to send
+     * @param gasLimit Gas limit for the call
      * @return ok True if transfer succeeded
      */
-    function _trySendNative(address recipient, uint amount) private returns (bool ok) {
+    function _trySendNative(address recipient, uint amount, uint gasLimit) private returns (bool ok) {
         if (amount == 0) return true;
-        (ok,) = payable(recipient).call{value: amount}("");
+        (ok,) = payable(recipient).call{value: amount, gas: gasLimit}("");
     }
 
     /**
@@ -468,5 +485,53 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         // Some tokens require setting to 0 before changing allowance
         if (!_tryApprove(token, spender, 0)) return false;
         return _tryApprove(token, spender, amount);
+    }
+
+    /**
+     * @dev Attempts to transfer ERC20 tokens without reverting
+     * @param token ERC20 token to transfer
+     * @param to Recipient address
+     * @param amount Amount to transfer
+     * @return True if transfer succeeded
+     */
+    function _tryTransfer(IERC20 token, address to, uint amount) private returns (bool) {
+        return _callOptionalReturnBool(token, abi.encodeCall(IERC20.transfer, (to, amount)));
+    }
+
+    /**
+     * @dev Attempts to send tokens directly to user on early failure
+     * @notice On early validation failure, tries to send tokens directly to user.
+     *         If direct send fails, returns remaining for bridge to handle recovery.
+     * @param token ERC20 token (or native token address)
+     * @param value Amount to send
+     * @param to User address to receive tokens
+     * @return success Always false (early failure)
+     * @return remaining 0 if sent to user, value if bridge needs to recover
+     */
+    function _failAndRefund(IERC20 token, uint value, address to) private returns (bool, uint) {
+        if (value == 0) return (false, 0);
+
+        if (address(token) == Const.NATIVE_TOKEN) {
+            // Native: try sending directly to user
+            uint reserve = _postCallGasReserve + NATIVE_TRANSFER_GAS;
+            uint userGas = gasleft() > reserve ? gasleft() - reserve : NATIVE_TRANSFER_GAS;
+
+            if (_trySendNative(to, value, userGas)) {
+                // Success: user received tokens
+                return (false, 0);
+            }
+            // Fallback: send to bridge for recovery
+            _trySendNative(msg.sender, value, NATIVE_TRANSFER_GAS);
+            return (false, value);
+        } else {
+            // ERC20: try transferring directly to user
+            if (_tryTransfer(token, to, value)) {
+                // Success: user received tokens
+                return (false, 0);
+            }
+            // Fallback: set allowance for bridge to recover
+            _tryForceApprove(token, msg.sender, value);
+            return (false, value);
+        }
     }
 }

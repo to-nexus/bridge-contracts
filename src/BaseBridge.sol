@@ -757,35 +757,27 @@ contract BaseBridge is
                 }
                 emit ExtraCallExecuted(fromChainID, index, success);
 
-                if (success) {
+                // 1. remaining == 0: executor가 이미 user에게 전송 완료
+                if (remaining == 0) {
                     _withdrawToken(fromChainID, address(toToken), value);
-
-                    // Transfer remaining tokens to user if any
-                    if (remaining > 0) {
-                        if (isERC20) {
-                            // Executor approved remaining tokens for bridge to pull
-                            toToken.safeTransferFrom(executor, to, remaining);
-                        } else {
-                            // Native: executor already sent remaining back to bridge
-                            _safeCall(payable(to), remaining, "");
-                        }
-                    }
                     return Const.FinalizeStatus.Success;
                 }
 
-                // Failure: recover tokens based on token type
-                // Native token: Executor returned it via call
-                // Origin token: Bridge pulls back via transferFrom (Executor approved)
-                // Wrapped token: burn from Executor, then mint to user
+                // 2. remaining > 0: executor에서 bridge로 회수
                 if (isERC20) {
-                    if (isOrigin) toToken.safeTransferFrom(executor, address(this), value);
-                    else ICrossMintableERC20(address(toToken)).burn(executor, value);
+                    if (isOrigin) toToken.safeTransferFrom(executor, address(this), remaining);
+                    else ICrossMintableERC20(address(toToken)).burn(executor, remaining);
                 }
-                // Fall through to normal flow below
+                // Native: executor가 이미 bridge로 전송함
+
+                // 3. remaining을 user에게 전송
+                status = _transferOrMintToken(toToken, to, remaining, isOrigin, false);
+                if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
+                return status;
             }
         }
 
-        // Normal token transfer flow (no extraData, not whitelisted, or extraCall failed)
+        // Normal token transfer flow (no extraData or not whitelisted)
         status = _transferOrMintToken(toToken, to, value, isOrigin, false);
         if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
         return status;
@@ -949,3 +941,4 @@ contract BaseBridge is
      */
     function _authorizeUpgrade(address _newImplementation) internal override onlyRole(Const.ADMIN_ROLE) {}
 }
+
