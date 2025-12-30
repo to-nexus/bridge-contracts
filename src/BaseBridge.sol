@@ -450,6 +450,7 @@ contract BaseBridge is
      * @param index Index of the pending operation
      */
     function releasePending(uint remoteChainID, uint index) public whenNotPaused nonReentrant {
+        require(!_chainData[remoteChainID].paused, RegistryChainPaused(remoteChainID));
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
 
         PendingData memory pending = _pendingData[remoteChainID][index];
