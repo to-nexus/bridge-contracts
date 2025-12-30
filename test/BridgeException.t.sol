@@ -194,4 +194,30 @@ contract BridgeExceptionTest is BridgeTest {
         finalizeRevertCross = true;
         crossFinalize(1, address(NATIVE_TOKEN), USER, amount, 5);
     }
+
+    function test_deposit_with_extra_data_too_long() public {
+        uint amount = 1000 ether;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        // Set max extra data length to 100 bytes
+        vm.prank(OWNER);
+        bridgeBSC.setMaxExtraDataLength(100);
+
+        // Create extra data that exceeds the limit
+        bytes memory longExtraData = new bytes(101);
+
+        vm.prank(USER);
+        vm.expectRevert();
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(cross)), USER, amount, 0, 0, longExtraData);
+
+        // Should succeed with data within limit
+        bytes memory validExtraData = new bytes(100);
+        vm.prank(USER);
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(cross)), USER, amount, 0, 0, validExtraData);
+    }
 }
