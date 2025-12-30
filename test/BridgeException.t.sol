@@ -195,6 +195,47 @@ contract BridgeExceptionTest is BridgeTest {
         crossFinalize(1, address(NATIVE_TOKEN), USER, amount, 5);
     }
 
+    function test_releasePending_at_chain_paused() public {
+        uint amount = 1000 ether;
+
+        // First deposit tokens normally (BSC -> Cross)
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        // Set finalize pause on Cross chain to create pending operation
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, true);
+
+        // Initiate on BSC
+        vm.selectFork(bscForkID);
+        vm.prank(USER);
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(cross)), USER, amount, 0, 0, "");
+        bscIncrementIndex();
+
+        // Finalize on Cross - goes to pending due to finalize pause
+        vm.selectFork(crossForkID);
+        crossFinalize(1, address(NATIVE_TOKEN), USER, amount, 5);
+
+        // Unpause token finalize but pause chain
+        vm.prank(CrossOWNER);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, false);
+        vm.prank(CrossOWNER);
+        bridgeCross.setChainPause(BSC_CHAIN_ID, true);
+
+        // releasePending should revert due to chain pause
+        vm.expectRevert();
+        bridgeCross.releasePending(BSC_CHAIN_ID, 1);
+
+        // Unpause chain - now releasePending should succeed
+        vm.prank(CrossOWNER);
+        bridgeCross.setChainPause(BSC_CHAIN_ID, false);
+        bridgeCross.releasePending(BSC_CHAIN_ID, 1);
+    }
+
     function test_deposit_with_extra_data_too_long() public {
         uint amount = 1000 ether;
 
