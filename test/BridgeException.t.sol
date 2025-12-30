@@ -116,6 +116,21 @@ contract BridgeExceptionTest is BridgeTest {
         withdraw(false, amount, 5);
     }
 
+    function test_deposit_with_zero_recipient() public {
+        uint amount = 1000 ether;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        vm.selectFork(bscForkID);
+        vm.prank(USER);
+        vm.expectRevert();
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(cross)), address(0), amount, 0, 0, "");
+    }
+
     function test_finalize_at_token_paused() public {
         uint amount = 1000 ether;
 

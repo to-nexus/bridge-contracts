@@ -250,6 +250,7 @@ contract BaseBridge is
         uint exFee,
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
+        require(to != address(0), BaseBridgeCanNotZeroAddress());
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         _executeBridge(
             BridgeTokenArguments({
