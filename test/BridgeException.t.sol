@@ -168,4 +168,30 @@ contract BridgeExceptionTest is BridgeTest {
         bridgeCross.releasePending(BSC_CHAIN_ID, 1);
         assertEq(USER.balance, userBalanceBefore + amount, "User should receive tokens after unpause");
     }
+
+    function test_finalize_at_chain_paused() public {
+        uint amount = 1000 ether;
+
+        // First deposit tokens normally (BSC -> Cross)
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), amount);
+
+        // Initiate on BSC
+        vm.selectFork(bscForkID);
+        vm.prank(USER);
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(cross)), USER, amount, 0, 0, "");
+        bscIncrementIndex();
+
+        // Set chain pause on Cross chain before finalize
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        bridgeCross.setChainPause(BSC_CHAIN_ID, true);
+
+        // Finalize on Cross should revert due to chain pause
+        finalizeRevertCross = true;
+        crossFinalize(1, address(NATIVE_TOKEN), USER, amount, 5);
+    }
 }
