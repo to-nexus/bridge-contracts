@@ -512,8 +512,8 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Removes a pending operation
-     * @dev Only callable by the verifier role
+     * @notice Removes a pending operation without processing
+     * @dev Only callable by admin role
      * @param remoteChainID Chain ID of the pending operation
      * @param index Index of the pending operation
      */
