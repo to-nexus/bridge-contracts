@@ -437,10 +437,10 @@ contract BaseBridge is
 
     /**
      * @notice Retries a pending bridge finalization
-     * @dev Attempts to complete a previously failed finalization
-     * - Validates pending operation exists
-     * - Updates pending amounts
-     * - Processes token transfer/minting
+     * @dev Attempts to complete a previously failed finalization.
+     * If this function reverts due to permanent failures (e.g., recipient contract
+     * rejecting transfers), use manualReleasePendingWithRecipient to specify
+     * an alternative recipient address for recovery.
      * @param remoteChainID Chain ID of the source chain
      * @param index Index of the pending operation
      */
