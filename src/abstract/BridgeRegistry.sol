@@ -109,6 +109,12 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      */
     event CrossMintableERC20CodeSet(ICrossMintableERC20Code indexed oldCode, ICrossMintableERC20Code indexed newCode);
 
+    /**
+     * @notice Emitted when the maximum extra data length is set
+     * @param length New maximum extra data length
+     */
+    event MaxExtraDataLengthSet(uint length);
+
     /// @dev Factory contract for creating new CrossMintable tokens
     ICrossMintableERC20Code public crossMintableERC20Code;
 
@@ -136,8 +142,11 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /// @dev Mapping from chain ID and token address to finalize pause status
     mapping(uint => mapping(address => bool)) internal _tokenFinalizePaused;
 
+    /// @dev Maximum length of extra data in bridge operations (0 = unlimited)
+    uint internal _maxExtraDataLength;
+
     /// @dev Storage gap for future upgrades
-    uint[40] private __gap;
+    uint[39] private __gap;
 
     /**
      * @notice Initializes the BridgeRegistry
@@ -297,6 +306,24 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     function setVerificationDelay(uint delay) external onlyRole(Const.ADMIN_ROLE) {
         _verificationDelay = delay;
         emit VerificationDelaySet(delay);
+    }
+
+    /**
+     * @notice Sets the maximum extra data length
+     * @dev Updates the maximum allowed length of extra data (0 = unlimited)
+     * @param length New maximum length in bytes
+     */
+    function setMaxExtraDataLength(uint length) external onlyRole(Const.ADMIN_ROLE) {
+        _maxExtraDataLength = length;
+        emit MaxExtraDataLengthSet(length);
+    }
+
+    /**
+     * @notice Returns the maximum extra data length
+     * @return Maximum allowed length of extra data (0 = unlimited)
+     */
+    function maxExtraDataLength() external view returns (uint) {
+        return _maxExtraDataLength;
     }
 
     /**

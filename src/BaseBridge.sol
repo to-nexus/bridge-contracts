@@ -58,6 +58,7 @@ contract BaseBridge is
     error BaseBridgeMismatchPermitAccount();
     error BaseBridgeFailedRelease(Const.FinalizeStatus status);
     error BaseBridgeOnlyExecutor();
+    error BaseBridgeExtraDataTooLong();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -251,6 +252,9 @@ contract BaseBridge is
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
         require(to != address(0), BaseBridgeCanNotZeroAddress());
+        if (_maxExtraDataLength != 0) {
+            require(extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
+        }
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         _executeBridge(
             BridgeTokenArguments({
