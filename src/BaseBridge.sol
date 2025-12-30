@@ -372,6 +372,7 @@ contract BaseBridge is
         nonReentrant
         returns (bool)
     {
+        require(!_chainData[args.fromChainID].paused, RegistryChainPaused(args.fromChainID));
         require(
             _tokens[args.fromChainID].contains(address(args.toToken)), BaseBridgeNotExistToken(address(args.toToken))
         );
