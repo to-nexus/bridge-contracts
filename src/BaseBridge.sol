@@ -135,12 +135,12 @@ contract BaseBridge is
     event PendingRemoved(uint indexed remoteChainID, uint indexed index);
 
     /**
-     * @notice Emitted when delay is set for a pending operation
+     * @notice Emitted when delay expiration is set for a pending operation
      * @param fromChainID Source chain ID
      * @param index Unique identifier for the operation
-     * @param delay Duration of the verification delay
+     * @param expiration Timestamp when the verification delay expires
      */
-    event VerificationDelayExpirationSet(uint indexed fromChainID, uint indexed index, uint delay);
+    event VerificationDelayExpirationSet(uint indexed fromChainID, uint indexed index, uint expiration);
 
     /**
      * @notice Emitted when the bridge verifier is set
