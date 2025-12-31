@@ -62,7 +62,6 @@ interface IBaseBridge is IBridgeRegistry {
     ) external payable returns (bool);
     function bridgeVerifier() external view returns (IBridgeVerifier);
     function releasePending(uint remoteChainID, uint index) external;
-    function releasePendingBatch(uint[] memory remoteChainIDs, uint[] memory indexes) external;
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
 }

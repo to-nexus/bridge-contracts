@@ -252,9 +252,7 @@ contract BaseBridge is
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
         require(to != address(0), BaseBridgeCanNotZeroAddress());
-        if (_maxExtraDataLength != 0) {
-            require(extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
-        }
+        require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         _executeBridge(
             BridgeTokenArguments({
@@ -465,24 +463,6 @@ contract BaseBridge is
         );
 
         _releasePending(remoteChainID, index, address(0));
-    }
-
-    /**
-     * @notice Attempts to process a pending bridge finalization
-     * @dev Retries a previously failed finalization
-     * - Validates pending operation exists
-     * - Verifies token is not paused
-     * - Checks verification delay has expired
-     * - Updates pending amounts
-     * - Processes token transfer/minting
-     * @param remoteChainIDs Chain IDs of the source chains
-     * @param indexes Indexes of the pending operations
-     */
-    function releasePendingBatch(uint[] memory remoteChainIDs, uint[] memory indexes) external {
-        require(remoteChainIDs.length == indexes.length, BaseBridgeNotMatchLength());
-        for (uint i = 0; i < indexes.length; ++i) {
-            releasePending(remoteChainIDs[i], indexes[i]);
-        }
     }
 
     /**
