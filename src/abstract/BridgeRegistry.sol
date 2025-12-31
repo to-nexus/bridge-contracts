@@ -220,7 +220,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
 
         // Prevent unregister while funds are locked or pending
-        TokenPair storage tokenPair = _tokenPairs[remoteChainID][token];
+        TokenPair memory tokenPair = _tokenPairs[remoteChainID][token];
         require(
             tokenPair.pendingAmount == 0 && tokenPair.deposited == 0 && tokenPair.minted == 0, RegistryTokenInUse(token)
         );
@@ -518,18 +518,38 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Stores operation arguments and reason
      * - Updates pending amounts for origin tokens
      * - Updates verification delay expiration for delayed processing
+     * - Always clears extraData to prevent extraCall re-execution on release
+     * - If remaining > 0, stores remaining as value (extraCall partially executed)
      * @param args Finalization arguments to store
      * @param status Status of the pending operation
      * @param delay Whether to delay processing (verification delay)
+     * @param remaining Actual remaining amount to process (0 means use args.value)
      */
-    function _setPendingArguments(FinalizeArguments calldata args, Const.FinalizeStatus status, bool delay) internal {
+    function _setPendingArguments(
+        FinalizeArguments calldata args,
+        Const.FinalizeStatus status,
+        bool delay,
+        uint remaining
+    ) internal returns (uint actualValue) {
         require(_pendingIndex[args.fromChainID].add(args.index), RegistryExistIndex(args.index));
 
-        _pendingData[args.fromChainID][args.index] =
-            PendingData({args: args, status: status, delayExpiration: delay ? block.timestamp + _verificationDelay : 0});
+        // Store remaining as value if set, always clear extraData (prevent re-execution on release)
+        actualValue = remaining != 0 ? remaining : args.value;
+        _pendingData[args.fromChainID][args.index] = PendingData({
+            args: FinalizeArguments({
+                fromChainID: args.fromChainID,
+                index: args.index,
+                toToken: args.toToken,
+                to: args.to,
+                value: actualValue,
+                extraData: bytes("") // Always empty: extraData is intentionally cleared for pending operations
+            }),
+            status: status,
+            delayExpiration: delay ? block.timestamp + _verificationDelay : 0
+        });
 
         TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
-        tokenPair.pendingAmount += args.value;
+        tokenPair.pendingAmount += actualValue;
     }
 
     /**
@@ -545,7 +565,8 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     function _removePendingArguments(uint remoteChainID, uint index) internal returns (FinalizeArguments memory args) {
         require(_pendingIndex[remoteChainID].remove(index), RegistryNotExistIndex(index));
 
-        args = _pendingData[remoteChainID][index].args;
+        PendingData storage pending = _pendingData[remoteChainID][index];
+        args = pending.args;
         TokenPair storage tokenPair = _tokenPairs[remoteChainID][address(args.toToken)];
 
         tokenPair.pendingAmount -= args.value;

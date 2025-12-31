@@ -398,10 +398,11 @@ contract BaseBridge is
 
         Const.FinalizeStatus status;
         bool delay;
+        uint remaining;
         {
             (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, false);
             if (status == Const.FinalizeStatus.Success) {
-                status =
+                (status, remaining) =
                     _finalizeBridge(args.fromChainID, args.index, args.toToken, args.to, args.value, args.extraData);
             }
         }
@@ -409,8 +410,11 @@ contract BaseBridge is
         if (status == Const.FinalizeStatus.Success) {
             emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
         } else {
-            _setPendingArguments(args, status, delay);
-            emit BridgePending(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp, status);
+            // Emit actual pending value (remaining if extraCall partially consumed, otherwise original value)
+            uint pendingValue = _setPendingArguments(args, status, delay, remaining);
+            emit BridgePending(
+                args.fromChainID, args.index, args.toToken, args.to, pendingValue, block.timestamp, status
+            );
         }
         return true;
     }
@@ -570,7 +574,9 @@ contract BaseBridge is
     function _releasePending(uint remoteChainID, uint index, address recipient) private {
         FinalizeArguments memory args = _removePendingArguments(remoteChainID, index);
         if (recipient == address(0)) recipient = args.to;
-        (Const.FinalizeStatus status) =
+        // args.value already contains actual value to process (remaining if set, original value otherwise)
+        // args.extraData is always empty for pending operations (intentionally cleared to prevent re-execution)
+        (Const.FinalizeStatus status,) =
             _finalizeBridge(args.fromChainID, args.index, args.toToken, recipient, args.value, args.extraData);
         require(status == Const.FinalizeStatus.Success, BaseBridgeFailedRelease(status));
         emit BridgeFinalized(args.fromChainID, args.index, args.toToken, recipient, args.value, block.timestamp);
@@ -683,6 +689,7 @@ contract BaseBridge is
      * @param value Amount to transfer/mint
      * @param extraData Additional data for bridge executor (contract address + calldata)
      * @return status Success status
+     * @return remaining Remaining amount to store in pending (0 means use original value)
      */
     function _finalizeBridge(
         uint fromChainID,
@@ -691,7 +698,7 @@ contract BaseBridge is
         address to,
         uint value,
         bytes memory extraData
-    ) internal returns (Const.FinalizeStatus status) {
+    ) internal returns (Const.FinalizeStatus status, uint remaining) {
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
 
         // Check if extraData is provided and long enough (>= 24 bytes for contract address and method ID)
@@ -703,7 +710,7 @@ contract BaseBridge is
                 targetContract := shr(96, mload(add(extraData, 32)))
             }
 
-            // Check if target is whitelisted (NO try/catch - use low-level staticcall and safe bool parsing)
+            // Check if target is whitelisted
             bool isWhitelisted;
             {
                 (bool ok, bytes memory returndata) =
@@ -714,20 +721,18 @@ contract BaseBridge is
                     }
                 }
             }
+
             if (isWhitelisted) {
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
 
                 // For ERC20, transfer/mint to Executor first
-                // For Native token, send directly via msg.value in executeExtraCall
                 if (isERC20) {
                     status = _transferOrMintToken(toToken, executor, value, isOrigin, false);
-                    if (status != Const.FinalizeStatus.Success) return status;
+                    if (status != Const.FinalizeStatus.Success) return (status, value);
                 }
 
                 // Call executeExtraCall and check result
-                // Returns (bool success, uint remaining)
                 bool success;
-                uint remaining;
                 {
                     (bool ok, bytes memory returndata) = executor.call{value: isERC20 ? 0 : value}(
                         abi.encodeCall(
@@ -743,30 +748,29 @@ contract BaseBridge is
                 }
                 emit ExtraCallExecuted(fromChainID, index, success);
 
-                // 1. remaining == 0: executor가 이미 user에게 전송 완료
+                // remaining == 0: executor already transferred to user
                 if (remaining == 0) {
                     _withdrawToken(fromChainID, address(toToken), value);
-                    return Const.FinalizeStatus.Success;
+                    return (Const.FinalizeStatus.Success, 0);
                 }
 
-                // 2. remaining > 0: executor에서 bridge로 회수
+                // remaining > 0: executor failed to send to user, go to pending directly
+                // ERC20: recover remaining from executor (Native: already sent to bridge)
                 if (isERC20) {
                     if (isOrigin) toToken.safeTransferFrom(executor, address(this), remaining);
                     else ICrossMintableERC20(address(toToken)).burn(executor, remaining);
                 }
-                // Native: executor가 이미 bridge로 전송함
-
-                // 3. remaining을 user에게 전송
-                status = _transferOrMintToken(toToken, to, remaining, isOrigin, false);
-                if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
-                return status;
+                // Account for consumed amount, remaining goes to pending
+                _withdrawToken(fromChainID, address(toToken), value - remaining);
+                return (Const.FinalizeStatus.RemainingTransferFailed, remaining);
             }
+            // Not whitelisted, continue to normal flow
         }
 
         // Normal token transfer flow (no extraData or not whitelisted)
         status = _transferOrMintToken(toToken, to, value, isOrigin, false);
         if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
-        return status;
+        return (status, value);
     }
 
     /**
