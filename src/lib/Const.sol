@@ -21,7 +21,9 @@ library Const {
         MintFailed,
         TokenScoreOverflow,
         TokenCurrentVolumeOverflow,
-        CrossSupplyLimitExceeded
+        CrossSupplyLimitExceeded,
+        RemainingTransferFailed // extraCall 성공 후 잔액 환불 실패
+
     }
 
     /**
