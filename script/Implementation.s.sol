@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {BSCBridgeV2} from "../src/BSCBridgeV2.sol";
 import {BaseBridge} from "../src/BaseBridge.sol";
 import {CrossBridge} from "../src/CrossBridge.sol";
 import {PriceFeed} from "../src/PriceFeed.sol";
@@ -71,6 +72,17 @@ contract ImplementationScript is Script {
         vm.broadcast();
         CrossBridge impl = new CrossBridge();
         console.log("CrossBridge Implementation deployed to:", address(impl));
+    }
+
+    /**
+     * @notice BSCBridgeV2 Implementation 배포
+     * @dev 프록시 없이 Implementation만 배포합니다.
+     *      초기 배포 또는 업그레이드용 새 Implementation 배포 시 사용합니다.
+     */
+    function deployBSCBridgeV2Impl() public {
+        vm.broadcast();
+        BSCBridgeV2 impl = new BSCBridgeV2();
+        console.log("BSCBridgeV2 Implementation deployed to:", address(impl));
     }
 
     /**
