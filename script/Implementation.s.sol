@@ -74,6 +74,17 @@ contract ImplementationScript is Script {
     }
 
     /**
+     * @notice BSCBridgeV2 Implementation 배포
+     * @dev 프록시 없이 Implementation만 배포합니다.
+     *      초기 배포 또는 업그레이드용 새 Implementation 배포 시 사용합니다.
+     */
+    function deployBSCBridgeV2Impl() public {
+        vm.broadcast();
+        BSCBridgeV2 impl = new BSCBridgeV2();
+        console.log("BSCBridgeV2 Implementation deployed to:", address(impl));
+    }
+
+    /**
      * @notice 프록시의 Implementation 업그레이드 (초기화 호출 없음)
      * @dev UUPS 프록시의 Implementation을 새 버전으로 업그레이드합니다.
      *      reinitialize가 필요 없는 경우 사용합니다.
