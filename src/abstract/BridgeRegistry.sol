@@ -313,7 +313,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @dev Updates the maximum allowed length of extra data (0 = unlimited)
      * @param length New maximum length in bytes
      */
-    function setMaxExtraDataLength(uint length) external onlyRole(Const.ADMIN_ROLE) {
+    function setMaxExtraDataLength(uint length) external onlyRole(Const.EDITOR_ROLE) {
         _maxExtraDataLength = length;
         emit MaxExtraDataLengthSet(length);
     }
