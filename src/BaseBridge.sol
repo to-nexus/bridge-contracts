@@ -769,7 +769,10 @@ contract BaseBridge is
 
         // Normal token transfer flow (no extraData or not whitelisted)
         status = _transferOrMintToken(toToken, to, value, isOrigin, false);
-        if (status == Const.FinalizeStatus.Success) _withdrawToken(fromChainID, address(toToken), value);
+        if (status == Const.FinalizeStatus.Success) {
+            _withdrawToken(fromChainID, address(toToken), value);
+            return (Const.FinalizeStatus.Success, 0);
+        }
         return (status, value);
     }
 
