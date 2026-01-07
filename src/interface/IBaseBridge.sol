@@ -38,22 +38,9 @@ interface IBaseBridge is IBridgeRegistry {
         uint exFee,
         bytes calldata extraData
     ) external payable returns (bool);
-    function permitBridgeToken(
-        uint toChainID,
-        IERC20 fromToken,
-        address to,
-        uint value,
-        uint networkFee,
-        uint exFee,
-        bytes calldata extraData,
-        PermitArguments calldata permitArgs
-    ) external payable returns (bool);
     function permitBridgeTokenBatch(BridgeTokenArguments[] calldata args, PermitArguments[] calldata permitArgs)
-        external;
-    function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
         external
-        payable
-        returns (bool);
+        payable;
     function finalizeBridgeBatch(
         FinalizeArguments[] calldata args,
         uint8[][] memory v,
