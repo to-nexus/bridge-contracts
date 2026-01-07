@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.28;
 
+import {BSCBridgeV2} from "../src/BSCBridgeV2.sol";
 import {BaseBridge} from "../src/BaseBridge.sol";
 import {CrossBridge} from "../src/CrossBridge.sol";
 import {PriceFeed} from "../src/PriceFeed.sol";

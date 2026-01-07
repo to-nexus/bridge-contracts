@@ -119,6 +119,13 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      */
     event PostCallGasReserveSet(uint oldValue, uint newValue);
 
+    /**
+     * @notice Emitted when max return data size is changed
+     * @param oldValue Previous max return data size
+     * @param newValue New max return data size
+     */
+    event MaxReturnDataSizeSet(uint oldValue, uint newValue);
+
     /// @dev Target whitelist configuration mapping
     mapping(address => Target) private _targets;
 
@@ -128,8 +135,8 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /// @dev Post-call gas reserve (adjustable by admin)
     uint private _postCallGasReserve = 150_000;
 
-    /// @dev Maximum return data size to prevent OOG from unbounded returndata
-    uint private constant MAX_RETURN_DATA_SIZE = 1024;
+    /// @dev Maximum return data size to prevent OOG from unbounded returndata (adjustable by admin)
+    uint private _maxReturnDataSize = 1024;
 
     /**
      * @notice Constructor
@@ -310,6 +317,18 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     }
 
     /**
+     * @notice Set the max return data size
+     * @dev Only callable by admin. Minimum: 64 bytes
+     * @param value New max return data size
+     */
+    function setMaxReturnDataSize(uint value) external onlyRole(Const.ADMIN_ROLE) {
+        require(value >= 64, BEInvalidGasReserve());
+        uint oldValue = _maxReturnDataSize;
+        _maxReturnDataSize = value;
+        emit MaxReturnDataSizeSet(oldValue, value);
+    }
+
+    /**
      * @notice Emergency function to recover stuck tokens
      * @dev Only callable by ADMIN_ROLE
      * @param token Token to recover (address(1) for native token, i.e., Const.NATIVE_TOKEN)
@@ -367,6 +386,14 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     }
 
     /**
+     * @notice Get the current max return data size
+     * @return The max return data size in bytes
+     */
+    function maxReturnDataSize() external view returns (uint) {
+        return _maxReturnDataSize;
+    }
+
+    /**
      * @notice Allows contract to receive native tokens
      */
     receive() external payable {}
@@ -388,7 +415,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         private
         returns (bool success, bytes memory returnData)
     {
-        uint maxSize = MAX_RETURN_DATA_SIZE;
+        uint maxSize = _maxReturnDataSize;
         assembly {
             // Allocate memory for returnData
             returnData := mload(0x40)
