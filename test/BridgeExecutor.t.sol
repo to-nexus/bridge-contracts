@@ -1401,6 +1401,37 @@ contract BridgeExecutorTest is BridgeTest {
     }
 
     /**
+     * @notice Test max return data size admin change
+     */
+    function test_maxReturnDataSize_adminChange() public {
+        vm.selectFork(crossForkID);
+
+        // Check initial value
+        assertEq(bridgeExecutorCross.maxReturnDataSize(), 1024);
+
+        // Change max return data size
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.setMaxReturnDataSize(2048);
+
+        assertEq(bridgeExecutorCross.maxReturnDataSize(), 2048);
+
+        // Test invalid value - too low
+        vm.prank(CrossOWNER);
+        vm.expectRevert();
+        bridgeExecutorCross.setMaxReturnDataSize(32); // Too low (min 64)
+
+        // Test boundary value (min)
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.setMaxReturnDataSize(64); // Min valid
+        assertEq(bridgeExecutorCross.maxReturnDataSize(), 64);
+
+        // Test large value (no upper limit)
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.setMaxReturnDataSize(1_000_000);
+        assertEq(bridgeExecutorCross.maxReturnDataSize(), 1_000_000);
+    }
+
+    /**
      * @notice Test batch method whitelist management
      */
     function test_batchMethodWhitelist() public {
