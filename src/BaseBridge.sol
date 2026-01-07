@@ -45,7 +45,6 @@ contract BaseBridge is
     error BaseBridgeInvalidBalance();
     error BaseBridgeInvalidAmount();
     error BaseBridgeInvalidPermitToken(address expected, address actual);
-    error BaseBridgeFailedPermitBatch(uint index, bytes reason);
     error BaseBridgeCanNotZeroAddress();
     error BaseBridgeCanNotZeroValue();
     error BaseBridgeVerifierNotSet();
@@ -165,9 +164,21 @@ contract BaseBridge is
      * @notice Emitted when extra call is executed via BridgeExecutor
      * @param fromChainID Source chain ID
      * @param index Unique identifier for the operation
+     * @param targetContract Contract that was called
+     * @param methodID Method ID of the called contract
      * @param success Whether the extra call succeeded
+     * @param consumed Amount of tokens consumed by target
+     * @param returnData Return data from target call (capped at 1KB)
      */
-    event ExtraCallExecuted(uint indexed fromChainID, uint indexed index, bool success);
+    event ExtraCallExecuted(
+        uint indexed fromChainID,
+        uint indexed index,
+        address indexed targetContract,
+        bytes4 methodID,
+        bool success,
+        uint consumed,
+        bytes returnData
+    );
 
     /// @dev Hash for finalize operation signature verification
     bytes32 private constant FINALIZE_TYPEHASH = keccak256(
@@ -270,27 +281,18 @@ contract BaseBridge is
     }
 
     /**
-     * @notice Bridges tokens using permit functionality
-     * @dev extraData parameter is intentionally ignored to prevent front-running attacks
-     * @param toChainID Target chain ID
-     * @param fromToken Token to bridge
-     * @param to Recipient address (must match permit account)
-     * @param value Amount to bridge
-     * @param networkFee Network fee
-     * @param exFee Exchange fee
-     * @param permitArgs Permit signature parameters
-     * @return success Operation status
+     * @notice Internal permit bridge implementation
+     * @dev Called by permitBridgeTokenBatch
      */
-    function permitBridgeToken(
+    function _permitBridgeToken(
         uint toChainID,
         IERC20 fromToken,
         address to,
         uint value,
         uint networkFee,
         uint exFee,
-        bytes calldata, // extraData ignored to prevent front-running attacks
         PermitArguments calldata permitArgs
-    ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
+    ) private {
         require(
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
@@ -331,7 +333,6 @@ contract BaseBridge is
                 extraData: "" // Empty: extraData not supported in permit flow
             })
         );
-        return true;
     }
 
     /**
@@ -341,44 +342,42 @@ contract BaseBridge is
      */
     function permitBridgeTokenBatch(BridgeTokenArguments[] calldata args, PermitArguments[] calldata permitArgs)
         external
+        payable
+        whenNotPaused
+        nonReentrant
     {
         require(args.length == permitArgs.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < args.length; ++i) {
-            try this.permitBridgeToken(
+            require(
+                _tokens[args[i].toChainID].contains(address(args[i].fromToken)),
+                BaseBridgeNotExistToken(address(args[i].fromToken))
+            );
+            _permitBridgeToken(
                 args[i].toChainID,
                 args[i].fromToken,
                 args[i].to,
                 args[i].value,
                 args[i].networkFee,
                 args[i].exFee,
-                args[i].extraData,
                 permitArgs[i]
-            ) {} catch (bytes memory reason) {
-                revert BaseBridgeFailedPermitBatch(i, reason);
-            }
+            );
         }
     }
 
     /**
-     * @notice Finalizes a bridge operation on target chain
-     * @param args Finalization parameters
-     * @param v Signature v values array
-     * @param r Signature r values array
-     * @param s Signature s values array
-     * @return success Operation status
+     * @notice Internal finalize bridge implementation
+     * @dev Called by finalizeBridgeBatch
      */
-    function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
-        public
-        payable
-        whenNotPaused
-        nonReentrant
-        returns (bool)
-    {
+    function _finalizeBridgeSingle(
+        FinalizeArguments calldata args,
+        uint8[] memory v,
+        bytes32[] memory r,
+        bytes32[] memory s
+    ) private {
         require(!_chainData[args.fromChainID].paused, RegistryChainPaused(args.fromChainID));
         require(
             _tokens[args.fromChainID].contains(address(args.toToken)), BaseBridgeNotExistToken(address(args.toToken))
         );
-        require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
 
         uint index = _useFinalizeIndex(args.fromChainID);
         require(args.index == index, BaseBridgeInvalidIndex(index, args.index));
@@ -410,13 +409,11 @@ contract BaseBridge is
         if (status == Const.FinalizeStatus.Success) {
             emit BridgeFinalized(args.fromChainID, args.index, args.toToken, args.to, args.value, block.timestamp);
         } else {
-            // Emit actual pending value (remaining if extraCall partially consumed, otherwise original value)
             uint pendingValue = _setPendingArguments(args, status, delay, remaining);
             emit BridgePending(
                 args.fromChainID, args.index, args.toToken, args.to, pendingValue, block.timestamp, status
             );
         }
-        return true;
     }
 
     /**
@@ -432,12 +429,13 @@ contract BaseBridge is
         uint8[][] memory v,
         bytes32[][] memory r,
         bytes32[][] memory s
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused nonReentrant returns (bool) {
         uint length = args.length;
         require(v.length == length && r.length == length && s.length == length, BaseBridgeNotMatchLength());
+        require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
 
         for (uint i = 0; i < length; ++i) {
-            finalizeBridge(args[i], v[i], r[i], s[i]);
+            _finalizeBridgeSingle(args[i], v[i], r[i], s[i]);
         }
         return true;
     }
@@ -681,7 +679,7 @@ contract BaseBridge is
      * @notice Executes token transfer or minting for bridge finalization
      * @dev Handles different token types (native, mintable, regular)
      * - If extraData is provided and bridgeExecutor is set, delegates to BridgeExecutor
-     * - On executor failure, reverts to normal token transfer to user
+     * - On executor revert, entire transaction rolls back (tokens remain safe in bridge)
      * @param fromChainID Source chain ID
      * @param index Finalize operation index
      * @param toToken Destination token
@@ -704,10 +702,12 @@ contract BaseBridge is
         // Check if extraData is provided and long enough (>= 24 bytes for contract address and method ID)
         address executor = address(bridgeExecutor);
         if (extraData.length >= 24 && executor != address(0) && executor.code.length != 0) {
-            // Parse target contract address from extraData
+            // Parse target contract address and method ID from extraData
             address targetContract;
+            bytes4 methodID;
             assembly {
                 targetContract := shr(96, mload(add(extraData, 32)))
+                methodID := mload(add(extraData, 52))
             }
 
             // Check if target is whitelisted
@@ -725,44 +725,54 @@ contract BaseBridge is
             if (isWhitelisted) {
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
 
-                // For ERC20, transfer/mint to Executor first
+                // For ERC20: mint/transfer to bridge first, then approve executor
+                // If executor reverts, tokens stay in bridge and fallback to normal flow
                 if (isERC20) {
-                    status = _transferOrMintToken(toToken, executor, value, isOrigin, false);
-                    if (status != Const.FinalizeStatus.Success) return (status, value);
-                }
-
-                // Call executeExtraCall and check result
-                bool success;
-                {
-                    (bool ok, bytes memory returndata) = executor.call{value: isERC20 ? 0 : value}(
-                        abi.encodeCall(
-                            IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
-                        )
-                    );
-                    if (ok && returndata.length >= 64) {
-                        assembly {
-                            success := mload(add(returndata, 32))
-                            remaining := mload(add(returndata, 64))
-                        }
+                    // For wrapped tokens, mint to bridge first
+                    if (!isOrigin) {
+                        require(
+                            ICrossMintableERC20(address(toToken)).mint(address(this), value), BaseBridgeInvalidBalance()
+                        );
                     }
+                    // Approve executor to pull tokens
+                    toToken.forceApprove(executor, value);
                 }
-                emit ExtraCallExecuted(fromChainID, index, success);
 
-                // remaining == 0: executor already transferred to user
-                if (remaining == 0) {
+                // Call executeExtraCall with low-level call to catch reverts
+                // If executor reverts, tokens stay in bridge (ERC20: not pulled, Native: returned)
+                (bool ok, bytes memory result) = executor.call{value: isERC20 ? 0 : value}(
+                    abi.encodeCall(
+                        IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
+                    )
+                );
+
+                // Clear approval (always for ERC20)
+                if (isERC20) toToken.forceApprove(executor, 0);
+
+                if (ok && result.length >= 64) {
+                    // Executor successfully handled the call (returns consumed, returnData)
+                    // Executor sends remaining to user directly
+                    (uint consumed, bytes memory returnData) = abi.decode(result, (uint, bytes));
+
+                    emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, true, consumed, returnData);
+
+                    // Account for entire value (consumed by target + remaining sent to user)
                     _withdrawToken(fromChainID, address(toToken), value);
                     return (Const.FinalizeStatus.Success, 0);
                 }
 
-                // remaining > 0: executor failed to send to user, go to pending directly
-                // ERC20: recover remaining from executor (Native: already sent to bridge)
-                if (isERC20) {
-                    if (isOrigin) toToken.safeTransferFrom(executor, address(this), remaining);
-                    else ICrossMintableERC20(address(toToken)).burn(executor, remaining);
+                // Executor reverted - emit event with revert reason and fallback to normal flow
+                emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, false, 0, result);
+
+                // For native: returned to bridge, For ERC20: tokens still in bridge
+                // For wrapped ERC20 (!isOrigin): already minted, use forceTransfer=true
+                bool mintedToBridge = isERC20 && !isOrigin;
+                status = _transferOrMintToken(toToken, to, value, isOrigin, mintedToBridge);
+                if (status == Const.FinalizeStatus.Success) {
+                    _withdrawToken(fromChainID, address(toToken), value);
+                    return (Const.FinalizeStatus.Success, 0);
                 }
-                // Account for consumed amount, remaining goes to pending
-                _withdrawToken(fromChainID, address(toToken), value - remaining);
-                return (Const.FinalizeStatus.RemainingTransferFailed, remaining);
+                return (status, value);
             }
             // Not whitelisted, continue to normal flow
         }

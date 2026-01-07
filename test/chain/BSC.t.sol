@@ -177,19 +177,22 @@ contract BSCTest is CrossChainTest {
             finalizeRevertBSC = false;
             vm.expectRevert();
         }
-        ok = bridgeBSC.finalizeBridge(
-            IBridgeRegistry.FinalizeArguments({
-                fromChainID: CROSS_CHAIN_ID,
-                index: index,
-                toToken: IERC20(token),
-                to: to,
-                value: value,
-                extraData: extraData
-            }),
-            v,
-            r,
-            s
-        );
+        IBridgeRegistry.FinalizeArguments[] memory argsArray = new IBridgeRegistry.FinalizeArguments[](1);
+        argsArray[0] = IBridgeRegistry.FinalizeArguments({
+            fromChainID: CROSS_CHAIN_ID,
+            index: index,
+            toToken: IERC20(token),
+            to: to,
+            value: value,
+            extraData: extraData
+        });
+        uint8[][] memory vArray = new uint8[][](1);
+        bytes32[][] memory rArray = new bytes32[][](1);
+        bytes32[][] memory sArray = new bytes32[][](1);
+        vArray[0] = v;
+        rArray[0] = r;
+        sArray[0] = s;
+        ok = bridgeBSC.finalizeBridgeBatch(argsArray, vArray, rArray, sArray);
     }
 
     function bscBurnCrossToDeadWallet(address from, address to, uint value, bool alreadyTransferred)

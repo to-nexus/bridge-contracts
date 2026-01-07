@@ -60,7 +60,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     error RegistryChainPaused(uint remoteChainID);
     error RegistryTokenPaused(address token);
     error RegistryFactoryNotSet();
-    error RegistryTokenInUse(address token);
 
     /**
      * @notice Emitted when a token pair is registered
@@ -72,13 +71,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     event TokenPairRegistered(
         uint indexed remoteChainID, address indexed localToken, address indexed remoteToken, bool isOrigin
     );
-
-    /**
-     * @notice Emitted when a token pair is unregistered
-     * @param remoteChainID ID of the remote chain
-     * @param localToken Address of token on this chain
-     */
-    event TokenPairUnregistered(uint indexed remoteChainID, address indexed localToken);
 
     /**
      * @notice Emitted when a token's pause status is changed
@@ -205,29 +197,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         onlyRole(Const.EDITOR_ROLE)
     {
         _registerToken(remoteChainID, isOrigin, localToken, remoteToken);
-    }
-
-    /**
-     * @notice Unregisters a token pair
-     * @dev Removes token pair from registry
-     * - Validates token exists
-     * - Cleans up token pair data
-     * - Emits unregistration event
-     * @param remoteChainID Chain ID to unregister from
-     * @param token Token address to unregister
-     */
-    function unregisterToken(uint remoteChainID, address token) external onlyRole(Const.ADMIN_ROLE) {
-        require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
-
-        // Prevent unregister while funds are locked or pending
-        TokenPair memory tokenPair = _tokenPairs[remoteChainID][token];
-        require(
-            tokenPair.pendingAmount == 0 && tokenPair.deposited == 0 && tokenPair.minted == 0, RegistryTokenInUse(token)
-        );
-
-        delete (_tokenPairs[remoteChainID][token]);
-        delete (_tokenFinalizePaused[remoteChainID][token]);
-        emit TokenPairUnregistered(remoteChainID, token);
     }
 
     /**

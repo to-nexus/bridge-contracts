@@ -246,8 +246,12 @@ contract BaseBridgeTest is BridgeTest {
             permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, NULLDATA);
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
+        permitArgsArray[0] = permitArgs;
         vm.prank(VALIDATOR1);
-        assertTrue(bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
 
         crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
         bscIncrementIndex();
@@ -292,8 +296,12 @@ contract BaseBridgeTest is BridgeTest {
         vm.prank(USER);
         cross.approve(address(bridgeBSC), amount);
 
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, NULLDATA);
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
+        permitArgsArray[0] = permitArgs;
         vm.prank(VALIDATOR1);
-        assertTrue(bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, NULLDATA, permitArgs));
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
 
         crossFinalize(nextIndexCross, address(NATIVE_TOKEN), USER, amount, 5);
         bscIncrementIndex();
@@ -336,9 +344,12 @@ contract BaseBridgeTest is BridgeTest {
                 IBaseBridge.PermitArguments(IERC20Permit(address(testTokenBSC)), USER, amount, type(uint).max, v, r, s);
         }
 
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, testTokenBSC, USER, USER, amount, 0, 0, NULLDATA);
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
+        permitArgsArray[0] = permitArgs;
         vm.prank(VALIDATOR1);
-        bool ok = bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, testTokenBSC, USER, amount, 0, 0, NULLDATA, permitArgs);
-        assertTrue(ok);
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
 
         bscIncrementIndex();
         crossFinalize(index, address(testTokenCross), USER, amount, 5);
@@ -351,7 +362,7 @@ contract BaseBridgeTest is BridgeTest {
     }
 
     /**
-     * @notice Test that permitBridgeToken ignores caller-supplied extraData
+     * @notice Test that permitBridgeTokenBatch ignores caller-supplied extraData
      * @dev Even when non-empty extraData is provided, the emitted event should have empty extraData
      */
     function test_permit_extraData_ignored() public {
@@ -396,10 +407,12 @@ contract BaseBridgeTest is BridgeTest {
         );
 
         // Call with non-empty extraData - it should be ignored
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, maliciousExtraData);
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
+        permitArgsArray[0] = permitArgs;
         vm.prank(VALIDATOR1);
-        assertTrue(
-            bridgeBSC.permitBridgeToken(CROSS_CHAIN_ID, cross, USER, amount, 0, 0, maliciousExtraData, permitArgs)
-        );
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
     }
 
     /**

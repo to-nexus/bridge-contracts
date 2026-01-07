@@ -13,7 +13,7 @@ import {Script, console} from "forge-std/Script.sol";
  *
  * .env 파일에서 읽어오는 환경 변수:
  * - OWNER (required): Admin 권한을 가질 주소
- * - BRIDGE (required): BaseBridge 프록시 주소 (EXECUTOR_ROLE 부여됨)
+ * - BRIDGE (optional): EXECUTOR_ROLE을 부여할 Bridge 주소
  *
  * 사용법:
  * 1. 기본 배포:
@@ -43,16 +43,15 @@ contract BridgeExecutorDeploy is Script {
         console.log("Deployer:", deployer);
         console.log("Chain ID:", block.chainid);
 
-        // 환경 변수에서 주소 읽기 (모두 필수)
+        // 환경 변수에서 주소 읽기
         address owner = vm.envAddress("OWNER");
-        address bridge = vm.envAddress("BRIDGE");
+        address bridge = vm.envOr("BRIDGE", address(0));
 
         require(owner != address(0), "OWNER is required");
-        require(bridge != address(0), "BRIDGE is required");
 
         console.log("\n=== Configuration ===");
         console.log("Owner (Admin):", owner);
-        console.log("Bridge:", bridge);
+        console.log("Bridge (Executor):", bridge);
 
         vm.startBroadcast();
 
@@ -68,12 +67,11 @@ contract BridgeExecutorDeploy is Script {
     /**
      * @notice 파라미터를 직접 전달하여 배포
      * @param _owner Admin 권한을 가질 주소
-     * @param _bridge BaseBridge 프록시 주소
+     * @param _bridge EXECUTOR_ROLE을 부여할 Bridge 주소 (0이면 부여 안함)
      * @return executor 배포된 BridgeExecutor 컨트랙트
      */
     function deploy(address _owner, address _bridge) external returns (BridgeExecutor executor) {
         require(_owner != address(0), "Invalid owner address");
-        require(_bridge != address(0), "Invalid bridge address");
 
         console.log("Deploying BridgeExecutor with parameters:");
         console.log("  Owner:", _owner);
@@ -92,20 +90,20 @@ contract BridgeExecutorDeploy is Script {
     /**
      * @notice Bridge에 Executor 연결
      * @dev ADMIN_ROLE 권한이 필요합니다
+     * @param _bridge Bridge 주소
      * @param _executor 배포된 BridgeExecutor 주소
      */
-    function setBridgeExecutor(address _executor) external {
-        address bridge = vm.envAddress("BRIDGE");
-        require(bridge != address(0), "BRIDGE is required");
+    function setBridgeExecutor(address _bridge, address _executor) external {
+        require(_bridge != address(0), "Invalid bridge address");
         require(_executor != address(0), "Invalid executor address");
 
         console.log("Setting BridgeExecutor on Bridge:");
-        console.log("  Bridge:", bridge);
+        console.log("  Bridge:", _bridge);
         console.log("  Executor:", _executor);
 
         vm.startBroadcast();
 
-        BaseBridge(payable(bridge)).setBridgeExecutor(IBridgeExecutor(_executor));
+        BaseBridge(payable(_bridge)).setBridgeExecutor(IBridgeExecutor(_executor));
 
         vm.stopBroadcast();
 
@@ -186,15 +184,15 @@ contract BridgeExecutorDeploy is Script {
         console.log("\n=== Deployment Summary ===");
         console.log("BridgeExecutor:", executor);
         console.log("Owner (Admin):", owner);
-        console.log("Bridge (Executor Role):", bridge);
+        if (bridge != address(0)) console.log("Bridge (EXECUTOR_ROLE granted):", bridge);
 
         console.log("\n=== Next Steps ===");
-        console.log("1. Set executor on Bridge (requires ADMIN_ROLE):");
+        console.log("1. Set executor on Bridge (requires ADMIN_ROLE on Bridge):");
         console.log("   forge script script/BridgeExecutorDeploy.s.sol:BridgeExecutorDeploy \\");
-        console.log("     --sig 'setBridgeExecutor(address)' <EXECUTOR_ADDRESS> \\");
+        console.log("     --sig 'setBridgeExecutor(address,address)' <BRIDGE> <EXECUTOR> \\");
         console.log("     --rpc-url $RPC_URL --broadcast");
 
-        console.log("\n2. Add whitelist targets (requires DEFAULT_ADMIN_ROLE on Executor):");
+        console.log("\n2. Add whitelist targets (requires ADMIN_ROLE on Executor):");
         console.log("   forge script script/BridgeExecutorDeploy.s.sol:BridgeExecutorDeploy \\");
         console.log("     --sig 'addWhitelistTarget(address,address)' <EXECUTOR> <TARGET> \\");
         console.log("     --rpc-url $RPC_URL --broadcast");

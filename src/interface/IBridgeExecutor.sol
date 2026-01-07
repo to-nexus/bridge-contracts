@@ -7,18 +7,29 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @title IBridgeExecutor
  * @notice Interface for executing bridge operations with extra data
  * @dev This interface is called by BaseBridge when extradata is provided during finalization
+ *
+ * Flow:
+ * 1. BaseBridge approves executor to spend tokens (ERC20) or sends native value
+ * 2. Executor pulls tokens via transferFrom (ERC20) or receives native value
+ * 3. Executor calls target contract with tokens
+ * 4. Executor returns consumed amount; remaining is sent to user by executor
+ * 5. If executor reverts, entire transaction rolls back (safe for bridge)
  */
 interface IBridgeExecutor {
     /**
      * @notice Executes extra call with bridge finalization data
+     * @dev This function WILL revert on any failure. On revert, bridge falls back to normal transfer.
+     *      - For ERC20: pulls tokens from msg.sender via transferFrom
+     *      - For Native: receives value via msg.value
+     *      - Returns consumed amount; sends remaining to user directly
      * @param fromChainID Source chain ID
      * @param index Bridge operation index
      * @param toToken Token being bridged
      * @param to Original recipient address
      * @param value Amount of tokens
      * @param extraData Target contract address (20 bytes) + calldata
-     * @return success Whether the execution was successful
-     * @return remaining Amount of tokens remaining (not consumed by target)
+     * @return consumed Amount of tokens actually consumed by target
+     * @return returnData Return data from target call (capped at 1KB)
      */
     function executeExtraCall(
         uint fromChainID,
@@ -27,7 +38,7 @@ interface IBridgeExecutor {
         address to,
         uint value,
         bytes calldata extraData
-    ) external payable returns (bool success, uint remaining);
+    ) external payable returns (uint consumed, bytes memory returnData);
 
     /**
      * @notice Check if a target contract is whitelisted
