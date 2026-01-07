@@ -149,6 +149,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
+        // Refund unspent tokens (safety measure for edge cases)
+        _refundUnspent(tokenIn);
+
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
 
@@ -359,6 +362,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 amountOutMinimum: params.amountOutMinimum
             })
         );
+
+        // Refund unspent WETH as ETH (safety measure for edge cases)
+        _refundUnspentETH();
 
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
