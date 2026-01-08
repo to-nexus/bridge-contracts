@@ -51,8 +51,8 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /// @notice Thrown when native token transfer fails during recovery
     error BEFailedToReturnNative();
 
-    /// @notice Thrown when gas reserve value is out of valid range (50k-1M)
-    error BEInvalidGasReserve();
+    /// @notice Thrown when max return data size is invalid (< 64 bytes)
+    error BEInvalidMaxReturnDataSize();
 
     /// @notice Thrown when extraData is too short (< 24 bytes)
     error BEInvalidExtraData();
@@ -294,7 +294,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      * @param value New max return data size
      */
     function setMaxReturnDataSize(uint value) external onlyRole(Const.ADMIN_ROLE) {
-        require(value >= 64, BEInvalidGasReserve());
+        require(value >= 64, BEInvalidMaxReturnDataSize());
         uint oldValue = _maxReturnDataSize;
         _maxReturnDataSize = value;
         emit MaxReturnDataSizeSet(oldValue, value);
