@@ -1376,28 +1376,29 @@ contract BridgeExecutorTest is BridgeTest {
     }
 
     /**
-     * @notice Test GAS_RESERVE admin change
+     * @notice Test GAS_RESERVE admin change (now in BaseBridge)
      */
     function test_gasReserve_adminChange() public {
         vm.selectFork(crossForkID);
 
-        // Check initial value
-        assertEq(bridgeExecutorCross.postCallGasReserve(), 150_000);
+        // Check initial value (BaseBridge now controls gas reserve)
+        assertEq(bridgeCross.postCallGasReserve(), 150_000);
 
         // Change gas reserve
         vm.prank(CrossOWNER);
-        bridgeExecutorCross.setPostCallGasReserve(300_000);
+        bridgeCross.setPostCallGasReserve(300_000);
 
-        assertEq(bridgeExecutorCross.postCallGasReserve(), 300_000);
+        assertEq(bridgeCross.postCallGasReserve(), 300_000);
 
-        // Test invalid values
+        // Test invalid value - too low
         vm.prank(CrossOWNER);
         vm.expectRevert();
-        bridgeExecutorCross.setPostCallGasReserve(10_000); // Too low
+        bridgeCross.setPostCallGasReserve(10_000); // Too low (min 50k)
 
+        // Test large value (no upper limit)
         vm.prank(CrossOWNER);
-        vm.expectRevert();
-        bridgeExecutorCross.setPostCallGasReserve(2_000_000); // Too high
+        bridgeCross.setPostCallGasReserve(5_000_000);
+        assertEq(bridgeCross.postCallGasReserve(), 5_000_000);
     }
 
     /**

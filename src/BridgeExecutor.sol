@@ -60,9 +60,6 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /// @notice Thrown when msg.value doesn't match expected value for native token
     error BEInvalidValue();
 
-    /// @notice Thrown when ERC20 transferFrom fails
-    error BETransferFromFailed();
-
     /// @notice Thrown when value is zero
     error BEZeroValue();
 
@@ -113,13 +110,6 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     event MethodCheckEnabled(address indexed target, bool enabled);
 
     /**
-     * @notice Emitted when post-call gas reserve is changed
-     * @param oldValue Previous gas reserve value
-     * @param newValue New gas reserve value
-     */
-    event PostCallGasReserveSet(uint oldValue, uint newValue);
-
-    /**
      * @notice Emitted when max return data size is changed
      * @param oldValue Previous max return data size
      * @param newValue New max return data size
@@ -131,9 +121,6 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
 
     /// @dev Mapping of whitelisted method selectors per target
     mapping(address => mapping(bytes4 => bool)) private _whitelistedMethods;
-
-    /// @dev Post-call gas reserve (adjustable by admin)
-    uint private _postCallGasReserve = 150_000;
 
     /// @dev Maximum return data size to prevent OOG from unbounded returndata (adjustable by admin)
     uint private _maxReturnDataSize = 1024;
@@ -200,13 +187,10 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         // Approve target for ERC20
         if (!isNative) toToken.forceApprove(targetContract, value);
 
-        // Reserve minimum gas for post-call logic
-        uint gasReserve = _postCallGasReserve;
-        uint remainingGas = gasleft() < gasReserve ? 0 : gasleft() - gasReserve;
-
         // Call target contract with bounded returndata to prevent OOG
+        // Gas limit is controlled by BaseBridge; here we use all available gas
         bool success;
-        (success, returnData) = _safeCall(targetContract, remainingGas, isNative ? value : 0, extraData[20:]);
+        (success, returnData) = _safeCall(targetContract, gasleft(), isNative ? value : 0, extraData[20:]);
 
         // Clear approval (always for ERC20)
         if (!isNative) toToken.forceApprove(targetContract, 0);
@@ -305,18 +289,6 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     }
 
     /**
-     * @notice Set the post-call gas reserve value
-     * @dev Only callable by admin
-     * @param value New gas reserve amount
-     */
-    function setPostCallGasReserve(uint value) external onlyRole(Const.ADMIN_ROLE) {
-        require(value >= 50_000 && value <= 1_000_000, BEInvalidGasReserve());
-        uint oldValue = _postCallGasReserve;
-        _postCallGasReserve = value;
-        emit PostCallGasReserveSet(oldValue, value);
-    }
-
-    /**
      * @notice Set the max return data size
      * @dev Only callable by admin. Minimum: 64 bytes
      * @param value New max return data size
@@ -375,14 +347,6 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      */
     function isWhitelistedMethod(address target, bytes4 methodID) external view returns (bool) {
         return _whitelistedMethods[target][methodID];
-    }
-
-    /**
-     * @notice Get the current post-call gas reserve value
-     * @return The gas reserve amount
-     */
-    function postCallGasReserve() external view returns (uint) {
-        return _postCallGasReserve;
     }
 
     /**

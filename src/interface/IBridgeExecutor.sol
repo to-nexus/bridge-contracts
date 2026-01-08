@@ -63,18 +63,6 @@ interface IBridgeExecutor {
     function isWhitelistedMethod(address target, bytes4 methodID) external view returns (bool);
 
     /**
-     * @notice Get the current post-call gas reserve value
-     * @return The gas reserve amount
-     */
-    function postCallGasReserve() external view returns (uint);
-
-    /**
-     * @notice Set the post-call gas reserve value
-     * @param value New gas reserve amount
-     */
-    function setPostCallGasReserve(uint value) external;
-
-    /**
      * @notice Add multiple method selectors to the whitelist for a target
      * @param target Target contract address
      * @param methodIDs Array of function selectors to whitelist
