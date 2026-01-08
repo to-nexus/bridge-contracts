@@ -56,7 +56,6 @@ contract BaseBridge is
     error BaseBridgeFailedCall();
     error BaseBridgeMismatchPermitAccount();
     error BaseBridgeFailedRelease(Const.FinalizeStatus status);
-    error BaseBridgeOnlyExecutor();
     error BaseBridgeExtraDataTooLong();
     error BaseBridgeInvalidGasReserve();
 
@@ -731,9 +730,9 @@ contract BaseBridge is
 
             if (isWhitelisted) {
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
+                bool ok = !isERC20; // Native: true (always call executor)
 
                 // For ERC20: mint/transfer to bridge first, then approve executor
-                // If executor reverts, tokens stay in bridge and fallback to normal flow
                 if (isERC20) {
                     // For wrapped tokens, mint to bridge first
                     if (!isOrigin) {
@@ -741,54 +740,52 @@ contract BaseBridge is
                             ICrossMintableERC20(address(toToken)).mint(address(this), value), BaseBridgeInvalidBalance()
                         );
                     }
-                    // Approve executor to pull tokens
-                    toToken.forceApprove(executor, value);
+                    // Approve executor to pull tokens (low-level call to handle non-standard tokens)
+                    (ok,) = address(toToken).call(abi.encodeCall(IERC20.approve, (executor, value)));
+                    // Approve failed - burn minted tokens, continue to normal flow
+                    if (!ok && !isOrigin) ICrossMintableERC20(address(toToken)).burn(address(this), value);
                 }
 
-                // Call executeExtraCall with low-level call to catch reverts
-                // If executor reverts, tokens stay in bridge (ERC20: not pulled, Native: returned)
-                // Apply gas limit: reserve gas for post-call logic
-                uint gasReserve = _postCallGasReserve == 0 ? 150_000 : _postCallGasReserve;
-                uint gasLimit = gasleft() < gasReserve ? 0 : gasleft() - gasReserve;
-                (bool ok, bytes memory result) = executor.call{gas: gasLimit, value: isERC20 ? 0 : value}(
-                    abi.encodeCall(
-                        IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
-                    )
-                );
+                if (ok) {
+                    // Call executeExtraCall with low-level call to catch reverts
+                    // Apply gas limit: reserve gas for post-call logic
+                    uint gasReserve = _postCallGasReserve == 0 ? 150_000 : _postCallGasReserve;
+                    uint gasLimit = gasleft() < gasReserve ? 0 : gasleft() - gasReserve;
+                    bytes memory result;
+                    (ok, result) = executor.call{gas: gasLimit, value: isERC20 ? 0 : value}(
+                        abi.encodeCall(
+                            IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
+                        )
+                    );
 
-                // Clear approval (always for ERC20)
-                if (isERC20) toToken.forceApprove(executor, 0);
+                    // Clear approval for ERC20 (low-level call, ignore result)
+                    // Note: Executor access is restricted to bridge only via EXECUTOR_ROLE.
+                    // Even if clearing allowance fails, no security issue exists since
+                    // executor cannot be called by unauthorized parties.
+                    if (isERC20) address(toToken).call(abi.encodeCall(IERC20.approve, (executor, 0)));
 
-                if (ok && result.length >= 64) {
-                    // Executor successfully handled the call (returns consumed, returnData)
-                    // Executor sends remaining to user directly
-                    (uint consumed, bytes memory returnData) = abi.decode(result, (uint, bytes));
+                    if (ok && result.length >= 64) {
+                        // Executor successfully handled the call (returns consumed, returnData)
+                        // Executor sends remaining to user directly
+                        (uint consumed, bytes memory returnData) = abi.decode(result, (uint, bytes));
 
-                    emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, true, consumed, returnData);
+                        emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, true, consumed, returnData);
 
-                    // Account for entire value (consumed by target + remaining sent to user)
-                    _withdrawToken(fromChainID, address(toToken), value);
-                    return (Const.FinalizeStatus.Success, 0);
+                        // Account for entire value (consumed by target + remaining sent to user)
+                        _withdrawToken(fromChainID, address(toToken), value);
+                        return (Const.FinalizeStatus.Success, 0);
+                    }
+
+                    // Executor reverted - burn minted tokens and fallback to normal flow
+                    if (isERC20 && !isOrigin) ICrossMintableERC20(address(toToken)).burn(address(this), value);
+                    emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, false, 0, result);
                 }
-
-                // Executor reverted - emit event with revert reason and fallback to normal flow
-                emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, false, 0, result);
-
-                // For native: returned to bridge, For ERC20: tokens still in bridge
-                // For wrapped ERC20 (!isOrigin): already minted, use forceTransfer=true
-                bool mintedToBridge = isERC20 && !isOrigin;
-                status = _transferOrMintToken(toToken, to, value, isOrigin, mintedToBridge);
-                if (status == Const.FinalizeStatus.Success) {
-                    _withdrawToken(fromChainID, address(toToken), value);
-                    return (Const.FinalizeStatus.Success, 0);
-                }
-                return (status, value);
             }
-            // Not whitelisted, continue to normal flow
+            // Not whitelisted or approve/executor failed - continue to normal flow
         }
 
         // Normal token transfer flow (no extraData or not whitelisted)
-        status = _transferOrMintToken(toToken, to, value, isOrigin, false);
+        status = _transferOrMintToken(toToken, to, value, isOrigin);
         if (status == Const.FinalizeStatus.Success) {
             _withdrawToken(fromChainID, address(toToken), value);
             return (Const.FinalizeStatus.Success, 0);
@@ -802,10 +799,9 @@ contract BaseBridge is
      * @param to Recipient address
      * @param value Amount to transfer/mint
      * @param isOrigin Whether token is origin token
-     * @param forceTransfer If true, always use transfer (token already minted)
      * @return status Success status
      */
-    function _transferOrMintToken(IERC20 toToken, address to, uint value, bool isOrigin, bool forceTransfer)
+    function _transferOrMintToken(IERC20 toToken, address to, uint value, bool isOrigin)
         private
         returns (Const.FinalizeStatus status)
     {
@@ -816,7 +812,7 @@ contract BaseBridge is
         if (value == 0) return Const.FinalizeStatus.Success;
 
         bytes memory data;
-        if (forceTransfer || isOrigin) {
+        if (isOrigin) {
             data = abi.encodeCall(IERC20.transfer, (to, value));
             status = Const.FinalizeStatus.TransferFailed;
         } else {
@@ -957,14 +953,6 @@ contract BaseBridge is
      */
     function postCallGasReserve() external view returns (uint) {
         return _postCallGasReserve == 0 ? 150_000 : _postCallGasReserve;
-    }
-
-    /**
-     * @notice Receives native tokens from BridgeExecutor when extradata call fails
-     * @dev Only BridgeExecutor can send native tokens to this contract
-     */
-    receive() external payable {
-        require(msg.sender == address(bridgeExecutor), BaseBridgeOnlyExecutor());
     }
 
     /**
