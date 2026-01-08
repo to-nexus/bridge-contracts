@@ -31,7 +31,7 @@ var (
 
 // BridgeExecutorMetaData contains all meta data concerning the BridgeExecutor contract.
 var BridgeExecutorMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"executor\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"methodIDs\",\"type\":\"bytes4[]\"}],\"name\":\"addWhitelistMethods\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"addWhitelistTarget\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"name\":\"executeExtraCall\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"consumed\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"isMethodCheckEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"methodID\",\"type\":\"bytes4\"}],\"name\":\"isWhitelistedMethod\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"isWhitelistedTarget\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"postCallGasReserve\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"}],\"name\":\"recoverToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"methodIDs\",\"type\":\"bytes4[]\"}],\"name\":\"removeWhitelistMethods\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"removeWhitelistTarget\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"callerConfirmation\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setMethodCheckEnabled\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setPostCallGasReserve\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"MethodCheckEnabled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes4\",\"name\":\"methodID\",\"type\":\"bytes4\"}],\"name\":\"MethodRemovedFromWhitelist\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes4\",\"name\":\"methodID\",\"type\":\"bytes4\"}],\"name\":\"MethodWhitelisted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldValue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"PostCallGasReserveSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"TargetRemovedFromWhitelist\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"TargetWhitelisted\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"AccessControlBadConfirmation\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"neededRole\",\"type\":\"bytes32\"}],\"name\":\"AccessControlUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEAlreadyWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEFailedToReturnNative\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidExtraData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidGasReserve\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidRecipient\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEMethodNotWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BENotWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BETargetCallFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BETargetNotWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BETransferFromFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEZeroValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"executor\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"},{\"inputs\":[],\"name\":\"DEFAULT_ADMIN_ROLE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"methodIDs\",\"type\":\"bytes4[]\"}],\"name\":\"addWhitelistMethods\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"addWhitelistTarget\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"toToken\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"name\":\"executeExtraCall\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"consumed\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"}],\"name\":\"getRoleAdmin\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"grantRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"hasRole\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"isMethodCheckEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"methodID\",\"type\":\"bytes4\"}],\"name\":\"isWhitelistedMethod\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"isWhitelistedTarget\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"maxReturnDataSize\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"}],\"name\":\"recoverToken\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes4[]\",\"name\":\"methodIDs\",\"type\":\"bytes4[]\"}],\"name\":\"removeWhitelistMethods\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"removeWhitelistTarget\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"callerConfirmation\",\"type\":\"address\"}],\"name\":\"renounceRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"revokeRole\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"setMaxReturnDataSize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setMethodCheckEnabled\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldValue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newValue\",\"type\":\"uint256\"}],\"name\":\"MaxReturnDataSizeSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"MethodCheckEnabled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes4\",\"name\":\"methodID\",\"type\":\"bytes4\"}],\"name\":\"MethodRemovedFromWhitelist\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes4\",\"name\":\"methodID\",\"type\":\"bytes4\"}],\"name\":\"MethodWhitelisted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"previousAdminRole\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"newAdminRole\",\"type\":\"bytes32\"}],\"name\":\"RoleAdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleGranted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"role\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"RoleRevoked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"TargetRemovedFromWhitelist\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"TargetWhitelisted\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"AccessControlBadConfirmation\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"neededRole\",\"type\":\"bytes32\"}],\"name\":\"AccessControlUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEAlreadyWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEFailedToReturnNative\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidExtraData\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidMaxReturnDataSize\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidRecipient\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEInvalidValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEMethodNotWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BENotWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BETargetCallFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BETargetNotWhitelisted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BEZeroValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"}]",
 	Sigs: map[string]string{
 		"a217fddf": "DEFAULT_ADMIN_ROLE()",
 		"a8582dc2": "addWhitelistMethods(address,bytes4[])",
@@ -43,17 +43,17 @@ var BridgeExecutorMetaData = &bind.MetaData{
 		"ab779650": "isMethodCheckEnabled(address)",
 		"b8e25592": "isWhitelistedMethod(address,bytes4)",
 		"907caa00": "isWhitelistedTarget(address)",
-		"230f4cda": "postCallGasReserve()",
+		"a1b8442a": "maxReturnDataSize()",
 		"d04323c5": "recoverToken(address,uint256,address)",
 		"4f8249a2": "removeWhitelistMethods(address,bytes4[])",
 		"11735ea5": "removeWhitelistTarget(address)",
 		"36568abe": "renounceRole(bytes32,address)",
 		"d547741f": "revokeRole(bytes32,address)",
+		"8a7fdc75": "setMaxReturnDataSize(uint256)",
 		"47239f71": "setMethodCheckEnabled(address,bool)",
-		"4bc51672": "setPostCallGasReserve(uint256)",
 		"01ffc9a7": "supportsInterface(bytes4)",
 	},
-	Bin: "0x6080346100ba57601f6116a238819003918201601f19168301916001600160401b038311848410176100be5780849260409485528339810103126100ba57610052602061004b836100d2565b92016100d2565b620249f0600355906001600160a01b038116156100ab578061007661007c926100e6565b5061015c565b506001600160a01b03811661009b575b60405161139f90816102838239f35b6100a4906101ef565b505f61008c565b63484b059f60e11b5f5260045ffd5b5f80fd5b634e487b7160e01b5f52604160045260245ffd5b51906001600160a01b03821682036100ba57565b6001600160a01b0381165f9081525f5160206116825f395f51905f52602052604090205460ff16610157576001600160a01b03165f8181525f5160206116825f395f51905f5260205260408120805460ff191660011790553391905f5160206116225f395f51905f528180a4600190565b505f90565b6001600160a01b0381165f9081525f5160206116425f395f51905f52602052604090205460ff16610157576001600160a01b03165f8181525f5160206116425f395f51905f5260205260408120805460ff191660011790553391907fa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775905f5160206116225f395f51905f529080a4600190565b6001600160a01b0381165f9081525f5160206116625f395f51905f52602052604090205460ff16610157576001600160a01b03165f8181525f5160206116625f395f51905f5260205260408120805460ff191660011790553391907fd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63905f5160206116225f395f51905f529080a460019056fe6080604052600436101561001a575b3615610018575f80fd5b005b5f3560e01c806301ffc9a71461014957806311735ea5146101445780631eeed5131461013f578063230f4cda1461013a578063248a9ca3146101355780632f2ff15d1461013057806336568abe1461012b57806347239f71146101265780634bc51672146101215780634f8249a21461011c57806361c8c47914610117578063907caa001461011257806391d148541461010d578063a217fddf14610108578063a8582dc214610103578063ab779650146100fe578063b8e25592146100f9578063d04323c5146100f45763d547741f0361000e5761091d565b610879565b61082e565b6107eb565b61073d565b610723565b6106e2565b6106a2565b610604565b61054e565b61046e565b6103db565b610393565b61035a565b610334565b610317565b61028a565b6101cb565b610164565b6001600160e01b031981160361016057565b5f80fd5b346101605760203660031901126101605760206004356101838161014e565b63ffffffff60e01b16637965db0b60e01b81149081156101a9575b506040519015158152f35b6301ffc9a760e01b1490505f61019e565b6001600160a01b0381160361016057565b34610160576020366003190112610160576004356101e8816101ba565b6101f0610ede565b6001600160a01b03165f8181526001602052604090205460ff161561024957805f52600160205260405f2060ff1981541690557f09443fc4fa9f38ce51944d7db4f773a5ffb81b85d76c7119b37194b3d83125675f80a2005b63c70ebef560e01b5f5260045ffd5b9060609260209183526040828401528051918291826040860152018484015e5f828201840152601f01601f1916010190565b60c0366003190112610160576044356024356004356102a8836101ba565b6064356102b4816101ba565b60a4359360843591906001600160401b0386116101605736602387011215610160576004860135946001600160401b038611610160573660248789010111610160576024610303970194610b3d565b9061031360405192839283610258565b0390f35b34610160575f366003190112610160576020600354604051908152f35b34610160576020366003190112610160576020610352600435610e93565b604051908152f35b346101605760403660031901126101605761001860243560043561037d826101ba565b61038e61038982610e93565b610fba565b6111cd565b34610160576040366003190112610160576004356024356103b3816101ba565b336001600160a01b038216036103cc5761001891611243565b63334bd91960e11b5f5260045ffd5b34610160576040366003190112610160576004356103f8816101ba565b602435908115158092036101605760207f5579fe57ff4f4b388db4f445bcef31a9cf6a04181411c7e592279df0854b04e391610432610ede565b6001600160a01b031692610447841515610ea4565b835f526001825260405f20805461ff008360081b169061ff001916179055604051908152a2005b346101605760203660031901126101605760043561048a610ede565b61c350811015806104e3575b156104d45760407f18c087ee0200bbe9d388bef52ea98caa28702660805c632add5ffd538a66356e91600354908060035582519182526020820152a1005b6315e4ec0160e01b5f5260045ffd5b50620f4240811115610496565b604060031982011261016057600435610508816101ba565b916024356001600160401b0381116101605782602382011215610160576004810135926001600160401b0384116101605760248460051b83010111610160576024019190565b346101605761055c366104f0565b9091610566610ede565b6001600160a01b031661057a811515610ea4565b5f5b82811061058557005b600190825f5260026020526105b260405f206105a2838789610eba565b35906105ad8261014e565b6109a8565b805460ff191690556105c5818587610eba565b356105cf8161014e565b6001600160e01b031916837f5a0866eb654c49b51bd173c271b0025fdfebd26fd53182c118d53b4fd3f42d2a5f80a30161057c565b3461016057602036600319011261016057600435610621816101ba565b610629610ede565b6001600160a01b031661063d811515610ea4565b805f52600160205260ff60405f20541661069357805f52600160205261066d60405f20600160ff19825416179055565b7f3d5490c3a5f2e74f927ed836bbeb02e5cf4f5e601f134742ec4c00235710b0825f80a2005b6305a88b4b60e11b5f5260045ffd5b34610160576020366003190112610160576004356106bf816101ba565b60018060a01b03165f526001602052602060ff60405f2054166040519015158152f35b3461016057604036600319011261016057602060ff610717602435600435610709826101ba565b5f525f845260405f20610951565b54166040519015158152f35b34610160575f3660031901126101605760206040515f8152f35b346101605761074b366104f0565b9091610755610ede565b6001600160a01b0316610769811515610ea4565b5f5b82811061077457005b600190825f5260026020526107a161079460405f206105a284888a610eba565b805460ff19166001179055565b6107ac818587610eba565b356107b68161014e565b6001600160e01b031916837f17cce9eb3d9badc6086fac9c927183f6e8bd32f8e122d6bc9a8ba5f5919395dd5f80a30161076b565b3461016057602036600319011261016057600435610808816101ba565b60018060a01b03165f526001602052602060ff60405f205460081c166040519015158152f35b3461016057604036600319011261016057602060ff610717600435610852816101ba565b6024359061085f8261014e565b6001600160a01b03165f90815260028552604090206109a8565b3461016057606036600319011261016057600435610896816101ba565b6024356044356108a5816101ba565b6108ad610ede565b6001600160a01b038116928315158061090b575b156108fc576001600160a01b0316600181036108f25750505f80808093610018955af16108ec610af8565b50610b27565b6100189350611198565b63b56bf2e760e01b5f5260045ffd5b506001600160a01b03811615156108c1565b3461016057604036600319011261016057610018602435600435610940826101ba565b61094c61038982610e93565b611243565b9060018060a01b03165f5260205260405f2090565b1561096d57565b6308ba07a960e21b5f5260045ffd5b1561098357565b6309b7a22f60e01b5f5260045ffd5b1561099957565b63a6bec22b60e01b5f5260045ffd5b9063ffffffff60e01b165f5260205260405f2090565b156109c557565b630850473d60e31b5f5260045ffd5b156109db57565b63867deca760e01b5f5260045ffd5b634e487b7160e01b5f52604160045260245ffd5b601f909101601f19168101906001600160401b03821190821017610a2157604052565b6109ea565b90816020910312610160575190565b6001600160a01b03909116815260200190565b6040513d5f823e3d90fd5b91908203918211610a6057565b634e487b7160e01b5f52601160045260245ffd5b909291928360141161016057831161016057601401916013190190565b6001600160401b038111610a2157601f01601f191660200190565b929192610ab882610a91565b91610ac660405193846109fe565b829481845281830111610160578281602093845f960137010152565b15610ae957565b63e2ef9c2b60e01b5f5260045ffd5b3d15610b22573d90610b0982610a91565b91610b1760405193846109fe565b82523d5f602084013e565b606090565b15610b2e57565b6317e90b5960e21b5f5260045ffd5b5050949390919294610b4d610f4c565b5f51602061132a5f395f51905f525c610e845760015f51602061132a5f395f51905f525d610b7c841515610966565b610b89601883101561097c565b853560601c5f81815260016020526040902090968791610bb99054610bb060ff8216610992565b60081c60ff1690565b610e4b575b6001600160a01b0383166001811494909187918615610e3057610be28334146109d4565b8615610dc25782610c489392610c33610c2c610c3a94610c03473490610a53565b995b8c159788610db1575b505080600354805a1015610da157505f955b8d15610d995794610a74565b3691610aac565b918d611156565b9a9091610d89575b50610ae2565b8315610d1c575047905b8315610cfc5780821115610cf457610c6991610a53565b848110610ce557505f5b935b8480821115610cdc57610c8791610a53565b915b82610c9f575b50505050610c9b610ff0565b9190565b15610ccd5750610cc4915f918291829182916001600160a01b03165af16108ec610af8565b5f808080610c8f565b91610cd792611198565b610cc4565b50505f91610c89565b610cef9085610a53565b610c73565b50505f610c69565b9080821115610d1457610d0e91610a53565b93610c75565b50505f610d0e565b602060405180926370a0823160e01b82528180610d3c3060048301610a35565b03915afa908115610d84575f91610d55575b5090610c52565b610d77915060203d602011610d7d575b610d6f81836109fe565b810190610a26565b5f610d4e565b503d610d65565b610a48565b610d939086611068565b5f610c42565b505f94610a74565b610dab905a610a53565b95610c20565b610dbb918d61112d565b8f85610c0e565b935090506040516370a0823160e01b815260208180610de43060048301610a35565b0381865afa908115610d845788610c4893610c33610c2c8e988496610c3a965f91610e11575b5099610c05565b610e2a915060203d602011610d7d57610d6f81836109fe565b5f610e0a565b610e3a34156109d4565b610e4683303389611002565b610be2565b610e7f610e7a610e7360148401356105ad8660018060a01b03165f52600260205260405f2090565b5460ff1690565b6109be565b610bbe565b633ee5aeb560e01b5f5260045ffd5b5f525f602052600160405f20015490565b15610eab57565b63484b059f60e11b5f5260045ffd5b9190811015610eca5760051b0190565b634e487b7160e01b5f52603260045260245ffd5b5f51602061134a5f395f51905f525f90815260205260ff610f1f337f7d7ffb7a348e1c6a02869081a26547b49160dd3df72d1d75a570eb9b698292ec610951565b541615610f2857565b63e2517d3f60e01b5f52336004525f51602061134a5f395f51905f5260245260445ffd5b5f51602061130a5f395f51905f525f90815260205260ff610f8d337fdae2aa361dfd1ca020a396615627d436107c35eff9fe7738a3512819782d7069610951565b541615610f9657565b63e2517d3f60e01b5f52336004525f51602061130a5f395f51905f5260245260445ffd5b805f525f60205260ff610fd03360405f20610951565b541615610fda5750565b63e2517d3f60e01b5f523360045260245260445ffd5b5f5f51602061132a5f395f51905f525d565b6040516323b872dd60e01b60208201526001600160a01b03928316602482015292909116604483015260648083019390935291815261104b916110466084836109fe565b6112b1565b565b6001600160a01b039091168152602081019190915260400190565b6040519060205f81840163095ea7b360e01b815261109c8561108e84896024840161104d565b03601f1981018752866109fe565b84519082855af15f51903d81611101575b501590505b6110bb57505050565b60405163095ea7b360e01b60208201526001600160a01b039390931660248401525f604480850191909152835261104b92611046906110fb6064826109fe565b826112b1565b1515905061112157506110b26001600160a01b0382163b15155b5f6110ad565b60016110b2911461111b565b91909160205f6040519361109c8561108e8582019363095ea7b360e01b8552896024840161104d565b925f929183926040519560208451940192f1913d610400811161118f575b806020918452805f8386013e601f01601f1916830101604052565b50610400611174565b61104661104b93926111bf60405194859263a9059cbb60e01b60208501526024840161104d565b03601f1981018452836109fe565b805f525f60205260ff6111e38360405f20610951565b541661123d57805f525f6020526111fd8260405f20610951565b805460ff1916600117905533916001600160a01b0316907f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d5f80a4600190565b50505f90565b805f525f60205260ff6112598360405f20610951565b54161561123d57805f525f6020526112748260405f20610951565b805460ff1916905533916001600160a01b0316907ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b5f80a4600190565b905f602091828151910182855af115610a48575f513d61130057506001600160a01b0381163b155b6112e05750565b635274afe760e01b5f9081526001600160a01b0391909116600452602490fd5b600114156112d956fed8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e639b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00a49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775a2646970667358221220935caa5198ebb400a10a67811f148fc3385ceee7bce258eb6068d9a178c6ee0764736f6c634300081c00332f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d7d7ffb7a348e1c6a02869081a26547b49160dd3df72d1d75a570eb9b698292ecdae2aa361dfd1ca020a396615627d436107c35eff9fe7738a3512819782d7069ad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5",
+	Bin: "0x6080346100b957601f61166e38819003918201601f19168301916001600160401b038311848410176100bd5780849260409485528339810103126100b957610052602061004b836100d1565b92016100d1565b610400600355906001600160a01b038116156100aa578061007561007b926100e5565b5061015b565b506001600160a01b03811661009a575b60405161136c90816102828239f35b6100a3906101ee565b505f61008b565b63484b059f60e11b5f5260045ffd5b5f80fd5b634e487b7160e01b5f52604160045260245ffd5b51906001600160a01b03821682036100b957565b6001600160a01b0381165f9081525f51602061164e5f395f51905f52602052604090205460ff16610156576001600160a01b03165f8181525f51602061164e5f395f51905f5260205260408120805460ff191660011790553391905f5160206115ee5f395f51905f528180a4600190565b505f90565b6001600160a01b0381165f9081525f51602061160e5f395f51905f52602052604090205460ff16610156576001600160a01b03165f8181525f51602061160e5f395f51905f5260205260408120805460ff191660011790553391907fa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775905f5160206115ee5f395f51905f529080a4600190565b6001600160a01b0381165f9081525f51602061162e5f395f51905f52602052604090205460ff16610156576001600160a01b03165f8181525f51602061162e5f395f51905f5260205260408120805460ff191660011790553391907fd8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e63905f5160206115ee5f395f51905f529080a460019056fe6080604052600436101561001a575b3615610018575f80fd5b005b5f3560e01c806301ffc9a71461014957806311735ea5146101445780631eeed5131461013f578063248a9ca31461013a5780632f2ff15d1461013557806336568abe1461013057806347239f711461012b5780634f8249a21461012657806361c8c479146101215780638a7fdc751461011c578063907caa001461011757806391d1485414610112578063a1b8442a1461010d578063a217fddf14610108578063a8582dc214610103578063ab779650146100fe578063b8e25592146100f9578063d04323c5146100f45763d547741f0361000e57610907565b610863565b610818565b6107d5565b610727565b61070d565b6106f0565b6106af565b61066f565b610603565b610565565b6104af565b6103be565b610376565b61033d565b610317565b61028a565b6101cb565b610164565b6001600160e01b031981160361016057565b5f80fd5b346101605760203660031901126101605760206004356101838161014e565b63ffffffff60e01b16637965db0b60e01b81149081156101a9575b506040519015158152f35b6301ffc9a760e01b1490505f61019e565b6001600160a01b0381160361016057565b34610160576020366003190112610160576004356101e8816101ba565b6101f0610ea9565b6001600160a01b03165f8181526001602052604090205460ff161561024957805f52600160205260405f2060ff1981541690557f09443fc4fa9f38ce51944d7db4f773a5ffb81b85d76c7119b37194b3d83125675f80a2005b63c70ebef560e01b5f5260045ffd5b9060609260209183526040828401528051918291826040860152018484015e5f828201840152601f01601f1916010190565b60c0366003190112610160576044356024356004356102a8836101ba565b6064356102b4816101ba565b60a4359360843591906001600160401b0386116101605736602387011215610160576004860135946001600160401b038611610160573660248789010111610160576024610303970194610b27565b9061031360405192839283610258565b0390f35b34610160576020366003190112610160576020610335600435610e5e565b604051908152f35b3461016057604036600319011261016057610018602435600435610360826101ba565b61037161036c82610e5e565b610f85565b61119a565b3461016057604036600319011261016057600435602435610396816101ba565b336001600160a01b038216036103af5761001891611210565b63334bd91960e11b5f5260045ffd5b34610160576040366003190112610160576004356103db816101ba565b602435908115158092036101605760207f5579fe57ff4f4b388db4f445bcef31a9cf6a04181411c7e592279df0854b04e391610415610ea9565b6001600160a01b03169261042a841515610e6f565b835f526001825260405f20805461ff008360081b169061ff001916179055604051908152a2005b604060031982011261016057600435610469816101ba565b916024356001600160401b0381116101605782602382011215610160576004810135926001600160401b0384116101605760248460051b83010111610160576024019190565b34610160576104bd36610451565b90916104c7610ea9565b6001600160a01b03166104db811515610e6f565b5f5b8281106104e657005b600190825f52600260205261051360405f20610503838789610e85565b359061050e8261014e565b610992565b805460ff19169055610526818587610e85565b356105308161014e565b6001600160e01b031916837f5a0866eb654c49b51bd173c271b0025fdfebd26fd53182c118d53b4fd3f42d2a5f80a3016104dd565b3461016057602036600319011261016057600435610582816101ba565b61058a610ea9565b6001600160a01b031661059e811515610e6f565b805f52600160205260ff60405f2054166105f457805f5260016020526105ce60405f20600160ff19825416179055565b7f3d5490c3a5f2e74f927ed836bbeb02e5cf4f5e601f134742ec4c00235710b0825f80a2005b6305a88b4b60e11b5f5260045ffd5b346101605760203660031901126101605760043561061f610ea9565b604081106106605760407f3d613bec426ed2a2fb9a9244f66939a8de8f29c84fa65bfabde181e0996b68f891600354908060035582519182526020820152a1005b6308de317760e21b5f5260045ffd5b346101605760203660031901126101605760043561068c816101ba565b60018060a01b03165f526001602052602060ff60405f2054166040519015158152f35b3461016057604036600319011261016057602060ff6106e46024356004356106d6826101ba565b5f525f845260405f2061093b565b54166040519015158152f35b34610160575f366003190112610160576020600354604051908152f35b34610160575f3660031901126101605760206040515f8152f35b346101605761073536610451565b909161073f610ea9565b6001600160a01b0316610753811515610e6f565b5f5b82811061075e57005b600190825f52600260205261078b61077e60405f2061050384888a610e85565b805460ff19166001179055565b610796818587610e85565b356107a08161014e565b6001600160e01b031916837f17cce9eb3d9badc6086fac9c927183f6e8bd32f8e122d6bc9a8ba5f5919395dd5f80a301610755565b34610160576020366003190112610160576004356107f2816101ba565b60018060a01b03165f526001602052602060ff60405f205460081c166040519015158152f35b3461016057604036600319011261016057602060ff6106e460043561083c816101ba565b602435906108498261014e565b6001600160a01b03165f9081526002855260409020610992565b3461016057606036600319011261016057600435610880816101ba565b60243560443561088f816101ba565b610897610ea9565b6001600160a01b03811692831515806108f5575b156108e6576001600160a01b0316600181036108dc5750505f80808093610018955af16108d6610ae2565b50610b11565b6100189350611165565b63b56bf2e760e01b5f5260045ffd5b506001600160a01b03811615156108ab565b346101605760403660031901126101605761001860243560043561092a826101ba565b61093661036c82610e5e565b611210565b9060018060a01b03165f5260205260405f2090565b1561095757565b6308ba07a960e21b5f5260045ffd5b1561096d57565b6309b7a22f60e01b5f5260045ffd5b1561098357565b63a6bec22b60e01b5f5260045ffd5b9063ffffffff60e01b165f5260205260405f2090565b156109af57565b630850473d60e31b5f5260045ffd5b156109c557565b63867deca760e01b5f5260045ffd5b634e487b7160e01b5f52604160045260245ffd5b601f909101601f19168101906001600160401b03821190821017610a0b57604052565b6109d4565b90816020910312610160575190565b6001600160a01b03909116815260200190565b6040513d5f823e3d90fd5b91908203918211610a4a57565b634e487b7160e01b5f52601160045260245ffd5b909291928360141161016057831161016057601401916013190190565b6001600160401b038111610a0b57601f01601f191660200190565b929192610aa282610a7b565b91610ab060405193846109e8565b829481845281830111610160578281602093845f960137010152565b15610ad357565b63e2ef9c2b60e01b5f5260045ffd5b3d15610b0c573d90610af382610a7b565b91610b0160405193846109e8565b82523d5f602084013e565b606090565b15610b1857565b6317e90b5960e21b5f5260045ffd5b5050949390919294610b37610f17565b5f5160206112f75f395f51905f525c610e4f5760015f5160206112f75f395f51905f525d610b66841515610950565b610b736018831015610966565b853560601c5f81815260016020526040902090968791610ba39054610b9a60ff821661097c565b60081c60ff1690565b610e16575b6001600160a01b0383166001811494909187918615610dfb57610bcc8334146109be565b8615610d8d57610c239291610c0e610c07610c1593610bec473490610a3d565b985b8b159687610d7c575b50508a15610d7457808d94610a5e565b3691610a96565b908c611121565b9a9091610d64575b50610acc565b8315610cf7575047905b8315610cd75780821115610ccf57610c4491610a3d565b848110610cc057505f5b935b8480821115610cb757610c6291610a3d565b915b82610c7a575b50505050610c76610fbb565b9190565b15610ca85750610c9f915f918291829182916001600160a01b03165af16108d6610ae2565b5f808080610c6a565b91610cb292611165565b610c9f565b50505f91610c64565b610cca9085610a3d565b610c4e565b50505f610c44565b9080821115610cef57610ce991610a3d565b93610c50565b50505f610ce9565b602060405180926370a0823160e01b82528180610d173060048301610a1f565b03915afa908115610d5f575f91610d30575b5090610c2d565b610d52915060203d602011610d58575b610d4a81836109e8565b810190610a10565b5f610d29565b503d610d40565b610a32565b610d6e9086611033565b5f610c1d565b805f94610a5e565b610d86918c6110f8565b8e8d610bf7565b6040516370a0823160e01b8152919450915060208180610db03060048301610a1f565b0381865afa918215610d5f578a94610c0e610c07610c1593610c23968d965f91610ddc575b5098610bee565b610df5915060203d602011610d5857610d4a81836109e8565b5f610dd5565b610e0534156109be565b610e1183303389610fcd565b610bcc565b610e4a610e45610e3e601484013561050e8660018060a01b03165f52600260205260405f2090565b5460ff1690565b6109a8565b610ba8565b633ee5aeb560e01b5f5260045ffd5b5f525f602052600160405f20015490565b15610e7657565b63484b059f60e11b5f5260045ffd5b9190811015610e955760051b0190565b634e487b7160e01b5f52603260045260245ffd5b5f5160206113175f395f51905f525f90815260205260ff610eea337f7d7ffb7a348e1c6a02869081a26547b49160dd3df72d1d75a570eb9b698292ec61093b565b541615610ef357565b63e2517d3f60e01b5f52336004525f5160206113175f395f51905f5260245260445ffd5b5f5160206112d75f395f51905f525f90815260205260ff610f58337fdae2aa361dfd1ca020a396615627d436107c35eff9fe7738a3512819782d706961093b565b541615610f6157565b63e2517d3f60e01b5f52336004525f5160206112d75f395f51905f5260245260445ffd5b805f525f60205260ff610f9b3360405f2061093b565b541615610fa55750565b63e2517d3f60e01b5f523360045260245260445ffd5b5f5f5160206112f75f395f51905f525d565b6040516323b872dd60e01b60208201526001600160a01b039283166024820152929091166044830152606480830193909352918152611016916110116084836109e8565b61127e565b565b6001600160a01b039091168152602081019190915260400190565b6040519060205f81840163095ea7b360e01b815261106785611059848960248401611018565b03601f1981018752866109e8565b84519082855af15f51903d816110cc575b501590505b61108657505050565b60405163095ea7b360e01b60208201526001600160a01b039390931660248401525f604480850191909152835261101692611011906110c66064826109e8565b8261127e565b151590506110ec575061107d6001600160a01b0382163b15155b5f611078565b600161107d91146110e6565b91909160205f60405193611067856110598582019363095ea7b360e01b85528960248401611018565b9290915f8060209260035496604051968583519301915af1933d9080821161115d575b50808452805f8386013e601f01601f1916830101604052565b90505f611144565b611011611016939261118c60405194859263a9059cbb60e01b602085015260248401611018565b03601f1981018452836109e8565b805f525f60205260ff6111b08360405f2061093b565b541661120a57805f525f6020526111ca8260405f2061093b565b805460ff1916600117905533916001600160a01b0316907f2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d5f80a4600190565b50505f90565b805f525f60205260ff6112268360405f2061093b565b54161561120a57805f525f6020526112418260405f2061093b565b805460ff1916905533916001600160a01b0316907ff6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b5f80a4600190565b905f602091828151910182855af115610a32575f513d6112cd57506001600160a01b0381163b155b6112ad5750565b635274afe760e01b5f9081526001600160a01b0391909116600452602490fd5b600114156112a656fed8aa0f3194971a2a116679f7c2090f6939c8d4e01a2a8d7e41d55e5351469e639b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00a49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775a264697066735822122000301955764226535a26d1828c7babdfc3fcceaf75314326ed3e7d1a8d27968464736f6c634300081c00332f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d7d7ffb7a348e1c6a02869081a26547b49160dd3df72d1d75a570eb9b698292ecdae2aa361dfd1ca020a396615627d436107c35eff9fe7738a3512819782d7069ad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5",
 }
 
 // BridgeExecutorABI is the input ABI used to generate the binding from.
@@ -413,12 +413,12 @@ func (_BridgeExecutor *BridgeExecutorCallerSession) IsWhitelistedTarget(target c
 	return _BridgeExecutor.Contract.IsWhitelistedTarget(&_BridgeExecutor.CallOpts, target)
 }
 
-// PostCallGasReserve is a free data retrieval call binding the contract method 0x230f4cda.
+// MaxReturnDataSize is a free data retrieval call binding the contract method 0xa1b8442a.
 //
-// Solidity: function postCallGasReserve() view returns(uint256)
-func (_BridgeExecutor *BridgeExecutorCaller) PostCallGasReserve(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function maxReturnDataSize() view returns(uint256)
+func (_BridgeExecutor *BridgeExecutorCaller) MaxReturnDataSize(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _BridgeExecutor.contract.Call(opts, &out, "postCallGasReserve")
+	err := _BridgeExecutor.contract.Call(opts, &out, "maxReturnDataSize")
 
 	if err != nil {
 		return *new(*big.Int), err
@@ -430,18 +430,18 @@ func (_BridgeExecutor *BridgeExecutorCaller) PostCallGasReserve(opts *bind.CallO
 
 }
 
-// PostCallGasReserve is a free data retrieval call binding the contract method 0x230f4cda.
+// MaxReturnDataSize is a free data retrieval call binding the contract method 0xa1b8442a.
 //
-// Solidity: function postCallGasReserve() view returns(uint256)
-func (_BridgeExecutor *BridgeExecutorSession) PostCallGasReserve() (*big.Int, error) {
-	return _BridgeExecutor.Contract.PostCallGasReserve(&_BridgeExecutor.CallOpts)
+// Solidity: function maxReturnDataSize() view returns(uint256)
+func (_BridgeExecutor *BridgeExecutorSession) MaxReturnDataSize() (*big.Int, error) {
+	return _BridgeExecutor.Contract.MaxReturnDataSize(&_BridgeExecutor.CallOpts)
 }
 
-// PostCallGasReserve is a free data retrieval call binding the contract method 0x230f4cda.
+// MaxReturnDataSize is a free data retrieval call binding the contract method 0xa1b8442a.
 //
-// Solidity: function postCallGasReserve() view returns(uint256)
-func (_BridgeExecutor *BridgeExecutorCallerSession) PostCallGasReserve() (*big.Int, error) {
-	return _BridgeExecutor.Contract.PostCallGasReserve(&_BridgeExecutor.CallOpts)
+// Solidity: function maxReturnDataSize() view returns(uint256)
+func (_BridgeExecutor *BridgeExecutorCallerSession) MaxReturnDataSize() (*big.Int, error) {
+	return _BridgeExecutor.Contract.MaxReturnDataSize(&_BridgeExecutor.CallOpts)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
@@ -664,6 +664,27 @@ func (_BridgeExecutor *BridgeExecutorTransactorSession) RevokeRole(role [32]byte
 	return _BridgeExecutor.Contract.RevokeRole(&_BridgeExecutor.TransactOpts, role, account)
 }
 
+// SetMaxReturnDataSize is a paid mutator transaction binding the contract method 0x8a7fdc75.
+//
+// Solidity: function setMaxReturnDataSize(uint256 value) returns()
+func (_BridgeExecutor *BridgeExecutorTransactor) SetMaxReturnDataSize(opts *bind.TransactOpts, value *big.Int) (*types.Transaction, error) {
+	return _BridgeExecutor.contract.Transact(opts, "setMaxReturnDataSize", value)
+}
+
+// SetMaxReturnDataSize is a paid mutator transaction binding the contract method 0x8a7fdc75.
+//
+// Solidity: function setMaxReturnDataSize(uint256 value) returns()
+func (_BridgeExecutor *BridgeExecutorSession) SetMaxReturnDataSize(value *big.Int) (*types.Transaction, error) {
+	return _BridgeExecutor.Contract.SetMaxReturnDataSize(&_BridgeExecutor.TransactOpts, value)
+}
+
+// SetMaxReturnDataSize is a paid mutator transaction binding the contract method 0x8a7fdc75.
+//
+// Solidity: function setMaxReturnDataSize(uint256 value) returns()
+func (_BridgeExecutor *BridgeExecutorTransactorSession) SetMaxReturnDataSize(value *big.Int) (*types.Transaction, error) {
+	return _BridgeExecutor.Contract.SetMaxReturnDataSize(&_BridgeExecutor.TransactOpts, value)
+}
+
 // SetMethodCheckEnabled is a paid mutator transaction binding the contract method 0x47239f71.
 //
 // Solidity: function setMethodCheckEnabled(address target, bool enabled) returns()
@@ -685,27 +706,6 @@ func (_BridgeExecutor *BridgeExecutorTransactorSession) SetMethodCheckEnabled(ta
 	return _BridgeExecutor.Contract.SetMethodCheckEnabled(&_BridgeExecutor.TransactOpts, target, enabled)
 }
 
-// SetPostCallGasReserve is a paid mutator transaction binding the contract method 0x4bc51672.
-//
-// Solidity: function setPostCallGasReserve(uint256 value) returns()
-func (_BridgeExecutor *BridgeExecutorTransactor) SetPostCallGasReserve(opts *bind.TransactOpts, value *big.Int) (*types.Transaction, error) {
-	return _BridgeExecutor.contract.Transact(opts, "setPostCallGasReserve", value)
-}
-
-// SetPostCallGasReserve is a paid mutator transaction binding the contract method 0x4bc51672.
-//
-// Solidity: function setPostCallGasReserve(uint256 value) returns()
-func (_BridgeExecutor *BridgeExecutorSession) SetPostCallGasReserve(value *big.Int) (*types.Transaction, error) {
-	return _BridgeExecutor.Contract.SetPostCallGasReserve(&_BridgeExecutor.TransactOpts, value)
-}
-
-// SetPostCallGasReserve is a paid mutator transaction binding the contract method 0x4bc51672.
-//
-// Solidity: function setPostCallGasReserve(uint256 value) returns()
-func (_BridgeExecutor *BridgeExecutorTransactorSession) SetPostCallGasReserve(value *big.Int) (*types.Transaction, error) {
-	return _BridgeExecutor.Contract.SetPostCallGasReserve(&_BridgeExecutor.TransactOpts, value)
-}
-
 // Receive is a paid mutator transaction binding the contract receive function.
 //
 // Solidity: receive() payable returns()
@@ -725,6 +725,141 @@ func (_BridgeExecutor *BridgeExecutorSession) Receive() (*types.Transaction, err
 // Solidity: receive() payable returns()
 func (_BridgeExecutor *BridgeExecutorTransactorSession) Receive() (*types.Transaction, error) {
 	return _BridgeExecutor.Contract.Receive(&_BridgeExecutor.TransactOpts)
+}
+
+// BridgeExecutorMaxReturnDataSizeSetIterator is returned from FilterMaxReturnDataSizeSet and is used to iterate over the raw logs and unpacked data for MaxReturnDataSizeSet events raised by the BridgeExecutor contract.
+type BridgeExecutorMaxReturnDataSizeSetIterator struct {
+	Event *BridgeExecutorMaxReturnDataSizeSet // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *BridgeExecutorMaxReturnDataSizeSetIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(BridgeExecutorMaxReturnDataSizeSet)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(BridgeExecutorMaxReturnDataSizeSet)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *BridgeExecutorMaxReturnDataSizeSetIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *BridgeExecutorMaxReturnDataSizeSetIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// BridgeExecutorMaxReturnDataSizeSet represents a MaxReturnDataSizeSet event raised by the BridgeExecutor contract.
+type BridgeExecutorMaxReturnDataSizeSet struct {
+	OldValue *big.Int
+	NewValue *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterMaxReturnDataSizeSet is a free log retrieval operation binding the contract event 0x3d613bec426ed2a2fb9a9244f66939a8de8f29c84fa65bfabde181e0996b68f8.
+//
+// Solidity: event MaxReturnDataSizeSet(uint256 oldValue, uint256 newValue)
+func (_BridgeExecutor *BridgeExecutorFilterer) FilterMaxReturnDataSizeSet(opts *bind.FilterOpts) (*BridgeExecutorMaxReturnDataSizeSetIterator, error) {
+
+	logs, sub, err := _BridgeExecutor.contract.FilterLogs(opts, "MaxReturnDataSizeSet")
+	if err != nil {
+		return nil, err
+	}
+	return &BridgeExecutorMaxReturnDataSizeSetIterator{contract: _BridgeExecutor.contract, event: "MaxReturnDataSizeSet", logs: logs, sub: sub}, nil
+}
+
+// WatchMaxReturnDataSizeSet is a free log subscription operation binding the contract event 0x3d613bec426ed2a2fb9a9244f66939a8de8f29c84fa65bfabde181e0996b68f8.
+//
+// Solidity: event MaxReturnDataSizeSet(uint256 oldValue, uint256 newValue)
+func (_BridgeExecutor *BridgeExecutorFilterer) WatchMaxReturnDataSizeSet(opts *bind.WatchOpts, sink chan<- *BridgeExecutorMaxReturnDataSizeSet) (event.Subscription, error) {
+
+	logs, sub, err := _BridgeExecutor.contract.WatchLogs(opts, "MaxReturnDataSizeSet")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(BridgeExecutorMaxReturnDataSizeSet)
+				if err := _BridgeExecutor.contract.UnpackLog(event, "MaxReturnDataSizeSet", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseMaxReturnDataSizeSet is a log parse operation binding the contract event 0x3d613bec426ed2a2fb9a9244f66939a8de8f29c84fa65bfabde181e0996b68f8.
+//
+// Solidity: event MaxReturnDataSizeSet(uint256 oldValue, uint256 newValue)
+func (_BridgeExecutor *BridgeExecutorFilterer) ParseMaxReturnDataSizeSet(log types.Log) (*BridgeExecutorMaxReturnDataSizeSet, error) {
+	event := new(BridgeExecutorMaxReturnDataSizeSet)
+	if err := _BridgeExecutor.contract.UnpackLog(event, "MaxReturnDataSizeSet", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // BridgeExecutorMethodCheckEnabledIterator is returned from FilterMethodCheckEnabled and is used to iterate over the raw logs and unpacked data for MethodCheckEnabled events raised by the BridgeExecutor contract.
@@ -1172,141 +1307,6 @@ func (_BridgeExecutor *BridgeExecutorFilterer) WatchMethodWhitelisted(opts *bind
 func (_BridgeExecutor *BridgeExecutorFilterer) ParseMethodWhitelisted(log types.Log) (*BridgeExecutorMethodWhitelisted, error) {
 	event := new(BridgeExecutorMethodWhitelisted)
 	if err := _BridgeExecutor.contract.UnpackLog(event, "MethodWhitelisted", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// BridgeExecutorPostCallGasReserveSetIterator is returned from FilterPostCallGasReserveSet and is used to iterate over the raw logs and unpacked data for PostCallGasReserveSet events raised by the BridgeExecutor contract.
-type BridgeExecutorPostCallGasReserveSetIterator struct {
-	Event *BridgeExecutorPostCallGasReserveSet // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *BridgeExecutorPostCallGasReserveSetIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(BridgeExecutorPostCallGasReserveSet)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(BridgeExecutorPostCallGasReserveSet)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *BridgeExecutorPostCallGasReserveSetIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *BridgeExecutorPostCallGasReserveSetIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// BridgeExecutorPostCallGasReserveSet represents a PostCallGasReserveSet event raised by the BridgeExecutor contract.
-type BridgeExecutorPostCallGasReserveSet struct {
-	OldValue *big.Int
-	NewValue *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterPostCallGasReserveSet is a free log retrieval operation binding the contract event 0x18c087ee0200bbe9d388bef52ea98caa28702660805c632add5ffd538a66356e.
-//
-// Solidity: event PostCallGasReserveSet(uint256 oldValue, uint256 newValue)
-func (_BridgeExecutor *BridgeExecutorFilterer) FilterPostCallGasReserveSet(opts *bind.FilterOpts) (*BridgeExecutorPostCallGasReserveSetIterator, error) {
-
-	logs, sub, err := _BridgeExecutor.contract.FilterLogs(opts, "PostCallGasReserveSet")
-	if err != nil {
-		return nil, err
-	}
-	return &BridgeExecutorPostCallGasReserveSetIterator{contract: _BridgeExecutor.contract, event: "PostCallGasReserveSet", logs: logs, sub: sub}, nil
-}
-
-// WatchPostCallGasReserveSet is a free log subscription operation binding the contract event 0x18c087ee0200bbe9d388bef52ea98caa28702660805c632add5ffd538a66356e.
-//
-// Solidity: event PostCallGasReserveSet(uint256 oldValue, uint256 newValue)
-func (_BridgeExecutor *BridgeExecutorFilterer) WatchPostCallGasReserveSet(opts *bind.WatchOpts, sink chan<- *BridgeExecutorPostCallGasReserveSet) (event.Subscription, error) {
-
-	logs, sub, err := _BridgeExecutor.contract.WatchLogs(opts, "PostCallGasReserveSet")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(BridgeExecutorPostCallGasReserveSet)
-				if err := _BridgeExecutor.contract.UnpackLog(event, "PostCallGasReserveSet", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParsePostCallGasReserveSet is a log parse operation binding the contract event 0x18c087ee0200bbe9d388bef52ea98caa28702660805c632add5ffd538a66356e.
-//
-// Solidity: event PostCallGasReserveSet(uint256 oldValue, uint256 newValue)
-func (_BridgeExecutor *BridgeExecutorFilterer) ParsePostCallGasReserveSet(log types.Log) (*BridgeExecutorPostCallGasReserveSet, error) {
-	event := new(BridgeExecutorPostCallGasReserveSet)
-	if err := _BridgeExecutor.contract.UnpackLog(event, "PostCallGasReserveSet", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
