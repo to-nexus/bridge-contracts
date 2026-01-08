@@ -151,6 +151,182 @@ contract MockBadApproveToken {
 }
 
 /**
+ * @title MockRevertingApproveMintableToken
+ * @notice Mock CrossMintableERC20 token that reverts on approve
+ * @dev Used to test BaseBridge approve revert fallback to normal flow.
+ *      Low-level call returns ok=false when approve reverts.
+ */
+contract MockRevertingApproveMintableToken {
+    mapping(address => uint) public balanceOf;
+    mapping(address => mapping(address => uint)) public allowance;
+    address public bridge;
+
+    error ApproveNotAllowed();
+
+    constructor(address _bridge) {
+        bridge = _bridge;
+    }
+
+    function decimals() external pure returns (uint8) {
+        return 18;
+    }
+
+    function transfer(address to, uint amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function approve(address, uint) external pure returns (bool) {
+        revert ApproveNotAllowed(); // Revert - low-level call will return ok=false
+    }
+
+    function mint(address to, uint amount) external returns (bool) {
+        require(msg.sender == bridge, "Only bridge");
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function burn(address from, uint amount) external returns (bool) {
+        require(msg.sender == bridge, "Only bridge");
+        balanceOf[from] -= amount;
+        return true;
+    }
+}
+
+/**
+ * @title MockNormalMintableToken
+ * @notice Normal mock CrossMintableERC20 token (for user side - user can approve bridge, supports mint/burn)
+ */
+contract MockNormalMintableToken {
+    mapping(address => uint) public balanceOf;
+    mapping(address => mapping(address => uint)) public allowance;
+    address public bridge;
+
+    constructor(address _bridge) {
+        bridge = _bridge;
+    }
+
+    function decimals() external pure returns (uint8) {
+        return 18;
+    }
+
+    function transfer(address to, uint amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function approve(address spender, uint amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function mint(address to, uint amount) external returns (bool) {
+        require(msg.sender == bridge, "Only bridge");
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function burn(address from, uint amount) external returns (bool) {
+        require(msg.sender == bridge, "Only bridge");
+        balanceOf[from] -= amount;
+        return true;
+    }
+
+    // Also allow direct mint for test setup
+    function mintDirect(address to, uint amount) external {
+        balanceOf[to] += amount;
+    }
+}
+
+/**
+ * @title MockNormalToken
+ * @notice Normal mock ERC20 token (for user side - user can approve bridge, no burn)
+ */
+contract MockNormalToken {
+    mapping(address => uint) public balanceOf;
+    mapping(address => mapping(address => uint)) public allowance;
+
+    function decimals() external pure returns (uint8) {
+        return 18;
+    }
+
+    function transfer(address to, uint amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function approve(address spender, uint amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function mint(address to, uint amount) external {
+        balanceOf[to] += amount;
+    }
+}
+
+/**
+ * @title MockRevertingApproveToken
+ * @notice Mock ERC20 token that reverts on approve (for testing bridge approve failure)
+ * @dev Transfer works, but approve reverts
+ */
+contract MockRevertingApproveToken {
+    mapping(address => uint) public balanceOf;
+    mapping(address => mapping(address => uint)) public allowance;
+
+    error ApproveNotAllowed();
+
+    function decimals() external pure returns (uint8) {
+        return 18;
+    }
+
+    function transfer(address to, uint amount) external returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint amount) external returns (bool) {
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    function approve(address, uint) external pure returns (bool) {
+        revert ApproveNotAllowed();
+    }
+
+    function mint(address to, uint amount) external {
+        balanceOf[to] += amount;
+    }
+}
+
+/**
  * @title MockNonStandardApproveToken
  * @notice Mock ERC20 token that returns non-standard values on approve
  * @dev Returns 0x02 (non-standard bool) to test assembly-based _callOptionalReturnBool
@@ -1221,7 +1397,7 @@ contract BridgeExecutorTest is BridgeTest {
 
     /**
      * @notice Test method whitelist - disallowed selector should revert
-     * @dev In the new design (CBU-26/27), method not whitelisted causes revert,
+     * @dev Method not whitelisted causes revert,
      *      and the entire finalization is rolled back safely
      */
     function test_methodWhitelist_disallowedSelector() public {
@@ -1532,7 +1708,7 @@ contract BridgeExecutorTest is BridgeTest {
 
     /**
      * @notice Test: Origin ERC20 with method not whitelisted should revert
-     * @dev In the new design (CBU-26/27), method not whitelisted causes revert,
+     * @dev Method not whitelisted causes revert,
      *      and the entire finalization is rolled back safely
      */
     function test_methodNotWhitelisted_originERC20_fallback() public {
@@ -2497,5 +2673,106 @@ contract BridgeExecutorTest is BridgeTest {
 
         // Verify minted is sufficient for future bridge-out
         assertTrue(pairAfter.minted >= userBalance, "Minted should be sufficient for bridge-out");
+    }
+
+    // ================================
+    // approve failure fallback tests
+    // ================================
+
+    /**
+     * @notice Test approve revert fallback to normal flow for wrapped token
+     * @dev When approve reverts (low-level call returns ok=false), BaseBridge should:
+     *      1. Burn the minted tokens
+     *      2. Continue to normal flow (mint directly to user)
+     */
+    function test_approveRevert_fallbackToNormalFlow_wrappedToken() public {
+        // Deploy tokens: normal on BSC (user can approve), reverting on Cross (bridge fails to approve)
+        vm.selectFork(bscForkID);
+        MockNormalToken normalTokenBSC = new MockNormalToken();
+        uint amount = 1000 * 1e18;
+        normalTokenBSC.mint(USER, amount);
+
+        vm.selectFork(crossForkID);
+        MockRevertingApproveMintableToken revertingTokenCross =
+            new MockRevertingApproveMintableToken(address(bridgeCross));
+
+        // Register token pairs on both chains
+        // BSC: normalTokenBSC is origin (user deposits here)
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        bridgeBSC.registerToken(CROSS_CHAIN_ID, true, address(normalTokenBSC), address(revertingTokenCross));
+
+        // Cross: revertingTokenCross is wrapped (minted on finalize, approve will revert)
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        bridgeCross.registerToken(BSC_CHAIN_ID, false, address(revertingTokenCross), address(normalTokenBSC));
+
+        // Deploy and whitelist a new target on Cross for this test
+        MockTargetContract newTarget = new MockTargetContract();
+        vm.prank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(newTarget));
+
+        // Prepare extraData
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(revertingTokenCross), USER, amount, bytes("test")
+        );
+        bytes memory extraData = abi.encodePacked(address(newTarget), calldata_);
+
+        // Bridge from BSC to Cross
+        vm.selectFork(bscForkID);
+        vm.prank(USER);
+        normalTokenBSC.approve(address(bridgeBSC), amount); // User approves bridge (this works)
+
+        (uint value, uint gas, uint service) = bscCalcFee(IERC20(address(normalTokenBSC)), amount);
+
+        // Record deposited before bridge on BSC
+        IBridgeRegistry.TokenPair memory bscPairBefore = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(normalTokenBSC));
+
+        vm.prank(USER);
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(normalTokenBSC)), USER, value, gas, service, extraData);
+        uint index = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID) - 1;
+
+        // Verify deposited increased on BSC after bridge
+        IBridgeRegistry.TokenPair memory bscPairAfterBridge =
+            bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(normalTokenBSC));
+        assertEq(
+            bscPairAfterBridge.deposited,
+            bscPairBefore.deposited + value,
+            "BSC deposited should increase by value after bridge"
+        );
+
+        bscIncrementIndex();
+
+        // Finalize on Cross - approve will revert, should fallback to normal mint
+        vm.selectFork(crossForkID);
+        uint userBalanceBefore = revertingTokenCross.balanceOf(USER);
+
+        // Record minted before finalize on Cross
+        IBridgeRegistry.TokenPair memory crossPairBefore =
+            bridgeCross.getTokenPair(BSC_CHAIN_ID, address(revertingTokenCross));
+
+        crossFinalize(index, address(revertingTokenCross), USER, value, 5, extraData);
+
+        // User should receive tokens via normal flow (mint)
+        uint userBalanceAfter = revertingTokenCross.balanceOf(USER);
+        assertEq(userBalanceAfter - userBalanceBefore, value, "User should receive tokens via normal flow");
+
+        // Bridge should have 0 balance (not stuck)
+        assertEq(revertingTokenCross.balanceOf(address(bridgeCross)), 0, "Bridge should not have stuck tokens");
+
+        // Verify minted increased correctly on Cross after finalize
+        // Even though approve failed and we had to burn+remint, final minted should be +value
+        IBridgeRegistry.TokenPair memory crossPairAfter =
+            bridgeCross.getTokenPair(BSC_CHAIN_ID, address(revertingTokenCross));
+        assertEq(
+            crossPairAfter.minted,
+            crossPairBefore.minted + value,
+            "Cross minted should increase by value after finalize (even with approve revert fallback)"
+        );
+
+        // Verify minted is sufficient for user to bridge back
+        assertTrue(
+            crossPairAfter.minted >= userBalanceAfter, "Minted should be sufficient for user to bridge back to BSC"
+        );
     }
 }
