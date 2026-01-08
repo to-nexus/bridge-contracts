@@ -58,6 +58,7 @@ contract BaseBridge is
     error BaseBridgeFailedRelease(Const.FinalizeStatus status);
     error BaseBridgeOnlyExecutor();
     error BaseBridgeExtraDataTooLong();
+    error BaseBridgeInvalidGasReserve();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -161,6 +162,13 @@ contract BaseBridge is
     event BridgeExecutorSet(address indexed bridgeExecutor);
 
     /**
+     * @notice Emitted when post-call gas reserve is changed
+     * @param oldValue Previous gas reserve value
+     * @param newValue New gas reserve value
+     */
+    event PostCallGasReserveSet(uint oldValue, uint newValue);
+
+    /**
      * @notice Emitted when extra call is executed via BridgeExecutor
      * @param fromChainID Source chain ID
      * @param index Unique identifier for the operation
@@ -197,8 +205,11 @@ contract BaseBridge is
     /// @dev Bridge executor contract for handling extradata operations
     IBridgeExecutor public bridgeExecutor;
 
+    /// @dev Post-call gas reserve for executor calls (adjustable by admin)
+    uint private _postCallGasReserve;
+
     /// @dev Storage gap for future upgrades
-    uint[46] private __gap;
+    uint[45] private __gap;
 
     /**
      * @notice Contract constructor
@@ -736,7 +747,10 @@ contract BaseBridge is
 
                 // Call executeExtraCall with low-level call to catch reverts
                 // If executor reverts, tokens stay in bridge (ERC20: not pulled, Native: returned)
-                (bool ok, bytes memory result) = executor.call{value: isERC20 ? 0 : value}(
+                // Apply gas limit: reserve gas for post-call logic
+                uint gasReserve = _postCallGasReserve == 0 ? 150_000 : _postCallGasReserve;
+                uint gasLimit = gasleft() < gasReserve ? 0 : gasleft() - gasReserve;
+                (bool ok, bytes memory result) = executor.call{gas: gasLimit, value: isERC20 ? 0 : value}(
                     abi.encodeCall(
                         IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
                     )
@@ -923,6 +937,26 @@ contract BaseBridge is
     function setBridgeExecutor(IBridgeExecutor _bridgeExecutor) external onlyRole(Const.ADMIN_ROLE) {
         bridgeExecutor = _bridgeExecutor;
         emit BridgeExecutorSet(address(_bridgeExecutor));
+    }
+
+    /**
+     * @notice Set the post-call gas reserve value for executor calls
+     * @dev Only callable by admin. Minimum: 50k
+     * @param value New gas reserve amount
+     */
+    function setPostCallGasReserve(uint value) external onlyRole(Const.ADMIN_ROLE) {
+        require(value >= 50_000, BaseBridgeInvalidGasReserve());
+        uint oldValue = _postCallGasReserve;
+        _postCallGasReserve = value;
+        emit PostCallGasReserveSet(oldValue, value);
+    }
+
+    /**
+     * @notice Get the current post-call gas reserve value
+     * @return The gas reserve amount (returns 150k as default if not set)
+     */
+    function postCallGasReserve() external view returns (uint) {
+        return _postCallGasReserve == 0 ? 150_000 : _postCallGasReserve;
     }
 
     /**
