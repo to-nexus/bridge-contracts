@@ -190,7 +190,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
         // Call target contract with bounded returndata to prevent OOG
         // Gas limit is controlled by BaseBridge; here we use all available gas
         bool success;
-        (success, returnData) = _safeCall(targetContract, gasleft(), isNative ? value : 0, extraData[20:]);
+        (success, returnData) = _safeCall(targetContract, isNative ? value : 0, extraData[20:]);
 
         // Clear approval (always for ERC20)
         if (!isNative) toToken.forceApprove(targetContract, 0);
@@ -369,13 +369,12 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
     /**
      * @dev Makes external call with bounded return data size to prevent OOG
      * @param target Target contract address
-     * @param gasLimit Gas limit for the call
      * @param value Native value to send
      * @param data Calldata to send
      * @return success True if call succeeded
      * @return returnData Return data (capped at MAX_RETURN_DATA_SIZE)
      */
-    function _safeCall(address target, uint gasLimit, uint value, bytes memory data)
+    function _safeCall(address target, uint value, bytes memory data)
         private
         returns (bool success, bytes memory returnData)
     {
@@ -385,7 +384,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
             returnData := mload(0x40)
 
             // Make the call
-            success := call(gasLimit, target, value, add(data, 0x20), mload(data), 0, 0)
+            success := call(gas(), target, value, add(data, 0x20), mload(data), 0, 0)
 
             // Cap returndata size
             let size := returndatasize()
