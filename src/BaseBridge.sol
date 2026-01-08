@@ -292,7 +292,7 @@ contract BaseBridge is
         uint networkFee,
         uint exFee,
         PermitArguments calldata permitArgs
-    ) private {
+    ) private onlyValidToken(toChainID, address(fromToken)) {
         require(
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
@@ -348,10 +348,6 @@ contract BaseBridge is
     {
         require(args.length == permitArgs.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < args.length; ++i) {
-            require(
-                _tokens[args[i].toChainID].contains(address(args[i].fromToken)),
-                BaseBridgeNotExistToken(address(args[i].fromToken))
-            );
             _permitBridgeToken(
                 args[i].toChainID,
                 args[i].fromToken,
