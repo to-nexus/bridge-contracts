@@ -124,7 +124,7 @@ contract ImplementationScript is Script {
         console.log("Legacy Implementation:", Upgrades.getImplementationAddress(address(proxy)));
         console.log("New Implementation:", impl);
 
-        vm.broadcast();
+        vm.startBroadcast();
         UUPSUpgradeable(payable(proxy)).upgradeToAndCall(impl, "");
 
         vm.prank(editor);
@@ -143,6 +143,7 @@ contract ImplementationScript is Script {
                 }
             }
         }
+        vm.stopBroadcast();
 
         console.log("Upgraded Implementation:", Upgrades.getImplementationAddress(address(proxy)));
     }
