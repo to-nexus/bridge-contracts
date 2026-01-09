@@ -3,9 +3,10 @@ pragma solidity 0.8.28;
 
 import {BSCBridgeV2} from "../src/BSCBridgeV2.sol";
 import {BaseBridge} from "../src/BaseBridge.sol";
+
+import {BridgeExecutor, IBridgeExecutor} from "../src/BridgeExecutor.sol";
 import {CrossBridge} from "../src/CrossBridge.sol";
 import {PriceFeed} from "../src/PriceFeed.sol";
-
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Upgrades} from "lib/openzeppelin-foundry-upgrades/src/Upgrades.sol";
@@ -98,6 +99,50 @@ contract ImplementationScript is Script {
 
         vm.broadcast();
         UUPSUpgradeable(payable(proxy)).upgradeToAndCall(impl, "");
+
+        console.log("Upgraded Implementation:", Upgrades.getImplementationAddress(address(proxy)));
+    }
+
+    /**
+     * @notice 프록시의 Implementation 업그레이드 및 setMaxExtraDataLength 호출
+     * @dev UUPS 프록시의 Implementation을 새 버전으로 업그레이드하고, setMaxExtraDataLength 등 필요한 설정을 수행합니다.
+     * @param proxy 프록시 컨트랙트 주소
+     * @param impl 새 Implementation 주소
+     * @param editor setMaxExtraDataLength를 호출할 권한을 가진 주소
+     * @param extraDataLength 설정할 최대 extra data 길이
+     * @param executor (옵션) BridgeExecutor 컨트랙트 주소. 없으면 address(0)
+     * @param whitelist (옵션) BridgeExecutor에 추가할 화이트리스트 타겟 주소 배열
+     */
+    function upgradeBridgeImplWithSetMaxExtraDataLength(
+        address proxy,
+        address impl,
+        address editor,
+        uint extraDataLength,
+        address executor,
+        address[] calldata whitelist
+    ) public {
+        console.log("Legacy Implementation:", Upgrades.getImplementationAddress(address(proxy)));
+        console.log("New Implementation:", impl);
+
+        vm.broadcast();
+        UUPSUpgradeable(payable(proxy)).upgradeToAndCall(impl, "");
+
+        vm.prank(editor);
+        BaseBridge(payable(proxy)).setMaxExtraDataLength(extraDataLength);
+
+        if (executor != address(0)) {
+            vm.prank(msg.sender);
+            BaseBridge(payable(proxy)).setBridgeExecutor(IBridgeExecutor(executor));
+            console.log("Executor:", executor);
+
+            if (whitelist.length > 0) {
+                for (uint i = 0; i < whitelist.length; i++) {
+                    vm.prank(msg.sender);
+                    BridgeExecutor(payable(executor)).addWhitelistTarget(whitelist[i]);
+                    console.log("Whitelisted target:", whitelist[i]);
+                }
+            }
+        }
 
         console.log("Upgraded Implementation:", Upgrades.getImplementationAddress(address(proxy)));
     }
