@@ -73,19 +73,13 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     );
 
     /**
-     * @notice Emitted when a token pair is unregistered
-     * @param remoteChainID ID of the remote chain
-     * @param localToken Address of token on this chain
-     */
-    event TokenPairUnregistered(uint indexed remoteChainID, address indexed localToken);
-
-    /**
      * @notice Emitted when a token's pause status is changed
      * @param remoteChainID ID of the remote chain
      * @param token Address of the token
-     * @param pause New pause status
+     * @param initiatePause Whether to pause initiate (true) or unpause (false)
+     * @param finalizePause Whether to pause finalize (true) or unpause (false)
      */
-    event TokenPauseSet(uint indexed remoteChainID, address indexed token, bool pause);
+    event TokenPauseSet(uint indexed remoteChainID, address indexed token, bool initiatePause, bool finalizePause);
 
     /**
      * @notice Emitted when a chain is paused or unpaused
@@ -102,9 +96,16 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
 
     /**
      * @notice Emitted when the CrossMintableERC20Factory is set
-     * @param code Address of the CrossMintableERC20 Code contract
+     * @param oldCode Address of the old CrossMintableERC20 Code contract
+     * @param newCode Address of the new CrossMintableERC20 Code contract
      */
-    event CrossMintableERC20CodeSet(address indexed code);
+    event CrossMintableERC20CodeSet(ICrossMintableERC20Code indexed oldCode, ICrossMintableERC20Code indexed newCode);
+
+    /**
+     * @notice Emitted when the maximum extra data length is set
+     * @param length New maximum extra data length
+     */
+    event MaxExtraDataLengthSet(uint length);
 
     /// @dev Factory contract for creating new CrossMintable tokens
     ICrossMintableERC20Code public crossMintableERC20Code;
@@ -130,8 +131,14 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /// @dev Mapping from chain ID and index to pending operation data
     mapping(uint => mapping(uint => PendingData)) internal _pendingData;
 
-    /// @dev Storage gap for future upgradessetCrossMintableERC20Code
-    uint[41] private __gap;
+    /// @dev Mapping from chain ID and token address to finalize pause status
+    mapping(uint => mapping(address => bool)) internal _tokenFinalizePaused;
+
+    /// @dev Maximum length of extra data in bridge operations (0 = unlimited)
+    uint internal _maxExtraDataLength;
+
+    /// @dev Storage gap for future upgrades
+    uint[39] private __gap;
 
     /**
      * @notice Initializes the BridgeRegistry
@@ -193,21 +200,6 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     }
 
     /**
-     * @notice Unregisters a token pair
-     * @dev Removes token pair from registry
-     * - Validates token exists
-     * - Cleans up token pair data
-     * - Emits unregistration event
-     * @param remoteChainID Chain ID to unregister from
-     * @param token Token address to unregister
-     */
-    function unregisterToken(uint remoteChainID, address token) external onlyRole(Const.ADMIN_ROLE) {
-        require(_tokens[remoteChainID].remove(token), RegistryNotExistToken(token));
-        delete (_tokenPairs[remoteChainID][token]);
-        emit TokenPairUnregistered(remoteChainID, token);
-    }
-
-    /**
      * @notice Sets the CrossMintableERC20Factory contract
      * @dev Updates factory reference for creating new tokens
      * - Can only be set once
@@ -219,11 +211,12 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
         external
         onlyRole(Const.ADMIN_ROLE)
     {
-        require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
+        // Allow update: removed check that prevented overwriting crossMintableERC20Code
+        // require(address(crossMintableERC20Code) == address(0), RegistryExistERC20Code(address(crossMintableERC20Code)));
         require(address(_crossMintableERC20Code) != address(0), RegistryCanNotZeroValue());
 
+        emit CrossMintableERC20CodeSet(crossMintableERC20Code, _crossMintableERC20Code);
         crossMintableERC20Code = _crossMintableERC20Code;
-        emit CrossMintableERC20CodeSet(address(crossMintableERC20Code));
     }
 
     /**
@@ -249,12 +242,29 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Emits pause event
      * @param remoteChainID Chain ID of the token pair
      * @param token Token address to pause
-     * @param pause Whether to pause (true) or unpause (false)
+     * @param initiatePause Whether to pause initiate (true) or unpause (false)
+     * @param finalizePause Whether to pause finalize (true) or unpause (false)
      */
-    function setTokenPause(uint remoteChainID, address token, bool pause) external onlyRole(Const.OPERATOR_ROLE) {
+    function setTokenPause(uint remoteChainID, address token, bool initiatePause, bool finalizePause)
+        external
+        onlyRole(Const.OPERATOR_ROLE)
+    {
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
-        _tokenPairs[remoteChainID][token].paused = pause;
-        emit TokenPauseSet(remoteChainID, token, pause);
+
+        TokenPair storage pair = _tokenPairs[remoteChainID][token];
+        pair.paused = initiatePause;
+        _tokenFinalizePaused[remoteChainID][token] = finalizePause;
+        emit TokenPauseSet(remoteChainID, token, initiatePause, finalizePause);
+    }
+
+    /**
+     * @notice Returns finalize pause status for a token pair
+     * @param remoteChainID Chain ID of the token pair
+     * @param token Token address to check
+     * @return True if token finalize is paused
+     */
+    function isTokenFinalizePaused(uint remoteChainID, address token) external view returns (bool) {
+        return _tokenFinalizePaused[remoteChainID][token];
     }
 
     /**
@@ -265,6 +275,24 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     function setVerificationDelay(uint delay) external onlyRole(Const.ADMIN_ROLE) {
         _verificationDelay = delay;
         emit VerificationDelaySet(delay);
+    }
+
+    /**
+     * @notice Sets the maximum extra data length
+     * @dev Updates the maximum allowed length of extra data (0 = unlimited)
+     * @param length New maximum length in bytes
+     */
+    function setMaxExtraDataLength(uint length) external onlyRole(Const.EDITOR_ROLE) {
+        _maxExtraDataLength = length;
+        emit MaxExtraDataLengthSet(length);
+    }
+
+    /**
+     * @notice Returns the maximum extra data length
+     * @return Maximum allowed length of extra data (0 = unlimited)
+     */
+    function maxExtraDataLength() external view returns (uint) {
+        return _maxExtraDataLength;
     }
 
     /**
@@ -459,18 +487,38 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * - Stores operation arguments and reason
      * - Updates pending amounts for origin tokens
      * - Updates verification delay expiration for delayed processing
+     * - Always clears extraData to prevent extraCall re-execution on release
+     * - If remaining > 0, stores remaining as value (extraCall partially executed)
      * @param args Finalization arguments to store
      * @param status Status of the pending operation
      * @param delay Whether to delay processing (verification delay)
+     * @param remaining Actual remaining amount to process (0 means use args.value)
      */
-    function _setPendingArguments(FinalizeArguments calldata args, Const.FinalizeStatus status, bool delay) internal {
+    function _setPendingArguments(
+        FinalizeArguments calldata args,
+        Const.FinalizeStatus status,
+        bool delay,
+        uint remaining
+    ) internal returns (uint actualValue) {
         require(_pendingIndex[args.fromChainID].add(args.index), RegistryExistIndex(args.index));
 
-        _pendingData[args.fromChainID][args.index] =
-            PendingData({args: args, status: status, delayExpiration: delay ? block.timestamp + _verificationDelay : 0});
+        // Store remaining as value if set, always clear extraData (prevent re-execution on release)
+        actualValue = remaining != 0 ? remaining : args.value;
+        _pendingData[args.fromChainID][args.index] = PendingData({
+            args: FinalizeArguments({
+                fromChainID: args.fromChainID,
+                index: args.index,
+                toToken: args.toToken,
+                to: args.to,
+                value: actualValue,
+                extraData: bytes("") // Always empty: extraData is intentionally cleared for pending operations
+            }),
+            status: status,
+            delayExpiration: delay ? block.timestamp + _verificationDelay : 0
+        });
 
         TokenPair storage tokenPair = _tokenPairs[args.fromChainID][address(args.toToken)];
-        tokenPair.pendingAmount += args.value;
+        tokenPair.pendingAmount += actualValue;
     }
 
     /**
@@ -486,7 +534,8 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     function _removePendingArguments(uint remoteChainID, uint index) internal returns (FinalizeArguments memory args) {
         require(_pendingIndex[remoteChainID].remove(index), RegistryNotExistIndex(index));
 
-        args = _pendingData[remoteChainID][index].args;
+        PendingData storage pending = _pendingData[remoteChainID][index];
+        args = pending.args;
         TokenPair storage tokenPair = _tokenPairs[remoteChainID][address(args.toToken)];
 
         tokenPair.pendingAmount -= args.value;

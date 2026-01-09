@@ -39,13 +39,13 @@ contract CrossMintableERC20V2Test is Test {
         crossMintableERC20.grantRole(Const.MINTER_ROLE, minter);
     }
 
-    function test_mint() public {
+    function test_mint_burn() public {
+        // mint
         vm.prank(minter);
         crossMintableERC20.mint(owner, INITIAL_SUPPLY);
         assertEq(crossMintableERC20.balanceOf(owner), INITIAL_SUPPLY);
-    }
 
-    function test_burn() public {
+        // burn
         vm.prank(minter);
         crossMintableERC20.burn(owner, INITIAL_SUPPLY);
         assertEq(crossMintableERC20.balanceOf(owner), 0);

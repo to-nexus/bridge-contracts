@@ -116,6 +116,18 @@ contract BSCTest is CrossChainTest {
         public
         returns (uint index, bool ok)
     {
+        return bscBridge(token, from, to, value, gas, service, NULLDATA);
+    }
+
+    function bscBridge(
+        address token,
+        address from,
+        address to,
+        uint value,
+        uint gas,
+        uint service,
+        bytes memory extraData
+    ) public returns (uint index, bool ok) {
         vm.selectFork(bscForkID);
         // bridge
         index = nextIndexBSC;
@@ -129,19 +141,27 @@ contract BSCTest is CrossChainTest {
         if (token == address(NATIVE_TOKEN)) {
             assertTrue(from.balance >= value + gas + service);
             ok = bridgeBSC.bridgeToken{value: value + gas + service}(
-                CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA
+                CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, extraData
             );
         } else {
-            ok = bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, NULLDATA);
+            ok = bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(token), to, value, gas, service, extraData);
         }
     }
 
     function bscFinalize(uint index, address token, address to, uint value, uint sigCount) public returns (bool ok) {
+        return bscFinalize(index, token, to, value, sigCount, NULLDATA);
+    }
+
+    function bscFinalize(uint index, address token, address to, uint value, uint sigCount, bytes memory extraData)
+        public
+        returns (bool ok)
+    {
         vm.selectFork(bscForkID);
         if (sigCount > threshold) sigCount = threshold;
 
         // create finalize validator signature
-        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, CROSS_CHAIN_ID, index, token, to, value, NULLDATA));
+        bytes32 h =
+            keccak256(abi.encode(FINALIZE_TYPEHASH, CROSS_CHAIN_ID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeBSC.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -157,19 +177,22 @@ contract BSCTest is CrossChainTest {
             finalizeRevertBSC = false;
             vm.expectRevert();
         }
-        ok = bridgeBSC.finalizeBridge(
-            IBridgeRegistry.FinalizeArguments({
-                fromChainID: CROSS_CHAIN_ID,
-                index: index,
-                toToken: IERC20(token),
-                to: to,
-                value: value,
-                extraData: NULLDATA
-            }),
-            v,
-            r,
-            s
-        );
+        IBridgeRegistry.FinalizeArguments[] memory argsArray = new IBridgeRegistry.FinalizeArguments[](1);
+        argsArray[0] = IBridgeRegistry.FinalizeArguments({
+            fromChainID: CROSS_CHAIN_ID,
+            index: index,
+            toToken: IERC20(token),
+            to: to,
+            value: value,
+            extraData: extraData
+        });
+        uint8[][] memory vArray = new uint8[][](1);
+        bytes32[][] memory rArray = new bytes32[][](1);
+        bytes32[][] memory sArray = new bytes32[][](1);
+        vArray[0] = v;
+        rArray[0] = r;
+        sArray[0] = s;
+        ok = bridgeBSC.finalizeBridgeBatch(argsArray, vArray, rArray, sArray);
     }
 
     function bscBurnCrossToDeadWallet(address from, address to, uint value, bool alreadyTransferred)
@@ -186,7 +209,7 @@ contract BSCTest is CrossChainTest {
             vm.expectRevert();
         }
 
-        ok = BSCBridgeV2(address(bridgeBSC)).burnCrossToDeadWallet(to, value, alreadyTransferred);
+        ok = BSCBridgeV2(payable(address(bridgeBSC))).burnCrossToDeadWallet(to, value, alreadyTransferred);
     }
 
     function bscCalcFee(IERC20 token, uint totalValue) public returns (uint value, uint gas, uint ex) {

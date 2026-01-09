@@ -38,23 +38,9 @@ interface IBaseBridge is IBridgeRegistry {
         uint exFee,
         bytes calldata extraData
     ) external payable returns (bool);
-    function permitBridgeToken(
-        uint toChainID,
-        IERC20 fromToken,
-        address to,
-        uint value,
-        uint networkFee,
-        uint exFee,
-        bytes calldata extraData,
-        PermitArguments calldata permitArgs
-    ) external payable returns (bool);
     function permitBridgeTokenBatch(BridgeTokenArguments[] calldata args, PermitArguments[] calldata permitArgs)
         external
         payable;
-    function finalizeBridge(FinalizeArguments calldata args, uint8[] memory v, bytes32[] memory r, bytes32[] memory s)
-        external
-        payable
-        returns (bool);
     function finalizeBridgeBatch(
         FinalizeArguments[] calldata args,
         uint8[][] memory v,
@@ -63,7 +49,6 @@ interface IBaseBridge is IBridgeRegistry {
     ) external payable returns (bool);
     function bridgeVerifier() external view returns (IBridgeVerifier);
     function releasePending(uint remoteChainID, uint index) external;
-    function releasePendingBatch(uint[] memory remoteChainIDs, uint[] memory indexes) external;
     function domainSeparator() external view returns (bytes32);
     function initializedAt() external view returns (uint);
 }

@@ -5,6 +5,7 @@ import {BridgeVerifier, IBridgeVerifier} from "../src/BridgeVerifier.sol";
 import {IPriceFeed} from "../src/PriceFeed.sol";
 import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
 import {BridgeTest} from "./Bridge.t.sol";
+import {TestToken} from "./token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BridgeSetTest is BridgeTest {
@@ -354,7 +355,7 @@ contract BridgeSetTest is BridgeTest {
         // Pause token on BSC chain
         vm.selectFork(bscForkID);
         vm.prank(OWNER);
-        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), true);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), true, false);
 
         // Try to deposit tokens (should fail due to pause)
         uint amount = 1000 ether;
@@ -369,7 +370,7 @@ contract BridgeSetTest is BridgeTest {
 
         // Unpause token
         vm.prank(OWNER);
-        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), false);
+        bridgeBSC.setTokenPause(CROSS_CHAIN_ID, address(cross), false, false);
 
         // Now deposit should succeed
         bridgeRevertBSC = false;
@@ -379,11 +380,11 @@ contract BridgeSetTest is BridgeTest {
         // Test same operations on Cross chain
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), true);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), true, false);
 
         // Unpause token
         vm.prank(CrossOWNER);
-        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), false);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(weth), false, false);
     }
 
     /**
