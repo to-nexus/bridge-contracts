@@ -124,26 +124,25 @@ contract ImplementationScript is Script {
         console.log("Legacy Implementation:", Upgrades.getImplementationAddress(address(proxy)));
         console.log("New Implementation:", impl);
 
-        vm.startBroadcast();
+        vm.broadcast(msg.sender);
         UUPSUpgradeable(payable(proxy)).upgradeToAndCall(impl, "");
 
-        vm.prank(editor);
+        vm.broadcast(editor);
         BaseBridge(payable(proxy)).setMaxExtraDataLength(extraDataLength);
 
         if (executor != address(0)) {
-            vm.prank(msg.sender);
+            vm.broadcast(msg.sender);
             BaseBridge(payable(proxy)).setBridgeExecutor(IBridgeExecutor(executor));
             console.log("Executor:", executor);
 
             if (whitelist.length > 0) {
                 for (uint i = 0; i < whitelist.length; i++) {
-                    vm.prank(msg.sender);
+                    vm.broadcast(msg.sender);
                     BridgeExecutor(payable(executor)).addWhitelistTarget(whitelist[i]);
                     console.log("Whitelisted target:", whitelist[i]);
                 }
             }
         }
-        vm.stopBroadcast();
 
         console.log("Upgraded Implementation:", Upgrades.getImplementationAddress(address(proxy)));
     }
