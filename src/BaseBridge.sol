@@ -301,7 +301,8 @@ contract BaseBridge is
         uint value,
         uint networkFee,
         uint exFee,
-        PermitArguments calldata permitArgs
+        PermitArguments calldata permitArgs,
+        bytes calldata extraData
     ) private onlyValidToken(toChainID, address(fromToken)) {
         require(
             address(fromToken) == address(permitArgs.token),
@@ -313,6 +314,7 @@ contract BaseBridge is
         // is the same as the account that signed the permit. This restriction provides protection against front-running
         // by enforcing that only the intended recipient can receive the bridged tokens.
         require(to == permitArgs.account, BaseBridgeMismatchPermitAccount());
+        require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
 
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         require(
@@ -340,7 +342,7 @@ contract BaseBridge is
                 value: value,
                 networkFee: networkFee,
                 exFee: exFee,
-                extraData: "" // Empty: extraData not supported in permit flow
+                extraData: extraData
             })
         );
     }
@@ -365,7 +367,8 @@ contract BaseBridge is
                 args[i].value,
                 args[i].networkFee,
                 args[i].exFee,
-                permitArgs[i]
+                permitArgs[i],
+                args[i].extraData
             );
         }
     }

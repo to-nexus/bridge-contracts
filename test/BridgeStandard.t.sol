@@ -362,10 +362,10 @@ contract BaseBridgeTest is BridgeTest {
     }
 
     /**
-     * @notice Test that permitBridgeTokenBatch ignores caller-supplied extraData
-     * @dev Even when non-empty extraData is provided, the emitted event should have empty extraData
+     * @notice Test that permitBridgeTokenBatch passes caller-supplied extraData
+     * @dev When non-empty extraData is provided, the emitted event should contain the same extraData
      */
-    function test_permit_extraData_ignored() public {
+    function test_permit_extraData_passed() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -383,14 +383,11 @@ contract BaseBridgeTest is BridgeTest {
             permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
-        // Prepare malicious extraData that attacker might try to inject
-        bytes memory maliciousExtraData = abi.encodePacked(address(0xDEAD), bytes4(0x12345678), bytes("attack"));
+        bytes memory extraData = abi.encodePacked(address(0xDEAD), bytes4(0x12345678), bytes("payload"));
 
-        // Get expected values for event assertion
         uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
         address expectedRemoteToken = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(cross)).remoteToken;
 
-        // Expect BridgeInitiated event with EMPTY extraData (not maliciousExtraData)
         vm.expectEmit(true, true, true, true);
         emit BaseBridge.BridgeInitiated(
             CROSS_CHAIN_ID,
@@ -402,13 +399,12 @@ contract BaseBridgeTest is BridgeTest {
             amount,
             0,
             0,
-            "", // KEY: extraData must be empty, not maliciousExtraData
+            extraData,
             block.timestamp
         );
 
-        // Call with non-empty extraData - it should be ignored
         IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
-        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, maliciousExtraData);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, extraData);
         IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
         permitArgsArray[0] = permitArgs;
         vm.prank(VALIDATOR1);
@@ -416,10 +412,10 @@ contract BaseBridgeTest is BridgeTest {
     }
 
     /**
-     * @notice Test that permitBridgeTokenBatch ignores extraData in args
-     * @dev Even when BridgeTokenArguments contain non-empty extraData, emitted events should have empty extraData
+     * @notice Test that permitBridgeTokenBatch passes extraData from args
+     * @dev When BridgeTokenArguments contain non-empty extraData, emitted events should contain the same extraData
      */
-    function test_permit_batch_extraData_ignored() public {
+    function test_permit_batch_extraData_passed() public {
         uint amount = 1000 * 1e18;
 
         vm.selectFork(bscForkID);
@@ -437,20 +433,17 @@ contract BaseBridgeTest is BridgeTest {
             permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
         }
 
-        // Prepare malicious extraData
-        bytes memory maliciousExtraData = abi.encodePacked(address(0xDEAD), bytes4(0x12345678));
+        bytes memory extraData = abi.encodePacked(address(0xDEAD), bytes4(0x12345678));
 
         IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
-        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, maliciousExtraData);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, extraData);
 
         IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
         permitArgsArray[0] = permitArgs;
 
-        // Get expected values for event assertion
         uint expectedIndex = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
         address expectedRemoteToken = bridgeBSC.getTokenPair(CROSS_CHAIN_ID, address(cross)).remoteToken;
 
-        // Expect BridgeInitiated event with EMPTY extraData
         vm.expectEmit(true, true, true, true);
         emit BaseBridge.BridgeInitiated(
             CROSS_CHAIN_ID,
@@ -462,12 +455,50 @@ contract BaseBridgeTest is BridgeTest {
             amount,
             0,
             0,
-            "", // KEY: extraData must be empty
+            extraData,
             block.timestamp
         );
 
         vm.prank(VALIDATOR1);
         bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
+    }
+
+    /**
+     * @notice Test that permitBridgeTokenBatch reverts when extraData exceeds maxExtraDataLength
+     */
+    function test_permit_extraData_length_validation() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+
+        vm.prank(OWNER);
+        bridgeBSC.setMaxExtraDataLength(32);
+
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            uint deadline = type(uint).max;
+            uint nonce = IERC20Permit(address(cross)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
+        }
+
+        bytes memory tooLongExtraData = new bytes(33);
+
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, tooLongExtraData);
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
+        permitArgsArray[0] = permitArgs;
+
+        vm.prank(VALIDATOR1);
+        vm.expectRevert(BaseBridge.BaseBridgeExtraDataTooLong.selector);
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
+
+        vm.prank(OWNER);
+        bridgeBSC.setMaxExtraDataLength(0);
     }
 
     function test_permit_deposit_batch() public {
