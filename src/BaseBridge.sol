@@ -301,18 +301,19 @@ contract BaseBridge is
         uint value,
         uint networkFee,
         uint exFee,
-        PermitArguments calldata permitArgs
+        PermitArguments calldata permitArgs,
+        bytes calldata extraData
     ) private onlyValidToken(toChainID, address(fromToken)) {
         require(
             address(fromToken) == address(permitArgs.token),
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
         );
 
-        // The permitBridgeToken function doesn't restrict msg.sender, allowing anyone to initiate the bridge operation.
-        // However, it requires that 'to' matches permitArgs.account to ensure that the recipient on the target chain
-        // is the same as the account that signed the permit. This restriction provides protection against front-running
-        // by enforcing that only the intended recipient can receive the bridged tokens.
+        // The permitBridgeToken function restricts msg.sender to INITIATOR_ROLE,
+        // preventing third parties from injecting unauthorized bridge parameters
+        // (toChainID, value, extraData) using a stolen or front-run permit.
         require(to == permitArgs.account, BaseBridgeMismatchPermitAccount());
+        require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
 
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         require(
@@ -340,7 +341,7 @@ contract BaseBridge is
                 value: value,
                 networkFee: networkFee,
                 exFee: exFee,
-                extraData: "" // Empty: extraData not supported in permit flow
+                extraData: extraData
             })
         );
     }
@@ -355,6 +356,7 @@ contract BaseBridge is
         payable
         whenNotPaused
         nonReentrant
+        onlyRole(Const.INITIATOR_ROLE)
     {
         require(args.length == permitArgs.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < args.length; ++i) {
@@ -365,7 +367,8 @@ contract BaseBridge is
                 args[i].value,
                 args[i].networkFee,
                 args[i].exFee,
-                permitArgs[i]
+                permitArgs[i],
+                args[i].extraData
             );
         }
     }
