@@ -48,6 +48,7 @@ contract BSCTest is CrossChainTest {
                 roles[i] = VALIDATOR_ROLE;
             }
             bridgeBSC.grantRoleBatch(roles, VALIDATORS);
+            bridgeBSC.grantRole(INITIATOR_ROLE, VALIDATOR1);
         }
 
         {

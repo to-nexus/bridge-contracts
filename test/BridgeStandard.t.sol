@@ -501,6 +501,36 @@ contract BaseBridgeTest is BridgeTest {
         bridgeBSC.setMaxExtraDataLength(0);
     }
 
+    /**
+     * @notice Test that permitBridgeTokenBatch reverts when called by unauthorized address
+     */
+    function test_permit_revert_unauthorized_caller() public {
+        uint amount = 1000 * 1e18;
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        cross.transfer(USER, amount);
+
+        IBaseBridge.PermitArguments memory permitArgs;
+        {
+            uint deadline = type(uint).max;
+            uint nonce = IERC20Permit(address(cross)).nonces(USER);
+            bytes32 h = keccak256(abi.encode(PERMIT_TYPEHASH, USER, address(bridgeBSC), amount, nonce, deadline));
+            bytes32 hash = MessageHashUtils.toTypedDataHash(IERC20Permit(address(cross)).DOMAIN_SEPARATOR(), h);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PK, hash);
+            permitArgs = IBaseBridge.PermitArguments(IERC20Permit(address(cross)), USER, amount, deadline, v, r, s);
+        }
+
+        IBaseBridge.BridgeTokenArguments[] memory args = new IBaseBridge.BridgeTokenArguments[](1);
+        args[0] = IBaseBridge.BridgeTokenArguments(CROSS_CHAIN_ID, cross, USER, USER, amount, 0, 0, "");
+        IBaseBridge.PermitArguments[] memory permitArgsArray = new IBaseBridge.PermitArguments[](1);
+        permitArgsArray[0] = permitArgs;
+
+        vm.prank(USER);
+        vm.expectRevert();
+        bridgeBSC.permitBridgeTokenBatch(args, permitArgsArray);
+    }
+
     function test_permit_deposit_batch() public {
         // not allow fail
         uint amount = 1000 * 1e18;
