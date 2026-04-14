@@ -309,10 +309,9 @@ contract BaseBridge is
             BaseBridgeInvalidPermitToken(address(fromToken), address(permitArgs.token))
         );
 
-        // The permitBridgeToken function doesn't restrict msg.sender, allowing anyone to initiate the bridge operation.
-        // However, it requires that 'to' matches permitArgs.account to ensure that the recipient on the target chain
-        // is the same as the account that signed the permit. This restriction provides protection against front-running
-        // by enforcing that only the intended recipient can receive the bridged tokens.
+        // The permitBridgeToken function restricts msg.sender to INITIATOR_ROLE,
+        // preventing third parties from injecting unauthorized bridge parameters
+        // (toChainID, value, extraData) using a stolen or front-run permit.
         require(to == permitArgs.account, BaseBridgeMismatchPermitAccount());
         require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
 
@@ -357,6 +356,7 @@ contract BaseBridge is
         payable
         whenNotPaused
         nonReentrant
+        onlyRole(Const.INITIATOR_ROLE)
     {
         require(args.length == permitArgs.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < args.length; ++i) {
