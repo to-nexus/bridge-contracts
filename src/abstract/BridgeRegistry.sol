@@ -382,7 +382,7 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
      * @param remoteChainID Chain ID to check
      * @param token Token address to check
      */
-    function _validateToken(uint remoteChainID, address token) private view {
+    function _validateToken(uint remoteChainID, address token) internal view {
         // check token is registered
         require(_tokens[remoteChainID].contains(token), RegistryNotExistToken(token));
         // check chain is not paused
