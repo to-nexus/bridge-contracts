@@ -224,7 +224,7 @@ contract BaseBridge is
      * @param dev_ Reward wallet address
      * @param threshold_ Required validator signatures
      */
-    function initialize(address owner, address payable dev_, uint8 threshold_) external initializer {
+    function initialize(address owner, address payable dev_, uint8 threshold_) external virtual initializer {
         __BaseBridge_init(owner, dev_, threshold_);
     }
 
@@ -605,7 +605,7 @@ contract BaseBridge is
      * @return _exFee Adjusted exchange fee
      */
     function _checkInitiateAmount(uint remoteChainID, IERC20 token, uint value, uint networkFee, uint exFee)
-        private
+        internal
         view
         returns (uint _networkFee, uint _exFee)
     {
@@ -662,6 +662,8 @@ contract BaseBridge is
      * @param fee Total fees to collect
      */
     function _initiateBridge(uint remoteChainID, IERC20 token, address from, uint value, uint fee) internal virtual {
+        _depositToken(remoteChainID, address(token), value);
+
         if (address(token) == Const.NATIVE_TOKEN) {
             // Handling native token transfers (e.g., CROSS, ETH, BNB)
             require(msg.value == value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
@@ -681,8 +683,56 @@ contract BaseBridge is
                 );
             }
         }
-        _depositToken(remoteChainID, address(token), value);
     }
+
+    /**
+     * @dev Groups the forward-hook bookkeeping locals of `_finalizeBridge` into a
+     * single memory struct instead of separate stack variables, to stay within the
+     * EVM stack budget for that already-deep function.
+     */
+    struct ForwardOutcome {
+        bool expected;
+        bool executorInvoked;
+        bool ok;
+        bytes result;
+    }
+
+    /**
+     * @notice Hook invoked from `_finalizeBridge`, before the executor whitelist/approve
+     * gates, when extraData parses to a target contract + method ID.
+     * @dev Base implementation is a no-op that never expects a forward. Override in
+     * relay-hub bridges (e.g. CrossBridgeV2) to stage a forward context when the parsed
+     * target/methodID is that bridge's own forwarded entrypoint.
+     * @return forwardExpected True if `_forwardEnd` must be called for this item.
+     */
+    function _forwardBegin(
+        uint, /* fromChainID */
+        uint, /* index */
+        address, /* token */
+        uint, /* value */
+        address, /* targetContract */
+        bytes4 /* methodID */
+    ) internal virtual returns (bool forwardExpected) {
+        return false;
+    }
+
+    /**
+     * @notice Hook invoked from `_finalizeBridge` to resolve an item for which
+     * `_forwardBegin` returned true, on every exit path (including the early success
+     * `return`).
+     * @dev Base implementation is a no-op. Parameters (unnamed here): fromChainID,
+     * index, executorInvoked (whether the executor was actually called for this item),
+     * ok (the outer executor-call frame's success flag, meaningless when
+     * executorInvoked is false), result (the outer executor-call frame's
+     * return/revert data).
+     */
+    function _forwardEnd(
+        uint, /* fromChainID */
+        uint, /* index */
+        bool, /* executorInvoked */
+        bool, /* ok */
+        bytes memory /* result */
+    ) internal virtual {}
 
     /**
      * @notice Executes token transfer or minting for bridge finalization
@@ -707,6 +757,7 @@ contract BaseBridge is
         bytes memory extraData
     ) internal returns (Const.FinalizeStatus status, uint remaining) {
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
+        bool handledByExecutor;
 
         // Check if extraData is provided and long enough (>= 24 bytes for contract address and method ID)
         address executor = address(bridgeExecutor);
@@ -714,18 +765,28 @@ contract BaseBridge is
             // Parse target contract address and method ID from extraData
             address targetContract;
             bytes4 methodID;
-            assembly {
+            assembly ("memory-safe") {
                 targetContract := shr(96, mload(add(extraData, 32)))
                 methodID := mload(add(extraData, 52))
             }
 
+            // Forward hook: stage a forward context if this item's target/methodID is a
+            // forward-capable entrypoint (no-op in BaseBridge; overridden by relay-hub
+            // bridges such as CrossBridgeV2). When `fwd.expected` is true, `_forwardEnd`
+            // MUST be called on every exit path below, including the early success
+            // `return`, so a staged context never leaks into the next finalize batch
+            // item. Grouped into a single memory struct (rather than separate locals)
+            // to keep this already-deep function within the EVM stack budget.
+            ForwardOutcome memory fwd;
+            fwd.expected = _forwardBegin(fromChainID, index, address(toToken), value, targetContract, methodID);
+
             // Check if target is whitelisted
             bool isWhitelisted;
             {
-                (bool ok, bytes memory returndata) =
+                (bool wlOk, bytes memory returndata) =
                     executor.staticcall(abi.encodeCall(IBridgeExecutor.isWhitelistedTarget, (targetContract)));
-                if (ok && returndata.length >= 32) {
-                    assembly {
+                if (wlOk && returndata.length >= 32) {
+                    assembly ("memory-safe") {
                         isWhitelisted := mload(add(returndata, 32))
                     }
                 }
@@ -733,7 +794,7 @@ contract BaseBridge is
 
             if (isWhitelisted) {
                 bool isERC20 = address(toToken) != Const.NATIVE_TOKEN;
-                bool ok = !isERC20; // Native: true (always call executor)
+                fwd.ok = !isERC20; // Native: true (always call executor)
 
                 // For ERC20: mint/transfer to bridge first, then approve executor
                 if (isERC20) {
@@ -744,18 +805,18 @@ contract BaseBridge is
                         );
                     }
                     // Approve executor to pull tokens (low-level call to handle non-standard tokens)
-                    (ok,) = address(toToken).call(abi.encodeCall(IERC20.approve, (executor, value)));
+                    (fwd.ok,) = address(toToken).call(abi.encodeCall(IERC20.approve, (executor, value)));
                     // Approve failed - burn minted tokens, continue to normal flow
-                    if (!ok && !isOrigin) ICrossMintableERC20(address(toToken)).burn(address(this), value);
+                    if (!fwd.ok && !isOrigin) ICrossMintableERC20(address(toToken)).burn(address(this), value);
                 }
 
-                if (ok) {
+                if (fwd.ok) {
                     // Call executeExtraCall with low-level call to catch reverts
                     // Apply gas limit: reserve gas for post-call logic
                     uint gasReserve = _postCallGasReserve == 0 ? 150_000 : _postCallGasReserve;
                     uint gasLimit = gasleft() < gasReserve ? 0 : gasleft() - gasReserve;
-                    bytes memory result;
-                    (ok, result) = executor.call{gas: gasLimit, value: isERC20 ? 0 : value}(
+                    fwd.executorInvoked = true;
+                    (fwd.ok, fwd.result) = executor.call{gas: gasLimit, value: isERC20 ? 0 : value}(
                         abi.encodeCall(
                             IBridgeExecutor.executeExtraCall, (fromChainID, index, toToken, to, value, extraData)
                         )
@@ -765,27 +826,35 @@ contract BaseBridge is
                     // Note: Executor access is restricted to bridge only via EXECUTOR_ROLE.
                     // Even if clearing allowance fails, no security issue exists since
                     // executor cannot be called by unauthorized parties.
+                    // The unused return value is deliberate: compiler warning 9302 here is
+                    // a known-harmless finding (see plan spec §16 acceptance criterion 10).
                     if (isERC20) address(toToken).call(abi.encodeCall(IERC20.approve, (executor, 0)));
 
-                    if (ok && result.length >= 64) {
+                    if (fwd.ok && fwd.result.length >= 64) {
                         // Executor successfully handled the call (returns consumed, returnData)
                         // Executor sends remaining to user directly
-                        (uint consumed, bytes memory returnData) = abi.decode(result, (uint, bytes));
+                        (uint consumed, bytes memory returnData) = abi.decode(fwd.result, (uint, bytes));
 
                         emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, true, consumed, returnData);
 
                         // Account for entire value (consumed by target + remaining sent to user)
                         _withdrawToken(fromChainID, address(toToken), value);
-                        return (Const.FinalizeStatus.Success, 0);
+                        status = Const.FinalizeStatus.Success;
+                        handledByExecutor = true;
+                    } else {
+                        // Executor reverted - burn minted tokens and fallback to normal flow
+                        if (isERC20 && !isOrigin) ICrossMintableERC20(address(toToken)).burn(address(this), value);
+                        emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, false, 0, fwd.result);
                     }
-
-                    // Executor reverted - burn minted tokens and fallback to normal flow
-                    if (isERC20 && !isOrigin) ICrossMintableERC20(address(toToken)).burn(address(this), value);
-                    emit ExtraCallExecuted(fromChainID, index, targetContract, methodID, false, 0, result);
                 }
             }
-            // Not whitelisted or approve/executor failed - continue to normal flow
+            // Resolve the forward hook exactly once, on the single merge point below,
+            // covering every path (whitelist/approve gate rejection, executor revert,
+            // and success) so the staged context never leaks into the next batch item.
+            if (fwd.expected) _forwardEnd(fromChainID, index, fwd.executorInvoked, fwd.ok, fwd.result);
         }
+
+        if (handledByExecutor) return (status, 0);
 
         // Normal token transfer flow (no extraData or not whitelisted)
         status = _transferOrMintToken(toToken, to, value, isOrigin);
@@ -848,7 +917,7 @@ contract BaseBridge is
                 if (address(recipient).code.length == 0) return false;
             } else {
                 bool returnValue;
-                assembly {
+                assembly ("memory-safe") {
                     returnValue := mload(add(returndata, 32))
                 }
                 return returnValue;

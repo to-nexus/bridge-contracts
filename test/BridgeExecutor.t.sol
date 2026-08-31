@@ -471,7 +471,7 @@ contract BridgeExecutorTest is BridgeTest {
     MockSwap public mockSwapCross;
     MockSwap public mockSwapBSC;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
 
         // Deploy BridgeExecutor for each chain
