@@ -62,7 +62,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     ICrossMintableERC20Code internal crossMintableERC20CodeChainA;
     TestToken internal chainALocalCrossToken;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         super.setUp();
 
         vm.selectFork(crossForkID);

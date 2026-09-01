@@ -19,3 +19,12 @@ int_types="short"
 single_line_statement_blocks = "single"
 multiline_func_header = "attributes_first"
 sort_imports = true
+
+# 배포 전용 프로파일: 메타데이터 해시를 바이트코드에서 제외해
+# `--libraries` 설정 변화가 바이트코드를 바꾸지 않도록 한다.
+# (ForwardLib 링크 검증이 빌드 설정에 결합되는 문제를 제거)
+[profile.deploy]
+optimizer = true
+optimizer_runs = 1
+via_ir = true
+bytecode_hash = "none"
