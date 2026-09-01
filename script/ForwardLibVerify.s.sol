@@ -57,9 +57,17 @@ contract ForwardLibVerify is Script {
     /// @notice The only external library `CrossBridgeV2` is expected to link against.
     string internal constant EXPECTED_LIB_NAME = "ForwardLib";
 
+    /// @notice Fully-qualified library name as the compiler records it under
+    /// `metadata.settings.libraries` when the artifact is built pre-linked.
+    string internal constant LIB_FQN = "src/lib/ForwardLib.sol:ForwardLib";
+
     error ForwardLibVerifyLibHasNoCode(address lib);
     error ForwardLibVerifyLibCodehashMismatch(bytes32 expected, bytes32 actual);
     error ForwardLibVerifyNoLinkReferenceFound();
+    /// @notice Artifact was built pre-linked but declares no `settings.libraries` entry for `ForwardLib`.
+    error ForwardLibVerifyPrelinkedLibraryNotDeclared();
+    /// @notice Artifact was built pre-linked to a DIFFERENT library address than the one being verified.
+    error ForwardLibVerifyPrelinkedAddressMismatch(address expected, address declared);
     error ForwardLibVerifyUnexpectedLinkReferenceContract(string file, string name);
     error ForwardLibVerifyLinkReferenceOutOfRange(uint offset, uint length, uint runtimeLength);
     error ForwardLibVerifyLinkedAddressMismatch(uint offset, address expected, address actual);
@@ -189,8 +197,14 @@ contract ForwardLibVerify is Script {
             // Patch the unlinked template in place for the wholesale check below.
             _writeAddress(unlinkedTemplate, offset, lib);
         }
-        // (offsets.length == 0 means CrossBridgeV2 was already fully linked at build
-        // time — nothing left to patch/extract for step (3); step (4) below still runs.)
+        // offsets.length == 0 means CrossBridgeV2 was already fully linked at build time
+        // (built with `--libraries`), so there are no relocations left to extract and
+        // step (3)'s per-relocation proof cannot run. Recover the equivalent guarantee
+        // from the artifact's own metadata: the compiler records the address it linked
+        // against under `settings.libraries`, and that MUST be the library we are
+        // verifying. Without this, step (4) would happily confirm that impl matches an
+        // artifact linked to some OTHER library address.
+        if (offsets.length == 0) _verifyPrelinkedDeclaration(json, lib);
 
         // CrossBridgeV2 also carries its OWN self-address immutable (inherited from
         // `UUPSUpgradeable`, see `_patchAllImmutableReferences`'s doc) — patch that to
@@ -204,6 +218,23 @@ contract ForwardLibVerify is Script {
         if (patchedCodehash != implCodehash) {
             revert ForwardLibVerifyPatchedRuntimeMismatch(implCodehash, patchedCodehash);
         }
+    }
+
+    /**
+     * @dev Verifies a pre-linked artifact declares `lib` as the address it was linked
+     * against. Used only when `deployedBytecode.linkReferences` is empty, which happens
+     * when the artifact was compiled with `--libraries`/`foundry.toml` `libraries`.
+     *
+     * The compiler records this under `metadata.settings.libraries` keyed by the
+     * fully-qualified library name.
+     */
+    function _verifyPrelinkedDeclaration(string memory json, address lib) internal view {
+        string memory path = string.concat(".metadata.settings.libraries", _jsonKey(LIB_FQN));
+
+        if (!vm.keyExistsJson(json, path)) revert ForwardLibVerifyPrelinkedLibraryNotDeclared();
+
+        address declared = vm.parseAddress(vm.parseJsonString(json, path));
+        if (declared != lib) revert ForwardLibVerifyPrelinkedAddressMismatch(lib, declared);
     }
 
     /**
@@ -248,7 +279,11 @@ contract ForwardLibVerify is Script {
             total += fileOffsets.length;
         }
 
-        if (total == 0) revert ForwardLibVerifyNoLinkReferenceFound();
+        // total == 0 is NOT an error: it means the artifact was compiled with
+        // `--libraries` (or a `libraries` entry in foundry.toml), so the compiler already
+        // baked the address in and emitted no relocations. `_verifyLinkedImplementation`
+        // detects the empty result and switches to the pre-linked verification path.
+        if (total == 0) return new uint[](0);
 
         offsets = new uint[](total);
         uint w;
