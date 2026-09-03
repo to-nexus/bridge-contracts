@@ -47,4 +47,9 @@ library Const {
     bytes32 internal constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 internal constant EXECUTOR_ROLE = keccak256("EXECUTOR_ROLE");
     bytes32 internal constant INITIATOR_ROLE = keccak256("INITIATOR_ROLE");
+
+    /// @dev Grants control of a `HyperMintableERC20`'s HyperCore link slots
+    /// (`setHyperCoreDeployer` / `setCoreTokenIndex`). Scoped to the token contract that
+    /// exposes those functions plus the factory that created it.
+    bytes32 internal constant LINKER_ROLE = keccak256("LINKER_ROLE");
 }

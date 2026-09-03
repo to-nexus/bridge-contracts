@@ -30,10 +30,10 @@ library ForwardLib {
     bytes32 private constant CTX_BASE = 0xf985886670fe7bb8de789a16f5a5fac4e3acb178f2710001e0f3cfde4fc8f400;
 
     bytes32 private constant CTX_ACTIVE = CTX_BASE;
-    bytes32 private constant CTX_FROM_CHAIN_ID = bytes32(uint256(CTX_BASE) + 1);
-    bytes32 private constant CTX_TOKEN = bytes32(uint256(CTX_BASE) + 2);
-    bytes32 private constant CTX_VALUE = bytes32(uint256(CTX_BASE) + 3);
-    bytes32 private constant CTX_FINALIZE_INDEX = bytes32(uint256(CTX_BASE) + 4);
+    bytes32 private constant CTX_FROM_CHAIN_ID = bytes32(uint(CTX_BASE) + 1);
+    bytes32 private constant CTX_TOKEN = bytes32(uint(CTX_BASE) + 2);
+    bytes32 private constant CTX_VALUE = bytes32(uint(CTX_BASE) + 3);
+    bytes32 private constant CTX_FINALIZE_INDEX = bytes32(uint(CTX_BASE) + 4);
 
     // keccak256(abi.encode(uint256(keccak256("nexus.bridge.forward.guard")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant GUARD_SLOT = 0x96c5fec86ccff8d1ee06d7ba5a223396fbf7f905e4727220bd20cf4e693d0500;

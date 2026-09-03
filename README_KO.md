@@ -131,6 +131,14 @@ sequenceDiagram
 - wrapped 토큰은 브리지가 배포하는 표준 `ERC20` + `ERC20Permit` 컨트랙트로, 이름은 `Cross Bridge <SYMBOL>`,
   심볼은 `<SYMBOL>x`이며 **등록 시 전달된** 심볼과 decimals를 사용합니다. 원본 토큰과 동일하다고 가정하지 말고
   토큰의 `decimals()`를 직접 조회하세요.
+- **HyperEVM** 배포에서는 wrapped 토큰으로 `CrossMintableERC20V2` 대신 `HyperMintableERC20`을 씁니다.
+  구조는 동일하고, 그 위에 HyperCore 링크 계층이 얹혀 있습니다 — 고정 스토리지 슬롯
+  (`keccak256("HyperCore deployer")`)에 HyperCore의 `finalizeEvmContract{customStorageSlot}` 액션이 읽어가는
+  finalizer 주소를 기록해 토큰을 HyperCore 스팟 자산에 연결하고, 그 토큰이 프로비저닝될 수 있는 HyperCore
+  시스템 주소를 유도합니다. 그 시스템 주소를 채우려면 직접 민팅해야 하는데(브리지의 일반적인 예치 기반
+  발행 경로 밖의 운영자 조작), 그 잔고는 브리지 자체의 페어별 `minted` 회계에 **반영되지 않습니다** — 버그가
+  아니라 의도된 회계상의 괴리입니다(§8의 `LINKER_ROLE`과 운영 절차·링크 런북은
+  `script/HyperMintableERC20Code.s.sol` 참조).
 - **등록된 페어**만 전송할 수 있습니다. 해당 배포에서 지원되는 조합은 `allChainIDs()` / `allTokenPairs()` /
   `getTokenPair()`로 확인하세요.
 
@@ -561,6 +569,8 @@ params 구조체와 `deadline`을 받습니다.
 | `BridgeExecutor` | 정산 시 화이트리스트된 `extraData` 호출을 실행합니다. |
 | `PriceFeed` | 수수료·한도 계산에 사용되는 토큰/네이티브 가격 소스. 업그레이더블(UUPS). |
 | `CrossMintableERC20V2` | 브리지가 발행하는 wrapped 토큰(`ERC20` + `ERC20Permit`). |
+| `HyperMintableERC20` | HyperEVM 전용 wrapped 토큰. `CrossMintableERC20V2`에 HyperCore 링크 슬롯을 더함. |
+| `HyperMintableERC20Code` | `HyperMintableERC20`의 팩토리. CREATE2로 결정적이고 사전 계산 가능한 주소에 배포. |
 | `SwapBridgeRouter` | 선택적 스왑 + 브리지 라우터(Uniswap V3). |
 | `BridgeBot` | 주기적 반복 전송을 위한 선택적 보조 컨트랙트. |
 
@@ -596,6 +606,32 @@ params 구조체와 `deadline`을 받습니다.
 | `INITIATOR_ROLE` | 브리지 | permit 기반 배치 전송 제출 |
 | `EXECUTOR_ROLE` | Executor | 결합 `extraData` 호출 실행 — 브리지가 보유 |
 | `MINTER_ROLE` | wrapped 토큰 | 발행·소각. 생성 시 브리지에 부여되며, `CrossMintableERC20V2`에서는 해당 토큰 자체의 기본 관리자가 관리 |
+| `LINKER_ROLE` | `HyperMintableERC20` | `setHyperCoreDeployer` / `setCoreTokenIndex`가 검사하는 role — 하지만 이 role을 **보유하는 것**과 실제로 호출할 수 있는 것은 다릅니다. 아래 설명 참고 |
+
+`HyperMintableERC20`은 **role 보유**와 **실효 권한**을 구분합니다. `hasRole(LINKER_ROLE, account)`는
+`account`가 이 role을 부여받았는지(일반적인, 회수 가능한 OZ grant)를 알려줄 뿐입니다. `account`가 지금
+실제로 `setHyperCoreDeployer` / `setCoreTokenIndex`를 호출할 수 있는지는 `isLinkAuthority(account)`이며,
+이번 라운드 이후 두 질문은 더 이상 같지 않습니다: 토큰의 **현재** `defaultAdmin()`은 `LINKER_ROLE` 보유
+여부와 무관하게 항상 권한이 있고, `beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`를 그대로
+따라갑니다 — 이전이 완료되는 즉시 예전 admin은 별도의 role 정리 없이도 권한을 잃습니다. 유일한 다른
+권한 주체는 immutable `factoryLinker()`(생성한 `HyperMintableERC20Code`)이며, 이마저도 `LINKER_ROLE`을
+보유하는 동안만 유효합니다 — 토큰의 기본 관리자가 `revokeRole(LINKER_ROLE, factoryLinker())`로 팩토리를
+차단할 수 있고, 나중에 `grantRole`로 다시 되돌릴 수 있습니다. 다른 주소에 `LINKER_ROLE`을 부여해도
+`hasRole`은 바뀌지만 `isLinkAuthority`는 생기지 않으므로, 슬롯 쓰기는 항상 이 두 주체로만 제한됩니다.
+
+`HyperMintableERC20Code`가 생성하는 모든 토큰의 기본 관리자가 되는 `tokenAdmin`은 CREATE2 주소 예측을 위해
+`immutable`입니다. 따라서 앞으로 생성될 토큰의 초기 owner를 바꾸려면 팩토리를 재배포해야 하고, **이미
+배포된** 토큰의 관리자는 토큰 자체의 `beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`로 이전할 수
+있습니다. 마찬가지로 토큰의 `factoryLinker`는 생성 시점에 그 토큰을 만든 팩토리로 고정됩니다 — 브리지의
+`crossMintableERC20Code`를 교체해도 기존에 생성된 토큰의 관리 권한이 새 팩토리로 넘어가지 **않습니다.**
+그런 토큰들을 위해 예전 팩토리를 계속 유지하거나, 토큰의 기본 관리자가 직접 호출하세요. 토큰별 생성
+팩토리 주소는 운영 장부에 기록해 두는 것이 좋습니다.
+
+finalize 이전 구간(런북은 `script/HyperMintableERC20Code.s.sol` 참고) 동안에는 `HyperCoreDeployerSet`,
+`CoreTokenIndexSet`, `LINKER_ROLE`과 `DEFAULT_ADMIN_ROLE` 양쪽의 `RoleGranted` / `RoleRevoked`(실효
+권한이 실제로 옮겨가는 시점은 후자입니다 — 2단계 이전의 `DefaultAdminTransferScheduled` /
+`DefaultAdminTransferCanceled`는 예고일 뿐입니다)를 모니터링하고, 이벤트를 놓치더라도 현재 통제 주체를
+알 수 있도록 `defaultAdmin()` / `isLinkAuthority()`를 주기적으로 재조회해 대조하세요.
 
 ---
 
