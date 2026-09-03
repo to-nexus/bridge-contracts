@@ -56,8 +56,7 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
         vm.selectFork(crossForkID);
         if (sigCount > threshold) sigCount = threshold;
 
-        bytes32 h =
-            keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -137,13 +136,19 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
 
         // (1) Slot comparison for the private, getter-less `_bscChainID`.
         bytes32 bscChainIDSlotAfter = vm.load(address(bridgeCross), BSC_CHAIN_ID_SLOT);
-        assertEq(bscChainIDSlotAfter, bscChainIDSlotBefore, "_bscChainID storage slot must be byte-identical post-upgrade");
+        assertEq(
+            bscChainIDSlotAfter, bscChainIDSlotBefore, "_bscChainID storage slot must be byte-identical post-upgrade"
+        );
 
         // (2) Behavioral proof: crossSupply() reads _tokenPairs[_bscChainID][NATIVE], so
         // it returning the SAME value (not the OTHER chain's DIFFERENT value) after the
         // upgrade proves `_bscChainID` itself round-tripped correctly, not just that its
         // raw slot bits happened to match.
-        assertEq(bridgeCrossV2.crossSupply(), crossSupplyBefore, "crossSupply() must read the SAME _bscChainID pair post-upgrade");
+        assertEq(
+            bridgeCrossV2.crossSupply(),
+            crossSupplyBefore,
+            "crossSupply() must read the SAME _bscChainID pair post-upgrade"
+        );
         assertEq(
             bridgeCross.getTokenPair(chainOther, Const.NATIVE_TOKEN).minted,
             otherChainMintedBefore,
@@ -159,8 +164,16 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
         assertEq(pairAfter.deposited, pairBefore.deposited);
         assertEq(pairAfter.minted, pairBefore.minted);
 
-        assertEq(bridgeCross.getNextInitiateIndex(BSC_CHAIN_ID), nextInitiateBefore, "initiate index must survive the upgrade");
-        assertEq(bridgeCross.getNextFinalizeIndex(BSC_CHAIN_ID), nextFinalizeBefore, "finalize index must survive the upgrade");
+        assertEq(
+            bridgeCross.getNextInitiateIndex(BSC_CHAIN_ID),
+            nextInitiateBefore,
+            "initiate index must survive the upgrade"
+        );
+        assertEq(
+            bridgeCross.getNextFinalizeIndex(BSC_CHAIN_ID),
+            nextFinalizeBefore,
+            "finalize index must survive the upgrade"
+        );
         assertEq(bridgeCrossV2.crossSupplyLimit(), crossSupplyLimitBefore, "crossSupplyLimit must survive the upgrade");
     }
 
@@ -225,7 +238,8 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
         vm.selectFork(crossForkID);
         crossFinalize(index2, address(NATIVE_TOKEN), USER, 10 ether, threshold);
         assertTrue(
-            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index2).status == Const.FinalizeStatus.CrossSupplyLimitExceeded,
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index2).status
+                == Const.FinalizeStatus.CrossSupplyLimitExceeded,
             "crossSupplyLimit must still be enforced post-upgrade"
         );
     }

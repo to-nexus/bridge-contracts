@@ -7,15 +7,17 @@ import {BridgeVerifier} from "../src/BridgeVerifier.sol";
 import {PriceFeed} from "../src/PriceFeed.sol";
 import {IBridgeExecutor} from "../src/interface/IBridgeExecutor.sol";
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
-import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
 import {Const} from "../src/lib/Const.sol";
 
-import {CrossBridgeV2MultihopTest} from "./CrossBridgeV2Multihop.t.sol";
+import {HyperMintableERC20} from "../src/token/HyperMintableERC20.sol";
+import {HyperMintableERC20Code} from "../src/token/HyperMintableERC20Code.sol";
 import {MockTargetContract} from "./BridgeExecutor.t.sol";
-import {CrossMintableERC20Code} from "../src/token/CrossMintableERC20Code.sol";
+import {CrossBridgeV2MultihopTest} from "./CrossBridgeV2Multihop.t.sol";
+
 import {TestToken} from "./token/TestToken.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
@@ -53,7 +55,7 @@ contract CrossBridgeV2HyperEVMRouteTest is CrossBridgeV2MultihopTest {
     PriceFeed internal priceFeedHyper;
     BridgeExecutor internal bridgeExecutorHyper;
     MockTargetContract internal mockTargetHyper;
-    ICrossMintableERC20Code internal crossMintableERC20CodeHyper;
+    HyperMintableERC20Code internal crossMintableERC20CodeHyper;
     TestToken internal hyperLocalCrossToken;
 
     function setUp() public virtual override {
@@ -91,7 +93,11 @@ contract CrossBridgeV2HyperEVMRouteTest is CrossBridgeV2MultihopTest {
         );
         bridgeHyper.setBridgeVerifier(bridgeVerifierHyper);
 
-        crossMintableERC20CodeHyper = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeHyper))));
+        // `HyperMintableERC20Code` in place of the V1 `CrossMintableERC20Code` — same
+        // `ICrossMintableERC20Code` surface, but its tokens carry the HyperCore link slot
+        // (T19-T22 below). `hyperOwner` doubles as `tokenAdmin` here, consistent with every
+        // other role in this fixture being centralized on `hyperOwner`.
+        crossMintableERC20CodeHyper = new HyperMintableERC20Code(hyperOwner, hyperOwner, address(bridgeHyper));
         bridgeHyper.setCrossMintableERC20Code(crossMintableERC20CodeHyper);
 
         // HyperEVM's native coin <-> CROSS's native coin, registered symmetrically to
@@ -137,8 +143,7 @@ contract CrossBridgeV2HyperEVMRouteTest is CrossBridgeV2MultihopTest {
         vm.selectFork(crossForkID);
         if (sigCount > threshold) sigCount = threshold;
 
-        bytes32 h =
-            keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeHyper.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -241,8 +246,7 @@ contract CrossBridgeV2HyperEVMRouteTest is CrossBridgeV2MultihopTest {
         uint ctxValue = value2 + fee2 + ex2;
 
         bytes memory hop3 = _hyperTargetExtraData(value2);
-        bytes memory extraData =
-            _forwardExtraData(HYPEREVM_TESTNET_CHAIN_ID, USER, value2, fee2, ex2, hop3);
+        bytes memory extraData = _forwardExtraData(HYPEREVM_TESTNET_CHAIN_ID, USER, value2, fee2, ex2, hop3);
 
         uint hop2Index = bridgeCross.getNextInitiateIndex(HYPEREVM_TESTNET_CHAIN_ID);
 
@@ -263,5 +267,97 @@ contract CrossBridgeV2HyperEVMRouteTest is CrossBridgeV2MultihopTest {
 
         assertEq(address(mockTargetHyper).balance, targetBalBefore, "reverting target must receive nothing");
         assertEq(USER.balance, value2, "HyperEVM's own normal-flow fallback must pay USER directly");
+    }
+
+    // =====================================================================
+    // Wrapped ERC20 path (T19-T22): proves
+    // `BridgeRegistry.createToken -> HyperMintableERC20Code -> HyperMintableERC20`
+    // is fully compatible end to end through a real bridge instance, on top of the native
+    // route already exercised above.
+    // =====================================================================
+
+    /// @dev Creates a fresh wrapped `HyperMintableERC20` for an arbitrary CROSS-side remote
+    /// token, through the real `bridgeHyper.createToken` entry point (EDITOR_ROLE = hyperOwner).
+    function _createWrappedToken() internal returns (address tokenAddress, address remoteToken) {
+        vm.selectFork(crossForkID);
+        remoteToken = makeAddr("hyperevm-wrapped-remote");
+
+        vm.prank(hyperOwner);
+        tokenAddress = bridgeHyper.createToken(CROSS_CHAIN_ID, remoteToken, "TT", 18);
+    }
+
+    /// T19 + T20. `createToken` deploys a real `HyperMintableERC20` tracked by the factory,
+    /// and its automatic `registerToken(isOrigin=false)` call is visible through `getTokenPair`.
+    function test_T19_T20_createToken_wrapped_registeredAndTracked() public {
+        (address tokenAddress, address remoteToken) = _createWrappedToken();
+
+        // T19: real HyperMintableERC20, tracked by the factory that created it.
+        assertTrue(crossMintableERC20CodeHyper.isHyperMintableERC20(tokenAddress));
+        HyperMintableERC20 wrapped = HyperMintableERC20(tokenAddress);
+        assertEq(wrapped.name(), "Cross Bridge TT");
+        assertEq(wrapped.symbol(), "TTx");
+        assertEq(wrapped.decimals(), 18);
+
+        // T20: createToken's internal registerToken(isOrigin=false) call registered the pair.
+        IBridgeRegistry.TokenPair memory pair = bridgeHyper.getTokenPair(CROSS_CHAIN_ID, tokenAddress);
+        assertEq(pair.localToken, tokenAddress);
+        assertEq(pair.remoteToken, remoteToken);
+        assertFalse(pair.isOrigin);
+    }
+
+    /// T21. The bridge holds MINTER_ROLE on the token it created: a validator-signed finalize
+    /// mints to the recipient, and bridging back out burns via the same wrapped token —
+    /// proving the whole factory-created token is usable end to end through the bridge.
+    function test_T21_wrappedToken_finalizeMintsAndReverseBurns() public {
+        (address tokenAddress,) = _createWrappedToken();
+        HyperMintableERC20 wrapped = HyperMintableERC20(tokenAddress);
+        assertTrue(wrapped.hasRole(Const.MINTER_ROLE, address(bridgeHyper)));
+
+        address recipient = makeAddr("hyperevm-wrapped-recipient");
+        uint value = 10 ether;
+        uint index = bridgeHyper.getNextFinalizeIndex(CROSS_CHAIN_ID);
+
+        assertTrue(
+            _signAndFinalizeHyper(CROSS_CHAIN_ID, index, tokenAddress, recipient, value, bytes(""), 5),
+            "inbound finalize must mint the wrapped token to recipient"
+        );
+        assertEq(wrapped.balanceOf(recipient), value);
+        assertEq(bridgeHyper.getTokenPair(CROSS_CHAIN_ID, tokenAddress).minted, value);
+
+        // Reverse direction: bridging the wrapped token back out burns it (capped by `minted`).
+        vm.selectFork(crossForkID);
+        uint value2 = 4 ether;
+        (, uint networkFee, uint exFee) = bridgeVerifierHyper.calculateFee(CROSS_CHAIN_ID, IERC20(tokenAddress), value2);
+        uint supplyBefore = wrapped.totalSupply();
+
+        vm.prank(recipient);
+        wrapped.approve(address(bridgeHyper), value2 + networkFee + exFee);
+
+        vm.prank(recipient);
+        assertTrue(
+            bridgeHyper.bridgeToken(CROSS_CHAIN_ID, IERC20(tokenAddress), USER, value2, networkFee, exFee, bytes(""))
+        );
+
+        assertEq(wrapped.balanceOf(recipient), value - value2 - networkFee - exFee, "burn + fee left the sender");
+        assertEq(wrapped.totalSupply(), supplyBefore - value2, "only the bridged value is burned, not the fee");
+        assertEq(
+            bridgeHyper.getTokenPair(CROSS_CHAIN_ID, tokenAddress).minted,
+            value - value2,
+            "minted accounting must fall by the burned amount"
+        );
+    }
+
+    /// T22. The factory-delegated `setHyperCoreDeployer` path works on a token created through
+    /// the real bridge, and the RAW storage slot (not just the getter) reflects the finalizer.
+    function test_T22_factoryPath_setHyperCoreDeployer_rawSlot() public {
+        (address tokenAddress,) = _createWrappedToken();
+        address finalizer = makeAddr("hyperevm-finalizer");
+
+        vm.prank(hyperOwner);
+        crossMintableERC20CodeHyper.setHyperCoreDeployer(tokenAddress, finalizer);
+
+        bytes32 raw = vm.load(tokenAddress, HyperMintableERC20(tokenAddress).HYPERCORE_DEPLOYER_SLOT());
+        assertEq(raw, bytes32(uint(uint160(finalizer))));
+        assertEq(HyperMintableERC20(tokenAddress).hyperCoreDeployer(), finalizer);
     }
 }

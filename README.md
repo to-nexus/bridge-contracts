@@ -137,6 +137,14 @@ Consequences for users:
 - Wrapped tokens are standard `ERC20` + `ERC20Permit` contracts deployed by the bridge, named
   `Cross Bridge <SYMBOL>` with symbol `<SYMBOL>x`, using the symbol and decimals supplied at registration
   time. Always read `decimals()` from the token rather than assuming it matches the origin token.
+- On a **HyperEVM** deployment, wrapped tokens are `HyperMintableERC20` instead of `CrossMintableERC20V2`:
+  same shape, plus a HyperCore link surface — a fixed storage slot (`keccak256("HyperCore deployer")`) that
+  HyperCore's `finalizeEvmContract{customStorageSlot}` action reads to attach the token to a HyperCore spot
+  asset, and a derived HyperCore system address the token can be provisioned at. Provisioning that system
+  address requires minting to it directly, an operator action outside the bridge's normal deposit-driven mint
+  path, so its balance is **not** reflected in the bridge's own `minted` accounting for the pair — a deliberate
+  accounting divergence, not a bug (see `LINKER_ROLE` in §8 and `script/HyperMintableERC20Code.s.sol` for the
+  operational procedure and its link runbook).
 - A transfer is only possible for a **registered** pair. Use `allChainIDs()` / `allTokenPairs()` /
   `getTokenPair()` to discover what is supported on a given deployment.
 
@@ -579,6 +587,8 @@ policies, and key management — are outside the scope of this document.
 | `BridgeExecutor` | Executes whitelisted `extraData` calls during settlement. |
 | `PriceFeed` | Token and native-coin price source used for fees and limits. Upgradeable (UUPS). |
 | `CrossMintableERC20V2` | Wrapped token issued by the bridge (`ERC20` + `ERC20Permit`). |
+| `HyperMintableERC20` | HyperEVM-specific wrapped token; `CrossMintableERC20V2` plus a HyperCore link slot. |
+| `HyperMintableERC20Code` | Factory for `HyperMintableERC20`; deploys via CREATE2 at a deterministic, pre-computable address. |
 | `SwapBridgeRouter` | Optional swap-and-bridge router (Uniswap V3). |
 | `BridgeBot` | Optional helper contract for scheduled recurring transfers. |
 
@@ -615,6 +625,35 @@ Enumerating members is not uniformly available: `getRoleMembers(role)` exists on
 | `INITIATOR_ROLE` | Bridge | Submitting permit-based batched transfers |
 | `EXECUTOR_ROLE` | Executor | Executing composed `extraData` calls — held by the bridge |
 | `MINTER_ROLE` | Wrapped token | Minting and burning. Granted to the bridge at creation; in `CrossMintableERC20V2` it is administered by that token's own default administrator |
+| `LINKER_ROLE` | `HyperMintableERC20` | Role checked by `setHyperCoreDeployer` / `setCoreTokenIndex` — but *holding* it is not the same as being able to call them; see below |
+
+`HyperMintableERC20` distinguishes **role membership** from **effective authority**. `hasRole(LINKER_ROLE,
+account)` reports whether `account` has been granted the role — an ordinary, revocable OZ grant. Whether
+`account` can actually call `setHyperCoreDeployer` / `setCoreTokenIndex` right now is
+`isLinkAuthority(account)`, and after this round the two are no longer the same question: the token's
+*current* `defaultAdmin()` always has authority, whether or not it holds `LINKER_ROLE`, and it tracks
+`beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer` automatically — a stale former admin loses
+authority the instant transfer completes, with no separate role housekeeping required. The only other
+authority is the immutable `factoryLinker()` (the creating `HyperMintableERC20Code`), and only while it still
+holds `LINKER_ROLE`: the token's default admin can `revokeRole(LINKER_ROLE, factoryLinker())` to cut the
+factory off, and `grantRole` it back later. A `LINKER_ROLE` grant to any other address changes `hasRole` but
+confers no `isLinkAuthority` — so slot writes are always limited to exactly these two principals.
+
+`HyperMintableERC20Code`'s `tokenAdmin` — the default admin every token it creates gets — is `immutable`
+(required for CREATE2 address prediction): changing the initial owner for *future* tokens means redeploying
+the factory, while an *already deployed* token's admin can still move via its own
+`beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`. Likewise, a token's `factoryLinker` is fixed at
+creation to the factory that created it — replacing a bridge's `crossMintableERC20Code` does **not** transfer
+management of previously created tokens to the new factory; keep the old factory around for those, or have
+the token's default admin call it directly. Record each token's creating factory address in your operational
+ledger.
+
+During the pre-finalize window (see the link runbook in `script/HyperMintableERC20Code.s.sol`), monitor
+`HyperCoreDeployerSet`, `CoreTokenIndexSet`, `RoleGranted` / `RoleRevoked` for both `LINKER_ROLE` and
+`DEFAULT_ADMIN_ROLE` (the latter is when authority actually moves — the two-step transfer's
+`DefaultAdminTransferScheduled` / `DefaultAdminTransferCanceled` events are only the announcement), and
+additionally re-query `defaultAdmin()` / `isLinkAuthority()` periodically so a missed event can't hide who
+currently controls the link slots.
 
 ---
 

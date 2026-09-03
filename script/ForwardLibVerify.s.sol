@@ -146,10 +146,12 @@ contract ForwardLibVerify is Script {
      * caller decides which `addr` they should be patched to (the library's own address
      * for the first case, `impl`'s own address for the second).
      */
-    function _patchAllImmutableReferences(bytes memory template, string memory json, string memory basePath, address addr)
-        internal
-        view
-    {
+    function _patchAllImmutableReferences(
+        bytes memory template,
+        string memory json,
+        string memory basePath,
+        address addr
+    ) internal view {
         if (!vm.keyExistsJson(json, basePath)) return; // nothing to patch; template already final.
 
         string[] memory names = vm.parseJsonKeys(json, basePath);
@@ -327,10 +329,7 @@ contract ForwardLibVerify is Script {
      * indexed byte writes (not assembly) since this only ever runs over a handful of
      * bytes and correctness matters far more than gas here.
      */
-    function _writeAddressRightAligned(bytes memory data, uint offset, uint slotLength, address addr)
-        internal
-        pure
-    {
+    function _writeAddressRightAligned(bytes memory data, uint offset, uint slotLength, address addr) internal pure {
         require(slotLength >= 20 && slotLength <= 32, "bad immutable slot length");
         uint zeroBytes = slotLength - 20;
         for (uint i = 0; i < zeroBytes; i++) {

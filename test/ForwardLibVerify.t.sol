@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 
+import {ForwardLibVerify} from "../script/ForwardLibVerify.s.sol";
 import {CrossBridgeV2} from "../src/CrossBridgeV2.sol";
 import {ForwardLib} from "../src/lib/ForwardLib.sol";
-import {ForwardLibVerify} from "../script/ForwardLibVerify.s.sol";
 
 /**
  * @title ForwardLibVerifyHarness

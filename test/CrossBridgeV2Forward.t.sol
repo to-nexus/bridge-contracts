@@ -6,9 +6,10 @@ import {BSCBridgeV2} from "../src/BSCBridgeV2.sol";
 import {BridgeExecutor} from "../src/BridgeExecutor.sol";
 import {CrossBridgeV2} from "../src/CrossBridgeV2.sol";
 import {BridgeRegistry} from "../src/abstract/BridgeRegistry.sol";
-import {ICrossBridgeV2} from "../src/interface/ICrossBridgeV2.sol";
+
 import {IBridgeExecutor} from "../src/interface/IBridgeExecutor.sol";
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
+import {ICrossBridgeV2} from "../src/interface/ICrossBridgeV2.sol";
 import {Const} from "../src/lib/Const.sol";
 import {ForwardLib} from "../src/lib/ForwardLib.sol";
 
@@ -247,11 +248,14 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     // Helpers
     // ----------------------------------------------------------------
 
-    function _forwardExtraData(uint toChainID2, address to2, uint value2, uint networkFee2, uint exFee2, bytes memory hop3)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function _forwardExtraData(
+        uint toChainID2,
+        address to2,
+        uint value2,
+        uint networkFee2,
+        uint exFee2,
+        bytes memory hop3
+    ) internal view returns (bytes memory) {
         bytes memory call_ = abi.encodeWithSelector(
             CrossBridgeV2.bridgeTokenForwarded.selector, toChainID2, to2, value2, networkFee2, exFee2, hop3
         );
@@ -273,8 +277,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         vm.selectFork(crossForkID);
         if (sigCount > threshold) sigCount = threshold;
 
-        bytes32 h =
-            keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -358,7 +361,13 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     function _findForwardFailed(Vm.Log[] memory logs)
         internal
         view
-        returns (bool found, uint fromChainID, uint finalizeIndex, ForwardLib.ForwardFailureCode code, bytes32 reasonHash)
+        returns (
+            bool found,
+            uint fromChainID,
+            uint finalizeIndex,
+            ForwardLib.ForwardFailureCode code,
+            bytes32 reasonHash
+        )
     {
         for (uint i = 0; i < logs.length; i++) {
             if (
@@ -401,7 +410,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
                 toChainID = uint(logs[i].topics[3]);
                 (fromToken, to, value, networkFee, exFee, extraDataHash) =
                     abi.decode(logs[i].data, (address, address, uint, uint, uint, bytes32));
-                return (true, fromChainID, finalizeIndex, toChainID, fromToken, to, value, networkFee, exFee, extraDataHash);
+                return (
+                    true, fromChainID, finalizeIndex, toChainID, fromToken, to, value, networkFee, exFee, extraDataHash
+                );
             }
         }
     }
@@ -588,10 +599,14 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         // One finalize batch containing both items.
         vm.selectFork(crossForkID);
         bytes32 hA = keccak256(
-            abi.encode(FINALIZE_TYPEHASH, BSC_CHAIN_ID, indexA, address(NATIVE_TOKEN), USER, ctxA, keccak256(extraDataA))
+            abi.encode(
+                FINALIZE_TYPEHASH, BSC_CHAIN_ID, indexA, address(NATIVE_TOKEN), USER, ctxA, keccak256(extraDataA)
+            )
         );
         bytes32 hB = keccak256(
-            abi.encode(FINALIZE_TYPEHASH, BSC_CHAIN_ID, indexB, address(NATIVE_TOKEN), USER, ctxB, keccak256(extraDataB))
+            abi.encode(
+                FINALIZE_TYPEHASH, BSC_CHAIN_ID, indexB, address(NATIVE_TOKEN), USER, ctxB, keccak256(extraDataB)
+            )
         );
         bytes32 hashA = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), hA);
         bytes32 hashB = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), hB);
@@ -689,7 +704,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
             )
         );
         bytes32 hB = keccak256(
-            abi.encode(FINALIZE_TYPEHASH, BSC_CHAIN_ID, indexB, address(NATIVE_TOKEN), USER, ctxB, keccak256(extraDataB))
+            abi.encode(
+                FINALIZE_TYPEHASH, BSC_CHAIN_ID, indexB, address(NATIVE_TOKEN), USER, ctxB, keccak256(extraDataB)
+            )
         );
         bytes32 hashA = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), hA);
         bytes32 hashB = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), hB);
@@ -975,7 +992,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
                 fromPairBefore.minted + ctxValue,
                 "from-pair (wrapped) minted must increase by ctxValue (hop-1's own _withdrawToken)"
             );
-            assertEq(fromPairAfter.deposited, fromPairBefore.deposited, "from-pair (wrapped) deposited must be unchanged");
+            assertEq(
+                fromPairAfter.deposited, fromPairBefore.deposited, "from-pair (wrapped) deposited must be unchanged"
+            );
             mintedDeltaSum += int(ctxValue);
         }
 
@@ -1101,7 +1120,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         // it doesn't revert. Compute the signature first, THEN arm `expectRevert()`
         // immediately before the one call that must actually revert.
         bytes32 h = keccak256(
-            abi.encode(FINALIZE_TYPEHASH, BSC_CHAIN_ID, index, address(NATIVE_TOKEN), USER, ctxValue, keccak256(extraData))
+            abi.encode(
+                FINALIZE_TYPEHASH, BSC_CHAIN_ID, index, address(NATIVE_TOKEN), USER, ctxValue, keccak256(extraData)
+            )
         );
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), h);
         uint8[] memory v = new uint8[](5);
@@ -1173,7 +1194,8 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         vm.selectFork(crossForkID);
         assertEq(USER.balance, ctxValue, "not-attempted forward must fall back to USER");
 
-        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) = _findForwardFailed(vm.getRecordedLogs());
+        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) =
+            _findForwardFailed(vm.getRecordedLogs());
         assertTrue(found, "ForwardFailed must be emitted");
         assertTrue(code == ForwardLib.ForwardFailureCode.ForwardNotAttempted);
         assertEq(reasonHash, bytes32(0), "reasonHash must be zero when the executor was never invoked");
@@ -1207,7 +1229,8 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
 
         assertEq(badToken.balanceOf(USER), value2, "approve-failure forward must fall back to minting USER the token");
 
-        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) = _findForwardFailed(vm.getRecordedLogs());
+        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) =
+            _findForwardFailed(vm.getRecordedLogs());
         assertTrue(found, "ForwardFailed must be emitted");
         assertTrue(code == ForwardLib.ForwardFailureCode.ForwardNotAttempted);
         assertEq(reasonHash, bytes32(0), "reasonHash must be zero when the executor was never invoked");
@@ -1229,7 +1252,8 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         vm.selectFork(crossForkID);
         assertEq(USER.balance, ctxValue + 1, "fee-mismatch forward must fall back to USER");
 
-        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) = _findForwardFailed(vm.getRecordedLogs());
+        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) =
+            _findForwardFailed(vm.getRecordedLogs());
         assertTrue(found, "ForwardFailed must be emitted");
         assertTrue(code == ForwardLib.ForwardFailureCode.ExecutorCallReverted);
         // L-1: `reasonHash` must be the EXACT hash of the outer executor-frame revert
@@ -1262,7 +1286,8 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         vm.selectFork(crossForkID);
         assertEq(USER.balance, ctxValue, "method-whitelist rejection must fall back to USER");
 
-        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) = _findForwardFailed(vm.getRecordedLogs());
+        (bool found,,, ForwardLib.ForwardFailureCode code, bytes32 reasonHash) =
+            _findForwardFailed(vm.getRecordedLogs());
         assertTrue(found, "ForwardFailed must be emitted");
         assertTrue(
             code == ForwardLib.ForwardFailureCode.ExecutorCallReverted,
@@ -1337,7 +1362,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         assertEq(value, value2);
         assertEq(networkFee, fee2);
         assertEq(exFee, ex2);
-        assertEq(extraDataHash, keccak256(hop3), "extraDataHash must hash bridgeTokenForwarded's OWN extraData arg (hop3)");
+        assertEq(
+            extraDataHash, keccak256(hop3), "extraDataHash must hash bridgeTokenForwarded's OWN extraData arg (hop3)"
+        );
     }
 
     /// @notice Regression: a NON-forward extraData target failing must never emit
@@ -1347,8 +1374,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         mockTargetCross.setShouldRevert(true);
 
         uint amount = 1 ether;
-        bytes memory calldata_ =
-            abi.encodeWithSelector(MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes(""));
+        bytes memory calldata_ = abi.encodeWithSelector(
+            MockTargetContract.handleBridgeCallback.selector, address(1), USER, amount, bytes("")
+        );
         bytes memory extraData = abi.encodePacked(address(mockTargetCross), calldata_);
 
         vm.selectFork(bscForkID);
@@ -1363,7 +1391,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         assertTrue(_signAndFinalize(BSC_CHAIN_ID, index, address(NATIVE_TOKEN), USER, amount, extraData, 5));
 
         assertEq(USER.balance, amount, "ordinary (non-forward) extra-call failure should still fall back normally");
-        assertFalse(_hasForwardFailed(vm.getRecordedLogs()), "a NON-forward extraData target must never emit ForwardFailed");
+        assertFalse(
+            _hasForwardFailed(vm.getRecordedLogs()), "a NON-forward extraData target must never emit ForwardFailed"
+        );
     }
 
     /// @notice `bridgeTokenForwarded`'s own native fee payout (mid-`_initiateBridge`)
@@ -1481,7 +1511,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         assertEq(bytes4(evilReceiver.forwardRevertData()), ICrossBridgeV2.BaseBridgeForwardNotExecutor.selector);
 
         assertTrue(evilReceiver.bridgeTokenAttempted(), "bridgeToken reentry was never attempted");
-        assertFalse(evilReceiver.bridgeTokenSucceeded(), "bridgeToken reentry must not succeed (existing guard unchanged)");
+        assertFalse(
+            evilReceiver.bridgeTokenSucceeded(), "bridgeToken reentry must not succeed (existing guard unchanged)"
+        );
         assertEq(bytes4(evilReceiver.bridgeTokenRevertData()), bytes4(keccak256("ReentrancyGuardReentrantCall()")));
     }
 

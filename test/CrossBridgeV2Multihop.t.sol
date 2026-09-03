@@ -7,16 +7,19 @@ import {BridgeVerifier} from "../src/BridgeVerifier.sol";
 import {PriceFeed} from "../src/PriceFeed.sol";
 import {IBridgeExecutor} from "../src/interface/IBridgeExecutor.sol";
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
-import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
+
 import {Const} from "../src/lib/Const.sol";
 import {ForwardLib} from "../src/lib/ForwardLib.sol";
+import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
 
-import {CrossBridgeV2ForwardTest} from "./CrossBridgeV2Forward.t.sol";
-import {MockTargetContract} from "./BridgeExecutor.t.sol";
 import {CrossMintableERC20Code} from "../src/token/CrossMintableERC20Code.sol";
+import {MockTargetContract} from "./BridgeExecutor.t.sol";
+import {CrossBridgeV2ForwardTest} from "./CrossBridgeV2Forward.t.sol";
+
 import {TestToken} from "./token/TestToken.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -104,7 +107,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
         bridgeChainC.setBridgeVerifier(bridgeVerifierChainC);
 
-        crossMintableERC20CodeChainC = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeChainC))));
+        crossMintableERC20CodeChainC =
+            ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeChainC))));
         bridgeChainC.setCrossMintableERC20Code(crossMintableERC20CodeChainC);
 
         // Native pair: chain C's own native coin <-> CROSS's native coin. Both
@@ -164,7 +168,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
         bridgeChainA.setBridgeVerifier(bridgeVerifierChainA);
 
-        crossMintableERC20CodeChainA = ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeChainA))));
+        crossMintableERC20CodeChainA =
+            ICrossMintableERC20Code(address(new CrossMintableERC20Code(address(bridgeChainA))));
         bridgeChainA.setCrossMintableERC20Code(crossMintableERC20CodeChainA);
         vm.stopPrank();
     }
@@ -187,8 +192,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         vm.selectFork(crossForkID);
         if (sigCount > threshold) sigCount = threshold;
 
-        bytes32 h =
-            keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeChainC.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -264,8 +268,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         vm.selectFork(crossForkID);
         if (sigCount > threshold) sigCount = threshold;
 
-        bytes32 h =
-            keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
+        bytes32 h = keccak256(abi.encode(FINALIZE_TYPEHASH, fromChainID, index, token, to, value, keccak256(extraData)));
         bytes32 hash = MessageHashUtils.toTypedDataHash(bridgeChainA.domainSeparator(), h);
 
         uint8[] memory v = new uint8[](sigCount);
@@ -328,8 +331,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     {
         for (uint i = 0; i < logs.length; i++) {
             if (
-                logs[i].emitter == emitter && logs[i].topics.length == 4
-                    && logs[i].topics[0] == BRIDGE_INITIATED_TOPIC0
+                logs[i].emitter == emitter && logs[i].topics.length == 4 && logs[i].topics[0] == BRIDGE_INITIATED_TOPIC0
             ) {
                 toChainID = uint(logs[i].topics[1]);
                 index = uint(logs[i].topics[2]);
@@ -349,8 +351,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     {
         for (uint i = 0; i < logs.length; i++) {
             if (
-                logs[i].emitter == emitter && logs[i].topics.length == 4
-                    && logs[i].topics[0] == BRIDGE_FINALIZED_TOPIC0
+                logs[i].emitter == emitter && logs[i].topics.length == 4 && logs[i].topics[0] == BRIDGE_FINALIZED_TOPIC0
             ) {
                 fromChainID = uint(logs[i].topics[1]);
                 index = uint(logs[i].topics[2]);
@@ -368,7 +369,14 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     function _findExtraCallExecuted(Vm.Log[] memory logs, address emitter)
         internal
         pure
-        returns (bool found, address targetContract, bytes4 methodID, bool success, uint consumed, bytes memory returnData)
+        returns (
+            bool found,
+            address targetContract,
+            bytes4 methodID,
+            bool success,
+            uint consumed,
+            bytes memory returnData
+        )
     {
         for (uint i = 0; i < logs.length; i++) {
             if (
@@ -442,7 +450,9 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
 
         _hop1NativeAndFinalize(ctxValue, extraData);
         vm.selectFork(crossForkID);
-        assertEq(USER.balance, 0, "hop-1 forward must still succeed (chain C's target failure is a LATER, separate hop)");
+        assertEq(
+            USER.balance, 0, "hop-1 forward must still succeed (chain C's target failure is a LATER, separate hop)"
+        );
 
         uint targetBalBefore = address(mockTargetChainC).balance;
         assertTrue(
@@ -672,7 +682,9 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
 
         vm.recordLogs();
         assertTrue(
-            _signAndFinalizeChainC(CROSS_CHAIN_ID, hop2IndexExpected, chainCHubToken, USER, value2, hop2TargetExtraData, 5)
+            _signAndFinalizeChainC(
+                CROSS_CHAIN_ID, hop2IndexExpected, chainCHubToken, USER, value2, hop2TargetExtraData, 5
+            )
         );
         Vm.Log[] memory chainCLogs = vm.getRecordedLogs();
 
@@ -680,8 +692,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         assertTrue(foundChainCFinalized, "chain C must emit BridgeFinalized for hop-2's own finalize");
 
         // M-1: the real chain-C target actually received/consumed the ERC20.
-        (bool foundExtraCall,, bytes4 extraCallMethodID, bool extraCallSuccess, uint consumed, bytes memory returnData) =
-            _findExtraCallExecuted(chainCLogs, address(bridgeChainC));
+        (bool foundExtraCall,, bytes4 extraCallMethodID, bool extraCallSuccess, uint consumed, bytes memory returnData)
+        = _findExtraCallExecuted(chainCLogs, address(bridgeChainC));
         assertTrue(foundExtraCall, "chain C must emit ExtraCallExecuted for hop-2's target call");
         assertTrue(extraCallSuccess, "chain C's target call must succeed");
         assertEq(
@@ -696,7 +708,11 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
 
         uint remaining = IERC20(chainCHubToken).balanceOf(USER) - chainCUserBalBefore;
-        assertEq(consumed + remaining, value2, "consumed by the target plus remaining sent to USER must equal hop-2's principal");
+        assertEq(
+            consumed + remaining,
+            value2,
+            "consumed by the target plus remaining sent to USER must equal hop-2's principal"
+        );
 
         assertEq(
             IERC20(chainCHubToken).balanceOf(address(mockTargetChainC)),
@@ -792,7 +808,9 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         // hop-2: finalize on chain C, whose target now reverts.
         uint targetBalBefore = IERC20(chainCHubToken).balanceOf(address(mockTargetChainC));
         assertTrue(
-            _signAndFinalizeChainC(CROSS_CHAIN_ID, hop2IndexExpected, chainCHubToken, USER, value2, hop2TargetExtraData, 5)
+            _signAndFinalizeChainC(
+                CROSS_CHAIN_ID, hop2IndexExpected, chainCHubToken, USER, value2, hop2TargetExtraData, 5
+            )
         );
 
         assertEq(
@@ -831,7 +849,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
         bscIncrementIndex();
 
-        (, uint netO, uint exO) = bridgeVerifierBSC.calculateFee(CROSS_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), ordinaryAmount);
+        (, uint netO, uint exO) =
+            bridgeVerifierBSC.calculateFee(CROSS_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), ordinaryAmount);
         uint indexOrdinary = nextIndexBSC;
         vm.deal(USER, ordinaryAmount + netO + exO);
         vm.prank(USER);
@@ -854,7 +873,13 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
         bytes32 hOrdinary = keccak256(
             abi.encode(
-                FINALIZE_TYPEHASH, BSC_CHAIN_ID, indexOrdinary, address(NATIVE_TOKEN), USER, ordinaryAmount, keccak256(bytes(""))
+                FINALIZE_TYPEHASH,
+                BSC_CHAIN_ID,
+                indexOrdinary,
+                address(NATIVE_TOKEN),
+                USER,
+                ordinaryAmount,
+                keccak256(bytes(""))
             )
         );
         bytes32 hashForward = MessageHashUtils.toTypedDataHash(bridgeCross.domainSeparator(), hForward);
@@ -999,7 +1024,9 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
 
         // Sanity bound: comfortably within a single block's gas limit with generous
         // headroom for batching multiple items.
-        assertLt(forwardGas, 1_000_000, "a single forward finalize item should stay well under typical block gas budgets");
+        assertLt(
+            forwardGas, 1_000_000, "a single forward finalize item should stay well under typical block gas budgets"
+        );
     }
 
     // ----------------------------------------------------------------
@@ -1050,7 +1077,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         assertTrue(crossSupplyBefore >= 10 ether);
 
         uint withdrawPrincipal = 2 ether;
-        (, uint fee, uint ex) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), withdrawPrincipal);
+        (, uint fee, uint ex) =
+            bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), withdrawPrincipal);
         uint total = withdrawPrincipal + fee + ex;
         vm.deal(USER, total);
         vm.prank(USER);
@@ -1078,7 +1106,11 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         vm.prank(USER);
         bridgeCrossV2.bridgeToken{value: total}(CHAIN_C_ID, IERC20(Const.NATIVE_TOKEN), USER, amount, fee, ex, "");
 
-        assertEq(bridgeCross.crossSupply(), crossSupplyBefore, "a CROSS<->chainC route must not touch the BSC-pair-only crossSupply()");
+        assertEq(
+            bridgeCross.crossSupply(),
+            crossSupplyBefore,
+            "a CROSS<->chainC route must not touch the BSC-pair-only crossSupply()"
+        );
     }
 
     /// @notice `crossSupplyLimit`'s circuit breaker (checked at hop-1's OWN finalize,
@@ -1107,7 +1139,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         bytes memory extraDataOver = _forwardExtraData(CHAIN_C_ID, USER, hop2PrincipalOver, fee2b, ex2b, "");
 
         vm.selectFork(bscForkID);
-        (, uint netA1, uint exA1) = bridgeVerifierBSC.calculateFee(CROSS_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), ctxValueOver);
+        (, uint netA1, uint exA1) =
+            bridgeVerifierBSC.calculateFee(CROSS_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), ctxValueOver);
         uint index = nextIndexBSC;
         vm.deal(USER, ctxValueOver + netA1 + exA1);
         vm.prank(USER);
