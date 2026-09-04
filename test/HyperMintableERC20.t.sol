@@ -1161,6 +1161,63 @@ contract HyperMintableERC20Test is Test {
             "executor is left holding only the truncated remainder (down by exactly `sent` from the value it pulled in)"
         );
     }
+
+    /// A29. The PRODUCTION shape of A28: `to` is the USER, which is what the bridge actually
+    /// passes. A28 deliberately set `to` to the executor so the dust self-transfer could not
+    /// disturb its "user nets to zero" assertion — that left one thing unproven, namely that
+    /// the truncated remainder is genuinely handed back to the user rather than stranded in
+    /// the executor. This case closes exactly that gap: the pass-through still credits Core to
+    /// the user (`Transfer(user -> systemAddr)`), and on top of it `executeExtraCall` returns
+    /// `remaining == value - consumed` to `to`, so the user ends up **up by the dust** and the
+    /// executor ends up with nothing.
+    function test_A29_transferToCoreFor_viaBridgeExecutor_dustReturnedToUser() public {
+        _mockValidCoreLink(address(token), 29); // weiDecimals 8, evmExtraWeiDecimals 10 -> coreUnit() == 1e10
+        vm.prank(tokenAdmin);
+        token.setCoreTokenIndex(29);
+        address systemAddr = token.coreSystemAddress();
+
+        address executorCaller = makeAddr("executorCaller29"); // holds EXECUTOR_ROLE, mimics the bridge
+        BridgeExecutor executor = new BridgeExecutor(factoryOwner, executorCaller);
+
+        vm.startPrank(factoryOwner);
+        executor.addWhitelistTarget(address(token));
+        executor.setMethodCheckEnabled(address(token), true);
+        bytes4[] memory methods = new bytes4[](1);
+        methods[0] = IHyperMintableERC20.transferToCoreFor.selector;
+        executor.addWhitelistMethods(address(token), methods);
+        vm.stopPrank();
+
+        uint value = 1e10 * 7 + 42; // 7 whole Core units plus dust below one Core wei
+        uint expectedSent = 1e10 * 7;
+        uint expectedDust = value - expectedSent; // 42
+
+        vm.prank(bridge);
+        token.mint(executorCaller, value);
+        vm.prank(executorCaller);
+        token.approve(address(executor), value);
+
+        bytes memory extraCalldata = abi.encodeWithSelector(IHyperMintableERC20.transferToCoreFor.selector, user, value);
+        bytes memory extraData = abi.encodePacked(address(token), extraCalldata);
+
+        uint userBalBefore = token.balanceOf(user);
+        assertEq(token.balanceOf(address(executor)), 0, "executor starts with no balance");
+
+        // Core still credits the USER, exactly as in A28 — `to` does not affect that leg.
+        vm.expectEmit(true, true, false, true, address(token));
+        emit Transfer(user, systemAddr, expectedSent);
+
+        // `to = user`: the real bridge always passes the recipient here.
+        vm.prank(executorCaller);
+        (uint consumed,) = executor.executeExtraCall(0, 0, IERC20(address(token)), user, value, extraData);
+
+        assertEq(consumed, expectedSent, "consumed must equal the coreUnit-rounded sent amount");
+        assertEq(token.balanceOf(systemAddr), expectedSent, "Core-bound amount is the rounded value");
+
+        // The point of this case: the dust is NOT stranded. `remaining = value - consumed` is
+        // transferred to `to`, so the user is up by exactly the truncated remainder.
+        assertEq(token.balanceOf(user), userBalBefore + expectedDust, "user receives the truncated remainder back");
+        assertEq(token.balanceOf(address(executor)), 0, "executor keeps nothing when `to` is the user");
+    }
 }
 
 /// @dev Minimal "upgraded" token implementation used only by beacon-upgrade tests (A18, A19,
