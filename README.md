@@ -145,6 +145,44 @@ Consequences for users:
   path, so its balance is **not** reflected in the bridge's own `minted` accounting for the pair — a deliberate
   accounting divergence, not a bug (see `LINKER_ROLE` in §8 and `script/HyperMintableERC20Code.s.sol` for the
   operational procedure and its link runbook).
+  - **Link hardening.** `setCoreTokenIndex` no longer accepts an arbitrary index: it calls HyperEVM's Core
+    read precompile (`tokenInfo(uint32)` at `0x…080C`) and only records the index if the precompile reports
+    `evmContract == address(this)` (a forgery-proof, on-chain proof that Core actually linked this exact
+    contract — not merely a plausible-looking one, such as a spot-pair index that resolves to a different
+    token) and `decimals() == weiDecimals + evmExtraWeiDecimals`. It also succeeds **at most once** per
+    token, and `setHyperCoreDeployer` locks permanently the instant it does. These checks are hard
+    operational-error guards, not a defense against a compromised upgrade key — see the AR-1 note below.
+  - **Rounded Core transfers.** `transferToCore(amount)` now rounds `amount` down to a whole Core wei
+    (`coreUnit()`, derived from the link's `evmExtraWeiDecimals`) before moving it, so it never burns dust;
+    the rounding remainder stays with the caller, and it returns the actually-sent amount. It is a
+    convenience wrapper, not a standard — Core credits based on the `Transfer.from` of a plain ERC20
+    `transfer` to the system address, so any standard-compliant transfer works identically, and no guard on
+    this function can be treated as unbypassable.
+  - **One-action HyperCore delivery.** A single `transferToCore` credits only its own caller on Core, which
+    is a problem when that caller is the `BridgeExecutor` acting on a composed `extraData` call — the
+    executor is a contract and cannot sign further Core actions, so a token credited to its Core account
+    would be stuck. `transferToCoreFor(address coreRecipient, uint amount)` fixes this: it moves the
+    (rounded) amount through the caller to `coreRecipient` and on to the Core system address in the same
+    transaction, so the second `Transfer`'s `from` is `coreRecipient` and Core credits *them*, not the
+    caller — `coreRecipient`'s EVM balance nets to exactly zero, so the function needs no role gate. Compose
+    it as an `extraData` call (`target` = the token, `selector` = `transferToCoreFor`, args =
+    `(finalRecipient, amount)`) to move a token BSC → CROSS → HyperEVM → HyperCore in the single user action
+    that starts the transfer.
+  - **Upgradeable token + factory.** Both the token and its factory (`HyperMintableERC20Code`) are proxies:
+    every token created by one factory is a `BeaconProxy` sharing one `UpgradeableBeacon` (one upgrade fixes
+    every token at once — the concentration this creates should sit behind a multisig/timelock beacon
+    owner), and the factory itself is a UUPS (`ERC1967Proxy`) singleton gated by its own `ADMIN_ROLE`. This
+    exists because a HyperCore link is permanent for the EVM address Core finalized against — without
+    upgradeability, fixing a bug in an already-linked token means minting an entirely new HyperCore token.
+    The CREATE2 initcode a factory predicts against embeds only the beacon's (fixed) address, never the
+    logic implementation it currently resolves to, so `computeTokenAddress` / `computeTokenAddressWithName`
+    predictions are stable across a beacon upgrade.
+  - **AR-1 — the one-shot locks are not upgrade-proof.** Because the token and factory are upgradeable, an
+    account holding beacon-owner or factory-`ADMIN_ROLE` upgrade authority can ship a new implementation
+    that removes the `setCoreTokenIndex` / `setHyperCoreDeployer` locks described above. Treat the locks as
+    guards against **operational mistakes** (a typo'd index, a stale finalizer left writable), not as
+    protection against a compromised upgrade key — that protection comes only from keeping the beacon owner
+    and the factory's upgrade-approving `ADMIN_ROLE` on a multisig or timelock, never an EOA.
 - A transfer is only possible for a **registered** pair. Use `allChainIDs()` / `allTokenPairs()` /
   `getTokenPair()` to discover what is supported on a given deployment.
 
@@ -587,8 +625,8 @@ policies, and key management — are outside the scope of this document.
 | `BridgeExecutor` | Executes whitelisted `extraData` calls during settlement. |
 | `PriceFeed` | Token and native-coin price source used for fees and limits. Upgradeable (UUPS). |
 | `CrossMintableERC20V2` | Wrapped token issued by the bridge (`ERC20` + `ERC20Permit`). |
-| `HyperMintableERC20` | HyperEVM-specific wrapped token; `CrossMintableERC20V2` plus a HyperCore link slot. |
-| `HyperMintableERC20Code` | Factory for `HyperMintableERC20`; deploys via CREATE2 at a deterministic, pre-computable address. |
+| `HyperMintableERC20` | HyperEVM-specific wrapped token; `CrossMintableERC20V2` plus a hardened HyperCore link slot. Upgradeable (`BeaconProxy`, one shared `UpgradeableBeacon` per factory). |
+| `HyperMintableERC20Code` | Factory for `HyperMintableERC20`; deploys via CREATE2 at a deterministic, pre-computable address that survives a beacon logic upgrade. Upgradeable (UUPS). |
 | `SwapBridgeRouter` | Optional swap-and-bridge router (Uniswap V3). |
 | `BridgeBot` | Optional helper contract for scheduled recurring transfers. |
 
@@ -625,7 +663,7 @@ Enumerating members is not uniformly available: `getRoleMembers(role)` exists on
 | `INITIATOR_ROLE` | Bridge | Submitting permit-based batched transfers |
 | `EXECUTOR_ROLE` | Executor | Executing composed `extraData` calls — held by the bridge |
 | `MINTER_ROLE` | Wrapped token | Minting and burning. Granted to the bridge at creation; in `CrossMintableERC20V2` it is administered by that token's own default administrator |
-| `LINKER_ROLE` | `HyperMintableERC20` | Role checked by `setHyperCoreDeployer` / `setCoreTokenIndex` — but *holding* it is not the same as being able to call them; see below |
+| `LINKER_ROLE` | `HyperMintableERC20` | Role checked by `setHyperCoreDeployer` / `setCoreTokenIndex` — but *holding* it is not the same as being able to call them; see below. `setCoreTokenIndex` succeeds at most once per token, and `setHyperCoreDeployer` locks permanently once it has (see §3 for the AR-1 caveat) |
 
 `HyperMintableERC20` distinguishes **role membership** from **effective authority**. `hasRole(LINKER_ROLE,
 account)` reports whether `account` has been granted the role — an ordinary, revocable OZ grant. Whether
@@ -639,13 +677,17 @@ holds `LINKER_ROLE`: the token's default admin can `revokeRole(LINKER_ROLE, fact
 factory off, and `grantRole` it back later. A `LINKER_ROLE` grant to any other address changes `hasRole` but
 confers no `isLinkAuthority` — so slot writes are always limited to exactly these two principals.
 
-`HyperMintableERC20Code`'s `tokenAdmin` — the default admin every token it creates gets — is `immutable`
-(required for CREATE2 address prediction): changing the initial owner for *future* tokens means redeploying
-the factory, while an *already deployed* token's admin can still move via its own
-`beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`. Likewise, a token's `factoryLinker` is fixed at
-creation to the factory that created it — replacing a bridge's `crossMintableERC20Code` does **not** transfer
-management of previously created tokens to the new factory; keep the old factory around for those, or have
-the token's default admin call it directly. Record each token's creating factory address in your operational
+`HyperMintableERC20Code`'s `tokenAdmin()` — the default admin every token it creates gets — and `beacon()` —
+the `UpgradeableBeacon` every created token's `BeaconProxy` points at — are fixed at `initialize` and have no
+setter, but are ordinary storage rather than `immutable`: the factory is itself a UUPS proxy, so its logic
+contract's constructor only disables initializers and cannot bake in per-deployment values the way a
+non-proxied constructor could. Changing either for *future* tokens still means redeploying the factory; an
+*already deployed* token's admin can still move via its own `beginDefaultAdminTransfer` /
+`acceptDefaultAdminTransfer`, and its logic can still be fixed in place via a beacon upgrade without
+redeploying the factory at all. Likewise, a token's `factoryLinker` is fixed at creation to the factory that
+created it — replacing a bridge's `crossMintableERC20Code` does **not** transfer management of previously
+created tokens to the new factory; keep the old factory around for those, or have the token's default admin
+call it directly. Record each token's creating factory address, and its beacon address, in your operational
 ledger.
 
 During the pre-finalize window (see the link runbook in `script/HyperMintableERC20Code.s.sol`), monitor
