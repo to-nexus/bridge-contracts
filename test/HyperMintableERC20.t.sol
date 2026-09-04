@@ -1218,6 +1218,75 @@ contract HyperMintableERC20Test is Test {
         assertEq(token.balanceOf(user), userBalBefore + expectedDust, "user receives the truncated remainder back");
         assertEq(token.balanceOf(address(executor)), 0, "executor keeps nothing when `to` is the user");
     }
+
+    // =====================================================================
+    // A30-A31. `transferToCoreFor` called DIRECTLY (no BridgeExecutor)
+    // =====================================================================
+
+    /// A30. Direct call with an `amount` that is NOT a multiple of `coreUnit()`. A13/A14 pins
+    /// the pass-through with an exact multiple, where there is no remainder to place at all;
+    /// this case is the one that actually distinguishes where the remainder goes. It stays with
+    /// the CALLER, exactly as `transferToCore` does — `coreRecipient` is a Core identity, so it
+    /// receives a Core credit and its EVM balance still nets to zero. Only the executor path
+    /// (A28/A29) routes the remainder onward, and it does so through `executeExtraCall`'s
+    /// `remaining` refund to `to`, not through this function.
+    function test_A30_transferToCoreFor_directCall_dustStaysWithCaller() public {
+        _mockValidCoreLink(address(token), 30); // weiDecimals 8, evmExtraWeiDecimals 10 -> coreUnit() == 1e10
+        vm.prank(tokenAdmin);
+        token.setCoreTokenIndex(30);
+        address systemAddr = token.coreSystemAddress();
+
+        vm.prank(bridge);
+        token.mint(user, 10 ether);
+
+        address coreRecipient = makeAddr("coreRecipient30");
+        uint amount = 1e10 * 3 + 77; // 3 whole Core units plus dust below one Core wei
+        uint expectedSent = 1e10 * 3;
+
+        uint callerBalBefore = token.balanceOf(user);
+        uint coreRecipientBalBefore = token.balanceOf(coreRecipient);
+
+        vm.expectEmit(true, true, false, true, address(token));
+        emit Transfer(coreRecipient, systemAddr, expectedSent);
+
+        vm.prank(user);
+        uint sent = token.transferToCoreFor(coreRecipient, amount);
+
+        assertEq(sent, expectedSent, "sent must be the coreUnit-rounded amount");
+        assertEq(token.balanceOf(user), callerBalBefore - expectedSent, "caller is debited only `sent`; the remainder stays with it");
+        assertEq(
+            token.balanceOf(coreRecipient),
+            coreRecipientBalBefore,
+            "coreRecipient EVM balance nets to zero even when `amount` truncates"
+        );
+        assertEq(token.balanceOf(systemAddr), expectedSent, "system address receives exactly sent");
+    }
+
+    /// A31. `coreRecipient == caller` (self-aliasing). Both legs then touch the same account, so
+    /// the call degenerates to exactly `transferToCore`: the caller is down by `sent` and keeps
+    /// the remainder. Pinned because the aliased pass-through is the one shape where the two
+    /// `_transfer` calls could interfere with each other.
+    function test_A31_transferToCoreFor_selfRecipient_retainsDust() public {
+        _mockValidCoreLink(address(token), 31); // weiDecimals 8, evmExtraWeiDecimals 10 -> coreUnit() == 1e10
+        vm.prank(tokenAdmin);
+        token.setCoreTokenIndex(31);
+        address systemAddr = token.coreSystemAddress();
+
+        vm.prank(bridge);
+        token.mint(user, 10 ether);
+
+        uint amount = 1e10 * 5 + 13; // 5 whole Core units plus dust below one Core wei
+        uint expectedSent = 1e10 * 5;
+
+        uint userBalBefore = token.balanceOf(user);
+
+        vm.prank(user);
+        uint sent = token.transferToCoreFor(user, amount);
+
+        assertEq(sent, expectedSent, "sent must be the coreUnit-rounded amount");
+        assertEq(token.balanceOf(user), userBalBefore - expectedSent, "caller/coreRecipient is down by sent only");
+        assertEq(token.balanceOf(systemAddr), expectedSent, "system address receives exactly sent");
+    }
 }
 
 /// @dev Minimal "upgraded" token implementation used only by beacon-upgrade tests (A18, A19,
