@@ -3,23 +3,33 @@ pragma solidity 0.8.28;
 
 import {BaseBridge} from "../src/BaseBridge.sol";
 import {Const} from "../src/lib/Const.sol";
+import {HyperMintableERC20} from "../src/token/HyperMintableERC20.sol";
 import {HyperMintableERC20Code} from "../src/token/HyperMintableERC20Code.sol";
 import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
 import {IHyperMintableERC20Code} from "../src/token/IHyperMintableERC20Code.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 /**
  * @title HyperMintableERC20CodeScript
- * @notice HyperMintableERC20Code 배포 · Bridge 연결 · HyperCore 링크 슬롯 조작 스크립트
- * @dev CrossMintableERC20V2Code와 달리 생성자가 3인자(`initialOwner, initialTokenAdmin,
- *      initialBridge`)이고, 토큰 CREATE2 주소를 배포 전에 예측할 수 있다. 하단 주석에
- *      링크 런북(§15) 전체를 담아 둔다 — 실제 운영 절차는 그 표를 따를 것.
+ * @notice HyperMintableERC20Code(+토큰 beacon) 배포 · 업그레이드 · Bridge 연결 · HyperCore 링크
+ *         슬롯 조작 스크립트
+ * @dev 이번 사이클(프록시화)부터 두 컨트랙트 모두 프록시다:
+ *      - 토큰(`HyperMintableERC20`)은 `UpgradeableBeacon` + `BeaconProxy`. 토큰이 몇 개든
+ *        beacon 업그레이드 한 번으로 전부 반영된다(§13 dual-block 문서 아래 참고).
+ *      - 팩토리(`HyperMintableERC20Code`)는 UUPS(`ERC1967Proxy`), 단일 인스턴스.
+ *      두 impl 모두 생성자에서 `_disableInitializers()`를 호출하므로 `ERC1967Proxy` /
+ *      `BeaconProxy`의 초기화 데이터를 통해서만 초기화된다(원자적 초기화).
+ *      CREATE2 토큰 주소의 initcode에는 **beacon 주소만** 들어가고 그 순간의 로직 impl 주소는
+ *      들어가지 않으므로, 토큰 로직을 업그레이드해도 향후 예측 주소는 바뀌지 않는다.
+ *      하단 주석에 링크 런북(§15 상당) 전체를 담아 둔다 — 실제 운영 절차는 그 표를 따를 것.
  *
  * 사용법:
  *   forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
  *     --rpc-url <RPC_URL> \
- *     --sig "deployHyperMintableERC20Code(address,address,address)" \
- *     <BRIDGE> <FACTORY_ADMIN> <TOKEN_ADMIN> \
+ *     --sig "deployAll(address,address,address,address)" \
+ *     <BRIDGE> <FACTORY_ADMIN> <TOKEN_ADMIN> <BEACON_OWNER> \
  *     --broadcast
  */
 contract HyperMintableERC20CodeScript is Script {
@@ -31,37 +41,162 @@ contract HyperMintableERC20CodeScript is Script {
 
     function setUp() public {}
 
+    // =====================================================================
+    // 배포 — 개별 단계
+    // =====================================================================
+
     /**
-     * @notice HyperMintableERC20Code 배포 및 Bridge에 설정
-     * @dev `tokenAdmin`은 팩토리에서 immutable이라 재배포 없이는 바꿀 수 없다. CREATE2
-     *      결정성을 위한 의도적 트레이드오프이므로(A3, AR-4) **반드시 멀티시그·타임락
-     *      주소**를 넣을 것 — EOA를 넣으면 키 유출 시 팩토리 재배포 외에 회복 수단이 없다.
-     *      이 함수는 내부적으로 `bridge.setCrossMintableERC20Code`를 호출하므로 브로드캐스트
-     *      계정은 bridge의 `ADMIN_ROLE`을 보유해야 한다. 이후 `createTokenAndVerify` 단계는
-     *      이와 별개로 bridge의 `EDITOR_ROLE`을 요구한다 — 두 role을 다른 계정이 보유한다면
-     *      단계별로 브로드캐스트 키를 바꿔야 한다.
-     * @param bridge Bridge 컨트랙트 주소 (프록시 주소). ADMIN_ROLE 계정으로 브로드캐스트해야
-     *        `setCrossMintableERC20Code` 호출이 성공한다.
-     * @param factoryAdmin 팩토리 `ADMIN_ROLE`을 받을 주소 (링크 슬롯 위임 setter 호출 주체)
-     * @param tokenAdmin 새로 생성되는 모든 토큰의 초기 owner(defaultAdmin) — LINKER_ROLE 보유
-     *        여부와 무관하게 isLinkAuthority로 항상 링크 권한을 가진다. **멀티시그/타임락 권장**
-     * @return code 배포된 HyperMintableERC20Code 주소
+     * @notice `HyperMintableERC20` 로직(impl) 배포
+     * @dev 생성자에서 `_disableInitializers()`를 호출하므로 이 주소를 직접 `initialize`할
+     *      수 없다 — 반드시 beacon을 거쳐 `BeaconProxy`로만 초기화된다.
+     * @return implementation 배포된 impl 주소
      */
-    function deployHyperMintableERC20Code(BaseBridge bridge, address factoryAdmin, address tokenAdmin)
-        public
-        returns (address code)
-    {
+    function deployHyperMintableERC20Implementation() public returns (address implementation) {
         vm.startBroadcast();
-        HyperMintableERC20Code deployed = new HyperMintableERC20Code(factoryAdmin, tokenAdmin, address(bridge));
-        code = address(deployed);
-        console.log("HyperMintableERC20Code deployed to:", code);
-        console.log("  tokenAdmin (immutable):", tokenAdmin);
+        HyperMintableERC20 impl = new HyperMintableERC20();
+        implementation = address(impl);
+        vm.stopBroadcast();
+
+        console.log("HyperMintableERC20 implementation deployed to:", implementation);
+    }
+
+    /**
+     * @notice 토큰 beacon 배포
+     * @dev **`beaconOwner`는 반드시 멀티시그·타임락 주소를 사용할 것** — 이 주소는 팩토리가
+     *      생성하는 모든 토큰의 로직을 단독으로 지배하는 단일 집중점이다(AR-2).
+     * @param implementation `deployHyperMintableERC20Implementation`의 반환값
+     * @param beaconOwner beacon `owner()` — `upgradeTo`를 호출할 수 있는 유일한 주소
+     * @return beaconAddress 배포된 `UpgradeableBeacon` 주소
+     */
+    function deployBeacon(address implementation, address beaconOwner) public returns (address beaconAddress) {
+        vm.startBroadcast();
+        UpgradeableBeacon beacon = new UpgradeableBeacon(implementation, beaconOwner);
+        beaconAddress = address(beacon);
+        vm.stopBroadcast();
+
+        console.log("HyperMintableERC20 beacon deployed to:", beaconAddress);
+        console.log("  implementation:", implementation);
+        console.log("  owner (must be multisig/timelock):", beaconOwner);
+    }
+
+    /**
+     * @notice `HyperMintableERC20Code` 로직(impl) 배포
+     * @dev 생성자에서 `_disableInitializers()`를 호출하므로 이 주소를 직접 `initialize`할
+     *      수 없다 — 반드시 `ERC1967Proxy`를 거쳐서만 초기화된다.
+     * @return implementation 배포된 impl 주소
+     */
+    function deployHyperMintableERC20CodeImplementation() public returns (address implementation) {
+        vm.startBroadcast();
+        HyperMintableERC20Code impl = new HyperMintableERC20Code();
+        implementation = address(impl);
+        vm.stopBroadcast();
+
+        console.log("HyperMintableERC20Code implementation deployed to:", implementation);
+    }
+
+    /**
+     * @notice 팩토리 `ERC1967Proxy` 배포 + 원자 초기화 + Bridge 연결
+     * @dev `tokenAdmin`/`beaconAddress`는 팩토리 스토리지에 저장되며(프록시라 immutable
+     *      불가) 재배포 없이는 바꿀 수 없다. **반드시 멀티시그·타임락 주소**를 `tokenAdmin`에
+     *      넣을 것 — EOA를 넣으면 키 유출 시 팩토리 재배포 외에 회복 수단이 없다. 이 함수는
+     *      내부적으로 `bridge.setCrossMintableERC20Code`를 호출하므로 브로드캐스트 계정은
+     *      bridge의 `ADMIN_ROLE`을 보유해야 한다.
+     * @param bridge Bridge 컨트랙트 주소 (프록시 주소)
+     * @param codeImplementation `deployHyperMintableERC20CodeImplementation`의 반환값
+     * @param factoryAdmin 팩토리 `ADMIN_ROLE`을 받을 주소 (링크 슬롯 위임 setter / 업그레이드 승인 주체)
+     * @param tokenAdmin 새로 생성되는 모든 토큰의 초기 owner(defaultAdmin). **멀티시그/타임락 권장**
+     * @param beaconAddress `deployBeacon`의 반환값
+     * @return code 배포된 팩토리 프록시 주소
+     */
+    function deployHyperMintableERC20CodeProxy(
+        BaseBridge bridge,
+        address codeImplementation,
+        address factoryAdmin,
+        address tokenAdmin,
+        address beaconAddress
+    ) public returns (address code) {
+        vm.startBroadcast();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            codeImplementation,
+            abi.encodeCall(
+                HyperMintableERC20Code.initialize, (factoryAdmin, tokenAdmin, address(bridge), beaconAddress)
+            )
+        );
+        code = address(proxy);
+        console.log("HyperMintableERC20Code proxy deployed to:", code);
+        console.log("  implementation:", codeImplementation);
+        console.log("  tokenAdmin:", tokenAdmin);
         console.log("  factoryAdmin (ADMIN_ROLE):", factoryAdmin);
+        console.log("  beacon:", beaconAddress);
 
         bridge.setCrossMintableERC20Code(ICrossMintableERC20Code(code));
         console.log("HyperMintableERC20Code set to bridge");
         vm.stopBroadcast();
     }
+
+    /**
+     * @notice impl(토큰) + beacon + impl(팩토리) + 팩토리 프록시를 한 번에 배포하고 Bridge에 연결
+     * @dev 위 네 함수를 순서대로 묶은 편의 함수. HyperEVM은 big block이 필요할 수 있다(§13).
+     * @param bridge Bridge 컨트랙트 주소 (ADMIN_ROLE 계정으로 브로드캐스트)
+     * @param factoryAdmin 팩토리 `ADMIN_ROLE`을 받을 주소
+     * @param tokenAdmin 새로 생성되는 모든 토큰의 초기 owner(defaultAdmin). **멀티시그/타임락 권장**
+     * @param beaconOwner 토큰 beacon `owner()`. **멀티시그/타임락 필수**(AR-2)
+     * @return tokenImplementation 토큰 impl 주소
+     * @return beaconAddress 토큰 beacon 주소
+     * @return codeImplementation 팩토리 impl 주소
+     * @return code 팩토리 프록시 주소
+     */
+    function deployAll(BaseBridge bridge, address factoryAdmin, address tokenAdmin, address beaconOwner)
+        public
+        returns (address tokenImplementation, address beaconAddress, address codeImplementation, address code)
+    {
+        tokenImplementation = deployHyperMintableERC20Implementation();
+        beaconAddress = deployBeacon(tokenImplementation, beaconOwner);
+        codeImplementation = deployHyperMintableERC20CodeImplementation();
+        code = deployHyperMintableERC20CodeProxy(bridge, codeImplementation, factoryAdmin, tokenAdmin, beaconAddress);
+    }
+
+    // =====================================================================
+    // 업그레이드
+    // =====================================================================
+
+    /**
+     * @notice 토큰 로직을 업그레이드한다 — 이 beacon을 가리키는 모든 토큰에 즉시 반영된다(AR-4)
+     * @dev beacon `owner()` 계정으로 브로드캐스트해야 한다. 단계적 롤아웃이 불가하므로 업그레이드
+     *      전 전수 테스트가 필수다. CREATE2 initcode에는 beacon 주소만 들어가므로 이 업그레이드는
+     *      향후 `computeTokenAddress`/`computeTokenAddressWithName` 예측값에 영향을 주지 않는다.
+     * @param beaconAddress 토큰 beacon 주소
+     * @param newImplementation 새 `HyperMintableERC20` impl 주소
+     */
+    function upgradeBeacon(address beaconAddress, address newImplementation) public {
+        vm.startBroadcast();
+        UpgradeableBeacon(beaconAddress).upgradeTo(newImplementation);
+        vm.stopBroadcast();
+
+        console.log("beacon upgraded:");
+        console.log("  beacon:", beaconAddress);
+        console.log("  newImplementation:", newImplementation);
+    }
+
+    /**
+     * @notice 팩토리 로직을 업그레이드한다
+     * @dev 팩토리의 `ADMIN_ROLE` 계정으로 브로드캐스트해야 한다(`_authorizeUpgrade`).
+     * @param code 팩토리 프록시 주소
+     * @param newImplementation 새 `HyperMintableERC20Code` impl 주소
+     */
+    function upgradeHyperMintableERC20Code(address code, address newImplementation) public {
+        vm.startBroadcast();
+        HyperMintableERC20Code(code).upgradeToAndCall(newImplementation, bytes(""));
+        vm.stopBroadcast();
+
+        console.log("HyperMintableERC20Code upgraded:");
+        console.log("  proxy:", code);
+        console.log("  newImplementation:", newImplementation);
+    }
+
+    // =====================================================================
+    // 토큰 생성 — 파생 경로 (심볼에서 name/symbol 파생, 브릿지 경유)
+    // =====================================================================
 
     /**
      * @notice 배포 전 토큰 CREATE2 주소를 미리 계산한다 (읽기 전용, 트랜잭션 없음)
@@ -72,7 +207,7 @@ contract HyperMintableERC20CodeScript is Script {
      * @param code HyperMintableERC20Code 주소
      * @param remoteChainID 원격 체인 ID
      * @param remoteToken 원격 토큰 주소
-     * @param symbol 토큰 심볼
+     * @param symbol 토큰 심볼 (name은 "Cross Bridge <symbol>", symbol은 "<symbol>x"로 파생)
      * @param decimals 토큰 decimals
      * @param minter 실제 `createCrossMintableERC20`을 호출할 주소 (보통 bridge)
      * @return predicted 예측된 토큰 주소
@@ -129,10 +264,94 @@ contract HyperMintableERC20CodeScript is Script {
         }
     }
 
+    // =====================================================================
+    // 토큰 생성 — 명시 경로 (임의 name/symbol + minter 직접 지정, 브릿지 미경유)
+    // =====================================================================
+
+    /**
+     * @notice 배포 전 토큰 CREATE2 주소를 미리 계산한다 (명시 name/symbol 경로, 읽기 전용)
+     * @param code HyperMintableERC20Code 주소
+     * @param remoteChainID 원격 체인 ID
+     * @param remoteToken 원격 토큰 주소
+     * @param name_ ERC20 name
+     * @param symbol_ ERC20 symbol
+     * @param decimals 토큰 decimals
+     * @param minter `createHyperMintableERC20` 호출 시 넘길 minter 인자 (호출자가 아니라
+     *        `MINTER_ROLE`을 받을 주소, 보통 bridge)
+     * @return predicted 예측된 토큰 주소
+     */
+    function computeTokenAddressWithName(
+        address code,
+        uint remoteChainID,
+        address remoteToken,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals,
+        address minter
+    ) public view returns (address predicted) {
+        predicted = IHyperMintableERC20Code(code).computeTokenAddressWithName(
+            remoteChainID, remoteToken, name_, symbol_, decimals, minter
+        );
+        console.log("predicted HyperMintableERC20 address (explicit name/symbol):", predicted);
+    }
+
+    /**
+     * @notice 임의 name/symbol + 명시 minter로 토큰을 생성한다 — 브릿지의 `createToken`을
+     *         거치지 않으므로 필요하면 별도로 `bridge.registerToken`을 호출해야 한다
+     * @dev 팩토리의 `ADMIN_ROLE` 계정으로 브로드캐스트해야 한다. `expected != 0`이면 사전
+     *      예측과 일치하는지 검증한다.
+     * @param code HyperMintableERC20Code 주소
+     * @param remoteChainID 원격 체인 ID
+     * @param remoteToken 원격 토큰 주소
+     * @param name_ ERC20 name
+     * @param symbol_ ERC20 symbol
+     * @param decimals 토큰 decimals
+     * @param minter `MINTER_ROLE`을 받을 주소
+     * @param expected 사전 예측 주소. 0이면 검증을 건너뜀
+     * @return tokenAddress 실제 생성된 토큰 주소
+     */
+    function createHyperMintableERC20AndVerify(
+        address code,
+        uint remoteChainID,
+        address remoteToken,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals,
+        address minter,
+        address expected
+    ) public returns (address tokenAddress) {
+        vm.startBroadcast();
+        // HyperEVM: 토큰 CREATE2 배포는 big block 가스 한도(30M)가 필요할 수 있다(§13, A4).
+        tokenAddress = IHyperMintableERC20Code(code).createHyperMintableERC20(
+            remoteChainID, remoteToken, name_, symbol_, decimals, minter
+        );
+        vm.stopBroadcast();
+
+        console.log("HyperMintableERC20 created at (explicit name/symbol):", tokenAddress);
+        console.log("  name:", name_);
+        console.log("  symbol:", symbol_);
+        console.log("  minter (MINTER_ROLE):", minter);
+        console.log(
+            "  NOTE: not routed through bridge.createToken() -> call bridge.registerToken(...) separately if this token must be bridgeable"
+        );
+
+        if (expected != address(0)) {
+            require(tokenAddress == expected, "createHyperMintableERC20AndVerify: address mismatch vs prediction");
+            console.log("  matches pre-computed address:", expected);
+        }
+    }
+
+    // =====================================================================
+    // HyperCore 링크 슬롯 설정 및 검증
+    // =====================================================================
+
     /**
      * @notice 팩토리 경유로 토큰의 HyperCore 링크 슬롯에 finalizer를 기록한다 (런북 단계 5)
      * @dev 직후 반드시 `verifyHyperCoreDeployer`로 원시 슬롯을 확인할 것. 이 시점부터 Core
      *      finalize(단계 7)가 끝날 때까지 LINKER_ROLE 변경·재설정 금지(§12 경쟁 창 방어).
+     *      Core 인덱스가 이미 확정된 토큰에서는 온체인에서 `HyperCoreLinkAlreadyFinalized`로
+     *      거부된다(R-4) — 재실행하기 전에 `verifyHyperCoreDeployer`/`coreTokenIndex`로 상태를
+     *      먼저 확인할 것.
      * @param code HyperMintableERC20Code 주소 (ADMIN_ROLE 계정으로 브로드캐스트)
      * @param token 대상 HyperMintableERC20 주소 (이 팩토리가 생성한 토큰이어야 함)
      * @param finalizer HyperCore에서 실제 서명할 주소 (EOA / API wallet)
@@ -148,10 +367,16 @@ contract HyperMintableERC20CodeScript is Script {
     }
 
     /**
-     * @notice 팩토리 경유로 토큰의 HyperCore 스팟 자산 인덱스를 기록한다 (런북 단계 8)
-     * @dev **Core finalize(단계 7) 성공 후에만** 호출할 것. 인덱스를 바꾸기 전에는 직전
-     *      `coreSystemAddress()`의 EVM ERC-20 잔고와 Core spot 잔고가 둘 다 0인지 오프체인에서
-     *      먼저 확인한다 — 잘못 나간 자금은 회수 불가(AR-3).
+     * @notice 팩토리 경유로 토큰의 HyperCore 스팟 자산 인덱스를 기록한다 (런북 단계 8) — 성공은
+     *         토큰당 정확히 1회뿐이다(R-2)
+     * @dev **Core finalize(단계 7) 성공 후에만** 호출할 것. 온체인에서 Core read precompile로
+     *      `tokenInfo(index).evmContract == token`과 decimals 정합성을 검증하므로(R-1, R-3),
+     *      스팟 페어 인덱스(예: 2902)와 토큰 인덱스(예: 2895)를 혼동해 넣으면 `CoreLinkNotFinalized`로
+     *      즉시 거부된다 — 이것이 실제로 발생했던 오입력이다(request.md R4). 인덱스를 바꾸기
+     *      전에는 직전 `coreSystemAddress()`의 EVM ERC-20 잔고와 Core spot 잔고가 둘 다 0인지
+     *      오프체인에서 먼저 확인한다 — 잘못 나간 자금은 회수 불가(AR-3). 잠금(R-2/R-4)은
+     *      오타·절차오류 방지용이며 beacon 업그레이드로는 무력화될 수 있다(AR-1) — 업그레이드
+     *      권한은 반드시 멀티시그/타임락으로 분리해 둘 것.
      * @param code HyperMintableERC20Code 주소 (ADMIN_ROLE 계정으로 브로드캐스트)
      * @param token 대상 HyperMintableERC20 주소
      * @param index HyperCore 스팟 토큰 인덱스
@@ -205,33 +430,38 @@ contract HyperMintableERC20CodeScript is Script {
  * # --------------------------------------------------
  *
  * # bridge: BaseBridge 프록시 주소
- * #   - deployHyperMintableERC20Code는 bridge의 ADMIN_ROLE 계정으로 브로드캐스트해야 함
- * #     (setCrossMintableERC20Code 호출)
+ * #   - deployAll/deployHyperMintableERC20CodeProxy는 bridge의 ADMIN_ROLE 계정으로
+ * #     브로드캐스트해야 함 (setCrossMintableERC20Code 호출)
  * #   - createTokenAndVerify는 bridge의 EDITOR_ROLE 계정으로 브로드캐스트해야 함
  * #     (createToken → 내부 registerToken 호출). ADMIN_ROLE과 EDITOR_ROLE은 서로 다른
  * #     권한이므로, 두 role을 다른 계정이 보유한다면 단계마다 브로드캐스트 키를 바꿔야 함
  *
  * # factoryAdmin: 팩토리 ADMIN_ROLE을 받을 주소
- * #   - setHyperCoreDeployer / setCoreTokenIndex 위임 호출 주체
+ * #   - setHyperCoreDeployer / setCoreTokenIndex 위임 호출, createHyperMintableERC20(명시
+ * #     name/symbol 경로), 팩토리 업그레이드 승인 주체
  *
  * # tokenAdmin: 새로 생성되는 모든 토큰의 초기 owner(defaultAdmin)
  * #   - LINKER_ROLE 보유 여부와 무관하게 isLinkAuthority로 항상 링크 권한을 가짐
- * #   - 팩토리에서 immutable — 반드시 멀티시그/타임락 주소를 사용할 것
+ * #   - 팩토리 스토리지에 저장 — 재배포 없이는 못 바꿈. 반드시 멀티시그/타임락 주소를 사용할 것
+ *
+ * # beaconOwner: 토큰 beacon owner()
+ * #   - upgradeBeacon을 호출할 수 있는 유일한 주소. 전체 토큰의 로직을 지배하는 단일
+ * #     집중점이므로(AR-2) 반드시 멀티시그/타임락 주소를 사용할 것
  *
  * # --------------------------------------------------
- * # 배포
+ * # 배포 (impl 2종 + beacon + 팩토리 프록시, 원자 초기화, Bridge 연결까지 한 번에)
  * # --------------------------------------------------
  *
  * # PRIVATE_KEY는 bridge의 ADMIN_ROLE 계정이어야 함 (setCrossMintableERC20Code 호출) —
  * # 아래 "토큰 생성" 단계의 EDITOR_ROLE 계정과는 다른 권한이다.
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
  * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
- * #   --sig "deployHyperMintableERC20Code(address,address,address)" \
- * #   $BRIDGE $FACTORY_ADMIN $TOKEN_ADMIN \
+ * #   --sig "deployAll(address,address,address,address)" \
+ * #   $BRIDGE $FACTORY_ADMIN $TOKEN_ADMIN $BEACON_OWNER \
  * #   --broadcast
  *
  * # --------------------------------------------------
- * # (선택) 사전 주소 계산
+ * # (선택) 사전 주소 계산 — 파생 경로
  * # --------------------------------------------------
  *
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
@@ -240,13 +470,23 @@ contract HyperMintableERC20CodeScript is Script {
  * #   $CODE $REMOTE_CHAIN_ID $REMOTE_TOKEN $SYMBOL $DECIMALS $BRIDGE
  *
  * # --------------------------------------------------
- * # 토큰 생성 (HyperEVM은 big block 필요 — §13, A4)
+ * # 토큰 생성 — 파생 경로 (HyperEVM은 big block 필요 — §13, A4)
  * # --------------------------------------------------
  *
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
  * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
  * #   --sig "createTokenAndVerify(address,address,uint256,address,string,uint8,address)" \
  * #   $BRIDGE $CODE $REMOTE_CHAIN_ID $REMOTE_TOKEN $SYMBOL $DECIMALS $EXPECTED_OR_ZERO \
+ * #   --broadcast
+ *
+ * # --------------------------------------------------
+ * # 토큰 생성 — 명시 name/symbol 경로 (ADMIN_ROLE, 브릿지 미경유)
+ * # --------------------------------------------------
+ *
+ * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
+ * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --sig "createHyperMintableERC20AndVerify(address,uint256,address,string,string,uint8,address,address)" \
+ * #   $CODE $REMOTE_CHAIN_ID $REMOTE_TOKEN $NAME $SYMBOL $DECIMALS $MINTER $EXPECTED_OR_ZERO \
  * #   --broadcast
  *
  * # --------------------------------------------------
@@ -265,13 +505,31 @@ contract HyperMintableERC20CodeScript is Script {
  * #   $TOKEN $FINALIZER
  *
  * # --------------------------------------------------
- * # (Core finalize 성공 후) Core 토큰 인덱스 설정
+ * # (Core finalize 성공 후) Core 토큰 인덱스 설정 — 토큰당 1회만 성공(R-2)
  * # --------------------------------------------------
  *
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
  * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
  * #   --sig "setCoreTokenIndex(address,address,uint64)" \
  * #   $CODE $TOKEN $CORE_TOKEN_INDEX \
+ * #   --broadcast
+ *
+ * # --------------------------------------------------
+ * # 업그레이드
+ * # --------------------------------------------------
+ *
+ * # 토큰 로직 업그레이드 (beaconOwner 계정 — 이 beacon을 쓰는 모든 토큰에 즉시 반영, AR-4)
+ * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
+ * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --sig "upgradeBeacon(address,address)" \
+ * #   $BEACON $NEW_TOKEN_IMPLEMENTATION \
+ * #   --broadcast
+ *
+ * # 팩토리 로직 업그레이드 (factoryAdmin 계정, ADMIN_ROLE)
+ * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
+ * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --sig "upgradeHyperMintableERC20Code(address,address)" \
+ * #   $CODE $NEW_CODE_IMPLEMENTATION \
  * #   --broadcast
  *
  * ===================================================================================
@@ -294,9 +552,11 @@ contract HyperMintableERC20CodeScript is Script {
  * | 6 | verifyHyperCoreDeployer             | vm.load로 원시 슬롯을 읽어 일치 확인. 불일치면 중단                    |
  * | 7 | Core finalizeEvmContract            | finalizer가 전송. 단계 5 직후 지체 없이. Core 상태와 tx hash 교차확인   |
  * |   | {customStorageSlot}                 |                                                                     |
- * | 8 | setCoreTokenIndex                   | 단계 7 성공 후에만. Core tokenInfo 교차확인. 직전 coreSystemAddress()  |
- * |   |                                    | 의 ① ERC-20 EVM 잔고와 ② Core spot 잔고가 둘 다 0인지 확인, 아니면    |
- * |   |                                    | 중단(AR-3)                                                          |
+ * | 8 | setCoreTokenIndex                   | 단계 7 성공 후에만. 온체인에서 tokenInfo(index).evmContract ==        |
+ * |   |                                    | token && decimals 정합성을 자동 검증(R-1, R-3) — 스팟 페어 인덱스와    |
+ * |   |                                    | 토큰 인덱스를 혼동해 넣으면 즉시 거부된다. 성공은 토큰당 1회뿐(R-2).    |
+ * |   |                                    | 직전 coreSystemAddress()의 ① ERC-20 EVM 잔고와 ② Core spot 잔고가    |
+ * |   |                                    | 둘 다 0인지 확인, 아니면 중단(AR-3)                                  |
  * | 9 | 시스템 주소 프로비저닝                | 아래 운영 장부 필드를 채운다                                         |
  *
  * ===================================================================================
@@ -304,33 +564,46 @@ contract HyperMintableERC20CodeScript is Script {
  * ===================================================================================
  *
  * LINKER_ROLE 권한 주체는 정확히 둘이다 — 현재 토큰 defaultAdmin()과, LINKER_ROLE을 보유한
- * factoryLinker(생성 팩토리, immutable). hasRole(LINKER_ROLE, account)는 role 보유를,
- * isLinkAuthority(account)는 실효 권한(슬롯을 실제로 쓸 수 있는지)을 뜻한다 — 둘은 같은 말이
- * 아니다: 현재 defaultAdmin()은 LINKER_ROLE을 보유하지 않아도 권한이 있고, factoryLinker가
- * 아닌 제3자는 LINKER_ROLE을 받아도 권한이 생기지 않는다. 슬롯을 실제로 쓸 수 있는 것은 항상
- * 현재 defaultAdmin()과 factoryLinker(LINKER_ROLE 보유 시)뿐이다.
+ * factoryLinker(생성 팩토리). hasRole(LINKER_ROLE, account)는 role 보유를, isLinkAuthority(account)는
+ * 실효 권한(슬롯을 실제로 쓸 수 있는지)을 뜻한다 — 둘은 같은 말이 아니다: 현재 defaultAdmin()은
+ * LINKER_ROLE을 보유하지 않아도 권한이 있고, factoryLinker가 아닌 제3자는 LINKER_ROLE을 받아도
+ * 권한이 생기지 않는다. 슬롯을 실제로 쓸 수 있는 것은 항상 현재 defaultAdmin()과 factoryLinker
+ * (LINKER_ROLE 보유 시)뿐이다.
  *
  * | 이벤트                                                  | 무엇을 뜻하는가                          |
  * |------------------------------------------------------------|---------------------------------------------|
  * | HyperCoreDeployerSet                                        | finalizer 슬롯이 바뀌었다                    |
- * | CoreTokenIndexSet                                           | Core 인덱스(=시스템 주소)가 바뀌었다          |
+ * | CoreTokenIndexSet                                           | Core 인덱스(=시스템 주소)가 확정됐다(1회뿐)   |
  * | RoleGranted / RoleRevoked (role = LINKER_ROLE)              | factoryLinker의 링크 권한이 켜지거나 꺼졌다.  |
  * |                                                              | factoryLinker 외 주소에 대한 grant는 실효     |
  * |                                                              | 권한이 아니지만 의도를 드러내므로 함께 본다    |
  * | RoleGranted / RoleRevoked (role = DEFAULT_ADMIN_ROLE)       | admin 교체가 실제로 완료됐다 — 이것이 실효    |
  * |                                                              | 권한이 옮겨간 시점이다                       |
  * | DefaultAdminTransferScheduled / DefaultAdminTransferCanceled | admin 교체 의도/취소 (예고일 뿐, 완료 아님)   |
+ * | Upgraded (beacon / 팩토리 프록시)                            | 로직 impl이 바뀌었다 — AR-1: 링크 잠금을      |
+ * |                                                              | 무력화할 수 있는 유일한 경로이므로 특히 주시   |
  *
  * 추가로 단계 5~7 구간 동안 defaultAdmin()과 isLinkAuthority()를 주기적으로 재조회해 대조할
  * 것 — 이벤트를 놓쳐도 실효 권한의 현재 값을 직접 확인할 수 있어야 한다.
  *
- * 운영 장부 필수 필드: token address · factory address · core token index · system address ·
- * evmExtraWeiDecimals · provisioned amount · Core spot balance of system address ·
- * EVM balance of system address · bridge minted (registry 회계) · finalizer ·
+ * 운영 장부 필수 필드: token address · factory address · beacon address · core token index ·
+ * system address · evmExtraWeiDecimals · provisioned amount · Core spot balance of system
+ * address · EVM balance of system address · bridge minted (registry 회계) · finalizer ·
  * current defaultAdmin() · factoryLinker() (immutable) · hasRole(LINKER_ROLE, factoryLinker)
  * (팩토리 권한 on/off) · extraneous LINKER_ROLE holders (실효 권한 없음 — 이상 징후로만 기록).
  * CoreTokenIndexSet / HyperCoreDeployerSet / RoleGranted / RoleRevoked / Transfer(to=system
- * address) 이벤트를 인덱싱해 장부와 정기 대조.
+ * address) / Upgraded 이벤트를 인덱싱해 장부와 정기 대조.
+ *
+ * ===================================================================================
+ * 잠금의 한계 (AR-1) — 반드시 숙지할 것
+ * ===================================================================================
+ *
+ * `setCoreTokenIndex`의 1회 고정(R-2)과 `setHyperCoreDeployer`의 확정 후 잠금(R-4)은
+ * **오타·절차오류를 막는 장치**이지, 권한 탈취에 대한 방어가 아니다. 이 토큰/팩토리는
+ * 업그레이더블이므로, beacon owner(토큰) 또는 팩토리 ADMIN_ROLE(팩토리)이 로직을 교체하면
+ * 잠금 자체를 무력화하는 새 구현을 올릴 수 있다. 권한 탈취 방어는 오직 **beacon owner와
+ * 팩토리 업그레이드 승인 계정을 멀티시그/타임락으로 분리**하는 것으로만 확보된다 — 이 스크립트의
+ * `beaconOwner`/`factoryAdmin` 파라미터에 EOA를 넣지 말 것.
  *
  * ===================================================================================
  * 팩토리 교체 시 기존 토큰 관리
@@ -343,16 +616,24 @@ contract HyperMintableERC20CodeScript is Script {
  *   ② 토큰 defaultAdmin이 토큰 함수를 직접 호출 (항상 가능한 폴백).
  * isHyperMintableERC20 allowlist 때문에 **새 팩토리로의 관리 이관은 불가(의도된 비목표)**다.
  * 새 팩토리를 배포해도 예전 팩토리가 만든 토큰은 예전 팩토리로만 setHyperCoreDeployer /
- * setCoreTokenIndex 위임을 받을 수 있다.
+ * setCoreTokenIndex 위임을 받을 수 있다. 다만 토큰 로직 자체는 팩토리와 무관하게 beacon
+ * 업그레이드로 여전히 고칠 수 있다 — beacon은 팩토리 교체와 독립적으로 유지된다.
  *
  * ===================================================================================
  * 참고사항
  * ===================================================================================
  *
  * # HyperMintableERC20Code가 설정되면 Bridge에서 createToken() 호출 시 HyperMintableERC20
- * # 토큰이 CREATE2로 생성되고 자동 등록됨. 기존에 이미 Code가 설정되어 있으면 업데이트됨.
+ * # 토큰이 CREATE2로 생성되고 자동 등록됨(파생 name/symbol 경로만). 기존에 이미 Code가
+ * # 설정되어 있으면 업데이트됨.
  *
- * # 팩토리 tokenAdmin은 immutable이므로 새로 생성될 토큰의 초기 owner를 바꾸려면 팩토리를
- * # 재배포해야 한다(AR-4). 이미 배포된 토큰의 admin은 토큰 자체의
- * # beginDefaultAdminTransfer / acceptDefaultAdminTransfer로 이전 가능.
+ * # 명시 name/symbol 경로(createHyperMintableERC20)는 브릿지의 createToken을 거치지
+ * # 않으므로 자동 registerToken이 일어나지 않는다 — 그 토큰을 브릿지로 이동시키려면
+ * # bridge.registerToken(remoteChainID, false, tokenAddress, remoteToken)을 EDITOR_ROLE
+ * # 계정으로 별도 호출해야 한다.
+ *
+ * # 팩토리 tokenAdmin/beacon은 팩토리 스토리지에 저장되므로 새로 생성될 토큰의 초기 owner나
+ * # beacon을 바꾸려면 팩토리를 재배포해야 한다(AR-4와 별개의 트레이드오프). 이미 배포된
+ * # 토큰의 admin은 토큰 자체의 beginDefaultAdminTransfer / acceptDefaultAdminTransfer로
+ * # 이전 가능하고, 토큰 로직 자체는 beacon 업그레이드로 팩토리 재배포 없이 고칠 수 있다.
  */

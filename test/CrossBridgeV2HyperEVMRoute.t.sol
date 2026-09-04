@@ -17,6 +17,7 @@ import {CrossBridgeV2MultihopTest} from "./CrossBridgeV2Multihop.t.sol";
 import {TestToken} from "./token/TestToken.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
@@ -95,9 +96,21 @@ contract CrossBridgeV2HyperEVMRouteTest is CrossBridgeV2MultihopTest {
 
         // `HyperMintableERC20Code` in place of the V1 `CrossMintableERC20Code` — same
         // `ICrossMintableERC20Code` surface, but its tokens carry the HyperCore link slot
-        // (T19-T22 below). `hyperOwner` doubles as `tokenAdmin` here, consistent with every
-        // other role in this fixture being centralized on `hyperOwner`.
-        crossMintableERC20CodeHyper = new HyperMintableERC20Code(hyperOwner, hyperOwner, address(bridgeHyper));
+        // (T19-T22 below). `hyperOwner` doubles as `tokenAdmin`/beacon owner here, consistent
+        // with every other role in this fixture being centralized on `hyperOwner`. Tokens are
+        // `BeaconProxy`s sharing one `UpgradeableBeacon`; the factory itself is a UUPS
+        // `ERC1967Proxy`, atomically initialized here exactly as a real deploy script would.
+        HyperMintableERC20 tokenImplHyper = new HyperMintableERC20();
+        UpgradeableBeacon tokenBeaconHyper = new UpgradeableBeacon(address(tokenImplHyper), hyperOwner);
+        HyperMintableERC20Code codeImplHyper = new HyperMintableERC20Code();
+        ERC1967Proxy codeProxyHyper = new ERC1967Proxy(
+            address(codeImplHyper),
+            abi.encodeCall(
+                HyperMintableERC20Code.initialize,
+                (hyperOwner, hyperOwner, address(bridgeHyper), address(tokenBeaconHyper))
+            )
+        );
+        crossMintableERC20CodeHyper = HyperMintableERC20Code(address(codeProxyHyper));
         bridgeHyper.setCrossMintableERC20Code(crossMintableERC20CodeHyper);
 
         // HyperEVM's native coin <-> CROSS's native coin, registered symmetrically to

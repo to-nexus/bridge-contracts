@@ -139,6 +139,46 @@ sequenceDiagram
   발행 경로 밖의 운영자 조작), 그 잔고는 브리지 자체의 페어별 `minted` 회계에 **반영되지 않습니다** — 버그가
   아니라 의도된 회계상의 괴리입니다(§8의 `LINKER_ROLE`과 운영 절차·링크 런북은
   `script/HyperMintableERC20Code.s.sol` 참조).
+  - **링크 안전장치 강화.** `setCoreTokenIndex`는 더 이상 임의의 index를 무조건 받아들이지 않습니다.
+    HyperEVM의 Core read precompile(`0x…080C`의 `tokenInfo(uint32)`)을 호출해 `evmContract ==
+    address(this)`(Core가 실제로 **바로 이 컨트랙트**에 링크했다는 위조 불가능한 온체인 증거 — 그럴듯해
+    보이는 다른 index, 예컨대 다른 토큰을 가리키는 스팟 페어 index로는 통과하지 못함)와 `decimals() ==
+    weiDecimals + evmExtraWeiDecimals`가 확인될 때만 index를 기록합니다. 또한 토큰당 **최대 1회만**
+    성공하며, 성공하는 순간 `setHyperCoreDeployer`가 영구히 잠깁니다. 이 검증들은 운영 실수(오타 index,
+    쓰기 가능 상태로 방치된 옛 finalizer)를 막는 장치이지, 탈취된 업그레이드 권한에 대한 방어는
+    아닙니다 — 아래 AR-1 항목 참고.
+  - **내림 전송.** `transferToCore(amount)`는 이제 전송 전에 `amount`를 Core wei 단위(`coreUnit()`, 링크의
+    `evmExtraWeiDecimals`에서 유도)로 내림해, 더 이상 잔여분을 소각하지 않습니다. 내림된 나머지는 호출자
+    잔고에 그대로 남고, 함수는 실제로 전송된 금액을 반환합니다. 이 함수는 표준이 아니라 **편의
+    래퍼**입니다 — Core는 시스템 주소로의 평범한 ERC20 `transfer`가 남기는 `Transfer.from`을 기준으로
+    크레딧하므로, 표준을 따르는 어떤 전송이든 동일하게 동작하며, 이 함수에 건 어떤 가드도 우회 불가능한
+    보장으로 취급할 수 없습니다.
+  - **원-액션 HyperCore 전달.** 단일 `transferToCore` 호출은 오직 그 호출자만 Core에서 크레딧받는데,
+    호출자가 결합 `extraData` 호출을 실행 중인 `BridgeExecutor`인 경우 문제가 됩니다 — executor는
+    컨트랙트이므로 이후 Core 액션에 서명할 수 없어, executor의 Core 계정에 크레딧된 토큰은 영구히
+    묶입니다. `transferToCoreFor(address coreRecipient, uint amount)`가 이를 해결합니다: 같은 트랜잭션
+    안에서 (내림된) 금액을 호출자 → `coreRecipient` → Core 시스템 주소 순으로 옮기므로, 두 번째
+    `Transfer`의 `from`이 `coreRecipient`가 되어 Core가 호출자가 아니라 **그들을** 크레딧합니다 —
+    `coreRecipient`의 EVM 잔고는 정확히 0으로 순증감하므로 이 함수에는 별도 role 게이트가 필요 없습니다.
+    이를 `extraData` 결합 호출로 구성하면(`target` = 토큰, `selector` = `transferToCoreFor`, 인자 =
+    `(finalRecipient, amount)`) 전송을 시작하는 단 한 번의 사용자 액션으로 BSC → CROSS → HyperEVM →
+    HyperCore까지 토큰을 옮길 수 있습니다.
+  - **업그레이더블 토큰 + 팩토리.** 토큰과 그 팩토리(`HyperMintableERC20Code`) 모두 프록시입니다: 한
+    팩토리가 생성한 모든 토큰은 하나의 `UpgradeableBeacon`을 공유하는 `BeaconProxy`이고(업그레이드 한
+    번으로 모든 토큰이 동시에 반영됩니다 — 이렇게 생기는 권한 집중은 멀티시그·타임락 beacon owner
+    뒤에 두어야 합니다), 팩토리 자신은 자기 자신의 `ADMIN_ROLE`이 지배하는 UUPS(`ERC1967Proxy`)
+    단일 인스턴스입니다. 이 구조가 필요한 이유는 HyperCore 링크가 Core가 finalize한 그 EVM 주소에
+    영구히 귀속되기 때문입니다 — 업그레이더블이 아니라면, 이미 링크된 토큰의 버그를 고치는 방법은
+    HyperCore 토큰을 완전히 새로 발행하는 것뿐입니다. 팩토리가 예측에 사용하는 CREATE2 initcode에는
+    beacon의 (고정된) 주소만 들어가고 그 순간 beacon이 가리키는 로직 impl 주소는 들어가지 않으므로,
+    `computeTokenAddress` / `computeTokenAddressWithName` 예측값은 beacon 업그레이드 이후에도
+    안정적입니다.
+  - **AR-1 — 1회성 잠금은 업그레이드에 대해서는 안전하지 않습니다.** 토큰과 팩토리가 업그레이더블이므로,
+    beacon owner 또는 팩토리 `ADMIN_ROLE`을 쥔 계정은 위에서 설명한 `setCoreTokenIndex` /
+    `setHyperCoreDeployer` 잠금을 제거하는 새 구현을 올릴 수 있습니다. 이 잠금들은 **운영 실수**(오타
+    index, 쓰기 가능 상태로 방치된 옛 finalizer)에 대한 방어로 취급하고, 탈취된 업그레이드 키에 대한
+    방어는 아니라고 간주하세요 — 그 방어는 오직 beacon owner와 팩토리의 업그레이드 승인 `ADMIN_ROLE`을
+    EOA가 아닌 멀티시그·타임락에 두는 것으로만 확보됩니다.
 - **등록된 페어**만 전송할 수 있습니다. 해당 배포에서 지원되는 조합은 `allChainIDs()` / `allTokenPairs()` /
   `getTokenPair()`로 확인하세요.
 
@@ -569,8 +609,8 @@ params 구조체와 `deadline`을 받습니다.
 | `BridgeExecutor` | 정산 시 화이트리스트된 `extraData` 호출을 실행합니다. |
 | `PriceFeed` | 수수료·한도 계산에 사용되는 토큰/네이티브 가격 소스. 업그레이더블(UUPS). |
 | `CrossMintableERC20V2` | 브리지가 발행하는 wrapped 토큰(`ERC20` + `ERC20Permit`). |
-| `HyperMintableERC20` | HyperEVM 전용 wrapped 토큰. `CrossMintableERC20V2`에 HyperCore 링크 슬롯을 더함. |
-| `HyperMintableERC20Code` | `HyperMintableERC20`의 팩토리. CREATE2로 결정적이고 사전 계산 가능한 주소에 배포. |
+| `HyperMintableERC20` | HyperEVM 전용 wrapped 토큰. `CrossMintableERC20V2`에 강화된 HyperCore 링크 슬롯을 더함. 업그레이더블(`BeaconProxy`, 팩토리별 공유 `UpgradeableBeacon`). |
+| `HyperMintableERC20Code` | `HyperMintableERC20`의 팩토리. CREATE2로 결정적이고, beacon 로직 업그레이드 이후에도 안정적인, 사전 계산 가능한 주소에 배포. 업그레이더블(UUPS). |
 | `SwapBridgeRouter` | 선택적 스왑 + 브리지 라우터(Uniswap V3). |
 | `BridgeBot` | 주기적 반복 전송을 위한 선택적 보조 컨트랙트. |
 
@@ -606,7 +646,7 @@ params 구조체와 `deadline`을 받습니다.
 | `INITIATOR_ROLE` | 브리지 | permit 기반 배치 전송 제출 |
 | `EXECUTOR_ROLE` | Executor | 결합 `extraData` 호출 실행 — 브리지가 보유 |
 | `MINTER_ROLE` | wrapped 토큰 | 발행·소각. 생성 시 브리지에 부여되며, `CrossMintableERC20V2`에서는 해당 토큰 자체의 기본 관리자가 관리 |
-| `LINKER_ROLE` | `HyperMintableERC20` | `setHyperCoreDeployer` / `setCoreTokenIndex`가 검사하는 role — 하지만 이 role을 **보유하는 것**과 실제로 호출할 수 있는 것은 다릅니다. 아래 설명 참고 |
+| `LINKER_ROLE` | `HyperMintableERC20` | `setHyperCoreDeployer` / `setCoreTokenIndex`가 검사하는 role — 하지만 이 role을 **보유하는 것**과 실제로 호출할 수 있는 것은 다릅니다. 아래 설명 참고. `setCoreTokenIndex`는 토큰당 최대 1회만 성공하고, `setHyperCoreDeployer`는 성공하는 순간 영구히 잠깁니다(AR-1 한계는 §3 참고) |
 
 `HyperMintableERC20`은 **role 보유**와 **실효 권한**을 구분합니다. `hasRole(LINKER_ROLE, account)`는
 `account`가 이 role을 부여받았는지(일반적인, 회수 가능한 OZ grant)를 알려줄 뿐입니다. `account`가 지금
@@ -619,13 +659,17 @@ params 구조체와 `deadline`을 받습니다.
 차단할 수 있고, 나중에 `grantRole`로 다시 되돌릴 수 있습니다. 다른 주소에 `LINKER_ROLE`을 부여해도
 `hasRole`은 바뀌지만 `isLinkAuthority`는 생기지 않으므로, 슬롯 쓰기는 항상 이 두 주체로만 제한됩니다.
 
-`HyperMintableERC20Code`가 생성하는 모든 토큰의 기본 관리자가 되는 `tokenAdmin`은 CREATE2 주소 예측을 위해
-`immutable`입니다. 따라서 앞으로 생성될 토큰의 초기 owner를 바꾸려면 팩토리를 재배포해야 하고, **이미
-배포된** 토큰의 관리자는 토큰 자체의 `beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`로 이전할 수
+`HyperMintableERC20Code`가 생성하는 모든 토큰의 기본 관리자가 되는 `tokenAdmin()`과, 생성되는 모든 토큰의
+`BeaconProxy`가 가리키는 `beacon()`은 `initialize` 시점에 고정되고 별도 setter가 없지만, `immutable`이
+아니라 일반 스토리지입니다 — 팩토리 자신이 UUPS 프록시이므로, 그 로직 컨트랙트의 생성자는 initializer를
+막는 것 외에는 아무 것도 하지 않고, 비프록시 생성자처럼 배포별 값을 바이트코드에 구울 수 없기
+때문입니다. 앞으로 생성될 토큰에 대해 둘 중 하나를 바꾸려면 여전히 팩토리를 재배포해야 하고, **이미
+배포된** 토큰의 관리자는 토큰 자체의 `beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`로 이전할
+수 있으며, 그 토큰의 로직도 팩토리를 전혀 재배포하지 않고 beacon 업그레이드만으로 그 자리에서 고칠 수
 있습니다. 마찬가지로 토큰의 `factoryLinker`는 생성 시점에 그 토큰을 만든 팩토리로 고정됩니다 — 브리지의
 `crossMintableERC20Code`를 교체해도 기존에 생성된 토큰의 관리 권한이 새 팩토리로 넘어가지 **않습니다.**
 그런 토큰들을 위해 예전 팩토리를 계속 유지하거나, 토큰의 기본 관리자가 직접 호출하세요. 토큰별 생성
-팩토리 주소는 운영 장부에 기록해 두는 것이 좋습니다.
+팩토리 주소와 beacon 주소는 운영 장부에 기록해 두는 것이 좋습니다.
 
 finalize 이전 구간(런북은 `script/HyperMintableERC20Code.s.sol` 참고) 동안에는 `HyperCoreDeployerSet`,
 `CoreTokenIndexSet`, `LINKER_ROLE`과 `DEFAULT_ADMIN_ROLE` 양쪽의 `RoleGranted` / `RoleRevoked`(실효
