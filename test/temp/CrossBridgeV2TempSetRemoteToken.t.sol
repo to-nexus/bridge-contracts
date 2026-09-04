@@ -52,7 +52,7 @@ contract CrossBridgeV2TempSetRemoteTokenTest is BridgeExecutorTest {
     uint internal constant TARGET_REMOTE_CHAIN_ID = 998;
 
     /// @dev Stand-in for the real testnet stuck value
-    /// (`0x3E0217c3926106b7E585B5341439f3150c6cab7c`, plan spec §6) — an arbitrary
+    /// (`0xBB37E106055AbAF98e4f039B6d000bF50646a410`, the value the first remap round installed) — an arbitrary
     /// nonzero address is sufficient for these tests, which only check the field is
     /// read/written correctly, not that specific mainnet value.
     address internal constant OLD_REMOTE_TOKEN = address(0xDEAD);
@@ -70,7 +70,7 @@ contract CrossBridgeV2TempSetRemoteTokenTest is BridgeExecutorTest {
     /// @dev Mirrors `CrossBridgeV2Temp.EXPECTED_OLD_REMOTE_TOKEN` (private in the script,
     /// so the literal is duplicated here) — the real testnet stuck value (plan spec §6),
     /// used directly since round-2 issue plan M1 removed the `expectedOld` argument.
-    address internal constant EXPECTED_OLD_REMOTE_TOKEN = 0x3E0217c3926106b7E585B5341439f3150c6cab7c;
+    address internal constant EXPECTED_OLD_REMOTE_TOKEN = 0xBB37E106055AbAF98e4f039B6d000bF50646a410;
 
     /// @dev Standard ERC1967 implementation slot
     /// (`keccak256("eip1967.proxy.implementation") - 1`), used to observe the proxy's

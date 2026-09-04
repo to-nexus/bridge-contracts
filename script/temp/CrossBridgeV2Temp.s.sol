@@ -45,11 +45,15 @@ contract CrossBridgeV2Temp is Script {
     /// (plan spec §6/§7-10).
     address internal constant FORWARD_LIB = 0x2d0c06B1D999fDA0D7a51906A3cAA94518e8Fe0f;
 
-    /// @notice The known stuck old `remoteToken` value (plan spec §6). Fixed as a
-    /// constant — an operator-supplied `expectedOld` would let the fail-closed check be
-    /// defeated by accidentally passing whatever the current value happens to be
-    /// (round-2 issue plan M1).
-    address private constant EXPECTED_OLD_REMOTE_TOKEN = 0x3E0217c3926106b7E585B5341439f3150c6cab7c;
+    /// @notice The known current `remoteToken` value this run is expected to replace
+    /// (plan spec §6). Fixed as a constant — an operator-supplied `expectedOld` would let
+    /// the fail-closed check be defeated by accidentally passing whatever the current
+    /// value happens to be (round-2 issue plan M1).
+    /// @dev UPDATED for the second remap round. The first round moved the pair from
+    /// `0x3E0217c3926106b7E585B5341439f3150c6cab7c` to the value below; this round moves
+    /// it off that value onto the new beacon-proxy token. This constant MUST match the
+    /// pair's live `remoteToken` at execution time or `preflightRemoteToken` fails closed.
+    address private constant EXPECTED_OLD_REMOTE_TOKEN = 0xBB37E106055AbAF98e4f039B6d000bF50646a410;
 
     /// @notice Thrown by `preflightDrained` when CROSS's next-initiate index for 998
     /// does not match HyperEVM's next-finalize index for 612044 (an in-flight
