@@ -5,6 +5,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 import {BaseBridge} from "../src/BaseBridge.sol";
 import {BridgeVerifier} from "../src/BridgeVerifier.sol";
+import {CrossMintableERC20V2} from "../src/token/CrossMintableERC20V2.sol";
 import {CrossMintableERC20V2Code} from "../src/token/CrossMintableERC20V2Code.sol";
 import {Script, console} from "forge-std/Script.sol";
 
@@ -210,8 +211,17 @@ contract BridgeScript is Script {
         // Bridge 역할 부여
         baseBridge.grantRoleBatch(bridgeRoles, bridgeRoleMembers);
 
-        // CrossMintableERC20V2Code 배포 및 연결
-        CrossMintableERC20V2Code erc20 = new CrossMintableERC20V2Code(owner, address(baseBridge));
+        // CrossMintableERC20V2Code 배포 및 연결 (개정 3: 토큰/팩토리 모두 프록시 — 팩토리가
+        // initialize 내부에서 토큰 beacon을 직접 만들어 소유한다, D8. 별도 beacon 배포 단계 없음)
+        CrossMintableERC20V2 erc20TokenImplementation = new CrossMintableERC20V2();
+        CrossMintableERC20V2Code erc20Implementation = new CrossMintableERC20V2Code();
+        ERC1967Proxy erc20Proxy = new ERC1967Proxy(
+            address(erc20Implementation),
+            abi.encodeCall(
+                CrossMintableERC20V2Code.initialize, (owner, address(baseBridge), address(erc20TokenImplementation))
+            )
+        );
+        CrossMintableERC20V2Code erc20 = CrossMintableERC20V2Code(address(erc20Proxy));
         baseBridge.setCrossMintableERC20Code(erc20);
 
         // BridgeVerifier 배포 및 연결
