@@ -20,6 +20,16 @@ type IBridgeRegistryTokenPair struct {
 }
 
 
+type IBridgeRegistryFinalizeArguments struct {
+	FromChainID *big.Int
+	Index       *big.Int
+	ToToken     common.Address
+	To          common.Address
+	Value       *big.Int
+	ExtraData   []byte
+}
+
+
 type IBaseBridgePermitArguments struct {
 	Token    common.Address
 	Account  common.Address
@@ -28,23 +38,6 @@ type IBaseBridgePermitArguments struct {
 	V        uint8
 	R        [32]byte
 	S        [32]byte
-}
-
-
-type IBridgeRegistryPendingData struct {
-	Args            IBridgeRegistryFinalizeArguments
-	Status          uint8
-	DelayExpiration *big.Int
-}
-
-
-type IBridgeRegistryFinalizeArguments struct {
-	FromChainID *big.Int
-	Index       *big.Int
-	ToToken     common.Address
-	To          common.Address
-	Value       *big.Int
-	ExtraData   []byte
 }
 
 
@@ -57,6 +50,13 @@ type IBaseBridgeBridgeTokenArguments struct {
 	NetworkFee *big.Int
 	ExFee      *big.Int
 	ExtraData  []byte
+}
+
+
+type IBridgeRegistryPendingData struct {
+	Args            IBridgeRegistryFinalizeArguments
+	Status          uint8
+	DelayExpiration *big.Int
 }
 
 

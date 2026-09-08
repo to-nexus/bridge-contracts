@@ -2,13 +2,19 @@
 pragma solidity 0.8.28;
 
 import {CrossMintableERC20V2} from "../src/token/CrossMintableERC20V2.sol";
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 /**
  * @title CrossMintableERC20V2Script
- * @notice CrossMintableERC20V2 토큰 배포 스크립트
- * @dev Bridge에서 mint/burn 가능한 ERC20 토큰을 독립적으로 배포합니다.
- *      CrossMintableERC20V2Code를 통한 자동 생성과 달리, 수동으로 토큰을 배포할 때 사용합니다.
+ * @notice CrossMintableERC20V2 토큰을 `CrossMintableERC20V2Code` 팩토리 없이 독립적으로 배포
+ * @dev 개정 3(BeaconProxy 전환)부터 토큰은 상수생성자 대신 `initialize`를 쓰고, 생성자에서
+ *      `_disableInitializers()`를 호출하므로 `new CrossMintableERC20V2(...)`로 곧장 초기화할
+ *      수 없다 — 반드시 `BeaconProxy`를 거쳐야 한다. 팩토리를 쓰지 않는 이 독립 배포 경로는
+ *      매 호출마다 전용 1회용 `UpgradeableBeacon`을 만들어 `initialOwner`에게 소유시킨다
+ *      (팩토리가 만드는 토큰들과 달리 다른 토큰과 beacon을 공유하지 않음 — 한 토큰만 관리하는
+ *      한도 내에서 계속 업그레이드 가능하게 하려는 목적).
  *
  * 사용법:
  *   forge script script/CrossMintableERC20V2.s.sol:CrossMintableERC20V2Script \
@@ -21,8 +27,8 @@ contract CrossMintableERC20V2Script is Script {
     function setUp() public {}
 
     /**
-     * @notice CrossMintableERC20V2 토큰 배포
-     * @param initialOwner 토큰의 Admin 권한을 가질 주소
+     * @notice CrossMintableERC20V2 토큰을 전용 beacon과 함께 배포
+     * @param initialOwner 토큰의 `defaultAdmin()`이 될 주소 (이 배포의 전용 beacon `owner()`도 됨)
      * @param initialMinter mint 권한을 가질 주소 (보통 Bridge 컨트랙트)
      * @param name 토큰 이름 (예: "Wrapped BTC")
      * @param symbol 토큰 심볼 (예: "WBTC")
@@ -35,9 +41,18 @@ contract CrossMintableERC20V2Script is Script {
         string memory symbol,
         uint8 decimals
     ) public {
-        vm.broadcast();
-        CrossMintableERC20V2 token = new CrossMintableERC20V2(initialOwner, initialMinter, name, symbol, decimals);
-        console.log("CrossMintableERC20V2 deployed to:", address(token));
+        vm.startBroadcast();
+        CrossMintableERC20V2 implementation = new CrossMintableERC20V2();
+        UpgradeableBeacon beacon = new UpgradeableBeacon(address(implementation), initialOwner);
+        BeaconProxy proxy = new BeaconProxy(
+            address(beacon),
+            abi.encodeCall(CrossMintableERC20V2.initialize, (initialOwner, initialMinter, name, symbol, decimals))
+        );
+        vm.stopBroadcast();
+
+        console.log("CrossMintableERC20V2 implementation deployed to:", address(implementation));
+        console.log("CrossMintableERC20V2 beacon (owner, must be multisig/timelock) deployed to:", address(beacon));
+        console.log("CrossMintableERC20V2 deployed to:", address(proxy));
     }
 }
 
