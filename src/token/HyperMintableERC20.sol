@@ -68,8 +68,8 @@ contract HyperMintableERC20 is CrossMintableERC20V2, IHyperMintableERC20 {
     ///      own ERC-7201 storage instead (see `decimals()`, inherited unchanged), so
     ///      `factoryLinker` occupies bytes 10-29 of this storage location. A beacon
     ///      implementation whose struct instead reserves a byte for `decimals` here uses a
-    ///      DIFFERENT layout at this same location and is not upgrade-compatible with this one
-    ///      without first migrating that slot.
+    ///      DIFFERENT layout at this same location and is NOT upgrade-compatible with this one:
+    ///      swapping between the two would reinterpret `factoryLinker`'s bytes.
     struct HyperMintableERC20Storage {
         // Packed into a single slot: 8 + 1 + 1 + 20 = 30 bytes.
         uint64 coreTokenIndex; // bytes 0-7

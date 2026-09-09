@@ -46,7 +46,7 @@ contract CrossBridge is BaseBridge, ICrossBridge {
     /// @dev Maximum issuance limit for CROSS native token on the Cross chain
     uint public crossSupplyLimit;
 
-    /// @dev BSC chain ID (e.g., 56 for mainnet, 97 for Sepolia testnet, or other chain IDs)
+    /// @dev BSC chain ID (56 for BNB Smart Chain mainnet, 97 for its testnet)
     uint private _bscChainID;
 
     /// @dev Storage gap for future upgrades
