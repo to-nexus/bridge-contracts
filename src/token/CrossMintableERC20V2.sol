@@ -14,13 +14,12 @@ import {ERC20PermitUpgradeable} from
  * @title CrossMintableERC20V2
  * @notice Upgradeable wrapped bridge token, deployed as a `BeaconProxy` so every token created by
  *         a `CrossMintableERC20V2Code` factory shares one `UpgradeableBeacon` — a single beacon
- *         upgrade fixes a defect in every already-deployed token at once. Replaces the earlier
- *         non-upgradeable design, where the same fix required a costly migration (deploy a new
- *         token, remap the pair, move liquidity over) — a real cost paid once already on
- *         HyperEVM, where `67e18` of the old token remain stranded.
+ *         upgrade fixes a defect in every already-deployed token at once. A non-upgradeable
+ *         token cannot be fixed in place: every change would instead require deploying a new
+ *         token, remapping its pair, and moving liquidity across.
  * @dev `immutable` state cannot be used behind a proxy — it is baked into the logic contract's
  *      own bytecode, not the proxy's storage — so `decimals` lives in ERC-7201 namespaced
- *      storage here instead of the `immutable` field the old design used.
+ *      storage here.
  *
  *      This token has no `bridge`/admin storage of its own: `initialize`'s `initialOwner`
  *      becomes `defaultAdmin()` via `AccessControlDefaultAdminRules`, and the creating factory

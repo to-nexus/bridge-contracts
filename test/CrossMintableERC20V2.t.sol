@@ -69,7 +69,7 @@ contract CrossMintableERC20V2Test is Test {
     address public bridge; // BRIDGE_ROLE on the factory, MINTER_ROLE on tokens created via the legacy path
     address public user;
 
-    uint internal constant REMOTE_CHAIN_ID = 998;
+    uint internal constant REMOTE_CHAIN_ID = 998; // HyperEVM testnet
     address internal constant REMOTE_TOKEN = address(0xBEEF);
     string internal constant SYMBOL = "TT";
     uint8 internal constant DECIMALS = 18;
