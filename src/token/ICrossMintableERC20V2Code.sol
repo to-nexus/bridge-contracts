@@ -9,7 +9,7 @@ import {ICrossMintableERC20Code} from "./ICrossMintableERC20Code.sol";
  *         `CrossMintableERC20V2Code` factory's own surface: an explicit name/symbol/minter
  *         creation path, CREATE2 address prediction for both paths, the shared beacon, and the
  *         owner-only pass-through management functions that stand in for a per-token admin now
- *         that every created token's `defaultAdmin()` is the factory itself (D7).
+ *         that every created token's `defaultAdmin()` is the factory itself.
  */
 interface ICrossMintableERC20V2Code is ICrossMintableERC20Code {
     /**
@@ -27,7 +27,7 @@ interface ICrossMintableERC20V2Code is ICrossMintableERC20Code {
 
     /**
      * @notice This factory already created a token for `(remoteChainID, remoteToken)`
-     * @dev Enforced identically by both creation paths (R10) so crossing paths, changing the
+     * @dev Enforced identically by both creation paths so crossing paths, changing the
      *      name/symbol, or changing the minter cannot bypass the one-token-per-pair guard.
      * @param remoteChainID Chain ID of the remote token
      * @param remoteToken Address of the remote token
@@ -38,6 +38,12 @@ interface ICrossMintableERC20V2Code is ICrossMintableERC20Code {
     /**
      * @notice Emitted when a `CrossMintableERC20V2` is deployed by this factory, by either
      *         creation path
+     * @dev Emitted from the overridable `_emitCreated` hook. A subclass factory
+     *      that already ships its own legacy creation event (see
+     *      `IHyperMintableERC20Code.HyperMintableERC20Created`) overrides that hook to emit BOTH
+     *      events, in the same transaction, for the SAME token creation — a consumer subscribed
+     *      to both topics MUST deduplicate by transaction hash or by `tokenAddress`, never treat
+     *      them as two separate creations.
      * @param remoteChainID Chain ID of the remote token this local token wraps
      * @param remoteToken Address of the remote token
      * @param tokenAddress Address of the newly deployed `CrossMintableERC20V2`
@@ -53,7 +59,7 @@ interface ICrossMintableERC20V2Code is ICrossMintableERC20Code {
      *      `BeaconProxy`-over-`beacon()` deployment shape as `createCrossMintableERC20` — only
      *      the initcode's name/symbol/minter inputs differ. Restricted to `Const.ADMIN_ROLE`.
      *      Reverts with `CrossMintableERC20V2CodePairAlreadyCreated` if this factory already
-     *      created a token for `(remoteChainID, remoteToken)` — via either creation path (R10).
+     *      created a token for `(remoteChainID, remoteToken)` — via either creation path.
      * @param remoteChainID Chain ID of the remote token this local token wraps
      * @param remoteToken Address of the remote token
      * @param name_ ERC20 name
@@ -122,7 +128,7 @@ interface ICrossMintableERC20V2Code is ICrossMintableERC20Code {
     /**
      * @notice The `UpgradeableBeacon` every `CrossMintableERC20V2` created by this factory points
      *         at
-     * @dev Created and owned by this factory itself inside `initialize` (D8) — there is no
+     * @dev Created and owned by this factory itself inside `initialize` — there is no
      *      separate beacon deployment or ownership hand-off step. Only its address (never the
      *      implementation it currently resolves to) is embedded in a token's initcode, so
      *      upgrading it never moves future CREATE2 predictions.
@@ -140,7 +146,7 @@ interface ICrossMintableERC20V2Code is ICrossMintableERC20Code {
     /**
      * @notice Returns the token this factory created for `(remoteChainID, remoteToken)`, or the
      *         zero address if none exists yet
-     * @dev Backs the one-token-per-pair guard (R10): both creation paths consult and update the
+     * @dev Backs the one-token-per-pair guard: both creation paths consult and update the
      *      same mapping, so a duplicate cannot be created by crossing paths, changing the name,
      *      or changing the minter.
      * @param remoteChainID Chain ID of the remote token
@@ -151,7 +157,7 @@ interface ICrossMintableERC20V2Code is ICrossMintableERC20Code {
 
     /**
      * @notice Upgrades the shared token beacon — reflected in EVERY token this factory created,
-     *         immediately (AR-9)
+     *         immediately
      * @dev Restricted to `Const.ADMIN_ROLE`. There is no staged/partial rollout: verify the new
      *      implementation thoroughly before calling this.
      * @param newImplementation New `CrossMintableERC20V2` logic address

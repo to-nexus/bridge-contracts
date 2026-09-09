@@ -701,7 +701,7 @@ contract BaseBridge is
      * @notice Hook invoked from `_finalizeBridge`, before the executor whitelist/approve
      * gates, when extraData parses to a target contract + method ID.
      * @dev Base implementation is a no-op that never expects a forward. Override in
-     * relay-hub bridges (e.g. CrossBridgeV2) to stage a forward context when the parsed
+     * relay-hub bridges (e.g. CrossBridge) to stage a forward context when the parsed
      * target/methodID is that bridge's own forwarded entrypoint.
      * @return forwardExpected True if `_forwardEnd` must be called for this item.
      */
@@ -772,7 +772,7 @@ contract BaseBridge is
 
             // Forward hook: stage a forward context if this item's target/methodID is a
             // forward-capable entrypoint (no-op in BaseBridge; overridden by relay-hub
-            // bridges such as CrossBridgeV2). When `fwd.expected` is true, `_forwardEnd`
+            // bridges such as CrossBridge). When `fwd.expected` is true, `_forwardEnd`
             // MUST be called on every exit path below, including the early success
             // `return`, so a staged context never leaks into the next finalize batch
             // item. Grouped into a single memory struct (rather than separate locals)
@@ -827,7 +827,8 @@ contract BaseBridge is
                     // Even if clearing allowance fails, no security issue exists since
                     // executor cannot be called by unauthorized parties.
                     // The unused return value is deliberate: compiler warning 9302 here is
-                    // a known-harmless finding (see plan spec §16 acceptance criterion 10).
+                    // a known-harmless finding, since a failed allowance-clear leaves no
+                    // exploitable state as explained above.
                     if (isERC20) address(toToken).call(abi.encodeCall(IERC20.approve, (executor, 0)));
 
                     if (fwd.ok && fwd.result.length >= 64) {

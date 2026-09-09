@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 
 import {ForwardLibVerify} from "../script/ForwardLibVerify.s.sol";
-import {CrossBridgeV2} from "../src/CrossBridgeV2.sol";
+import {CrossBridge} from "../src/CrossBridge.sol";
 import {ForwardLib} from "../src/lib/ForwardLib.sol";
 
 /**
@@ -16,10 +16,10 @@ import {ForwardLib} from "../src/lib/ForwardLib.sol";
  * instance's `verify(...)` — never this harness's own (inherited but unused) copy.
  */
 contract ForwardLibVerifyHarness is ForwardLibVerify {
-    /// @dev Builds the REAL, correctly-linked `CrossBridgeV2` runtime bytecode a genuine
+    /// @dev Builds the REAL, correctly-linked `CrossBridge` runtime bytecode a genuine
     /// deployment at `implAddr` linked against `libAddr` would have: the build
     /// artifact's own template, with every `ForwardLib` link-reference offset patched to
-    /// `libAddr` and `CrossBridgeV2`'s own `UUPSUpgradeable.__self` immutable patched to
+    /// `libAddr` and `CrossBridge`'s own `UUPSUpgradeable.__self` immutable patched to
     /// `implAddr`.
     function buildGenuineImplRuntime(address implAddr, address libAddr) external view returns (bytes memory) {
         string memory json = vm.readFile(HOST_ARTIFACT_PATH);
@@ -69,8 +69,8 @@ contract ForwardLibVerifyHarness is ForwardLibVerify {
         _patchAllImmutableReferences(template, json, ".deployedBytecode.immutableReferences", libSelfAddr);
     }
 
-    /// @dev M-1: reads the ACTUALLY-linked `ForwardLib` address straight out of `impl`'s
-    /// real deployed runtime bytecode, at the offset(s) the `CrossBridgeV2` build
+    /// @dev Reads the ACTUALLY-linked `ForwardLib` address straight out of `impl`'s
+    /// real deployed runtime bytecode, at the offset(s) the `CrossBridge` build
     /// artifact declares as `ForwardLib` link references — the address is discovered,
     /// never assumed by the caller. Reuses `verify(...)`'s own offset-discovery logic
     /// (`_collectForwardLibOffsets`/`_readAddress`) so this is exactly what `verify`
@@ -85,9 +85,9 @@ contract ForwardLibVerifyHarness is ForwardLibVerify {
 
 /**
  * @title ForwardLibVerifyTest
- * @notice Self-tests for `script/ForwardLibVerify.s.sol`, per plan spec §7.5 / issue
- * plan H-1 item 4: the verifier itself needs unit coverage, not just a happy-path smoke
- * run, since a bug in the verifier is exactly as dangerous as no verifier at all.
+ * @notice Self-tests for `script/ForwardLibVerify.s.sol`: the verifier itself needs unit
+ * coverage, not just a happy-path smoke run, since a bug in the verifier is exactly as
+ * dangerous as no verifier at all.
  * @dev Four required cases: (1) genuinely correct link -> passes, (2) wrong library
  * address -> rejected, (3) right library address but different code deployed there ->
  * rejected (codehash mismatch), (4) an implementation that happens to contain the
@@ -117,7 +117,7 @@ contract ForwardLibVerifyTest is Test {
         require(addr != address(0), "ForwardLib deployment failed");
     }
 
-    /// @notice M-1: a REAL, genuinely compiled-and-linked `CrossBridgeV2` (not a
+    /// @notice A REAL, genuinely compiled-and-linked `CrossBridge` (not a
     /// synthetic runtime built from the verifier's own patching helpers) must pass
     /// `verify(...)` against its ACTUALLY linked `ForwardLib` address, discovered from
     /// the artifact-declared relocation offsets rather than assumed by the test.
@@ -127,7 +127,7 @@ contract ForwardLibVerifyTest is Test {
     /// (or forge's actual linker/deployment output) are correct in the first place. This
     /// test closes that gap with a genuinely deployed host contract.
     function test_verify_realDeployedImplementation_passes() public {
-        CrossBridgeV2 impl = new CrossBridgeV2();
+        CrossBridge impl = new CrossBridge();
         address actualLib = harness.discoverLinkedLibAddress(address(impl));
         assertTrue(actualLib.code.length > 0, "discovered library address must have code");
 
@@ -185,7 +185,7 @@ contract ForwardLibVerifyTest is Test {
     /// @notice (4) `libAddr`'s bytes sit at every offset the compiler declared as a
     /// `ForwardLib` relocation, and the self-address immutable is correctly patched too
     /// — but everything else in the "implementation" is arbitrary filler, not real
-    /// compiled `CrossBridgeV2` code. A verifier that only checked the 20 bytes at each
+    /// compiled `CrossBridge` code. A verifier that only checked the 20 bytes at each
     /// offset (a pattern scan) would be fooled by this; the wholesale runtime-hash check
     /// must still reject it.
     function test_verify_coincidentalAddressMatch_reverts() public {

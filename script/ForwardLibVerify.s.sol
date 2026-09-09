@@ -5,11 +5,11 @@ import {Script, console} from "forge-std/Script.sol";
 
 /**
  * @title ForwardLibVerify
- * @notice READ-ONLY deployment-integrity gate for `CrossBridgeV2`'s `ForwardLib` link
- * (plan spec §7.5 / §14.6, issue plan H-1). Sends NO transactions — there is no
+ * @notice READ-ONLY deployment-integrity gate for `CrossBridge`'s `ForwardLib` link.
+ * Sends NO transactions — there is no
  * `vm.broadcast`/`vm.startBroadcast` anywhere in this file. It only reads on-chain code
  * and the local build artifact, and reverts if anything is wrong.
- * @dev Usage (run against an ALREADY-DEPLOYED, but not-yet-promoted, `CrossBridgeV2`
+ * @dev Usage (run against an ALREADY-DEPLOYED, but not-yet-promoted, `CrossBridge`
  * implementation, BEFORE pointing the proxy at it):
  *
  *   forge script script/ForwardLibVerify.s.sol \
@@ -24,14 +24,14 @@ import {Script, console} from "forge-std/Script.sol";
  * Checks performed (all read-only):
  *   1. `lib.code.length > 0` — the configured `ForwardLib` address actually has code.
  *   2. `lib.codehash` matches the `ForwardLib` build artifact's runtime codehash.
- *   3. Every `ForwardLib` link-reference offset recorded in the `CrossBridgeV2` build
+ *   3. Every `ForwardLib` link-reference offset recorded in the `CrossBridge` build
  *      artifact, when read directly out of `impl`'s ACTUAL deployed runtime bytecode,
  *      contains exactly `lib`'s address (rejects a partially-relinked or mismatched
  *      implementation).
  *   4. The build artifact's unlinked runtime template, with every one of those offsets
  *      patched to `lib`, hashes to EXACTLY `impl.codehash` — proving the entire deployed
  *      runtime (not just the 20 bytes at each link offset) matches what the compiler
- *      produced for `CrossBridgeV2` with `ForwardLib` correctly linked. This is strictly
+ *      produced for `CrossBridge` with `ForwardLib` correctly linked. This is strictly
  *      stronger than (3) alone: (3) only proves "an address sits at that offset", not
  *      that the rest of the bytecode wasn't tampered with or built from a different
  *      source.
@@ -49,12 +49,12 @@ contract ForwardLibVerify is Script {
     string internal constant LIB_ARTIFACT = "ForwardLib.sol:ForwardLib";
 
     /// @notice Path to the host contract's build artifact, read via `vm.readFile`.
-    string internal constant HOST_ARTIFACT_PATH = "out/CrossBridgeV2.sol/CrossBridgeV2.json";
+    string internal constant HOST_ARTIFACT_PATH = "out/CrossBridge.sol/CrossBridge.json";
 
     /// @notice Path to the library's own build artifact, read via `vm.readFile`.
     string internal constant LIB_ARTIFACT_JSON_PATH = "out/ForwardLib.sol/ForwardLib.json";
 
-    /// @notice The only external library `CrossBridgeV2` is expected to link against.
+    /// @notice The only external library `CrossBridge` is expected to link against.
     string internal constant EXPECTED_LIB_NAME = "ForwardLib";
 
     /// @notice Fully-qualified library name as the compiler records it under
@@ -76,7 +76,7 @@ contract ForwardLibVerify is Script {
 
     /**
      * @notice Entry point for `forge script --sig 'run(address,address)'`.
-     * @param impl The already-deployed (not-yet-promoted) `CrossBridgeV2` implementation.
+     * @param impl The already-deployed (not-yet-promoted) `CrossBridge` implementation.
      * @param lib The `ForwardLib` address `impl` is expected to be linked against.
      */
     function run(address impl, address lib) external view {
@@ -113,7 +113,7 @@ contract ForwardLibVerify is Script {
      * fail for a correctly deployed library. This patches that self-address placeholder
      * to `lib`'s own address (mirroring what `lib`'s constructor did at deploy time)
      * before hashing, exactly analogous to how `_verifyLinkedImplementation` patches
-     * `CrossBridgeV2`'s `ForwardLib` link-reference offsets.
+     * `CrossBridge`'s `ForwardLib` link-reference offsets.
      */
     function _verifyLibCode(address lib) internal view {
         if (lib.code.length == 0) revert ForwardLibVerifyLibHasNoCode(lib);
@@ -140,7 +140,7 @@ contract ForwardLibVerify is Script {
      * must be patched before a wholesale runtime-hash comparison can succeed:
      *   - `ForwardLib`'s own compiler-inserted "reject direct CALL" guard, which compares
      *     `ADDRESS` against the library's own deployment address.
-     *   - `CrossBridgeV2`'s inherited `UUPSUpgradeable.__self` (`address(this)` captured
+     *   - `CrossBridge`'s inherited `UUPSUpgradeable.__self` (`address(this)` captured
      *     as a Solidity `immutable`), used by its `onlyProxy`/`notDelegated` checks.
      * Both are ordinary Solidity/Yul immutables from the EVM's point of view; only the
      * caller decides which `addr` they should be patched to (the library's own address
@@ -173,7 +173,7 @@ contract ForwardLibVerify is Script {
 
         // NOTE: deliberately NOT `vm.parseJsonBytes` here — on the installed forge-std
         // toolchain, `parseJsonBytes`/`vm.parseBytes` fail to parse a hex string this
-        // long (~22KB, CrossBridgeV2 being close to the EIP-170 limit). Reading the raw
+        // long (~22KB, CrossBridge being close to the EIP-170 limit). Reading the raw
         // JSON string and hex-decoding it ourselves sidesteps that toolchain limitation.
         bytes memory unlinkedTemplate = _hexToBytes(vm.parseJsonString(json, ".deployedBytecode.object"));
         bytes memory implRuntime = impl.code;
@@ -199,7 +199,7 @@ contract ForwardLibVerify is Script {
             // Patch the unlinked template in place for the wholesale check below.
             _writeAddress(unlinkedTemplate, offset, lib);
         }
-        // offsets.length == 0 means CrossBridgeV2 was already fully linked at build time
+        // offsets.length == 0 means CrossBridge was already fully linked at build time
         // (built with `--libraries`), so there are no relocations left to extract and
         // step (3)'s per-relocation proof cannot run. Recover the equivalent guarantee
         // from the artifact's own metadata: the compiler records the address it linked
@@ -208,7 +208,7 @@ contract ForwardLibVerify is Script {
         // artifact linked to some OTHER library address.
         if (offsets.length == 0) _verifyPrelinkedDeclaration(json, lib);
 
-        // CrossBridgeV2 also carries its OWN self-address immutable (inherited from
+        // CrossBridge also carries its OWN self-address immutable (inherited from
         // `UUPSUpgradeable`, see `_patchAllImmutableReferences`'s doc) — patch that to
         // `impl`'s own address too, or the wholesale hash below can never match.
         _patchAllImmutableReferences(unlinkedTemplate, json, ".deployedBytecode.immutableReferences", impl);
@@ -245,7 +245,7 @@ contract ForwardLibVerify is Script {
      * compiler filed it under. Reverts if any link reference is filed under a name other
      * than `ForwardLib` (an unexpected external library would mean this script's
      * assumptions are stale) or if none is found (`length == 0`) is the caller's signal
-     * that `CrossBridgeV2` was already fully linked at build time.
+     * that `CrossBridge` was already fully linked at build time.
      */
     function _collectForwardLibOffsets(string memory json) internal pure returns (uint[] memory offsets) {
         string memory basePath = ".deployedBytecode.linkReferences";

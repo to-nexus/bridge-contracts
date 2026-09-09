@@ -10,6 +10,7 @@ import {IBridgeRegistry} from "../../src/interface/IBridgeRegistry.sol";
 import {CrossMintableERC20} from "../../src/token/CrossMintableERC20.sol";
 import {CrossMintableERC20Code} from "../../src/token/CrossMintableERC20Code.sol";
 import {ICrossMintableERC20Code} from "../../src/token/ICrossMintableERC20Code.sol";
+import {CrossBridgeLegacy} from "../legacy/CrossBridgeLegacy.sol";
 import {SettingTest} from "./Setting.t.sol";
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -37,11 +38,28 @@ contract CrossChainTest is SettingTest {
         // bridge setup
         {
             // bridge
-            CrossBridge bridgeCrossImpl = new CrossBridge();
+            // Deployed+initialized via `CrossBridgeLegacy`, NOT
+            // `CrossBridge`: post-rename `CrossBridge` (formerly `CrossBridgeV2`) has no
+            // functional initializer at all — `initialize` permanently reverts and
+            // `initializeCrossBridge` is preserved only as a non-callable comment. Every test
+            // that needs a working CROSS-side bridge therefore MUST go through the same
+            // Legacy-deploy-then-upgrade path production will (see `CrossBridgeForwardTest`,
+            // which upgrades `bridgeCross` to `CrossBridge` itself, and
+            // `CrossBridgeUpgradeTest`, which captures this exact pre-upgrade state). This
+            // shared base fixture deliberately stops at the Legacy stage — it does NOT upgrade
+            // to `CrossBridge` — so both of those test files' own upgrade step is meaningful
+            // rather than a no-op. `bridgeCross` stays typed/used as `CrossBridge` throughout
+            // this file because every function called on it below (`crossSupply`,
+            // `setCrossSupplyLimit`, `bridgeToken`, `finalizeBridgeBatch`, role management,
+            // `createToken`, ...) is identical on both contracts (`CrossBridgeLegacy` is a
+            // frozen, byte-for-byte copy of the pre-rename `CrossBridge`, storage- and
+            // ABI-compatible with the post-rename one for everything except
+            // `initializeCrossBridge` itself and the new `bridgeTokenForwarded` surface).
+            CrossBridgeLegacy bridgeCrossImpl = new CrossBridgeLegacy();
             ERC1967Proxy bridgeCrossProxy = new ERC1967Proxy(address(bridgeCrossImpl), bytes(""));
             bridgeCross = CrossBridge(payable(address(bridgeCrossProxy)));
             vm.deal(address(bridgeCross), INITIAL_SUPPLY - CROSS_FOUNDATION_INITIAL_SUPPLY);
-            bridgeCross.initializeCrossBridge(
+            CrossBridgeLegacy(payable(address(bridgeCrossProxy))).initializeCrossBridge(
                 CrossOWNER, REWARD, threshold, BSC_CHAIN_ID, address(cross), CROSS_FOUNDATION_INITIAL_SUPPLY
             );
 

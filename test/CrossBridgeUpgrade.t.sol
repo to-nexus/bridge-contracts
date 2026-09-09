@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {CrossBridge} from "../src/CrossBridge.sol";
-import {CrossBridgeV2} from "../src/CrossBridgeV2.sol";
+import {CrossBridge} from "../src/CrossBridge.sol";
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
 import {Const} from "../src/lib/Const.sol";
 
@@ -12,20 +12,20 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
- * @title CrossBridgeV2UpgradeTest
- * @notice M-4 (plan spec §8 / §14.7): upgrade storage-layout integrity and
+ * @title CrossBridgeUpgradeTest
+ * @notice Upgrade storage-layout integrity and
  * initializer-sealing regression suite. Fixture follows the same upgrade order as
- * `CrossBridgeV2ForwardTest` (`CrossBridge` deployed/initialized exactly as in the base
- * fixture, upgraded to `CrossBridgeV2` INSIDE each test rather than in `setUp` — so
+ * `CrossBridgeForwardTest` (`CrossBridge` deployed/initialized exactly as in the base
+ * fixture, upgraded to `CrossBridge` INSIDE each test rather than in `setUp` — so
  * every test can capture pre-upgrade state to compare against).
  */
-contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
+contract CrossBridgeUpgradeTest is BridgeExecutorTest {
     /// @dev `_bscChainID`'s storage slot, identical in `CrossBridge` and
-    /// `CrossBridgeV2` — confirmed via `forge inspect CrossBridge storageLayout` and
-    /// `forge inspect CrossBridgeV2 storageLayout` (both report slot 101). `_bscChainID`
+    /// `CrossBridge` — confirmed via `forge inspect CrossBridge storageLayout` and
+    /// `forge inspect CrossBridge storageLayout` (both report slot 101). `_bscChainID`
     /// is `private` with no getter, so this is the only direct way to compare it
-    /// byte-for-byte across the upgrade; §2 below additionally proves it BEHAVIORALLY
-    /// via `crossSupply()`.
+    /// byte-for-byte across the upgrade; the behavioral check below additionally proves
+    /// it BEHAVIORALLY via `crossSupply()`.
     bytes32 internal constant BSC_CHAIN_ID_SLOT = bytes32(uint(101));
 
     function setUp() public virtual override {
@@ -86,8 +86,8 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
 
     /// @notice Every piece of pre-upgrade state (roles, token pairs, initiate/finalize
     /// index progress, `crossSupplyLimit`, and the private `_bscChainID`) survives an
-    /// upgrade to `CrossBridgeV2` unchanged — proving the identical storage-layout
-    /// redeclaration (plan spec §6.2/§8) is correct.
+    /// upgrade to `CrossBridge` unchanged — proving the identical storage-layout
+    /// redeclaration is correct.
     function test_upgrade_preservesStorage() public {
         vm.selectFork(crossForkID);
 
@@ -129,10 +129,10 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
         uint crossSupplyLimitBefore = bridgeCross.crossSupplyLimit();
         bytes32 bscChainIDSlotBefore = vm.load(address(bridgeCross), BSC_CHAIN_ID_SLOT);
 
-        CrossBridgeV2 newImpl = new CrossBridgeV2();
+        CrossBridge newImpl = new CrossBridge();
         vm.prank(CrossOWNER);
         bridgeCross.upgradeToAndCall(address(newImpl), bytes(""));
-        CrossBridgeV2 bridgeCrossV2 = CrossBridgeV2(payable(address(bridgeCross)));
+        CrossBridge bridgeCrossV2 = CrossBridge(payable(address(bridgeCross)));
 
         // (1) Slot comparison for the private, getter-less `_bscChainID`.
         bytes32 bscChainIDSlotAfter = vm.load(address(bridgeCross), BSC_CHAIN_ID_SLOT);
@@ -178,25 +178,25 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
     }
 
     /// @notice Post-upgrade, `initialize(...)` (inherited from `BaseBridge`, overridden
-    /// in `CrossBridgeV2` as a permanent revert stub) is sealed shut.
+    /// in `CrossBridge` as a permanent revert stub) is sealed shut.
     function test_upgrade_initializeSealed() public {
         vm.selectFork(crossForkID);
-        CrossBridgeV2 newImpl = new CrossBridgeV2();
+        CrossBridge newImpl = new CrossBridge();
         vm.prank(CrossOWNER);
         bridgeCross.upgradeToAndCall(address(newImpl), bytes(""));
-        CrossBridgeV2 bridgeCrossV2 = CrossBridgeV2(payable(address(bridgeCross)));
+        CrossBridge bridgeCrossV2 = CrossBridge(payable(address(bridgeCross)));
 
-        vm.expectRevert(CrossBridgeV2.Disabled.selector);
+        vm.expectRevert(CrossBridge.Disabled.selector);
         bridgeCrossV2.initialize(CrossOWNER, REWARD, threshold);
     }
 
-    /// @notice `CrossBridgeV2` does not inherit `CrossBridge`, so `initializeCrossBridge`
+    /// @notice `CrossBridge` does not inherit `CrossBridge`, so `initializeCrossBridge`
     /// does not exist on it at all post-upgrade — not merely reverting, genuinely absent
     /// (a raw call with its selector fails to resolve to any function and reverts via
     /// the EVM's default no-matching-selector/no-fallback behavior).
     function test_upgrade_initializeCrossBridgeGone() public {
         vm.selectFork(crossForkID);
-        CrossBridgeV2 newImpl = new CrossBridgeV2();
+        CrossBridge newImpl = new CrossBridge();
         vm.prank(CrossOWNER);
         bridgeCross.upgradeToAndCall(address(newImpl), bytes(""));
 
@@ -210,18 +210,18 @@ contract CrossBridgeV2UpgradeTest is BridgeExecutorTest {
             CROSS_FOUNDATION_INITIAL_SUPPLY
         );
         (bool ok,) = address(bridgeCross).call(data);
-        assertFalse(ok, "initializeCrossBridge selector must not exist on CrossBridgeV2");
+        assertFalse(ok, "initializeCrossBridge selector must not exist on CrossBridge");
     }
 
-    /// @notice `crossSupplyLimit`'s circuit-breaker (§6.1: unchanged CrossBridge logic,
-    /// only inherited via CrossBridgeV2's override of `_checkFinalizeAmount`) still
+    /// @notice `crossSupplyLimit`'s circuit-breaker (unchanged CrossBridge logic,
+    /// only inherited via CrossBridge's override of `_checkFinalizeAmount`) still
     /// enforces correctly post-upgrade.
     function test_upgrade_crossSupplyLimitStillEnforced() public {
         vm.selectFork(crossForkID);
-        CrossBridgeV2 newImpl = new CrossBridgeV2();
+        CrossBridge newImpl = new CrossBridge();
         vm.prank(CrossOWNER);
         bridgeCross.upgradeToAndCall(address(newImpl), bytes(""));
-        CrossBridgeV2 bridgeCrossV2 = CrossBridgeV2(payable(address(bridgeCross)));
+        CrossBridge bridgeCrossV2 = CrossBridge(payable(address(bridgeCross)));
 
         vm.prank(CrossOWNER);
         bridgeCrossV2.setCrossSupplyLimit(10 ether + CROSS_FOUNDATION_INITIAL_SUPPLY);

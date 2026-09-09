@@ -14,7 +14,7 @@ import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol"
 
 import {CrossMintableERC20Code} from "../src/token/CrossMintableERC20Code.sol";
 import {MockTargetContract} from "./BridgeExecutor.t.sol";
-import {CrossBridgeV2ForwardTest} from "./CrossBridgeV2Forward.t.sol";
+import {CrossBridgeForwardTest} from "./CrossBridgeForward.t.sol";
 
 import {TestToken} from "./token/TestToken.sol";
 
@@ -24,24 +24,24 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {Vm} from "forge-std/Vm.sol";
 
 /**
- * @title CrossBridgeV2MultihopTest
- * @notice M-2 (plan spec §14.5) + M-3 (plan spec §14.3/§6.1): genuine three-bridge
- * A -> B -> C end-to-end coverage and `crossSupply()` pass-through accounting.
+ * @title CrossBridgeMultihopTest
+ * @notice Genuine three-bridge A -> B -> C end-to-end coverage and `crossSupply()`
+ * pass-through accounting.
  * @dev "Chain C" is a THIRD real, independently deployed `BSCBridge` instance (its own
  * `BridgeVerifier`/`PriceFeed`/`BridgeExecutor`/target contract) — not a mock, not a
  * fabricated signed message. It is deployed on the SAME underlying fork as `crossForkID`
  * (a separate CONTRACT instance representing a separate real chain, exactly as
- * `bridgeBSC` and `bridgeCross` already coexist as two independent contracts before this
- * round). "Chain A" for the native E2E test is the fixture's real `bridgeBSC`, driven
- * through its genuine `bridgeToken` entrypoint (`_hop1NativeAndFinalize`, inherited).
- * For the ERC20-both-origin E2E, chain A is represented the same way the pre-existing,
- * already-reviewed D1 tests represent an origin-chain message (a validly signed
+ * `bridgeBSC` and `bridgeCross` already coexist as two independent contracts). "Chain A"
+ * for the native E2E test is the fixture's real `bridgeBSC`, driven through its genuine
+ * `bridgeToken` entrypoint (`_hop1NativeAndFinalize`, inherited).
+ * For the ERC20-both-origin E2E, chain A is represented the same way the existing
+ * pass-through tests represent an origin-chain message (a validly signed
  * `_signAndFinalize` call) — hub-origin assets have no real chain-A contract to
  * originate from in this fixture (BSC's own registered tokens are not hub-origin), and a
  * validator-signed finalize IS the system's actual trust mechanism for "chain A said
  * so"; hop-2's finalize on chain C is what matters for genuineness and IS fully real.
  */
-contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
+contract CrossBridgeMultihopTest is CrossBridgeForwardTest {
     uint internal constant CHAIN_C_ID = 90999;
     uint internal constant CHAIN_A_ID = 90501;
 
@@ -54,7 +54,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     ICrossMintableERC20Code internal crossMintableERC20CodeChainC;
     TestToken internal chainCLocalCrossToken;
 
-    // H-1: a REAL, independently deployed chain-A leaf bridge (mirrors `bridgeChainC`'s
+    // A REAL, independently deployed chain-A leaf bridge (mirrors `bridgeChainC`'s
     // deployment pattern) holding a WRAPPED representation of the hub-origin ERC20, so
     // the ERC20 A -> B -> C E2E test can genuinely originate hop-1 on chain A instead of
     // faking it via a signed message.
@@ -114,7 +114,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         // Native pair: chain C's own native coin <-> CROSS's native coin. Both
         // non-origin (mirrors how CROSS/BSC each treat their OWN native relative to the
         // counterpart chain — native never mints/burns regardless of this flag; it only
-        // controls deposited/minted BOOKKEEPING, spec §6.1).
+        // controls deposited/minted BOOKKEEPING).
         bridgeChainC.registerToken(CROSS_CHAIN_ID, false, address(NATIVE_TOKEN), address(NATIVE_TOKEN));
         vm.deal(address(bridgeChainC), 1_000 ether);
 
@@ -127,11 +127,11 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         // CROSS's own registration for CHAIN_C_ID's native pair: isOrigin=true, so
         // `_checkInitiateAmount`'s `minted >= value` precondition (which only applies to
         // NOT-origin pairs) never gates outbound forwards to chain C — no pre-seeding
-        // needed. (Native pass-through itself is unconditional either way per D1.)
+        // needed. (Native pass-through itself is unconditional either way.)
         vm.prank(CrossOWNER);
         bridgeCross.registerToken(CHAIN_C_ID, true, address(NATIVE_TOKEN), address(NATIVE_TOKEN));
 
-        // H-1: deploy chain A's bridge exactly like a real leaf bridge (same pattern as
+        // Deploy chain A's bridge exactly like a real leaf bridge (same pattern as
         // chain C above), registered symmetrically to CROSS_CHAIN_ID. No native pair, no
         // executor/target: this fixture only needs chain A to originate a REAL ERC20
         // `bridgeToken` call whose wrapped representation of the hub-origin ERC20 is
@@ -179,7 +179,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     // ----------------------------------------------------------------
 
     /// @dev Generic sign+finalize against `bridgeChainC` (mirrors
-    /// `CrossBridgeV2ForwardTest._signAndFinalize`, which is hardcoded to `bridgeCross`).
+    /// `CrossBridgeForwardTest._signAndFinalize`, which is hardcoded to `bridgeCross`).
     function _signAndFinalizeChainC(
         uint fromChainID,
         uint index,
@@ -229,7 +229,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         return abi.encodePacked(address(mockTargetChainC), call_);
     }
 
-    /// @dev M-1: builds hop-2's extraData for the ERC20 A -> B -> C E2E (target =
+    /// @dev Builds hop-2's extraData for the ERC20 A -> B -> C E2E (target =
     /// `mockTargetChainC`), using `handleBridgeCallbackWithReturn` rather than the
     /// native test's plain `handleBridgeCallback` so the returned `bytes32` hash gives
     /// an independent, deterministic proof (surfaced via `ExtraCallExecuted`'s
@@ -252,7 +252,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         return keccak256(abi.encode(token3, USER, value3, tag));
     }
 
-    /// @dev Generic sign+finalize against `bridgeChainA` (H-1: mirrors
+    /// @dev Generic sign+finalize against `bridgeChainA` (mirrors
     /// `_signAndFinalizeChainC`, used only to finalize the bootstrap leg's inbound
     /// mint on chain A — hop-1 of the measured route itself is a genuine `bridgeToken`
     /// call, not a signed finalize).
@@ -297,8 +297,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     }
 
     // ----------------------------------------------------------------
-    // H-1: BridgeInitiated / BridgeFinalized event-log decoding helpers (generic over
-    // the emitting bridge, unlike `CrossBridgeV2ForwardTest`'s ForwardLib-specific ones)
+    // BridgeInitiated / BridgeFinalized event-log decoding helpers (generic over
+    // the emitting bridge, unlike `CrossBridgeForwardTest`'s ForwardLib-specific ones)
     // ----------------------------------------------------------------
 
     bytes32 internal constant BRIDGE_INITIATED_TOPIC0 = keccak256(
@@ -362,7 +362,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         }
     }
 
-    /// @dev M-1: finds the (first) `ExtraCallExecuted` log emitted BY `emitter` among
+    /// @dev Finds the (first) `ExtraCallExecuted` log emitted BY `emitter` among
     /// `logs`, and decodes its fields -- used to independently confirm chain C's
     /// `BridgeExecutor`-mediated target call actually ran (as opposed to merely
     /// observing balance movement).
@@ -391,7 +391,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     }
 
     // ----------------------------------------------------------------
-    // M-2: genuine A -> B -> C end-to-end
+    // Genuine A -> B -> C end-to-end
     // ----------------------------------------------------------------
 
     /// @notice Native A(BSC) -> B(CROSS, forwards) -> C(bridgeChainC, finalizes AND
@@ -414,7 +414,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         _hop1NativeAndFinalize(ctxValue, extraData);
 
         vm.selectFork(crossForkID);
-        assertEq(USER.balance, 0, "hop-1's forward must succeed on chain B (no D3 fallback)");
+        assertEq(USER.balance, 0, "hop-1's forward must succeed on chain B (no fallback payout)");
         assertEq(
             bridgeCross.getTokenPair(CHAIN_C_ID, Const.NATIVE_TOKEN).deposited,
             depositedCBefore + value2,
@@ -464,17 +464,17 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     }
 
     /// @notice ERC20 both-origin A -> B -> C: the asset originates ON THE HUB (CROSS)
-    /// itself (spec §6.1's "both isOrigin=true" pattern — see D1's existing
-    /// `test_D1_erc20_bothOrigin_success` for the two-chain version this generalizes).
-    /// @dev H-1 fix: hop-1 is now a GENUINE `bridgeToken` call on a real chain-A leaf
+    /// itself (the "both isOrigin=true" pattern — see the existing
+    /// `test_forwardErc20_bothOriginPairs_succeedsWithoutFallback` for the two-chain version this generalizes).
+    /// @dev Hop-1 is a GENUINE `bridgeToken` call on a real chain-A leaf
     /// bridge (`bridgeChainA`), holding a real wrapped representation of the hub-origin
     /// ERC20 — not a fabricated signed message. Since registration alone seeds no
     /// inventory, a REAL bootstrap leg (hub -> chain A, finalized there) runs FIRST to
     /// mint USER the wrapped token and seed both ledgers; only then does the measured
     /// A -> B -> C route run, starting with chain A's own `bridgeToken` call. Hop-1's
     /// arguments for the hub's finalize are read off the REAL `BridgeInitiated` event
-    /// chain A emits (never hardcoded), following the exact field-mapping the plan
-    /// pins down: the hub's `toToken` is the event's `toToken` (== `remoteToken`, the
+    /// chain A emits (never hardcoded), following the exact field-mapping asserted
+    /// below: the hub's `toToken` is the event's `toToken` (== `remoteToken`, the
     /// HUB's own local token address) — NOT the event's `fromToken` (chain A's own
     /// wrapped address). Chain C's leg remains a REAL finalize on a real bridge holding
     /// a real wrapped token, as before.
@@ -496,7 +496,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         address chainCHubToken = bridgeChainC.createToken(CROSS_CHAIN_ID, address(hubToken), "CHUB", 18);
 
         // ------------------------------------------------------------------
-        // STEP 0 (H-1 CRITICAL PREREQUISITE): bootstrap leg hub -> chain A. Registration
+        // STEP 0 (CRITICAL PREREQUISITE): bootstrap leg hub -> chain A. Registration
         // alone seeds no inventory: USER holds no wrapped token on chain A, chain A's
         // `minted[hub]` is 0, and the hub's `deposited[chainA]` is 0, so the measured
         // route below would have nothing real to originate from without this. A REAL
@@ -547,7 +547,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         uint ctxValue = value2 + fee2 + ex2;
         require(ctxValue <= bootstrapAmount, "bootstrap inventory must cover the measured route's hop-1 principal");
 
-        // M-1: hop-2's own extraData now carries a REAL chain-C target call (mirrors
+        // Hop-2's own extraData carries a REAL chain-C target call (mirrors
         // the native E2E's `_hop3TargetExtraData`), so this route proves through to
         // "chain A `bridgeToken` -> ... -> chain C target method call", not merely
         // destination delivery. `mockTargetChainC` is already whitelisted on
@@ -565,7 +565,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         uint chainAMintedBefore = bridgeChainA.getTokenPair(CROSS_CHAIN_ID, chainAHubToken).minted;
         uint chainAUserBalBefore = IERC20(chainAHubToken).balanceOf(USER);
 
-        // L-1: snapshot the REAL ERC20 balances of all three bridges around the
+        // Snapshot the REAL ERC20 balances of all three bridges around the
         // MEASURED route (bootstrap-leg seeding is already behind us at this point, so
         // these snapshots capture only the measured route's own net movement).
         uint chainABridgeBalBefore = IERC20(chainAHubToken).balanceOf(address(bridgeChainA));
@@ -599,7 +599,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         assertEq(evValue, ctxValue, "event's value must be the fee-exclusive principal chain A submitted");
         assertEq(keccak256(evExtraData), keccak256(extraData), "event's extraData must be exactly what was submitted");
 
-        // The plan's explicit field-mapping table, pinned down as an assertion: the
+        // The explicit field-mapping table, pinned down as an assertion: the
         // hub's finalize `toToken` must be the event's `toToken` (== `remoteToken`, the
         // HUB's own local token), and must NOT be the event's `fromToken` (chain A's
         // own wrapped address) — the two are deliberately distinct addresses here.
@@ -618,7 +618,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
             "hop-1 origination must decrement chain A's minted[hub] by ctxValue"
         );
 
-        // L-1: chain A's OWN real ERC20 balance (of its wrapped `chainAHubToken`) must
+        // Chain A's OWN real ERC20 balance (of its wrapped `chainAHubToken`) must
         // net to zero across hop-1 origination -- USER's payment (principal + chain-A
         // fee) flows in, chain A's own fee flows out to `_dev`, and the wrapped
         // principal is burned, consistent with the mint/burn (not custody) model for a
@@ -637,7 +637,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         Vm.Log[] memory hubLogs = vm.getRecordedLogs();
 
         vm.selectFork(crossForkID);
-        assertEq(hubToken.balanceOf(USER), 0, "hop-1's forward must succeed on the hub (no D3 fallback)");
+        assertEq(hubToken.balanceOf(USER), 0, "hop-1's forward must succeed on the hub (no fallback payout)");
         assertEq(
             bridgeCross.getTokenPair(CHAIN_A_ID, address(hubToken)).deposited,
             hubDepositedABefore - ctxValue,
@@ -649,13 +649,13 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
             "hub deposited[chainC] must increase by the forwarded principal"
         );
 
-        // L-1: the hub's own REAL hubToken balance, across this single finalize call
+        // The hub's own REAL hubToken balance, across this single finalize call
         // (hop-1's own finalize immediately followed by hop-2's forward-initiate,
         // synchronously in the same transaction), must decrease by EXACTLY the fee
         // (networkFee2 + exFee2) that leaks out to `_dev` on the re-initiate to chain
         // C -- the full ctxValue is pulled out to the executor and pulled straight back
         // in by `bridgeTokenForwarded`'s own `_initiateBridge`, so only the fee is a
-        // genuine net outflow. This is the same view as the §14.3 invariant: the
+        // genuine net outflow. This is the same view as the accounting invariant: the
         // ledger delta (deposited[chainA] -ctxValue, deposited[chainC] +value2) is
         // consistent with the real balance delta only once the fee outflow is
         // accounted for (ctxValue - value2 = fee2 + ex2).
@@ -672,7 +672,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         (bool foundForwardInitiated,,,,,,,,,) = _findForwardInitiated(hubLogs);
         assertTrue(foundForwardInitiated, "hub must emit ForwardInitiated for the forward to chain C");
 
-        // hop-2 (real): finalize on chain C. With M-1's fix, this now goes all the way
+        // hop-2 (real): finalize on chain C. This goes all the way
         // through chain C's real `BridgeExecutor` into `mockTargetChainC`'s target
         // method, rather than stopping at a plain mint to USER.
         uint chainCBridgeBalBefore = IERC20(chainCHubToken).balanceOf(address(bridgeChainC));
@@ -691,7 +691,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         (bool foundChainCFinalized,,,,,) = _findBridgeFinalized(chainCLogs, address(bridgeChainC));
         assertTrue(foundChainCFinalized, "chain C must emit BridgeFinalized for hop-2's own finalize");
 
-        // M-1: the real chain-C target actually received/consumed the ERC20.
+        // The real chain-C target actually received/consumed the ERC20.
         (bool foundExtraCall,, bytes4 extraCallMethodID, bool extraCallSuccess, uint consumed, bytes memory returnData)
         = _findExtraCallExecuted(chainCLogs, address(bridgeChainC));
         assertTrue(foundExtraCall, "chain C must emit ExtraCallExecuted for hop-2's target call");
@@ -720,8 +720,8 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
             "chain C's real target contract must have received and consumed the forwarded ERC20"
         );
 
-        // L-1: chain C's minted[hub] ledger and chain C bridge's own real ERC20
-        // balance, cross-checked against each other (§14.3 invariant view): the bridge
+        // Chain C's minted[hub] ledger and chain C bridge's own real ERC20
+        // balance, cross-checked against each other (an accounting invariant view): the bridge
         // mints the wrapped principal to itself then hands it straight to the executor
         // for the target call, so its OWN balance nets back to zero even though the
         // ledger records the full mint.
@@ -737,7 +737,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
     }
 
-    /// @notice M-1: same ERC20 A -> B -> C route as `test_e2e_erc20_bothOrigin_ABC`,
+    /// @notice Same ERC20 A -> B -> C route as `test_e2e_erc20_bothOrigin_ABC`,
     /// but chain C's target reverts -- chain C's OWN EXISTING (unmodified) fallback
     /// must mint/pay the ERC20 to USER directly there, exactly like the native
     /// `test_e2e_chainC_targetRevert_fallback` already proves for native value.
@@ -826,7 +826,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
     }
 
-    /// @notice §14.5 operational case: one `finalizeBridgeBatch` containing BOTH a
+    /// @notice One `finalizeBridgeBatch` containing BOTH a
     /// forward item (to chain C) and an ordinary (non-forward) item must process both
     /// correctly in the same transaction.
     function test_batch_mixedForwardAndOrdinary() public {
@@ -934,7 +934,7 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
     }
 
-    /// @notice §14.5: measures the actual nested extraData length (chain A's top-level
+    /// @notice Measures the actual nested extraData length (chain A's top-level
     /// extraData, embedding chain B's forward call which itself embeds chain C's own
     /// extraData) against `_maxExtraDataLength`'s boundary — success at exactly the
     /// configured max, revert one byte over.
@@ -972,14 +972,14 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
         );
     }
 
-    /// @notice §14.5 gas measurement: total gas of a finalize batch item that performs a
+    /// @notice Gas measurement: total gas of a finalize batch item that performs a
     /// forward (including the `ForwardLib` DELEGATECALL overhead), against an equivalent
     /// ordinary (non-forward) item's gas, to isolate the forward-specific incremental
-    /// cost. Reported plainly for the implementation report's `_postCallGasReserve`
-    /// recommendation — `_postCallGasReserve` itself budgets BaseBridge's POST-executor-
-    /// call bookkeeping (approve-clear, `_withdrawToken`, event emission), which does
-    /// NOT scale with forward complexity, so this measurement informs the report's
-    /// recommendation rather than asserting a specific reserve value here.
+    /// cost. Reported plainly to inform `_postCallGasReserve`'s sizing —
+    /// `_postCallGasReserve` itself budgets BaseBridge's POST-executor-call bookkeeping
+    /// (approve-clear, `_withdrawToken`, event emission), which does NOT scale with
+    /// forward complexity, so this measurement is informational rather than asserting a
+    /// specific reserve value here.
     function test_gasUsed_forwardVsOrdinary() public {
         vm.selectFork(crossForkID);
         uint amount = 1 ether;
@@ -1030,13 +1030,13 @@ contract CrossBridgeV2MultihopTest is CrossBridgeV2ForwardTest {
     }
 
     // ----------------------------------------------------------------
-    // M-3: crossSupply() pass-through accounting (plan spec §6.1/§14.3)
+    // crossSupply() pass-through accounting
     // ----------------------------------------------------------------
 
     /// @notice BSC -> CROSS -> chainC pass-through: `crossSupply()` increases by
     /// `ctxValue` (the FULL BSC-leg amount finalized to CROSS), not merely
     /// `hop2Principal` (the smaller amount forwarded onward) — this is the DEFINITION of
-    /// `crossSupply()` (net CROSS inflow from BSC, spec §6.1), not drift, and is pinned
+    /// `crossSupply()` (net CROSS inflow from BSC), not drift, and is pinned
     /// here so a future reader does not "fix" it as a bug.
     function test_crossSupply_passThrough_increases() public {
         vm.selectFork(crossForkID);

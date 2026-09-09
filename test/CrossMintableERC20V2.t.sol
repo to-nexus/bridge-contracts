@@ -25,16 +25,20 @@ import {console} from "forge-std/Test.sol";
 
 /**
  * @title CrossMintableERC20V2Test
- * @notice T1-T26 + AC-2b/AC-2c of the BeaconProxy + UUPS conversion test plan (final-spec §14,
- *         개정 3).
- * @dev Deliberately scoped to `CrossMintableERC20V2` + `CrossMintableERC20V2Code` in isolation for
- *      T1-T24/AC-2b/AC-2c — `bridge` is a bare address (as in `HyperMintableERC20Test`), not a
- *      real `BaseBridge` instance, for those. T25 and T26 below step outside that isolation on
- *      purpose: T25 deploys a real (non-forked, locally-initialized) `BaseBridge` proxy to prove
- *      the cross-factory duplicate-pair gap (AR-11) at the `BridgeRegistry` level, and T26
- *      instantiates `CrossMintableERC20V2CodeScript` directly (no `forge script` invocation
- *      needed — `preflightCheckDuplicateRemoteToken` is a plain `view` function) against a
- *      minimal mock registry that only implements `allTokenPairs`.
+ * @notice Covers the BeaconProxy + UUPS factory design end to end: the legacy creation path, the
+ *         beacon-proxy shape of created tokens, address-prediction stability, factory
+ *         upgradeability, per-pair uniqueness across every creation variant, owner-managed
+ *         token pass-through, and the DEFAULT_ADMIN_ROLE-vs-ADMIN_ROLE ownership transfer
+ *         runbook.
+ * @dev Most of this file is deliberately scoped to `CrossMintableERC20V2` +
+ *      `CrossMintableERC20V2Code` in isolation — `bridge` is a bare address (as in
+ *      `HyperMintableERC20Test`), not a real `BaseBridge` instance. The last two groups of tests
+ *      step outside that isolation on purpose: one deploys a real (non-forked,
+ *      locally-initialized) `BaseBridge` proxy to prove a cross-factory duplicate-pair gap at
+ *      the `BridgeRegistry` level, and another instantiates `CrossMintableERC20V2CodeScript`
+ *      directly (no `forge script` invocation needed — `preflightCheckDuplicateRemoteToken` is a
+ *      plain `view` function) against a minimal mock registry that only implements
+ *      `allTokenPairs`.
  */
 contract CrossMintableERC20V2Test is Test {
     /// @dev Declared locally (not imported from IERC20) purely so `vm.expectEmit` can match the
@@ -45,7 +49,7 @@ contract CrossMintableERC20V2Test is Test {
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     // ERC-7201 / ERC-1967 slot literals — the test's OWN copies (never read from a getter), the
-    // same independence discipline `HyperMintableERC20Test` uses for its A1.
+    // same independence discipline `HyperMintableERC20Test` uses for its namespaced-slot check.
     bytes32 internal constant TOKEN_STORAGE_SLOT = 0x9581ab046f3e11ba7ecf3d09df64f89f69c3a2a7a7e6f470b2498e2d7b1f5700;
     bytes32 internal constant FACTORY_STORAGE_SLOT = 0x2b6c7dfd4e9330f706f3d4045fa01a8903ed43939ff7d252d6806f39e1487c00;
     bytes32 internal constant ERC1967_IMPLEMENTATION_SLOT =
@@ -113,36 +117,36 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // Legacy invariants (T1-T5)
+    // Legacy invariants
     // =====================================================================
 
-    /// T1. `createCrossMintableERC20`'s selector is frozen at `0xf88d3d42` — the whole point of
+    /// `createCrossMintableERC20`'s selector is frozen at `0xf88d3d42` — the whole point of
     /// keeping its signature untouched across this conversion.
-    function test_T1_legacySelector_isFrozen() public pure {
+    function test_legacySelector_isFrozen() public pure {
         assertEq(ICrossMintableERC20Code.createCrossMintableERC20.selector, bytes4(0xf88d3d42));
     }
 
-    /// T2. Legacy path derives name/symbol exactly as before: "Cross Bridge <SYM>" / "<SYM>x".
-    function test_T2_legacyPath_derivedNameAndSymbol() public view {
+    /// Legacy path derives name/symbol exactly as before: "Cross Bridge <SYM>" / "<SYM>x".
+    function test_legacyPath_derivedNameAndSymbol() public view {
         assertEq(token.name(), string(abi.encodePacked("Cross Bridge ", SYMBOL)));
         assertEq(token.symbol(), string(abi.encodePacked(SYMBOL, "x")));
         assertEq(token.decimals(), DECIMALS);
     }
 
-    /// T3. The legacy path's `minter` is the actual caller (`_msgSender()`, the bridge), which
+    /// The legacy path's `minter` is the actual caller (`_msgSender()`, the bridge), which
     /// receives `MINTER_ROLE` on the created token.
-    function test_T3_legacyPath_callerGetsMinterRole() public view {
+    function test_legacyPath_callerGetsMinterRole() public view {
         assertTrue(token.hasRole(Const.MINTER_ROLE, bridge));
     }
 
-    /// T4 / AC-2a. Every token's `defaultAdmin()` is the FACTORY PROXY address itself — not a
-    /// separately stored `tokenAdmin` (D7). There is no `tokenAdmin()` getter to compare against.
-    function test_T4_tokenDefaultAdmin_isFactoryItself() public view {
+    /// Every token's `defaultAdmin()` is the FACTORY PROXY address itself — not a
+    /// separately stored `tokenAdmin`. There is no `tokenAdmin()` getter to compare against.
+    function test_tokenDefaultAdmin_isFactoryItself() public view {
         assertEq(token.defaultAdmin(), address(code));
     }
 
-    /// T5. Missing `BRIDGE_ROLE` reverts the legacy path.
-    function test_T5_legacyPath_requiresBridgeRole() public {
+    /// Missing `BRIDGE_ROLE` reverts the legacy path.
+    function test_legacyPath_requiresBridgeRole() public {
         vm.prank(user);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, Const.BRIDGE_ROLE)
@@ -151,21 +155,21 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // BeaconProxy shape (T6-T10)
+    // BeaconProxy shape
     // =====================================================================
 
-    /// T6. The created token really is a `BeaconProxy`: its ERC-1967 beacon slot holds this
+    /// The created token really is a `BeaconProxy`: its ERC-1967 beacon slot holds this
     /// factory's beacon address, and it has no ERC-1967 implementation slot of its own set
     /// (`BeaconProxy` never writes that slot — only the beacon does).
-    function test_T6_createdToken_isRealBeaconProxy() public view {
+    function test_createdToken_isRealBeaconProxy() public view {
         bytes32 beaconSlotValue = vm.load(address(token), ERC1967_BEACON_SLOT);
         assertEq(address(uint160(uint(beaconSlotValue))), code.beacon());
         assertEq(vm.load(address(token), ERC1967_IMPLEMENTATION_SLOT), bytes32(0));
     }
 
-    /// T7. Beacon upgrade is reflected in an ALREADY-issued token immediately, while its balances,
+    /// Beacon upgrade is reflected in an ALREADY-issued token immediately, while its balances,
     /// roles and `decimals` (ERC-7201 storage) are preserved untouched.
-    function test_T7_beaconUpgrade_reflectsOnExistingToken_preservingState() public {
+    function test_beaconUpgrade_reflectsOnExistingToken_preservingState() public {
         vm.prank(bridge);
         token.mint(user, 10 ether);
         vm.prank(factoryOwner);
@@ -181,9 +185,9 @@ contract CrossMintableERC20V2Test is Test {
         assertEq(CrossMintableERC20V2Mock(address(token)).version(), 2);
     }
 
-    /// T8. A beacon upgrade never moves a future CREATE2 prediction — the initcode only ever
+    /// A beacon upgrade never moves a future CREATE2 prediction — the initcode only ever
     /// embeds the beacon's own (fixed) address, never the implementation it currently resolves to.
-    function test_T8_beaconUpgrade_doesNotMovePrediction() public {
+    function test_beaconUpgrade_doesNotMovePrediction() public {
         uint remoteChainID2 = REMOTE_CHAIN_ID + 2;
         address predictedBefore = code.computeTokenAddress(remoteChainID2, REMOTE_TOKEN, SYMBOL, DECIMALS, bridge);
 
@@ -200,30 +204,30 @@ contract CrossMintableERC20V2Test is Test {
         assertEq(CrossMintableERC20V2Mock(actual).version(), 2);
     }
 
-    /// T9. The token LOGIC contract can never be initialized directly (`_disableInitializers`).
-    function test_T9_tokenImplementation_directInitializeReverts() public {
+    /// The token LOGIC contract can never be initialized directly (`_disableInitializers`).
+    function test_tokenImplementation_directInitializeReverts() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         tokenImplementation.initialize(factoryOwner, bridge, "X", "X", 18);
     }
 
-    /// T10. The token PROXY cannot be initialized a second time.
-    function test_T10_tokenProxy_reinitializeReverts() public {
+    /// The token PROXY cannot be initialized a second time.
+    function test_tokenProxy_reinitializeReverts() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         token.initialize(factoryOwner, bridge, "X", "X", 18);
     }
 
     // =====================================================================
-    // Address prediction (T11-T13a)
+    // Address prediction
     // =====================================================================
 
-    /// T11. Legacy-path prediction matches the actual `createCrossMintableERC20` result.
-    function test_T11_legacyPath_predictionMatchesActual() public view {
+    /// Legacy-path prediction matches the actual `createCrossMintableERC20` result.
+    function test_legacyPath_predictionMatchesActual() public view {
         address predicted = code.computeTokenAddress(REMOTE_CHAIN_ID, REMOTE_TOKEN, SYMBOL, DECIMALS, bridge);
         assertEq(predicted, address(token));
     }
 
-    /// T12. New (`createMintableERC20`) path prediction matches the actual result.
-    function test_T12_newPath_predictionMatchesActual() public {
+    /// New (`createMintableERC20`) path prediction matches the actual result.
+    function test_newPath_predictionMatchesActual() public {
         uint remoteChainID3 = REMOTE_CHAIN_ID + 3;
         address minter = makeAddr("explicitMinter");
 
@@ -236,10 +240,10 @@ contract CrossMintableERC20V2Test is Test {
         assertEq(predicted, actual);
     }
 
-    /// T13. Transferring the factory's OWN `defaultAdmin()` (its `DEFAULT_ADMIN_ROLE`, distinct
-    /// from `ADMIN_ROLE` — §15-2) changes nothing about future predictions: `_initCode` always
+    /// Transferring the factory's OWN `defaultAdmin()` (its `DEFAULT_ADMIN_ROLE`, distinct
+    /// from `ADMIN_ROLE`) changes nothing about future predictions: `_initCode` always
     /// embeds `address(this)` (the factory's own fixed address), never `defaultAdmin()`.
-    function test_T13_addressPrediction_stableAcrossFactoryDefaultAdminTransfer() public {
+    function test_addressPrediction_stableAcrossFactoryDefaultAdminTransfer() public {
         address newFactoryOwner = makeAddr("newFactoryOwner");
         uint remoteChainID4 = REMOTE_CHAIN_ID + 4;
 
@@ -257,11 +261,11 @@ contract CrossMintableERC20V2Test is Test {
         assertEq(predictedAfter, predictedBefore);
     }
 
-    /// T13a. §15-2 regression pin: even after the factory's `defaultAdmin()` moves, a freshly
+    /// Even after the factory's `defaultAdmin()` moves, a freshly
     /// created token's OWN `defaultAdmin()` is still the factory's (unchanged) proxy address —
     /// not the factory's new `defaultAdmin()`, and not the old one either. Prediction stays
     /// pinned to the same value before and after.
-    function test_T13a_factoryDefaultAdminTransfer_doesNotAffectTokenDefaultAdminOrPrediction() public {
+    function test_factoryDefaultAdminTransfer_doesNotAffectTokenDefaultAdminOrPrediction() public {
         address newFactoryOwner = makeAddr("newFactoryOwner13a");
         uint remoteChainID5 = REMOTE_CHAIN_ID + 5;
 
@@ -286,11 +290,11 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // New explicit path (T14-T16)
+    // New explicit path
     // =====================================================================
 
-    /// T14. `createMintableERC20` reflects its arguments exactly (no derivation).
-    function test_T14_createMintableERC20_reflectsArguments() public {
+    /// `createMintableERC20` reflects its arguments exactly (no derivation).
+    function test_createMintableERC20_reflectsArguments() public {
         address minter = makeAddr("explicitMinter14");
         uint remoteChainID6 = REMOTE_CHAIN_ID + 6;
 
@@ -306,8 +310,8 @@ contract CrossMintableERC20V2Test is Test {
         assertTrue(code.isCrossMintableERC20(tokenAddress));
     }
 
-    /// T15. `createMintableERC20` is gated to `ADMIN_ROLE`.
-    function test_T15_createMintableERC20_requiresAdminRole() public {
+    /// `createMintableERC20` is gated to `ADMIN_ROLE`.
+    function test_createMintableERC20_requiresAdminRole() public {
         vm.prank(user);
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, Const.ADMIN_ROLE)
@@ -315,8 +319,8 @@ contract CrossMintableERC20V2Test is Test {
         code.createMintableERC20(REMOTE_CHAIN_ID + 7, REMOTE_TOKEN, "X", "X", 18, user);
     }
 
-    /// T16. `minter == address(0)` on the new path means `MINTER_ROLE` is granted to nobody.
-    function test_T16_createMintableERC20_zeroMinter_grantsNoRole() public {
+    /// `minter == address(0)` on the new path means `MINTER_ROLE` is granted to nobody.
+    function test_createMintableERC20_zeroMinter_grantsNoRole() public {
         vm.prank(factoryOwner);
         address tokenAddress = code.createMintableERC20(REMOTE_CHAIN_ID + 8, REMOTE_TOKEN, "X", "X", 18, address(0));
 
@@ -327,19 +331,19 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // Factory upgradeability (T17-T21)
+    // Factory upgradeability
     // =====================================================================
 
-    /// T17. The factory PROXY cannot be initialized a second time.
-    function test_T17_factoryProxy_reinitializeReverts() public {
+    /// The factory PROXY cannot be initialized a second time.
+    function test_factoryProxy_reinitializeReverts() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         code.initialize(factoryOwner, bridge, address(tokenImplementation));
     }
 
-    /// T18. Regression: deployer != `initialOwner` must not revert the factory's atomic proxy
+    /// Deployer != `initialOwner` must not revert the factory's atomic proxy
     /// initialization — the trap the legacy (non-upgradeable) `CrossMintableERC20V2Code`'s
     /// constructor falls into by using public `grantRole` instead of `_grantRole`.
-    function test_T18_deployerNotInitialOwner_doesNotRevert() public {
+    function test_initialize_succeedsWhenDeployerIsNotInitialOwner() public {
         address deployer = makeAddr("someoneElse18");
         vm.prank(deployer);
         CrossMintableERC20V2Code freshCode = _deployCode(factoryOwner, bridge);
@@ -348,14 +352,14 @@ contract CrossMintableERC20V2Test is Test {
         assertFalse(freshCode.hasRole(Const.ADMIN_ROLE, deployer));
     }
 
-    /// T19. The factory LOGIC contract can never be initialized directly.
-    function test_T19_codeImplementation_directInitializeReverts() public {
+    /// The factory LOGIC contract can never be initialized directly.
+    function test_codeImplementation_directInitializeReverts() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         codeImplementation.initialize(factoryOwner, bridge, address(tokenImplementation));
     }
 
-    /// T20. `upgradeToAndCall` without `ADMIN_ROLE` reverts.
-    function test_T20_factoryUpgrade_requiresAdminRole() public {
+    /// `upgradeToAndCall` without `ADMIN_ROLE` reverts.
+    function test_factoryUpgrade_requiresAdminRole() public {
         CrossMintableERC20V2CodeMock newCodeImpl = new CrossMintableERC20V2CodeMock();
         vm.prank(user);
         vm.expectRevert(
@@ -364,9 +368,9 @@ contract CrossMintableERC20V2Test is Test {
         code.upgradeToAndCall(address(newCodeImpl), bytes(""));
     }
 
-    /// T21. Factory (UUPS) upgrade preserves storage: `beacon`, `isCrossMintableERC20` and
+    /// Factory (UUPS) upgrade preserves storage: `beacon`, `isCrossMintableERC20` and
     /// `tokenForPair` all survive.
-    function test_T21_factoryUpgrade_preservesState() public {
+    function test_factoryUpgrade_preservesState() public {
         assertTrue(code.isCrossMintableERC20(address(token)));
         address beaconBefore = code.beacon();
         address tokenForPairBefore = code.tokenForPair(REMOTE_CHAIN_ID, REMOTE_TOKEN);
@@ -384,11 +388,11 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // Common (T22-T24)
+    // Common
     // =====================================================================
 
-    /// T22a. `CrossMintableERC20Created` carries the right fields on the legacy path.
-    function test_T22a_event_legacyPath() public {
+    /// `CrossMintableERC20Created` carries the right fields on the legacy path.
+    function test_creationEvent_legacyPath() public {
         uint remoteChainID9 = REMOTE_CHAIN_ID + 9;
         address predicted = code.computeTokenAddress(remoteChainID9, REMOTE_TOKEN, SYMBOL, DECIMALS, bridge);
 
@@ -399,8 +403,8 @@ contract CrossMintableERC20V2Test is Test {
         code.createCrossMintableERC20(remoteChainID9, REMOTE_TOKEN, SYMBOL, DECIMALS);
     }
 
-    /// T22b. `CrossMintableERC20Created` carries the right fields on the new explicit path.
-    function test_T22b_event_newPath() public {
+    /// `CrossMintableERC20Created` carries the right fields on the new explicit path.
+    function test_creationEvent_newPath() public {
         uint remoteChainID10 = REMOTE_CHAIN_ID + 10;
         address minter = makeAddr("explicitMinter22b");
         address predicted =
@@ -413,17 +417,17 @@ contract CrossMintableERC20V2Test is Test {
         code.createMintableERC20(remoteChainID10, REMOTE_TOKEN, "X", "X", 18, minter);
     }
 
-    /// T23. `isCrossMintableERC20` is true right after creation, false for an unrelated address.
-    function test_T23_isCrossMintableERC20() public view {
+    /// `isCrossMintableERC20` is true right after creation, false for an unrelated address.
+    function test_isCrossMintableERC20_trueForCreatedToken() public view {
         assertTrue(code.isCrossMintableERC20(address(token)));
         assertFalse(code.isCrossMintableERC20(address(0xDEAD)));
     }
 
-    /// T24. Because `tokenForPair` is checked before CREATE2 ever runs, retrying the SAME pair —
+    /// Because `tokenForPair` is checked before CREATE2 ever runs, retrying the SAME pair —
     /// even with byte-for-byte identical arguments (what would otherwise be a raw CREATE2 salt
     /// collision) — is rejected by `CrossMintableERC20V2CodePairAlreadyCreated`, not
     /// `Errors.FailedDeployment`: the pair guard is strictly in front of the raw CREATE2 check.
-    function test_T24_samePairSameArgs_revertsWithPairAlreadyCreated_notRawCreate2Collision() public {
+    function test_samePairSameArgs_revertsWithPairAlreadyCreated_notRawCreate2Collision() public {
         vm.prank(bridge);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -437,12 +441,12 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // AC-2b. One token per remote pair, enforced across every variant (R10)
+    // One token per remote pair, enforced across every creation variant
     // =====================================================================
 
-    /// AC-2b/1. Same pair, legacy path again but with a DIFFERENT symbol (would have produced a
-    /// different CREATE2 address under the old, pair-guard-less factory) — still rejected.
-    function test_AC2b_samePair_differentSymbol_reverts() public {
+    /// Same pair, legacy path again but with a DIFFERENT symbol (would have produced a
+    /// different CREATE2 address under a pair-guard-less factory) — still rejected.
+    function test_samePair_differentSymbol_stillReverts() public {
         vm.prank(bridge);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -455,9 +459,9 @@ contract CrossMintableERC20V2Test is Test {
         code.createCrossMintableERC20(REMOTE_CHAIN_ID, REMOTE_TOKEN, "OTHER", DECIMALS);
     }
 
-    /// AC-2b/2. Same pair, crossing from the legacy path to the new explicit path with a
+    /// Same pair, crossing from the legacy path to the new explicit path with a
     /// different name/symbol/minter — still rejected.
-    function test_AC2b_samePair_crossPathDifferentNameAndMinter_reverts() public {
+    function test_samePair_crossPathDifferentNameAndMinter_stillReverts() public {
         vm.prank(factoryOwner);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -470,9 +474,9 @@ contract CrossMintableERC20V2Test is Test {
         code.createMintableERC20(REMOTE_CHAIN_ID, REMOTE_TOKEN, "Totally Different", "TD", 6, makeAddr("otherMinter"));
     }
 
-    /// AC-2b/3. Same pair via the new path twice, second attempt varying only the minter — still
+    /// Same pair via the new path twice, second attempt varying only the minter — still
     /// rejected (guards a pair, not an (args) tuple).
-    function test_AC2b_samePair_newPathDifferentMinterOnly_reverts() public {
+    function test_samePair_newPathDifferentMinterOnly_stillReverts() public {
         uint remoteChainID11 = REMOTE_CHAIN_ID + 11;
         vm.startPrank(factoryOwner);
         address first = code.createMintableERC20(remoteChainID11, REMOTE_TOKEN, "X", "X", 18, makeAddr("minterA"));
@@ -489,9 +493,9 @@ contract CrossMintableERC20V2Test is Test {
         vm.stopPrank();
     }
 
-    /// AC-2b/4. A DIFFERENT `remoteToken` on the same `remoteChainID` is unaffected — the guard
+    /// A DIFFERENT `remoteToken` on the same `remoteChainID` is unaffected — the guard
     /// is keyed on the pair, not the chain alone.
-    function test_AC2b_differentRemoteToken_sameChain_succeeds() public {
+    function test_differentRemoteToken_sameChain_succeeds() public {
         vm.prank(bridge);
         address second = code.createCrossMintableERC20(REMOTE_CHAIN_ID, address(0xCAFE), SYMBOL, DECIMALS);
         assertTrue(code.isCrossMintableERC20(second));
@@ -499,10 +503,10 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // Owner-managed token pass-through (R9 / AR-10)
+    // Owner-managed token pass-through
     // =====================================================================
 
-    /// The beacon's `owner()` is the factory PROXY itself, not an EOA (D8/D9) — so upgrading it
+    /// The beacon's `owner()` is the factory PROXY itself, not an EOA — so upgrading it
     /// must go through `code.upgradeBeacon`, never a direct call, even from the `ADMIN_ROLE` EOA.
     function test_beaconOwner_isFactoryItself_directCallReverts() public {
         UpgradeableBeacon tokenBeacon = UpgradeableBeacon(code.beacon());
@@ -570,14 +574,14 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // AC-2c. §15-2 ownership transfer runbook — DEFAULT_ADMIN_ROLE != ADMIN_ROLE
+    // Ownership transfer runbook — DEFAULT_ADMIN_ROLE != ADMIN_ROLE
     // =====================================================================
 
-    /// AC-2c. Before step 3 (grantRole(ADMIN_ROLE, newOwner)) the new owner cannot perform any
+    /// Before step 3 (grantRole(ADMIN_ROLE, newOwner)) the new owner cannot perform any
     /// ADMIN_ROLE-gated action, even after accepting DEFAULT_ADMIN_ROLE (step 1-2 alone are not
     /// enough). After step 4 (revokeRole(ADMIN_ROLE, oldOwner)) the OLD owner can no longer
     /// either. Probed with `createMintableERC20`, an ordinary ADMIN_ROLE-gated action.
-    function test_AC2c_ownershipTransferRunbook_gatesAdminRoleActions() public {
+    function test_ownershipTransferRunbook_gatesAdminRoleActions() public {
         address newOwner = makeAddr("newOwner2c");
 
         // Step 1-2: begin + accept DEFAULT_ADMIN_ROLE transfer.
@@ -622,7 +626,7 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // T25-T26 — cross-factory duplicate registration + deploy-script preflight (§15-1, AR-11)
+    // Cross-factory duplicate registration + deploy-script preflight
     // =====================================================================
 
     /// @dev Deploys a real (non-forked) `BaseBridge` behind an `ERC1967Proxy`, granting
@@ -640,12 +644,13 @@ contract CrossMintableERC20V2Test is Test {
         vm.stopPrank();
     }
 
-    /// T25. AR-11: `BridgeRegistry._registerToken` only guards duplicates by `localToken`
+    /// `BridgeRegistry._registerToken` only guards duplicates by `localToken`
     /// (`src/abstract/BridgeRegistry.sol:468`), so replacing the bridge's factory and
     /// re-creating a token for the SAME `(remoteChainID, remoteToken)` is NOT blocked on-chain —
     /// a second pair is registered alongside the first instead of `RegistryExistToken`. This
-    /// pins the exact gap §15-1's preflight (T26) exists to catch operationally.
-    function test_T25_bridgeRegistry_allowsDuplicatePair_acrossFactoryReplacement() public {
+    /// pins the exact gap the deploy script's preflight check below exists to catch
+    /// operationally.
+    function test_bridgeRegistry_allowsDuplicatePair_acrossFactoryReplacement() public {
         address bridgeOwner = makeAddr("bridgeOwner25");
         BaseBridge bridgeInstance = _deployBridge(bridgeOwner);
 
@@ -675,12 +680,12 @@ contract CrossMintableERC20V2Test is Test {
         assertEq(pairs[1].remoteToken, remoteToken25);
     }
 
-    /// T26. The deploy script's `preflightCheckDuplicateRemoteToken` reverts when the target
+    /// The deploy script's `preflightCheckDuplicateRemoteToken` reverts when the target
     /// `remoteChainID` already has a pair for `remoteToken` (regardless of `localToken`), and
     /// does NOT revert for an unrelated `remoteToken` on the same chain. Uses a minimal mock that
     /// implements only `allTokenPairs`, cast to `BaseBridge` — Solidity dispatches by selector,
     /// so the mock never needs to actually BE a `BaseBridge`.
-    function test_T26_scriptPreflight_revertsOnExistingRemoteToken() public {
+    function test_scriptPreflight_revertsOnExistingRemoteToken() public {
         CrossMintableERC20V2CodeScript scriptContract = new CrossMintableERC20V2CodeScript();
         MockAllTokenPairsRegistry mockRegistry = new MockAllTokenPairsRegistry();
 
@@ -710,15 +715,15 @@ contract CrossMintableERC20V2Test is Test {
     }
 
     // =====================================================================
-    // T27-T31 — round-2 issue-plan fixes: `revokeOldAdmin` identity checks (Fix 1) and the
-    // view/broadcast split for the three ownership-transfer status functions (Fix 2)
+    // `revokeOldAdmin` identity checks and the view/broadcast split for the three
+    // ownership-transfer status functions
     // =====================================================================
 
-    /// T27. `beginTransferStatus` / `acceptTransferStatus` / `revokeOldAdminStatus` return the
+    /// `beginTransferStatus` / `acceptTransferStatus` / `revokeOldAdminStatus` return the
     /// right `TransferStage` as the underlying on-chain state is walked through every stage of a
     /// real 4-step transfer, using a factory dedicated to this test (`oldOwner27`/`newOwner27`)
     /// so it doesn't interact with the shared `setUp` fixture's `code`.
-    function test_T27_statusFunctions_matchStateAcrossStages() public {
+    function test_statusFunctions_matchStateAcrossStages() public {
         CrossMintableERC20V2CodeScript scriptContract = new CrossMintableERC20V2CodeScript();
         address oldOwner27 = makeAddr("oldOwner27");
         address newOwner27 = makeAddr("newOwner27");
@@ -778,7 +783,7 @@ contract CrossMintableERC20V2Test is Test {
         assertEq(uint(stage), uint(CrossMintableERC20V2CodeScript.TransferStage.Ready));
 
         // Revoke for real: oldOwner27 now lacks ADMIN_ROLE -> Inconsistent, NEVER AlreadyDone
-        // (see T28/T29).
+        // (see the tests below for why AlreadyDone must never be reachable here).
         vm.prank(newOwner27);
         fresh.revokeRole(Const.ADMIN_ROLE, oldOwner27);
 
@@ -787,7 +792,7 @@ contract CrossMintableERC20V2Test is Test {
         assertTrue(bytes(reason).length > 0);
     }
 
-    /// T28 (Fix 1 regression, deterministic). Pins the exact bug the round-2 review found: after
+    /// Pins the exact bug this identity check exists to prevent: after
     /// a real transfer completes (`realOldOwner28` -> `newOwner28`) with `realOldOwner28` still
     /// holding `ADMIN_ROLE` (the operator hasn't revoked it yet), calling
     /// `revokeOldAdminStatus(factory, wrongOldOwner28, newOwner28)` with a MISTYPED oldOwner that
@@ -796,7 +801,7 @@ contract CrossMintableERC20V2Test is Test {
     /// "wrong address", so treating it as AlreadyDone would silently leave the REAL old admin's
     /// privileged ADMIN_ROLE untouched while reporting success. The execution wrapper must revert
     /// and must not broadcast.
-    function test_T28_revokeOldAdminStatus_wrongOldOwner_isInconsistent_notAlreadyDone() public {
+    function test_revokeOldAdminStatus_wrongOldOwner_isInconsistent_notAlreadyDone() public {
         CrossMintableERC20V2CodeScript scriptContract = new CrossMintableERC20V2CodeScript();
         address realOldOwner28 = makeAddr("realOldOwner28");
         address newOwner28 = makeAddr("newOwner28");
@@ -828,12 +833,13 @@ contract CrossMintableERC20V2Test is Test {
         assertTrue(fresh.hasRole(Const.ADMIN_ROLE, realOldOwner28));
     }
 
-    /// T29 (fuzz). Structural guarantee, fuzzed rather than pinned to one state: for ANY
+    /// Structural guarantee, fuzzed rather than pinned to one state: for ANY
     /// oldOwner/newOwner addresses, `revokeOldAdminStatus` never returns `AlreadyDone`. Its
     /// source (`revokeOldAdminStatus`'s @dev in the script) has no code path that returns
     /// `AlreadyDone` at all -- this test is the operational proof that structural claim holds
-    /// for arbitrary inputs, not just the specific states T27/T28/T30/T30a happen to construct.
-    function test_T29_fuzz_revokeOldAdminStatus_neverReturnsAlreadyDone(address fuzzOldOwner, address fuzzNewOwner)
+    /// for arbitrary inputs, not just the specific states the other tests in this group happen
+    /// to construct.
+    function testFuzz_revokeOldAdminStatus_neverReturnsAlreadyDoneForAnyOwners(address fuzzOldOwner, address fuzzNewOwner)
         public
     {
         CrossMintableERC20V2CodeScript scriptContract = new CrossMintableERC20V2CodeScript();
@@ -846,11 +852,11 @@ contract CrossMintableERC20V2Test is Test {
         assertTrue(stage != CrossMintableERC20V2CodeScript.TransferStage.AlreadyDone);
     }
 
-    /// T30. `newOwner30` has accepted `DEFAULT_ADMIN_ROLE` (step 2) but step 3 (granting itself
+    /// `newOwner30` has accepted `DEFAULT_ADMIN_ROLE` (step 2) but step 3 (granting itself
     /// `ADMIN_ROLE`) was skipped -- revoking `oldOwner30`'s `ADMIN_ROLE` now would strand the
     /// factory with zero admins. Must be `Inconsistent`, and the execution wrapper must revert
     /// without broadcasting (oldOwner30 keeps ADMIN_ROLE).
-    function test_T30_revokeOldAdminStatus_newOwnerMissingAdminRole_isInconsistent() public {
+    function test_revokeOldAdminStatus_newOwnerMissingAdminRole_isInconsistent() public {
         CrossMintableERC20V2CodeScript scriptContract = new CrossMintableERC20V2CodeScript();
         address oldOwner30 = makeAddr("oldOwner30");
         address newOwner30 = makeAddr("newOwner30");
@@ -878,7 +884,7 @@ contract CrossMintableERC20V2Test is Test {
         assertTrue(fresh.hasRole(Const.ADMIN_ROLE, oldOwner30));
     }
 
-    /// T30a (Fix 1 precondition-1 regression). `oldOwner30a` pre-grants `ADMIN_ROLE` to
+    /// `oldOwner30a` pre-grants `ADMIN_ROLE` to
     /// `newOwner30a` BEFORE the `DEFAULT_ADMIN_ROLE` transfer is even begun/accepted -- so both
     /// addresses already hold `ADMIN_ROLE` (preconditions 2 and 3 both pass), but
     /// `defaultAdmin()` is still `oldOwner30a` (precondition 1 fails). This is exactly the gap
@@ -886,7 +892,7 @@ contract CrossMintableERC20V2Test is Test {
     /// would read as `Ready` and the execution wrapper would broadcast a `revokeRole` call that
     /// the factory's role-admin check would then reject. Must be `Inconsistent`, and the
     /// execution wrapper must not broadcast at all.
-    function test_T30a_revokeOldAdminStatus_preGrantedAdminRoleButTransferNotAccepted_isInconsistent()
+    function test_revokeOldAdminStatus_preGrantedAdminRoleButTransferNotAccepted_isInconsistent()
         public
     {
         CrossMintableERC20V2CodeScript scriptContract = new CrossMintableERC20V2CodeScript();
@@ -916,12 +922,13 @@ contract CrossMintableERC20V2Test is Test {
         assertTrue(fresh.hasRole(Const.ADMIN_ROLE, newOwner30a));
     }
 
-    /// T31. Full 4-step ownership transfer, executed by calling the script wrappers directly
-    /// (no `forge script` CLI invocation needed, same rationale as T26) with two DISTINCT real
+    /// Full 4-step ownership transfer, executed by calling the script wrappers directly
+    /// (no `forge script` CLI invocation needed, same rationale as the deploy-script preflight
+    /// test above) with two DISTINCT real
     /// addresses for oldOwner/newOwner. No `vm.prank` is used anywhere in this test -- each
     /// wrapper sets its own broadcast sender explicitly (`vm.startBroadcast(oldOwner)` /
     /// `vm.startBroadcast(newOwner)`), so there is no prank/broadcast interaction to worry about.
-    function test_T31_fullOwnershipTransfer_viaExplicitBroadcastSenders_completes() public {
+    function test_fullOwnershipTransfer_viaExplicitBroadcastSenders_completes() public {
         CrossMintableERC20V2CodeScript scriptContract = new CrossMintableERC20V2CodeScript();
         address oldOwner31 = makeAddr("oldOwner31");
         address newOwner31 = makeAddr("newOwner31");
@@ -939,7 +946,7 @@ contract CrossMintableERC20V2Test is Test {
     }
 }
 
-/// @dev Minimal "upgraded" token implementation used only by beacon-upgrade tests (T7, T8):
+/// @dev Minimal "upgraded" token implementation used only by the beacon-upgrade tests:
 /// identical storage layout and behavior to `CrossMintableERC20V2`, plus one new function so the
 /// tests can observe that an upgrade actually took effect.
 contract CrossMintableERC20V2Mock is CrossMintableERC20V2 {
@@ -948,14 +955,14 @@ contract CrossMintableERC20V2Mock is CrossMintableERC20V2 {
     }
 }
 
-/// @dev Minimal "upgraded" factory implementation used only by the factory-upgrade tests (T20, T21).
+/// @dev Minimal "upgraded" factory implementation used only by the factory-upgrade tests.
 contract CrossMintableERC20V2CodeMock is CrossMintableERC20V2Code {
     function version() external pure returns (uint) {
         return 2;
     }
 }
 
-/// @dev Minimal mock used only by T26: implements just `allTokenPairs`, matching
+/// @dev Minimal mock used only by the deploy-script preflight test: implements just `allTokenPairs`, matching
 /// `IBridgeRegistry`'s selector, so it can be cast to `BaseBridge` and passed to
 /// `CrossMintableERC20V2CodeScript.preflightCheckDuplicateRemoteToken` without deploying a real
 /// bridge — Solidity dispatches external calls by selector, not by actual runtime type.

@@ -58,8 +58,12 @@ contract CrossMintableERC20V2 is
     /**
      * @notice Initializes a token instance. Called once, atomically, from the `BeaconProxy`
      *         constructor via `CrossMintableERC20V2Code._initCode`.
+     * @dev `virtual` so `HyperMintableERC20` can override this exact signature to permanently
+     *      revert — closing the linker-less init path — while reusing the actual initialization
+     *      logic via `__CrossMintableERC20V2_init` under its own, differently-shaped public
+     *      initializer.
      * @param initialOwner Becomes `defaultAdmin()` of this token. The creating factory always
-     *        passes its own address here (D7) — there is no separately stored token admin.
+     *        passes its own address here — there is no separately stored token admin.
      * @param initialMinter Address granted `MINTER_ROLE` if non-zero (normally the bridge)
      * @param name_ ERC20 name
      * @param symbol_ ERC20 symbol
@@ -71,7 +75,23 @@ contract CrossMintableERC20V2 is
         string memory name_,
         string memory symbol_,
         uint8 decimals_
-    ) public initializer {
+    ) public virtual initializer {
+        __CrossMintableERC20V2_init(initialOwner, initialMinter, name_, symbol_, decimals_);
+    }
+
+    /**
+     * @notice Extracted initialization body, callable from a subclass's own differently-shaped
+     *         public initializer (see `HyperMintableERC20.initialize`, the 6-arg overload).
+     * @dev `internal onlyInitializing` — mirrors `BaseBridge.__BaseBridge_init`'s pattern: only
+     *      callable from within another `initializer`-guarded function, never directly.
+     */
+    function __CrossMintableERC20V2_init(
+        address initialOwner,
+        address initialMinter,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_
+    ) internal onlyInitializing {
         __ERC20_init(name_, symbol_);
         __ERC20Permit_init(name_);
         __AccessControlDefaultAdminRules_init(0, initialOwner);
@@ -94,11 +114,20 @@ contract CrossMintableERC20V2 is
         return true;
     }
 
-    function decimals() public view override(ERC20Upgradeable, ICrossMintableERC20) returns (uint8) {
+    /// @dev `virtual`, though `HyperMintableERC20` does NOT override this: it deliberately reuses
+    /// this exact implementation (and this contract's ERC-7201 storage) for `decimals` rather than
+    /// keeping its own copy — `virtual` only for consistency/future subclasses.
+    function decimals() public view virtual override(ERC20Upgradeable, ICrossMintableERC20) returns (uint8) {
         return _getCrossMintableERC20V2Storage().decimals;
     }
 
-    function nonces(address owner_) public view override(ERC20PermitUpgradeable, ICrossMintableERC20) returns (uint) {
+    function nonces(address owner_)
+        public
+        view
+        virtual
+        override(ERC20PermitUpgradeable, ICrossMintableERC20)
+        returns (uint)
+    {
         return super.nonces(owner_);
     }
 }

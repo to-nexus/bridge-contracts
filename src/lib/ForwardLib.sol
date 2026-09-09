@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
-import {ICrossBridgeV2} from "../interface/ICrossBridgeV2.sol";
+import {ICrossBridge} from "../interface/ICrossBridge.sol";
 
 /**
  * @title ForwardLib
  * @notice External library backing the executor-only forwarded (multi-hop) bridge
- * entrypoint (`bridgeTokenForwarded`) on relay-hub bridges such as `CrossBridgeV2`.
+ * entrypoint (`bridgeTokenForwarded`) on relay-hub bridges such as `CrossBridge`.
  * @dev Deployed as a separate contract and DELEGATECALL'd by the host bridge: all
  * transient storage touched here lives in the HOST's transient space, and all events
  * emitted here are emitted with the HOST's address as `emitter`. Every function here
@@ -106,13 +106,13 @@ library ForwardLib {
 
     /**
      * @notice Consumes (read-then-zero) the staged forward context.
-     * @dev Reverts with `ICrossBridgeV2.BaseBridgeForwardContextInactive` if inactive.
+     * @dev Reverts with `ICrossBridge.BaseBridgeForwardContextInactive` if inactive.
      * Zeroing on read (rather than via a later explicit clear) means nested
      * reentrancy and a sequential second call are blocked by the very same mechanism:
      * only one `bridgeTokenForwarded` call per staged context can ever succeed.
      */
     function consumeCtx() external returns (uint fromChainID, address token, uint value, uint finalizeIndex) {
-        if (!CTX_ACTIVE.asBoolean().tload()) revert ICrossBridgeV2.BaseBridgeForwardContextInactive();
+        if (!CTX_ACTIVE.asBoolean().tload()) revert ICrossBridge.BaseBridgeForwardContextInactive();
 
         fromChainID = CTX_FROM_CHAIN_ID.asUint256().tload();
         token = CTX_TOKEN.asAddress().tload();
