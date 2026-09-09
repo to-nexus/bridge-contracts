@@ -1,16 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {ICrossMintableERC20Code} from "./ICrossMintableERC20Code.sol";
+import {ICrossMintableERC20V2Code} from "./ICrossMintableERC20V2Code.sol";
 
 /**
  * @title IHyperMintableERC20Code
- * @notice `ICrossMintableERC20Code` extended with the HyperCore link-delegation surface for
- *         tokens created by this factory, plus an explicit name/symbol/minter creation path.
+ * @notice `ICrossMintableERC20V2Code` (the full Cross factory surface: legacy bridge-only
+ *         creation path, explicit name/symbol/minter creation, CREATE2 address prediction,
+ *         shared beacon, and owner-managed pass-through setters) extended with the HyperCore
+ *         link-delegation surface for tokens created by this factory, plus a compat-named
+ *         creation entrypoint.
+ * @dev `HyperMintableERC20Code` inherits `CrossMintableERC20V2Code` rather than redeclaring an
+ *      equivalent `tokenAdmin()`/`beacon()`/`computeTokenAddress*` surface, so this interface
+ *      inherits the same functions from `ICrossMintableERC20V2Code` rather than restating
+ *      them. There is no `tokenAdmin()` here — every token this factory creates gets
+ *      `address(this)` (this factory) as `defaultAdmin()`, exactly like
+ *      `CrossMintableERC20V2Code`'s own tokens.
  */
-interface IHyperMintableERC20Code is ICrossMintableERC20Code {
+interface IHyperMintableERC20Code is ICrossMintableERC20V2Code {
     /**
-     * @notice Emitted when a `HyperMintableERC20` is deployed by this factory
+     * @notice Emitted, alongside `ICrossMintableERC20V2Code.CrossMintableERC20Created`, for every
+     *         token this factory creates
+     * @dev Preserved for ABI/tooling continuity: existing off-chain consumers of this factory
+     *      already watch this topic, so it must keep being emitted. `_create` (inherited,
+     *      unmodified, from `CrossMintableERC20V2Code`) calls the overridable `_emitCreated`
+     *      hook, which this factory overrides to emit BOTH
+     *      `ICrossMintableERC20V2Code.CrossMintableERC20Created` and then this event — in that
+     *      order, in the same transaction — for every token this factory creates, whether via
+     *      `createCrossMintableERC20`, `createMintableERC20`, or this factory's own
+     *      `createHyperMintableERC20`. The two events describe ONE token creation, not two:
+     *      consumers subscribed to both topics MUST deduplicate by transaction hash or by the
+     *      created `tokenAddress`, never count a single creation twice.
      * @param remoteChainID Chain ID of the remote token this local token wraps
      * @param remoteToken Address of the remote token
      * @param tokenAddress Address of the newly deployed `HyperMintableERC20`
@@ -19,7 +39,7 @@ interface IHyperMintableERC20Code is ICrossMintableERC20Code {
 
     /**
      * @notice Delegates to `token.setHyperCoreDeployer(finalizer)` on a token this factory created
-     * @dev Reverts with `HyperMintableERC20CodeUnknownToken` for any other address. Restricted
+     * @dev Reverts with `CrossMintableERC20V2CodeUnknownToken` for any other address. Restricted
      *      to `Const.ADMIN_ROLE`.
      * @param token Address of a `HyperMintableERC20` this factory deployed
      * @param finalizer Address that will sign the matching HyperCore `finalizeEvmContract` action
@@ -28,7 +48,7 @@ interface IHyperMintableERC20Code is ICrossMintableERC20Code {
 
     /**
      * @notice Delegates to `token.setCoreTokenIndex(index)` on a token this factory created
-     * @dev Reverts with `HyperMintableERC20CodeUnknownToken` for any other address. Restricted
+     * @dev Reverts with `CrossMintableERC20V2CodeUnknownToken` for any other address. Restricted
      *      to `Const.ADMIN_ROLE`.
      * @param token Address of a `HyperMintableERC20` this factory deployed
      * @param index HyperCore spot token index
@@ -36,34 +56,14 @@ interface IHyperMintableERC20Code is ICrossMintableERC20Code {
     function setCoreTokenIndex(address token, uint64 index) external;
 
     /**
-     * @notice Predicts the CREATE2 address `createCrossMintableERC20` would deploy to
-     * @dev Shares the exact same `_initCode(...)` builder as `createCrossMintableERC20` (via the
-     *      same derived name/symbol), so the prediction and the real deployment can never
-     *      structurally diverge. `minter` is the address that will actually call
-     *      `createCrossMintableERC20` (normally the bridge) — supplying the wrong address does
-     *      NOT revert, it simply returns a different address than what will actually be deployed
-     *      once the real minter creates the token. This is intentional: it allows precomputing
-     *      an address before the eventual minter has even been granted `Const.BRIDGE_ROLE`.
-     * @param remoteChainID Chain ID of the remote token this local token would wrap
-     * @param remoteToken Address of the remote token
-     * @param symbol Token symbol (name is derived as "Cross Bridge <symbol>", symbol as "<symbol>x")
-     * @param decimals Token decimals
-     * @param minter Address that will call `createCrossMintableERC20` (the bridge)
-     * @return Predicted `HyperMintableERC20` address
-     */
-    function computeTokenAddress(
-        uint remoteChainID,
-        address remoteToken,
-        string memory symbol,
-        uint8 decimals,
-        address minter
-    ) external view returns (address);
-
-    /**
      * @notice Deploys a `HyperMintableERC20` with caller-chosen name/symbol and an explicit minter
-     * @dev Same CREATE2 salt derivation (`remoteChainID`, `remoteToken`) and the same
-     *      `BeaconProxy`-over-`beacon()` deployment shape as `createCrossMintableERC20` — only
-     *      the initcode's name/symbol/minter inputs differ. Restricted to `Const.ADMIN_ROLE`.
+     * @dev Thin compat wrapper kept ONLY so this selector — already relied on by this
+     *      UUPS-upgradeable factory's existing operational tooling — does not disappear; it
+     *      delegates to the exact same inherited creation path as
+     *      `ICrossMintableERC20V2Code.createMintableERC20`. Same CREATE2 salt derivation
+     *      (`remoteChainID`, `remoteToken`) and the same `BeaconProxy`-over-`beacon()` deployment
+     *      shape as `createCrossMintableERC20` — only the initcode's name/symbol/minter inputs
+     *      differ. Restricted to `Const.ADMIN_ROLE`.
      * @param remoteChainID Chain ID of the remote token this local token wraps
      * @param remoteToken Address of the remote token
      * @param name_ ERC20 name
@@ -82,52 +82,9 @@ interface IHyperMintableERC20Code is ICrossMintableERC20Code {
     ) external returns (address tokenAddress);
 
     /**
-     * @notice Predicts the CREATE2 address `createHyperMintableERC20` would deploy to
-     * @dev Shares the exact same `_initCode(...)` builder as `createHyperMintableERC20`, so the
-     *      prediction and the real deployment can never structurally diverge. `minter` here is the
-     *      exact `minter` ARGUMENT that will be passed to `createHyperMintableERC20` and receive
-     *      `MINTER_ROLE` — unlike `computeTokenAddress`, it is NOT the factory caller. Supplying a
-     *      different value than the eventual creation uses does NOT revert; it simply returns a
-     *      different address than what will actually be deployed.
-     * @param remoteChainID Chain ID of the remote token this local token would wrap
-     * @param remoteToken Address of the remote token
-     * @param name_ ERC20 name
-     * @param symbol_ ERC20 symbol
-     * @param decimals Token decimals
-     * @param minter Address that will be passed as `minter` to `createHyperMintableERC20` and
-     *        granted `MINTER_ROLE` (normally the bridge)
-     * @return Predicted `HyperMintableERC20` address
-     */
-    function computeTokenAddressWithName(
-        uint remoteChainID,
-        address remoteToken,
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals,
-        address minter
-    ) external view returns (address);
-
-    /**
-     * @notice Immutable-in-effect `defaultAdmin()` passed to every token this factory creates
-     * @dev As the token's current default admin, this address has effective link authority
-     *      (`isLinkAuthority`) over `setHyperCoreDeployer` / `setCoreTokenIndex` without holding
-     *      `LINKER_ROLE` itself — that role is instead granted to this factory (`address(this)`
-     *      in the created token's `factoryLinker`). Stored (not `immutable`) because this
-     *      contract is itself a UUPS proxy: the logic contract's constructor only disables
-     *      initializers, so per-deployment values live in storage and survive a logic upgrade.
-     * @return Configured token admin address
-     */
-    function tokenAdmin() external view returns (address);
-
-    /**
-     * @notice The `UpgradeableBeacon` every `HyperMintableERC20` created by this factory points at
-     * @dev Also stored (not `immutable`) for the same reason as `tokenAdmin` — see there.
-     * @return Beacon address baked into every created token's `BeaconProxy` initcode
-     */
-    function beacon() external view returns (address);
-
-    /**
      * @notice Returns whether `token` was deployed by this factory
+     * @dev Compat alias for the inherited `isCrossMintableERC20` — kept so this selector, relied
+     *      on by existing operational tooling, does not disappear.
      * @param token Address to check
      * @return True if this factory created `token`
      */

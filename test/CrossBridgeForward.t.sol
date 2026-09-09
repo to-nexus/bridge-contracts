@@ -4,12 +4,12 @@ pragma solidity ^0.8.28;
 import {BSCBridge} from "../src/BSCBridge.sol";
 import {BSCBridgeV2} from "../src/BSCBridgeV2.sol";
 import {BridgeExecutor} from "../src/BridgeExecutor.sol";
-import {CrossBridgeV2} from "../src/CrossBridgeV2.sol";
+import {CrossBridge} from "../src/CrossBridge.sol";
 import {BridgeRegistry} from "../src/abstract/BridgeRegistry.sol";
 
 import {IBridgeExecutor} from "../src/interface/IBridgeExecutor.sol";
 import {IBridgeRegistry} from "../src/interface/IBridgeRegistry.sol";
-import {ICrossBridgeV2} from "../src/interface/ICrossBridgeV2.sol";
+import {ICrossBridge} from "../src/interface/ICrossBridge.sol";
 import {Const} from "../src/lib/Const.sol";
 import {ForwardLib} from "../src/lib/ForwardLib.sol";
 
@@ -52,7 +52,7 @@ contract EvilForwardExecutor {
         bridgeTokenReentryChainID = chainID;
     }
 
-    /// @dev M-1b regression: forward mid-flight reentry into `finalizeBridgeBatch`
+    /// @dev Regression: forward mid-flight reentry into `finalizeBridgeBatch`
     /// itself (an empty, harmless batch) must be blocked by the SAME pre-existing
     /// shared `nonReentrant` guard `bridgeToken` reentry is blocked by — proving the
     /// guard covers `finalizeBridgeBatch` too, not just `bridgeToken`.
@@ -60,7 +60,7 @@ contract EvilForwardExecutor {
         shouldReenterFinalizeBridgeBatch = v;
     }
 
-    /// @dev M-1b regression: forward mid-flight reentry into `releasePending` (with a
+    /// @dev Regression: forward mid-flight reentry into `releasePending` (with a
     /// nonexistent index — any revert reason is fine, we only care that the call is
     /// blocked by the shared guard BEFORE it could reach `BaseBridgeNotExistIndex`).
     function setShouldReenterReleasePending(bool v) external {
@@ -90,7 +90,7 @@ contract EvilForwardExecutor {
         if (shouldReenterForward) {
             reentryAttempted = true;
             shouldReenterForward = false; // avoid infinite recursion
-            try ICrossBridgeV2(bridge).bridgeTokenForwarded(0, address(0xdead), 0, 0, 0, "") {
+            try ICrossBridge(bridge).bridgeTokenForwarded(0, address(0xdead), 0, 0, 0, "") {
                 reentrySucceeded = true;
             } catch (bytes memory reason) {
                 reentryRevertData = reason;
@@ -100,7 +100,7 @@ contract EvilForwardExecutor {
             shouldReenterBridgeToken = false;
             // toChainID/token must be a REGISTERED pair so the call reaches the shared
             // `nonReentrant` guard (past `onlyValidToken`) rather than failing earlier.
-            try CrossBridgeV2(payable(bridge)).bridgeToken(
+            try CrossBridge(payable(bridge)).bridgeToken(
                 bridgeTokenReentryChainID, IERC20(Const.NATIVE_TOKEN), address(0xdead), 0, 0, 0, ""
             ) {
                 reentrySucceeded = true;
@@ -113,7 +113,7 @@ contract EvilForwardExecutor {
             // Empty batch: the shared `nonReentrant` guard (already held by the outer
             // `finalizeBridgeBatch` call this reentry happens inside of) must reject
             // this before the empty-array body would otherwise trivially succeed.
-            try CrossBridgeV2(payable(bridge)).finalizeBridgeBatch(
+            try CrossBridge(payable(bridge)).finalizeBridgeBatch(
                 new IBridgeRegistry.FinalizeArguments[](0), new uint8[][](0), new bytes32[][](0), new bytes32[][](0)
             ) returns (bool) {
                 reentrySucceeded = true;
@@ -123,7 +123,7 @@ contract EvilForwardExecutor {
         } else if (shouldReenterReleasePending) {
             reentryAttempted = true;
             shouldReenterReleasePending = false;
-            try CrossBridgeV2(payable(bridge)).releasePending(999999999, 999999999) {
+            try CrossBridge(payable(bridge)).releasePending(999999999, 999999999) {
                 reentrySucceeded = true;
             } catch (bytes memory reason) {
                 reentryRevertData = reason;
@@ -137,7 +137,7 @@ contract EvilForwardExecutor {
  * @notice Stand-in `bridgeExecutor` used ONLY to reproduce `ForwardFailureCode.ForwardCallNotConsumed`:
  * returns a well-formed (>= 64 byte) SUCCESS response without ever actually calling the
  * target (`bridgeTokenForwarded`), so the staged forward context is never consumed.
- * @dev Plan spec §10 / test/M-1: this is a deliberately non-compliant/malicious executor
+ * @dev This is a deliberately non-compliant/malicious executor
  * shape — a spec-compliant `BridgeExecutor` can never produce this outcome, since it
  * always calls the target before returning success. It exists purely as defense-in-depth
  * coverage for "what if `bridgeExecutor` were misconfigured or compromised".
@@ -161,7 +161,7 @@ contract NonConsumingExecutor {
 /**
  * @title MaliciousNativeReceiver
  * @notice A native-token finalize recipient (`to`) whose receive callback attempts to
- * reenter both `bridgeTokenForwarded` and `bridgeToken`. Used for the §14.1 regression
+ * reenter both `bridgeTokenForwarded` and `bridgeToken`. Used for the regression
  * proving BaseBridge's ordinary `_safeCall(to, value, "")` native payout callback (gas
  * 100k) — ATTACKER-CONTROLLED since `to` is a caller-supplied address — cannot reach
  * either entrypoint: `bridgeTokenForwarded` because `msg.sender` here is this receiver,
@@ -185,14 +185,14 @@ contract MaliciousNativeReceiver {
 
     receive() external payable {
         forwardAttempted = true;
-        try ICrossBridgeV2(bridge).bridgeTokenForwarded(0, address(0xdead), 0, 0, 0, "") {
+        try ICrossBridge(bridge).bridgeTokenForwarded(0, address(0xdead), 0, 0, 0, "") {
             forwardSucceeded = true;
         } catch (bytes memory reason) {
             forwardRevertData = reason;
         }
 
         bridgeTokenAttempted = true;
-        try CrossBridgeV2(payable(bridge)).bridgeToken(
+        try CrossBridge(payable(bridge)).bridgeToken(
             bridgeTokenReentryChainID, IERC20(Const.NATIVE_TOKEN), address(0xdead), 0, 0, 0, ""
         ) {
             bridgeTokenSucceeded = true;
@@ -206,8 +206,9 @@ contract MaliciousNativeReceiver {
  * @title RevertingReceiver
  * @notice Rejects any native ETH sent to it. Used as a `_dev` stand-in to force
  * `_initiateBridge`'s native fee payout (mid-`bridgeTokenForwarded`) to revert, taking
- * down the entire forwarded call — the vehicle for the M-1 `BridgeInitiated`-rollback
- * regression (plan spec §12 atomicity).
+ * down the entire forwarded call — the vehicle for the `BridgeInitiated`-rollback
+ * regression proving atomicity: a mid-flight failure must roll back everything the
+ * forwarded call already did, not leave it partially applied.
  */
 contract RevertingReceiver {
     receive() external payable {
@@ -216,29 +217,30 @@ contract RevertingReceiver {
 }
 
 /**
- * @title CrossBridgeV2ForwardTest
- * @notice Forward (multi-hop) entrypoint test suite per plan spec §14.1 (guards /
- * access control), §14.2 (D1 pass-through invariant), and §14.6 (code-size gates).
- * @dev Fixture upgrade order follows §14.7: `CrossBridge` is deployed and initialized
- * exactly as in the base `BridgeExecutorTest` fixture, and is only THEN upgraded to
- * `CrossBridgeV2` — mirroring the real upgrade path rather than deploying V2 fresh.
+ * @title CrossBridgeForwardTest
+ * @notice Forward (multi-hop) entrypoint test suite: guards / access control, the
+ * pass-through invariant for hops that must skip normal deposit/mint accounting, and
+ * deployed-bytecode size gates.
+ * @dev `CrossBridge` is deployed and initialized exactly as in the base
+ * `BridgeExecutorTest` fixture, and is only THEN upgraded to `CrossBridge` — mirroring
+ * the real upgrade path rather than deploying V2 fresh.
  */
-contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
-    CrossBridgeV2 internal bridgeCrossV2;
+contract CrossBridgeForwardTest is BridgeExecutorTest {
+    CrossBridge internal bridgeCrossV2;
 
     function setUp() public virtual override {
         super.setUp();
 
         vm.selectFork(crossForkID);
         vm.startPrank(CrossOWNER);
-        bridgeCross.upgradeToAndCall(address(new CrossBridgeV2()), bytes(""));
-        bridgeCrossV2 = CrossBridgeV2(payable(address(bridgeCross)));
+        bridgeCross.upgradeToAndCall(address(new CrossBridge()), bytes(""));
+        bridgeCrossV2 = CrossBridge(payable(address(bridgeCross)));
 
         // The forwarded entrypoint's own target is the bridge itself.
         bridgeExecutorCross.addWhitelistTarget(address(bridgeCrossV2));
 
         // Keep monitoring thresholds out of the way for synthetic/unconfigured tokens
-        // and chain IDs used by the D1 tests below.
+        // and chain IDs used by the pass-through tests below.
         bridgeVerifierCross.setVerificationAmountThreshold(0);
         bridgeVerifierCross.setPeriodTotalValueThreshold(0);
         vm.stopPrank();
@@ -257,14 +259,14 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         bytes memory hop3
     ) internal view returns (bytes memory) {
         bytes memory call_ = abi.encodeWithSelector(
-            CrossBridgeV2.bridgeTokenForwarded.selector, toChainID2, to2, value2, networkFee2, exFee2, hop3
+            CrossBridge.bridgeTokenForwarded.selector, toChainID2, to2, value2, networkFee2, exFee2, hop3
         );
         return abi.encodePacked(address(bridgeCrossV2), call_);
     }
 
     /// @dev Mirrors `CrossChainTest.crossFinalize`'s signing logic but is generic over
     /// `fromChainID`/`token`, so it can also finalize from the synthetic chain IDs the
-    /// D1 tests register.
+    /// pass-through tests register.
     function _signAndFinalize(
         uint fromChainID,
         uint index,
@@ -348,7 +350,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     // ----------------------------------------------------------------
-    // M-1: event-log decoding helpers
+    // Event-log decoding helpers
     // ----------------------------------------------------------------
 
     bytes32 internal constant FORWARD_FAILED_TOPIC0 = keccak256("ForwardFailed(uint256,uint256,uint8,bytes32)");
@@ -356,8 +358,8 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         keccak256("ForwardInitiated(uint256,uint256,uint256,address,address,uint256,uint256,uint256,bytes32)");
 
     /// @dev Finds the (first) `ForwardFailed` log emitted BY THE BRIDGE (DELEGATECALL
-    /// means `ForwardLib`'s events carry the bridge's own address as emitter — plan spec
-    /// §9) among `logs`, and decodes its fields.
+    /// means `ForwardLib`'s events carry the bridge's own address as emitter) among
+    /// `logs`, and decodes its fields.
     function _findForwardFailed(Vm.Log[] memory logs)
         internal
         view
@@ -422,16 +424,15 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         (found,,,,) = _findForwardFailed(logs);
     }
 
-    /// @dev Discovers the `ForwardLib` address forge auto-linked for `CrossBridgeV2` in
+    /// @dev Discovers the `ForwardLib` address forge auto-linked for `CrossBridge` in
     /// this test run. Foundry predeploys/reuses a SINGLE external-library instance per
     /// test run for a given library, so this is the SAME address baked into
     /// `bridgeCrossV2`'s real implementation set up in `setUp()`. Offset derived from
-    /// `out/CrossBridgeV2.sol/CrossBridgeV2.json`'s `deployedBytecode.linkReferences`
-    /// (stable for this round — `CrossBridgeV2.sol`'s logic is unchanged this round; if
-    /// it ever changes, re-derive via `script/ForwardLibVerify.s.sol`'s own JSON-based
-    /// approach instead of a hardcoded offset).
+    /// `out/CrossBridge.sol/CrossBridge.json`'s `deployedBytecode.linkReferences`; if
+    /// `CrossBridge.sol`'s logic ever changes and this offset drifts, re-derive it via
+    /// `script/ForwardLibVerify.s.sol`'s own JSON-based approach instead of hardcoding.
     function _discoverForwardLibAddress() internal returns (address addr) {
-        bytes memory code = address(new CrossBridgeV2()).code;
+        bytes memory code = address(new CrossBridge()).code;
         uint offset = 8638;
         assembly ("memory-safe") {
             addr := shr(96, mload(add(add(code, 32), offset)))
@@ -439,27 +440,27 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     // ----------------------------------------------------------------
-    // §14.1 Guards / access control
+    // Guards / access control
     // ----------------------------------------------------------------
 
     function test_forward_directCallByEOA_reverts() public {
         vm.selectFork(crossForkID);
         vm.prank(USER);
-        vm.expectRevert(ICrossBridgeV2.BaseBridgeForwardNotExecutor.selector);
+        vm.expectRevert(ICrossBridge.BaseBridgeForwardNotExecutor.selector);
         bridgeCrossV2.bridgeTokenForwarded(BSC_CHAIN_ID, USER, 1, 0, 0, "");
     }
 
     function test_forward_directCallByArbitraryContract_reverts() public {
         vm.selectFork(crossForkID);
         vm.prank(address(mockTargetCross));
-        vm.expectRevert(ICrossBridgeV2.BaseBridgeForwardNotExecutor.selector);
+        vm.expectRevert(ICrossBridge.BaseBridgeForwardNotExecutor.selector);
         bridgeCrossV2.bridgeTokenForwarded(BSC_CHAIN_ID, USER, 1, 0, 0, "");
     }
 
     function test_forward_executorOutsideFinalizeContext_reverts() public {
         vm.selectFork(crossForkID);
         vm.prank(address(bridgeExecutorCross));
-        vm.expectRevert(ICrossBridgeV2.BaseBridgeForwardContextInactive.selector);
+        vm.expectRevert(ICrossBridge.BaseBridgeForwardContextInactive.selector);
         bridgeCrossV2.bridgeTokenForwarded(BSC_CHAIN_ID, USER, 1, 0, 0, "");
     }
 
@@ -471,11 +472,11 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         bridgeCross.setPause(true);
 
         vm.prank(USER); // not the executor
-        vm.expectRevert(ICrossBridgeV2.BaseBridgeForwardNotExecutor.selector);
+        vm.expectRevert(ICrossBridge.BaseBridgeForwardNotExecutor.selector);
         bridgeCrossV2.bridgeTokenForwarded(BSC_CHAIN_ID, USER, 1, 0, 0, "");
     }
 
-    /// @notice Validation priority regression for the "no modifiers" design (§7.3):
+    /// @notice Validation priority regression for the "no modifiers" design:
     /// with BOTH paused AND an inactive context, the caller sees the ctx error, NOT
     /// `Pausable`'s error — proving the ordering is msg.sender -> ctx -> paused ->
     /// token, implemented in the function body rather than via modifiers.
@@ -485,7 +486,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         bridgeCross.setPause(true);
 
         vm.prank(address(bridgeExecutorCross));
-        vm.expectRevert(ICrossBridgeV2.BaseBridgeForwardContextInactive.selector);
+        vm.expectRevert(ICrossBridge.BaseBridgeForwardContextInactive.selector);
         bridgeCrossV2.bridgeTokenForwarded(BSC_CHAIN_ID, USER, 1, 0, 0, "");
     }
 
@@ -505,7 +506,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         assertEq(USER.balance, 0, "forward should have consumed the finalize payout, not paid USER");
 
         vm.prank(address(bridgeExecutorCross));
-        vm.expectRevert(ICrossBridgeV2.BaseBridgeForwardContextInactive.selector);
+        vm.expectRevert(ICrossBridge.BaseBridgeForwardContextInactive.selector);
         bridgeCrossV2.bridgeTokenForwarded(BSC_CHAIN_ID, USER, value2, networkFee2, exFee2, "");
     }
 
@@ -560,9 +561,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         assertEq(bytes4(evil.reentryRevertData()), bytes4(keccak256("ReentrancyGuardReentrantCall()")));
     }
 
-    /// @notice Priority case for this round: a batch with TWO forwarded items must have
-    /// BOTH succeed, proving the forward guard is call-scoped (acquired/released per
-    /// `bridgeTokenForwarded` invocation), not transaction/batch-scoped.
+    /// @notice A batch with TWO forwarded items must have BOTH succeed, proving the
+    /// forward guard is call-scoped (acquired/released per `bridgeTokenForwarded`
+    /// invocation), not transaction/batch-scoped.
     function test_forward_batchOfTwoForwardedItems_bothSucceed() public {
         vm.selectFork(crossForkID);
         uint hop2InitiateIndexBefore = bridgeCross.getNextInitiateIndex(BSC_CHAIN_ID);
@@ -757,10 +758,10 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     // ----------------------------------------------------------------
-    // §14.2 D1 pass-through invariant
+    // Pass-through invariant: forwards that bypass normal accounting
     // ----------------------------------------------------------------
 
-    function test_D1_erc20_bothOrigin_success() public {
+    function test_forwardErc20_bothOriginPairs_succeedsWithoutFallback() public {
         vm.selectFork(crossForkID);
         TestToken myToken = new TestToken("Origin", "ORG", 18);
         myToken.mint(address(bridgeCross), 1000 ether);
@@ -785,10 +786,10 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
 
         assertEq(myToken.balanceOf(address(bridgeExecutorCross)), 0, "executor should not retain any ORG token");
         assertEq(bridgeCross.getTokenPair(chainY, address(myToken)).deposited, value2);
-        assertEq(myToken.balanceOf(USER), 0, "D1 both-origin success must NOT fall back to a direct USER payout");
+        assertEq(myToken.balanceOf(USER), 0, "both-origin success must NOT fall back to a direct USER payout");
     }
 
-    function test_D1_erc20_fromNotOrigin_reverts() public {
+    function test_forwardErc20_fromPairNotOrigin_fallsBackAfterForwardReverts() public {
         vm.selectFork(crossForkID);
         uint chainX = 90003; // from-chain pair: NOT origin (wrapped)
         uint chainY = 90004; // to-chain pair: origin
@@ -805,11 +806,11 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
 
         assertTrue(_signAndFinalize(chainX, 1, wrappedAddr, USER, ctxValue, extraData, 5));
 
-        // D1 violation -> bridgeTokenForwarded reverts -> normal finalize fallback pays USER.
+        // A pass-through violation makes bridgeTokenForwarded revert, so the normal finalize fallback pays USER instead.
         assertEq(IERC20(wrappedAddr).balanceOf(USER), ctxValue);
     }
 
-    function test_D1_erc20_toNotOrigin_reverts() public {
+    function test_forwardErc20_toPairNotOrigin_fallsBackAfterForwardReverts() public {
         vm.selectFork(crossForkID);
         uint chainX = 90005; // from-chain pair: origin
         uint chainY = 90006; // to-chain pair: NOT origin (wrapped)
@@ -831,14 +832,14 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
 
         assertTrue(_signAndFinalize(chainX, 1, wrappedAddr, USER, ctxValue, extraData, 5));
 
-        // D1 violation -> bridgeTokenForwarded reverts -> normal finalize fallback pays USER.
+        // A pass-through violation makes bridgeTokenForwarded revert, so the normal finalize fallback pays USER instead.
         assertEq(IERC20(wrappedAddr).balanceOf(USER), ctxValue);
     }
 
-    function test_D1_native_bypassed_success() public {
-        // Native is registered isOrigin=false relative to BSC on CROSS (§7.3's
-        // generalization rationale), yet pass-through succeeds unconditionally because
-        // D1 bypasses native regardless of isOrigin.
+    function test_forwardNative_bypassesOriginCheck_succeeds() public {
+        // Native is registered isOrigin=false relative to BSC on CROSS, yet pass-through
+        // succeeds unconditionally because native forwards bypass the isOrigin check
+        // entirely.
         vm.selectFork(crossForkID);
         assertFalse(bridgeCross.getTokenPair(BSC_CHAIN_ID, Const.NATIVE_TOKEN).isOrigin);
 
@@ -850,18 +851,18 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         assertEq(USER.balance, 0, "native forward should have succeeded, not fallen back");
     }
 
-    /// @notice L-1 fix (prior review): the ORIGINAL version of this test measured
-    /// `minted[BSC_CHAIN_ID][NATIVE_TOKEN]` at test start, but that pair's baseline
-    /// already carries `CROSS_FOUNDATION_INITIAL_SUPPLY` (50,000,000 ether) from fixture
-    /// setup — so `value2 = mintedAvailable + 1 ether` was itself astronomically large,
-    /// and the observed fallback could not be confidently attributed to the intended
-    /// `minted >= value` gate specifically (some other gate tripping on such a huge
-    /// value would have looked identical). Fixed by using a FRESH synthetic destination
-    /// chain with an explicitly pinned, small `minted` baseline, and by asserting the
-    /// specific failure code (`ExecutorCallReverted`, meaning the revert happened INSIDE
-    /// `bridgeTokenForwarded` itself — exactly what `_checkInitiateAmount`'s
-    /// `require(minted >= value)` produces) rather than only the fallback payout.
-    function test_D1_native_insufficientMinted_fallsBack() public {
+    /// @notice Uses a FRESH synthetic destination chain with an explicitly pinned, small
+    /// `minted` baseline — measuring `minted[BSC_CHAIN_ID][NATIVE_TOKEN]` instead would
+    /// not work, since that pair's baseline already carries
+    /// `CROSS_FOUNDATION_INITIAL_SUPPLY` (50,000,000 ether) from fixture setup, making
+    /// `value2 = mintedAvailable + 1 ether` astronomically large and the observed
+    /// fallback impossible to attribute confidently to the intended `minted >= value`
+    /// gate specifically (some other gate tripping on such a huge value would look
+    /// identical). Also asserts the specific failure code (`ExecutorCallReverted`,
+    /// meaning the revert happened INSIDE `bridgeTokenForwarded` itself — exactly what
+    /// `_checkInitiateAmount`'s `require(minted >= value)` produces) rather than only the
+    /// fallback payout.
+    function test_forwardNative_insufficientMinted_fallsBackToDirectPayout() public {
         vm.selectFork(crossForkID);
         uint chainZ = 90007;
         vm.prank(CrossOWNER);
@@ -900,7 +901,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     // ----------------------------------------------------------------
-    // L-2: native D1 — all four isOrigin[from] x isOrigin[to] combinations
+    // Native pass-through — all four isOrigin[from] x isOrigin[to] combinations
     // ----------------------------------------------------------------
 
     /// @dev Registers a fresh (native) token pair for `chainID` with the given
@@ -930,18 +931,18 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
 
     /// @dev Runs one full isOrigin[from] x isOrigin[to] combination: registers a fresh
     /// `fromChainID`/`toChainID` pair with the given flags, seeds whatever precondition
-    /// each flag requires, then asserts the native forward succeeds (D1 bypasses native
-    /// unconditionally — spec §14.2) regardless of the combination.
-    /// @dev M-2: also snapshots the bridge's real native balance and both pairs'
+    /// each flag requires, then asserts the native forward succeeds unconditionally
+    /// (native forwards bypass the isOrigin check) regardless of the combination.
+    /// @dev Also snapshots the bridge's real native balance and both pairs'
     /// `minted`/`deposited` around the forward, asserts the EXACT per-pair delta this
-    /// specific isOrigin combination must produce (spec §6.1's `_depositToken`/
-    /// `_withdrawToken` rules), and asserts the §14.3 accounting invariant tying those
+    /// specific isOrigin combination must produce (per the `_depositToken`/
+    /// `_withdrawToken` rules), and asserts the accounting invariant tying those
     /// ledger deltas to the bridge's real balance change:
     /// `Δbalance == −Σ(!isOrigin)Δminted + Σ(isOrigin)Δdeposited`. Native pass-through
     /// round-trips through the executor with net zero balance effect on its own; the
     /// only REAL balance movement is hop-2's network/ex fee paid out to `_dev`, and the
     /// invariant below is what ties that observable movement back to the ledger.
-    function _runD1NativeCombo(uint fromChainID, bool fromIsOrigin, uint toChainID, bool toIsOrigin) internal {
+    function _runNativeIsOriginCombo(uint fromChainID, bool fromIsOrigin, uint toChainID, bool toIsOrigin) internal {
         vm.selectFork(crossForkID);
         _registerNativePair(fromChainID, fromIsOrigin);
         _registerNativePair(toChainID, toIsOrigin);
@@ -954,7 +955,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         uint ctxValue = value2 + fee2 + ex2;
         bytes memory extraData = _forwardExtraData(toChainID, USER, value2, fee2, ex2, "");
 
-        // M-2: snapshot immediately before the forward — after the seeding above, whose
+        // Snapshot immediately before the forward — after the seeding above, whose
         // own balance/ledger effects must not pollute this combination's measured delta.
         uint balBefore = address(bridgeCross).balance;
         IBridgeRegistry.TokenPair memory fromPairBefore = bridgeCross.getTokenPair(fromChainID, Const.NATIVE_TOKEN);
@@ -969,12 +970,12 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
             "native forward must succeed regardless of isOrigin[from]/isOrigin[to] combination, not fall back"
         );
 
-        // M-2: exact per-pair ledger deltas for this specific isOrigin combination.
+        // Exact per-pair ledger deltas for this specific isOrigin combination.
         IBridgeRegistry.TokenPair memory fromPairAfter = bridgeCross.getTokenPair(fromChainID, Const.NATIVE_TOKEN);
         IBridgeRegistry.TokenPair memory toPairAfter = bridgeCross.getTokenPair(toChainID, Const.NATIVE_TOKEN);
 
         // Σ(!isOrigin)Δminted and Σ(isOrigin)Δdeposited, accumulated across BOTH pairs —
-        // exactly the two sums the §14.3 invariant below is stated in terms of.
+        // exactly the two sums the accounting invariant below is stated in terms of.
         int mintedDeltaSum;
         int depositedDeltaSum;
 
@@ -1016,7 +1017,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
             mintedDeltaSum -= int(value2);
         }
 
-        // M-2 / spec §14.3 invariant.
+        // Accounting invariant.
         int balDelta = int(address(bridgeCross).balance) - int(balBefore);
         int expectedBalDelta = -mintedDeltaSum + depositedDeltaSum;
         assertEq(
@@ -1027,31 +1028,31 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     /// @notice isOrigin[from]=true, isOrigin[to]=true.
-    function test_D1_native_isOriginCombination_TT_succeeds() public {
-        _runD1NativeCombo(90101, true, 90102, true);
+    function test_forwardNative_isOriginCombination_fromOriginToOrigin_succeeds() public {
+        _runNativeIsOriginCombo(90101, true, 90102, true);
     }
 
     /// @notice isOrigin[from]=true, isOrigin[to]=false.
-    function test_D1_native_isOriginCombination_TF_succeeds() public {
-        _runD1NativeCombo(90103, true, 90104, false);
+    function test_forwardNative_isOriginCombination_fromOriginToWrapped_succeeds() public {
+        _runNativeIsOriginCombo(90103, true, 90104, false);
     }
 
     /// @notice isOrigin[from]=false, isOrigin[to]=true.
-    function test_D1_native_isOriginCombination_FT_succeeds() public {
-        _runD1NativeCombo(90105, false, 90106, true);
+    function test_forwardNative_isOriginCombination_fromWrappedToOrigin_succeeds() public {
+        _runNativeIsOriginCombo(90105, false, 90106, true);
     }
 
     /// @notice isOrigin[from]=false, isOrigin[to]=false.
-    function test_D1_native_isOriginCombination_FF_succeeds() public {
-        _runD1NativeCombo(90107, false, 90108, false);
+    function test_forwardNative_isOriginCombination_fromWrappedToWrapped_succeeds() public {
+        _runNativeIsOriginCombo(90107, false, 90108, false);
     }
 
     // ----------------------------------------------------------------
-    // §14.6 Code-size gates (deployment blockers if these fail)
+    // Code-size gates (deployment blockers if these fail)
     // ----------------------------------------------------------------
 
     function test_size_crossBridgeV2_underEIP170Limit() public {
-        assertLe(address(new CrossBridgeV2()).code.length, 24576);
+        assertLe(address(new CrossBridge()).code.length, 24576);
     }
 
     function test_size_bscBridge_underEIP170Limit() public {
@@ -1065,11 +1066,12 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     // ----------------------------------------------------------------
-    // H-1: ForwardLib link-integrity — mislink recovery (plan spec §7.5)
+    // ForwardLib link-integrity — mislink recovery
     // ----------------------------------------------------------------
 
     /// @notice Dedicated link-integrity happy-path smoke test. Distinct in PURPOSE from
-    /// `test_D1_native_bypassed_success` (which documents the D1 bypass rule itself):
+    /// `test_forwardNative_bypassesOriginCheck_succeeds` (which documents the native pass-through bypass
+    /// rule itself):
     /// this one exists purely to anchor "a correctly linked ForwardLib forwards
     /// successfully", as the positive counterpart to the mislink tests below.
     function test_correctlyLinkedLibrary_forwardSucceeds() public {
@@ -1084,10 +1086,10 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
 
     /// @dev Shared body for both mislink variants below: stages a forward, but with
     /// `ForwardLib`'s linked address tampered with FIRST, and asserts the entire
-    /// finalize batch reverts — D3's normal per-item fallback does NOT absorb this
-    /// (plan spec §7.5, since `_forwardBegin`'s `ForwardLib.setCtx()` call runs before
-    /// the executor whitelist/approve gates) — no D3 payout, no finalize-index
-    /// progress, i.e. genuinely nothing committed.
+    /// finalize batch reverts — the normal per-item fallback payout does NOT absorb this
+    /// (since `_forwardBegin`'s `ForwardLib.setCtx()` call runs before the executor
+    /// whitelist/approve gates) — no fallback payout, no finalize-index progress, i.e.
+    /// genuinely nothing committed.
     function _assertMislinkRevertsWholeBatch(bytes memory tamperedLibCode) internal {
         vm.selectFork(crossForkID);
         address libAddr = _discoverForwardLibAddress();
@@ -1150,16 +1152,16 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
         vm.expectRevert();
         bridgeCross.finalizeBridgeBatch(args, vArray, rArray, sArray);
 
-        assertEq(USER.balance, userBalanceBefore, "reverted batch must not pay USER via the normal D3 fallback");
+        assertEq(USER.balance, userBalanceBefore, "reverted batch must not pay USER via the normal fallback payout");
         assertEq(
             bridgeCross.getNextFinalizeIndex(BSC_CHAIN_ID),
             finalizeIndexBefore,
             "reverted batch must not advance the finalize index"
         );
 
-        // Isolation (plan requirement): restore the tampered library's real code within
-        // THIS test — forge's own per-test state isolation already prevents this from
-        // leaking into other test functions regardless, but restore explicitly anyway.
+        // Restore the tampered library's real code within THIS test — forge's own
+        // per-test state isolation already prevents this from leaking into other test
+        // functions regardless, but restore explicitly anyway.
         vm.etch(libAddr, originalLibCode);
     }
 
@@ -1175,7 +1177,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     // ----------------------------------------------------------------
-    // M-1: failure-code / event observability contract (plan spec §10)
+    // Failure-code / event observability contract
     // ----------------------------------------------------------------
 
     function test_forwardFailed_notAttempted_targetNotWhitelisted() public {
@@ -1211,9 +1213,8 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     /// `ExecutorCallReverted`, not `ForwardNotAttempted`. Only a genuinely REVERTING
     /// `approve` (like `MockRevertingApproveMintableToken` here) makes the low-level
     /// call itself fail and reproduces `ForwardNotAttempted` via this gate. This is
-    /// existing, already-reviewed `BaseBridge` behavior (round 1 found zero logic
-    /// defects) — out of scope to change this round; this test targets the scenario
-    /// that actually reaches `ForwardNotAttempted`, not the plan's literal wording.
+    /// existing `BaseBridge` behavior, out of scope to change here; this test targets
+    /// the scenario that actually reaches `ForwardNotAttempted`.
     function test_forwardFailed_notAttempted_erc20ApproveFails() public {
         vm.selectFork(crossForkID);
         MockRevertingApproveMintableToken badToken = new MockRevertingApproveMintableToken(address(bridgeCrossV2));
@@ -1256,7 +1257,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
             _findForwardFailed(vm.getRecordedLogs());
         assertTrue(found, "ForwardFailed must be emitted");
         assertTrue(code == ForwardLib.ForwardFailureCode.ExecutorCallReverted);
-        // L-1: `reasonHash` must be the EXACT hash of the outer executor-frame revert
+        // `reasonHash` must be the EXACT hash of the outer executor-frame revert
         // data, not merely nonzero. Here the fee-mismatch causes `bridgeTokenForwarded`
         // ITSELF (the target) to revert; `BridgeExecutor.executeExtraCall` (BridgeExecutor.sol:199)
         // then replaces that with its own `BETargetCallFailed()` before its call frame
@@ -1293,7 +1294,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
             code == ForwardLib.ForwardFailureCode.ExecutorCallReverted,
             "method-whitelist rejection happens INSIDE executeExtraCall (executor WAS invoked) -> ExecutorCallReverted, not ForwardNotAttempted"
         );
-        // L-1: here the EXECUTOR ITSELF reverts (the method-whitelist gate rejects the
+        // Here the EXECUTOR ITSELF reverts (the method-whitelist gate rejects the
         // call before the target is ever reached), so unlike the fee-mismatch case above
         // there is no `BETargetCallFailed()` substitution -- the outer frame's revert
         // data is `BEMethodNotWhitelisted()` directly.
@@ -1397,7 +1398,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     /// @notice `bridgeTokenForwarded`'s own native fee payout (mid-`_initiateBridge`)
-    /// reverting must roll back EVERYTHING hop-2 did (spec §12 atomicity) — no
+    /// reverting must roll back EVERYTHING hop-2 did (an atomicity requirement) — no
     /// `BridgeInitiated`, no initiate-index progress — and the ORIGINAL finalize must
     /// still fall back to paying the chain B recipient.
     function test_forwardFailure_rollsBackBridgeInitiated_fallsBackToUser() public {
@@ -1439,8 +1440,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     }
 
     // ----------------------------------------------------------------
-    // M-1b: §14.1 named regression cases required to literally claim acceptance
-    // criterion 3
+    // Named regression cases for guards / access control
     // ----------------------------------------------------------------
 
     function test_forward_reentry_finalizeBridgeBatch_reverts() public {
@@ -1508,7 +1508,7 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
 
         assertTrue(evilReceiver.forwardAttempted(), "bridgeTokenForwarded reentry was never attempted");
         assertFalse(evilReceiver.forwardSucceeded(), "bridgeTokenForwarded reentry must not succeed");
-        assertEq(bytes4(evilReceiver.forwardRevertData()), ICrossBridgeV2.BaseBridgeForwardNotExecutor.selector);
+        assertEq(bytes4(evilReceiver.forwardRevertData()), ICrossBridge.BaseBridgeForwardNotExecutor.selector);
 
         assertTrue(evilReceiver.bridgeTokenAttempted(), "bridgeToken reentry was never attempted");
         assertFalse(
@@ -1544,8 +1544,9 @@ contract CrossBridgeV2ForwardTest is BridgeExecutorTest {
     /// @notice Even with `methodCheckEnabled == false` for the bridge as an executor
     /// target (the executor's OWN selector whitelist providing no protection), the
     /// bridge's PRE-EXISTING role checks and shared reentrancy guard independently
-    /// block `setDev`/`bridgeToken`/`releasePending` when reached via the executor
-    /// (plan spec §11's on-chain defense claim, §14.1).
+    /// block `setDev`/`bridgeToken`/`releasePending` when reached via the executor,
+    /// providing on-chain defense in depth even without the executor's own selector
+    /// whitelist.
     function test_methodCheckDisabled_adminSelectors_revert() public {
         vm.selectFork(crossForkID);
         assertFalse(bridgeExecutorCross.isMethodCheckEnabled(address(bridgeCrossV2)));

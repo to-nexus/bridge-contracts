@@ -17,21 +17,22 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
  * @title CrossMintableERC20V2Code
  * @notice Factory that deploys `CrossMintableERC20V2` tokens via CREATE2, as `BeaconProxy`
  *         instances all sharing one `UpgradeableBeacon` that THIS factory creates and owns
- *         itself in `initialize` (D8) — a single beacon upgrade fixes every token this factory
- *         created at once, instead of the costly new-token + pair-remap + liquidity-move
- *         migration the old non-upgradeable design required (already paid once on HyperEVM).
+ *         itself in `initialize` — a single beacon upgrade fixes every token this factory
+ *         created at once, whereas a non-upgradeable token would instead need a new token, a
+ *         pair remap, and a liquidity move for every change.
  * @dev Every created token's `defaultAdmin()` is this factory itself (`address(this)`), never a
- *      separately stored `tokenAdmin` (D7) — the factory's own address is already fixed (it is
+ *      separately stored `tokenAdmin` — the factory's own address is already fixed (it is
  *      the CREATE2 deployer of every token it creates), so there is nothing new to keep in sync
- *      when this factory's own ownership changes hands. This is also why this factory, unlike
- *      `HyperMintableERC20Code`, needs no `tokenAdmin` storage slot at all.
+ *      when this factory's own ownership changes hands. No `tokenAdmin` storage slot exists,
+ *      here or in `HyperMintableERC20Code`, which inherits this same factory-as-token-admin
+ *      model.
  *
- *      A consequence of the above: trust concentrates entirely on this factory's `ADMIN_ROLE`
- *      (R9). That one role can (1) upgrade the shared beacon, rewriting every created token's
+ *      A consequence of the above: trust concentrates entirely on this factory's `ADMIN_ROLE`.
+ *      That one role can (1) upgrade the shared beacon, rewriting every created token's
  *      logic at once, (2) manage any created token's roles through the pass-through setters
  *      below (including minting new supply out of thin air by granting `MINTER_ROLE`), and
  *      (3) upgrade this factory itself (UUPS). Splitting these three into separate principals is
- *      not possible by construction (a single `defaultAdmin()`/beacon owner is the point, D9) —
+ *      not possible by construction (a single `defaultAdmin()`/beacon owner is the point) —
  *      the only available defense is making that one `ADMIN_ROLE` holder a multisig/timelock
  *      (see the deploy script). `beginTokenDefaultAdminTransfer` is an escape hatch, but only
  *      within token-level administration: it moves a token's `defaultAdmin()`/role-management
@@ -44,7 +45,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
  *      is expected, so there is no need for a beacon here (mirrors this factory's
  *      `HyperMintableERC20Code` sibling).
  *
- *      One token per remote pair (R10): CREATE2's salt is derived only from
+ *      One token per remote pair: CREATE2's salt is derived only from
  *      `(remoteChainID, remoteToken)`, but the initcode built by `_initCode` also embeds
  *      name/symbol/decimals/minter — so salt collision alone cannot stop a second, differently
  *      named token for the same pair from landing at a different address. `tokenForPair` closes
@@ -60,12 +61,12 @@ contract CrossMintableERC20V2Code is
 {
     // `CrossMintableERC20V2CodeZeroAddress` / `CrossMintableERC20V2CodeUnknownToken` /
     // `CrossMintableERC20V2CodePairAlreadyCreated` are declared on `ICrossMintableERC20V2Code`
-    // (U1) and inherited from there — not redeclared here.
+    // and inherited from there — not redeclared here.
 
     /// @custom:storage-location erc7201:nexus.storage.CrossMintableERC20V2Code
     struct CrossMintableERC20V2CodeStorage {
         // `UpgradeableBeacon` this factory creates and takes ownership of inside `initialize`
-        // (D8) — there is no separate beacon deployment / ownership hand-off step. Only its
+        // — there is no separate beacon deployment / ownership hand-off step. Only its
         // address is embedded in a token's initcode, never the implementation it currently
         // resolves to, so an upgrade of the beacon's implementation never moves future CREATE2
         // predictions.
@@ -73,7 +74,7 @@ contract CrossMintableERC20V2Code is
         // Tokens this factory has deployed, gating the token-scoped pass-through setters below.
         mapping(address => bool) isCrossMintableERC20;
         // keccak256(abi.encode(remoteChainID, remoteToken)) -> token this factory created for
-        // that pair. Enforces at most one token per remote pair across BOTH creation paths (R10)
+        // that pair. Enforces at most one token per remote pair across BOTH creation paths
         // — see `_create`.
         mapping(bytes32 => address) tokenForPair;
     }
@@ -96,7 +97,7 @@ contract CrossMintableERC20V2Code is
 
     /**
      * @notice Initializes the factory: grants roles, then creates and takes ownership of the
-     *         shared token beacon (D8) — no separate beacon deployment / hand-off step exists.
+     *         shared token beacon — no separate beacon deployment / hand-off step exists.
      * @param initialOwner Granted `Const.ADMIN_ROLE` (and, via `AccessControlDefaultAdminRules`,
      *        `DEFAULT_ADMIN_ROLE`) on this factory
      * @param initialBridge Granted `Const.BRIDGE_ROLE` if non-zero
@@ -109,16 +110,15 @@ contract CrossMintableERC20V2Code is
         __UUPSUpgradeable_init();
         __AccessControlDefaultAdminRules_init(0, initialOwner);
 
-        // The beacon this factory will forever create tokens against (R8) — owned by this
+        // The beacon this factory will forever create tokens against — owned by this
         // factory itself, so `upgradeBeacon` below is the only way to change its implementation.
         _getCrossMintableERC20V2CodeStorage().beacon = address(new UpgradeableBeacon(tokenImplementation, address(this)));
 
-        // `_grantRole`, not the public `grantRole` — the latter is what makes the legacy
-        // (non-upgradeable) `CrossMintableERC20V2Code`'s constructor revert whenever the deployer
-        // account isn't `initialOwner` itself (public `grantRole` is access-controlled and checks
-        // the caller, not just `initialOwner`). `_grantRole` bypasses that check entirely, as
-        // intended here (the account broadcasting the proxy deployment need not be
-        // `initialOwner`) (R6).
+        // `_grantRole`, not the public `grantRole` — the public entrypoint is access-controlled
+        // and checks the caller's own permissions, so it would revert whenever the account
+        // broadcasting this proxy's deployment isn't `initialOwner` itself. `_grantRole` bypasses
+        // that caller check entirely, which is required here since the deployer and
+        // `initialOwner` are not necessarily the same account.
         _grantRole(Const.ADMIN_ROLE, initialOwner);
 
         if (initialBridge != address(0)) _grantRole(Const.BRIDGE_ROLE, initialBridge);
@@ -158,17 +158,18 @@ contract CrossMintableERC20V2Code is
 
     /**
      * @dev Shared by both creation paths and both address-prediction views so the predicted and
-     *      actual initcode can never structurally diverge (R8). Builds a
+     *      actual initcode can never structurally diverge. Builds a
      *      `BeaconProxy(beacon, initData)` initcode: only the beacon's own (fixed) address is
      *      embedded, never the implementation it currently points at, and the token's initial
      *      owner is always `address(this)` — this factory's own (CREATE2/proxy-fixed) address —
      *      never a mutable value like `defaultAdmin()`. So neither a beacon upgrade nor a change
      *      of who currently holds this factory's `ADMIN_ROLE`/`defaultAdmin()` ever moves a
-     *      future CREATE2 prediction (AC-9).
+     *      future CREATE2 prediction.
      */
     function _initCode(string memory name_, string memory symbol_, uint8 decimals_, address minter)
         internal
         view
+        virtual
         returns (bytes memory)
     {
         bytes memory initData =
@@ -179,8 +180,8 @@ contract CrossMintableERC20V2Code is
     }
 
     /**
-     * @dev Shared CREATE2 deploy + pair guard + registry-mark + event for both creation paths
-     *      (R10). `_initCode` bakes name/symbol/decimals/minter into the CREATE2 initcode, so the
+     * @dev Shared CREATE2 deploy + pair guard + registry-mark + event for both creation paths.
+     *      `_initCode` bakes name/symbol/decimals/minter into the CREATE2 initcode, so the
      *      salt (derived only from `remoteChainID`/`remoteToken`) alone cannot stop a second,
      *      differently-named/minter'd token for the same pair from landing at a DIFFERENT
      *      address — hence the explicit `tokenForPair` check below, keyed identically regardless
@@ -209,6 +210,22 @@ contract CrossMintableERC20V2Code is
 
         $.isCrossMintableERC20[tokenAddress] = true;
         $.tokenForPair[pairKey] = tokenAddress;
+        _emitCreated(remoteChainID, remoteToken, tokenAddress);
+    }
+
+    /**
+     * @dev Overridable creation-event hook, called once from `_create` after
+     *      the registry/pair-map writes above. Exists so a subclass whose factory already shipped
+     *      its own creation event topic (see `HyperMintableERC20Code`) can additionally emit that
+     *      legacy event — for the exact same creation, not a duplicate one — without duplicating
+     *      `_create`'s deploy/registry/pair-guard logic (which would risk the two copies drifting
+     *      apart). `virtual` only for that one override; this base emits the one event every
+     *      `CrossMintableERC20V2Code`-family factory has always emitted.
+     * @param remoteChainID Chain ID of the remote token this local token wraps
+     * @param remoteToken Address of the remote token
+     * @param tokenAddress Address of the newly deployed token
+     */
+    function _emitCreated(uint remoteChainID, address remoteToken, address tokenAddress) internal virtual {
         emit CrossMintableERC20Created(remoteChainID, remoteToken, tokenAddress);
     }
 
@@ -277,7 +294,7 @@ contract CrossMintableERC20V2Code is
     }
 
     // =====================================================================
-    // Owner-managed pass-through surface (R9) — all `ADMIN_ROLE`; the three
+    // Owner-managed pass-through surface — all `ADMIN_ROLE`; the three
     // that take a `token` argument are additionally gated to tokens this
     // factory created.
     // =====================================================================
@@ -293,7 +310,7 @@ contract CrossMintableERC20V2Code is
         onlyRole(Const.ADMIN_ROLE)
         onlyKnownToken(token)
     {
-        // `this` (the factory) is `token`'s `defaultAdmin()` (D7), so this call succeeds exactly
+        // `this` (the factory) is `token`'s `defaultAdmin()`, so this call succeeds exactly
         // as if `defaultAdmin()` had called `grantRole` on the token directly.
         CrossMintableERC20V2(token).grantRole(role, account);
     }

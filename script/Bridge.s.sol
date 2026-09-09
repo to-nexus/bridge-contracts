@@ -211,8 +211,8 @@ contract BridgeScript is Script {
         // Bridge 역할 부여
         baseBridge.grantRoleBatch(bridgeRoles, bridgeRoleMembers);
 
-        // CrossMintableERC20V2Code 배포 및 연결 (개정 3: 토큰/팩토리 모두 프록시 — 팩토리가
-        // initialize 내부에서 토큰 beacon을 직접 만들어 소유한다, D8. 별도 beacon 배포 단계 없음)
+        // CrossMintableERC20V2Code 배포 및 연결 (토큰과 팩토리 모두 프록시로 배포되며,
+        // 팩토리가 initialize 내부에서 토큰 beacon을 직접 만들어 소유하므로 별도의 beacon 배포 단계는 없다)
         CrossMintableERC20V2 erc20TokenImplementation = new CrossMintableERC20V2();
         CrossMintableERC20V2Code erc20Implementation = new CrossMintableERC20V2Code();
         ERC1967Proxy erc20Proxy = new ERC1967Proxy(

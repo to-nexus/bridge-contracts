@@ -2,14 +2,10 @@
 pragma solidity 0.8.28;
 
 import {Const} from "../lib/Const.sol";
+import {CrossMintableERC20V2} from "./CrossMintableERC20V2.sol";
 import {ICrossMintableERC20} from "./ICrossMintableERC20.sol";
 import {IHyperMintableERC20} from "./IHyperMintableERC20.sol";
 
-import {AccessControlDefaultAdminRulesUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlDefaultAdminRulesUpgradeable.sol";
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {ERC20PermitUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 
@@ -18,7 +14,15 @@ import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
  * @notice `CrossMintableERC20V2`-shaped wrapped token with a hardened HyperCore link on top,
  *         deployed as a `BeaconProxy` so its logic can be upgraded without changing its address
  *         (a HyperCore link is permanently bound to the EVM address that Core finalized).
- * @dev Deploying a bridge-wrapped token on HyperEVM with the ordinary `CrossMintableERC20V2Code`
+ * @dev Inherits `CrossMintableERC20V2` rather than redeclaring its ERC20 / permit /
+ *      access-control / mint / burn / decimals surface: their inheritance chains are identical
+ *      (`ERC20Upgradeable`, `ERC20PermitUpgradeable`, `AccessControlDefaultAdminRulesUpgradeable`),
+ *      and `IHyperMintableERC20 is ICrossMintableERC20` mirrors that at the interface level, so
+ *      redeclaring would be pure duplication. `decimals` lives in `CrossMintableERC20V2`'s
+ *      ERC-7201 storage; this contract's own `HyperMintableERC20Storage` struct carries no
+ *      `decimals` field, and `decimals()` itself is inherited unchanged.
+ *
+ *      Deploying a bridge-wrapped token on HyperEVM with the ordinary `CrossMintableERC20V2Code`
  *      factory leaves the token with no way to link to a HyperCore spot asset: of the three
  *      `finalizeEvmContract` variants Core offers, `create{nonce}` requires an EOA CREATE
  *      deployment (the factory deploys via CREATE2), `firstStorageSlot` needs the finalizer at
@@ -39,13 +43,14 @@ import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
  *      storage so it never collides with `ERC20Upgradeable` / `AccessControlUpgradeable` slots
  *      or with the ERC-1967 beacon/implementation slots the proxy itself uses.
  */
-contract HyperMintableERC20 is
-    ERC20Upgradeable,
-    ERC20PermitUpgradeable,
-    IHyperMintableERC20,
-    AccessControlDefaultAdminRulesUpgradeable
-{
+contract HyperMintableERC20 is CrossMintableERC20V2, IHyperMintableERC20 {
     error HyperMintableERC20CoreTokenIndexNotSet();
+
+    /// @notice Thrown by the inherited (5-arg) `CrossMintableERC20V2.initialize` override below —
+    /// it has no `initialLinker` parameter, so calling it would permanently leave this token
+    /// unlinkable to any factory. Closes that linker-less init path entirely: callers must use
+    /// the 6-arg `initialize` overload declared on this contract instead.
+    error HyperMintableERC20LinkerlessInitDisabled();
 
     /// @dev keccak256("HyperCore deployer") — the ONLY slot Core's `customStorageSlot` variant
     /// of `finalizeEvmContract` reads. Plain digest, not ERC-7201 masked.
@@ -55,20 +60,29 @@ contract HyperMintableERC20 is
     uint160 public constant CORE_SYSTEM_ADDRESS_PREFIX = uint160(0x20) << 152;
 
     /// @dev HyperEVM's Core read precompile: `tokenInfo(uint32) -> CoreTokenInfo`. Used only by
-    /// `setCoreTokenIndex` to obtain a forgery-proof, on-chain proof of the link (§6.4).
+    /// `setCoreTokenIndex` to obtain a forgery-proof, on-chain proof of the link.
     address internal constant CORE_TOKEN_INFO_PRECOMPILE = 0x000000000000000000000000000000000000080C;
 
     /// @custom:storage-location erc7201:nexus.storage.HyperMintableERC20
+    /// @dev No `decimals` field in this struct — `decimals()` reads from `CrossMintableERC20V2`'s
+    ///      own ERC-7201 storage instead (see `decimals()`, inherited unchanged), so
+    ///      `factoryLinker` occupies bytes 10-29 of this storage location. A beacon
+    ///      implementation whose struct instead reserves a byte for `decimals` here uses a
+    ///      DIFFERENT layout at this same location and is not upgrade-compatible with this one
+    ///      without first migrating that slot.
     struct HyperMintableERC20Storage {
-        // Packed into a single slot: 8 + 1 + 1 + 1 + 20 = 31 bytes.
-        uint64 coreTokenIndex;
-        bool coreTokenIndexSet;
-        int8 coreExtraWeiDecimals;
-        uint8 decimals;
-        address factoryLinker;
+        // Packed into a single slot: 8 + 1 + 1 + 20 = 30 bytes.
+        uint64 coreTokenIndex; // bytes 0-7
+        bool coreTokenIndexSet; // byte 8
+        int8 coreExtraWeiDecimals; // byte 9
+        address factoryLinker; // bytes 10-29
     }
 
     // keccak256(abi.encode(uint256(keccak256("nexus.storage.HyperMintableERC20")) - 1)) & ~bytes32(uint256(0xff))
+    // This location depends only on the namespace string above, never on the struct's field
+    // layout (ERC-7201 locations are derived from the namespace string alone), so it stays fixed
+    // regardless of field changes — confirmed via `cast index-erc7201
+    // "nexus.storage.HyperMintableERC20"`.
     bytes32 private constant HyperMintableERC20StorageLocation =
         0xc65afee183f44952959f664e5c2b8a5e4916480c324e2787b2215d744391d400;
 
@@ -78,15 +92,36 @@ contract HyperMintableERC20 is
         }
     }
 
-    /// @dev Implementation contract is never initialized directly — only `BeaconProxy` instances
-    /// pointing at it are (see `HyperMintableERC20Code._initCode`).
-    constructor() {
-        _disableInitializers();
+    // No own constructor: `CrossMintableERC20V2`'s constructor already calls
+    // `_disableInitializers()`, so there is no need to redeclare an identical constructor here
+    // (the same pattern `CrossBridge` uses relative to `BaseBridge`). Implementation contract is
+    // never initialized directly — only `BeaconProxy` instances pointing at it are (see
+    // `HyperMintableERC20Code._initCode`).
+
+    /**
+     * @notice Disabled. `CrossMintableERC20V2.initialize` (5-arg: no `initialLinker`) is
+     *         permanently closed on this contract — see `HyperMintableERC20LinkerlessInitDisabled`.
+     * @dev Use the 6-arg `initialize` overload below instead. Mirrors the `pure override` revert
+     *      style used for `CrossBridge`'s disabled `initialize`.
+     */
+    function initialize(address, address, string memory, string memory, uint8) public pure override {
+        revert HyperMintableERC20LinkerlessInitDisabled();
     }
 
     /**
      * @notice Initializes a token instance. Called once, atomically, from the `BeaconProxy`
      *         constructor via `HyperMintableERC20Code._initCode`.
+     * @dev Same name as the inherited (5-arg) `CrossMintableERC20V2.initialize` — this is a
+     *      same-name overload, not a rename, so the ABI selector
+     *      `initialize(address,address,address,string,string,uint8)` already relied on by
+     *      existing off-chain deployment tooling is preserved exactly. Overload
+     *      resolution for a direct call picks this 6-arg signature by argument count/types with
+     *      no ambiguity; `abi.encodeCall`, however, cannot resolve a same-named overload from a
+     *      bare `Type.functionName` member access, so callers must reference this signature
+     *      through `IHyperMintableERC20.initialize` instead of `HyperMintableERC20.initialize` —
+     *      `IHyperMintableERC20` declares only this 6-arg signature (its parent `ICrossMintableERC20`
+     *      does not declare `initialize` at all), so the interface-qualified reference is
+     *      unambiguous. See `HyperMintableERC20Code._initCode`.
      * @param initialOwner Default admin of the token; always has link authority regardless of role
      * @param initialMinter Address granted `MINTER_ROLE` if non-zero (normally the bridge)
      * @param initialLinker Address granted `LINKER_ROLE` if non-zero (normally the creating factory);
@@ -103,14 +138,7 @@ contract HyperMintableERC20 is
         string memory symbol_,
         uint8 decimals_
     ) public initializer {
-        __ERC20_init(name_, symbol_);
-        __ERC20Permit_init(name_);
-        __AccessControlDefaultAdminRules_init(0, initialOwner);
-
-        if (initialMinter != address(0)) {
-            // Grant the minter role to the bridge
-            _grantRole(Const.MINTER_ROLE, initialMinter);
-        }
+        __CrossMintableERC20V2_init(initialOwner, initialMinter, name_, symbol_, decimals_);
 
         HyperMintableERC20Storage storage $ = _getHyperMintableERC20Storage();
         $.factoryLinker = initialLinker;
@@ -118,8 +146,6 @@ contract HyperMintableERC20 is
             // Grant the linker role to the creating factory
             _grantRole(Const.LINKER_ROLE, initialLinker);
         }
-
-        $.decimals = decimals_;
     }
 
     /// @dev Reverts with the same ABI `onlyRole(Const.LINKER_ROLE)` would (`IAccessControl`'s
@@ -146,21 +172,20 @@ contract HyperMintableERC20 is
         return _getHyperMintableERC20Storage().factoryLinker;
     }
 
-    function mint(address _account, uint _amount) external onlyRole(Const.MINTER_ROLE) returns (bool) {
-        _mint(_account, _amount);
-        return true;
+    // `mint`/`burn` are NOT redeclared here — inherited unchanged from `CrossMintableERC20V2`.
+
+    /// @dev `decimals`/`nonces` bodies are ALSO just the inherited `CrossMintableERC20V2` ones
+    /// (`super.decimals()`/`super.nonces()`) — not reimplemented here. Restating them with an
+    /// explicit `override(...)` is required only because Solidity's diamond-override check does
+    /// not treat `IHyperMintableERC20 is ICrossMintableERC20` (a second, independent path to the
+    /// same interface declaration) as already resolved by `CrossMintableERC20V2`'s own
+    /// `override(ERC20Upgradeable, ICrossMintableERC20)` — this contract's direct base list
+    /// itself must repeat it.
+    function decimals() public view override(CrossMintableERC20V2, ICrossMintableERC20) returns (uint8) {
+        return super.decimals();
     }
 
-    function burn(address _account, uint _amount) external onlyRole(Const.MINTER_ROLE) returns (bool) {
-        _burn(_account, _amount);
-        return true;
-    }
-
-    function decimals() public view override(ERC20Upgradeable, ICrossMintableERC20) returns (uint8) {
-        return _getHyperMintableERC20Storage().decimals;
-    }
-
-    function nonces(address owner_) public view override(ERC20PermitUpgradeable, ICrossMintableERC20) returns (uint) {
+    function nonces(address owner_) public view override(CrossMintableERC20V2, ICrossMintableERC20) returns (uint) {
         return super.nonces(owner_);
     }
 
@@ -180,10 +205,11 @@ contract HyperMintableERC20 is
     }
 
     /// @inheritdoc IHyperMintableERC20
-    /// @dev See §6.4 of the hardening spec: fail-closed in this exact order —
-    ///      `CoreTokenIndexAlreadySet` -> `CoreTokenIndexOutOfRange` -> `CoreTokenInfoUnavailable`
-    ///      -> `CoreLinkNotFinalized` -> `CoreDecimalsMismatch`. The precompile read cannot be
-    ///      forged by the caller: it reflects Core's own state.
+    /// @dev Fail-closed in this exact order — `CoreTokenIndexAlreadySet` ->
+    ///      `CoreTokenIndexOutOfRange` -> `CoreTokenInfoUnavailable` -> `CoreLinkNotFinalized` ->
+    ///      `CoreDecimalsMismatch` — so a caller always learns the FIRST reason the link cannot
+    ///      be finalized rather than a later check masking an earlier one. The precompile read
+    ///      cannot be forged by the caller: it reflects Core's own state.
     function setCoreTokenIndex(uint64 index) external onlyLinkAuthority {
         HyperMintableERC20Storage storage $ = _getHyperMintableERC20Storage();
 

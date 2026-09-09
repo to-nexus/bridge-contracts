@@ -9,7 +9,7 @@ import {Script, console} from "forge-std/Script.sol";
 /**
  * @title CrossMintableERC20V2Script
  * @notice CrossMintableERC20V2 토큰을 `CrossMintableERC20V2Code` 팩토리 없이 독립적으로 배포
- * @dev 개정 3(BeaconProxy 전환)부터 토큰은 상수생성자 대신 `initialize`를 쓰고, 생성자에서
+ * @dev 토큰은 상수생성자 대신 `initialize`를 쓰고, 생성자에서
  *      `_disableInitializers()`를 호출하므로 `new CrossMintableERC20V2(...)`로 곧장 초기화할
  *      수 없다 — 반드시 `BeaconProxy`를 거쳐야 한다. 팩토리를 쓰지 않는 이 독립 배포 경로는
  *      매 호출마다 전용 1회용 `UpgradeableBeacon`을 만들어 `initialOwner`에게 소유시킨다

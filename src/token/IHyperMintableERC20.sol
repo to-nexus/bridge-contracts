@@ -73,6 +73,33 @@ interface IHyperMintableERC20 is ICrossMintableERC20 {
     error CoreAmountBelowOneCoreWei();
 
     /**
+     * @notice Initializes a token instance (6-arg overload of the inherited, disabled
+     *         `CrossMintableERC20V2.initialize`)
+     * @dev Declared here (and ONLY here — `ICrossMintableERC20`, the parent this interface
+     *      extends, does not declare `initialize` at all) so `abi.encodeCall(IHyperMintableERC20.initialize, (...))`
+     *      resolves this exact 6-arg signature unambiguously, preserving the ABI selector
+     *      `initialize(address,address,address,string,string,uint8)` instead of the same-name
+     *      `abi.encodeCall` ambiguity a bare `HyperMintableERC20.initialize`
+     *      reference would hit against the contract's other (5-arg, disabled) `initialize`
+     *      overload.
+     * @param initialOwner Default admin of the token; always has link authority regardless of role
+     * @param initialMinter Address granted `MINTER_ROLE` if non-zero (normally the bridge)
+     * @param initialLinker Address granted `LINKER_ROLE` if non-zero (normally the creating factory);
+     *        stored as `factoryLinker`
+     * @param name_ ERC20 name
+     * @param symbol_ ERC20 symbol
+     * @param decimals_ ERC20 decimals
+     */
+    function initialize(
+        address initialOwner,
+        address initialMinter,
+        address initialLinker,
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_
+    ) external;
+
+    /**
      * @notice Writes `finalizer` to the `keccak256("HyperCore deployer")` storage slot
      * @dev Zero is an allowed value: it is the only way to recall a mistakenly set finalizer
      *      before Core has finalized the link. Restricted to `isLinkAuthority` — see there for

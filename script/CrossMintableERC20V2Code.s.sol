@@ -15,7 +15,7 @@ import {Script, console} from "forge-std/Script.sol";
 /**
  * @title CrossMintableERC20V2CodeScript
  * @notice `CrossMintableERC20V2Code`(+ 토큰 beacon) 배포 · 업그레이드 · Bridge 연결 스크립트
- * @dev 이번 사이클(BeaconProxy 전환)부터 두 컨트랙트 모두 프록시다:
+ * @dev 두 컨트랙트 모두 프록시다:
  *      - 토큰(`CrossMintableERC20V2`)은 `UpgradeableBeacon` + `BeaconProxy`. 토큰이 몇 개든
  *        beacon 업그레이드 한 번으로 전부 반영된다.
  *      - 팩토리(`CrossMintableERC20V2Code`)는 UUPS(`ERC1967Proxy`), 단일 인스턴스.
@@ -23,10 +23,10 @@ import {Script, console} from "forge-std/Script.sol";
  *      `BeaconProxy`의 초기화 데이터를 통해서만 초기화된다(원자적 초기화).
  *
  *      `HyperMintableERC20Code`와 달리 beacon은 별도로 배포·소유하지 않는다 — 팩토리
- *      `initialize`가 beacon을 직접 만들고 스스로 소유한다(D8). 따라서 beacon 업그레이드도
+ *      `initialize`가 beacon을 직접 만들고 스스로 소유한다. 따라서 beacon 업그레이드도
  *      beacon을 직접 부르지 않고 **팩토리의 `upgradeBeacon`을 거쳐야 한다** — beacon
  *      `owner()`가 팩토리 프록시 주소이지 EOA/멀티시그가 아니기 때문이다. 신뢰가 팩토리
- *      `ADMIN_ROLE` 하나로 모이므로(D9, AR-6) **그 계정은 반드시 멀티시그/타임락**이어야 한다.
+ *      `ADMIN_ROLE` 하나로 모이므로 **그 계정은 반드시 멀티시그/타임락**이어야 한다.
  *
  *      CREATE2 토큰 주소의 initcode에는 **beacon 주소만** 들어가고 그 순간의 로직 impl 주소는
  *      들어가지 않으므로, 토큰 로직을 업그레이드해도 향후 예측 주소는 바뀌지 않는다.
@@ -82,11 +82,11 @@ contract CrossMintableERC20V2CodeScript is Script {
 
     /**
      * @notice 팩토리 `ERC1967Proxy` 배포 + 원자 초기화 (beacon은 `initialize` 내부에서 팩토리
-     *         자신이 직접 만들어 소유한다, D8 — 별도 beacon 배포 단계가 없다)
+     *         자신이 직접 만들어 소유한다 — 별도 beacon 배포 단계가 없다)
      * @dev `factoryAdmin`은 **반드시 멀티시그/타임락 주소**를 쓸 것 — 비콘 업그레이드
      *      (전 토큰 로직 교체) · 토큰 역할 관리 패스쓰루 · 팩토리 자신의 업그레이드 승인을
-     *      전부 이 한 계정이 쥔다(D9, AR-6). 브로드캐스트 계정은 `factoryAdmin`일 필요는
-     *      없다(R6, `initialize`가 public `grantRole`이 아니라 `_grantRole`을 쓰므로) —
+     *      전부 이 한 계정이 쥔다. 브로드캐스트 계정은 `factoryAdmin`일 필요는
+     *      없다(`initialize`가 public `grantRole`이 아니라 `_grantRole`을 쓰므로) —
      *      단순히 이 프록시를 배포·초기화할 수 있는 아무 계정이면 된다.
      * @param codeImplementation `deployCrossMintableERC20V2CodeImplementation`의 반환값
      * @param factoryAdmin 팩토리 `ADMIN_ROLE`을 받을 주소(canonical owner, **멀티시그/타임락 필수**)
@@ -122,7 +122,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     /**
      * @notice 팩토리를 Bridge에 연결한다 (Bridge의 `ADMIN_ROLE` 계정으로 브로드캐스트해야 함)
      * @dev 이후 Bridge의 `createToken`이 이 팩토리를 거쳐 레거시 파생-name/symbol 경로로
-     *      토큰을 만든다. **호출 전에 반드시 §15-1 프리플라이트
+     *      토큰을 만든다. **호출 전에 반드시 프리플라이트
      *      (`preflightCheckDuplicateRemoteToken`)를 대상 체인의 기존 페어 전부에 대해
      *      실행해 둘 것** — 이 함수 자체는 페어 단위가 아니라 팩토리 교체 자체이므로
      *      remoteToken 중복을 검사하지 않는다.
@@ -142,7 +142,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     /**
      * @notice impl(토큰) + impl(팩토리) + 팩토리 프록시(비콘 내부 생성) + Bridge 연결을 한 번에
      * @dev 위 네 함수를 순서대로 묶은 편의 함수. **CROSS 테스트넷 RPC에서는 `--broadcast`가
-     *      조용히 실패할 수 있으므로**(§13) 각 단계를 개별 함수로 나눠 두었다 — 실패가 의심되면
+     *      조용히 실패할 수 있으므로** 각 단계를 개별 함수로 나눠 두었다 — 실패가 의심되면
      *      이 편의 함수 대신 단계별로 실행하고 매 단계 온체인 상태를 직접 조회해 확인할 것.
      * @param bridge Bridge 컨트랙트 주소 (연결 단계는 bridge의 `ADMIN_ROLE` 계정으로 브로드캐스트)
      * @param factoryAdmin 팩토리 `ADMIN_ROLE`을 받을 주소. **멀티시그/타임락 필수**
@@ -166,8 +166,8 @@ contract CrossMintableERC20V2CodeScript is Script {
     // =====================================================================
 
     /**
-     * @notice 토큰 로직을 업그레이드한다 — 이 팩토리가 만든 모든 토큰에 즉시 반영된다(AR-9)
-     * @dev beacon `owner()`는 팩토리 프록시 자신이므로(D8) beacon을 직접 부르지 않고 **팩토리의
+     * @notice 토큰 로직을 업그레이드한다 — 이 팩토리가 만든 모든 토큰에 즉시 반영된다
+     * @dev beacon `owner()`는 팩토리 프록시 자신이므로 beacon을 직접 부르지 않고 **팩토리의
      *      `upgradeBeacon`을 거친다** — 팩토리의 `ADMIN_ROLE` 계정으로 브로드캐스트해야 한다.
      *      단계적 롤아웃이 불가하므로 업그레이드 전 전수 테스트가 필수다. CREATE2 initcode에는
      *      beacon 주소만 들어가므로 이 업그레이드는 향후 `computeTokenAddress`/
@@ -203,7 +203,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     // =====================================================================
-    // 소유권 이전 (§15-2, U4) — DEFAULT_ADMIN_ROLE 과 ADMIN_ROLE 은 별개이므로 4단계
+    // 소유권 이전 — DEFAULT_ADMIN_ROLE 과 ADMIN_ROLE 은 별개이므로 4단계
     // =====================================================================
     //
     // 4단계는 서명자가 다르다(1=구 owner, 2~4=신 owner). `msg.sender`로 서명자를 판별하지
@@ -222,7 +222,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     // 때문이다. 반대로 **`revokeOldAdmin`은 절대 `AlreadyDone`을 반환하지 않는다** —
     // `ADMIN_ROLE` 부재만으로는 "이미 취소됨"과 "oldOwner 를 잘못 넣음"을 스테이트리스하게
     // 구분할 수 없으므로, 멱등 skip 을 두면 오타 하나가 구 관리자의 특권을 조용히 방치하는
-    // 경로가 된다(Fix 1). `revokeOldAdmin`을 재실행하면 (이미 완료됐어도) revert하는 것이
+    // 경로가 된다. `revokeOldAdmin`을 재실행하면 (이미 완료됐어도) revert하는 것이
     // 의도된 안전 동작이다 — 온체인 상태를 직접 확인해야 한다.
 
     /// @dev 4단계 이전의 진행 상태 판정 결과. `Ready`=사전조건 충족, 실행 함수가 브로드캐스트를
@@ -235,7 +235,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     /**
-     * @notice §15-2 1단계의 진행 상태를 판정한다 (순수 view, 브로드캐스트 없음)
+     * @notice 1단계의 진행 상태를 판정한다 (순수 view, 브로드캐스트 없음)
      * @dev `Ready`: `defaultAdmin() == oldOwner`이고 아직 `newOwner`로 pending 되지 않음.
      *      `AlreadyDone`: `defaultAdmin() == newOwner`(1~2단계 완료) 이거나
      *      `pendingDefaultAdmin() == newOwner`(1단계만 완료, `defaultAdmin()`은 여전히
@@ -277,7 +277,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     /**
-     * @notice §15-2 2·3단계의 진행 상태를 판정한다 (순수 view, 브로드캐스트 없음)
+     * @notice 2·3단계의 진행 상태를 판정한다 (순수 view, 브로드캐스트 없음)
      * @dev `Ready`: `pendingDefaultAdmin() == newOwner`(수락 대기 중) 이거나
      *      `defaultAdmin() == newOwner`(수락은 끝났고 `ADMIN_ROLE` 부여만 남음). `AlreadyDone`:
      *      사후조건 `defaultAdmin()==newOwner && hasRole(ADMIN_ROLE,newOwner)`이 이미 참 —
@@ -324,10 +324,10 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     /**
-     * @notice §15-2 4단계의 진행 상태를 판정한다 (순수 view, 브로드캐스트 없음)
+     * @notice 4단계의 진행 상태를 판정한다 (순수 view, 브로드캐스트 없음)
      * @dev **절대 `AlreadyDone`을 반환하지 않는다** — `hasRole(ADMIN_ROLE, oldOwner) == false`는
      *      "이미 취소됨"과 "oldOwner 가 애초에 틀렸음"을 스테이트리스하게 구분할 수 없기
-     *      때문이다(Fix 1). 세 사전조건을 모두 요구하며, 어느 하나라도 깨지면 진단 가능한
+     *      때문이다. 세 사전조건을 모두 요구하며, 어느 하나라도 깨지면 진단 가능한
      *      `reason`과 함께 `Inconsistent`를 반환한다:
      *        1. `defaultAdmin() == newOwner` — 이전이 실제로 완료됐는지
      *        2. `hasRole(ADMIN_ROLE, newOwner) == true` — 관리자 0명 방지
@@ -389,7 +389,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     /**
-     * @notice §15-2 1단계: 팩토리 `DEFAULT_ADMIN_ROLE`을 `oldOwner`에서 `newOwner`로 이전
+     * @notice 1단계: 팩토리 `DEFAULT_ADMIN_ROLE`을 `oldOwner`에서 `newOwner`로 이전
      *         시작한다 (`oldOwner`의 키로 브로드캐스트됨 — `vm.startBroadcast(oldOwner)`)
      * @dev 판정은 `beginTransferStatus`에 위임하는 얇은 래퍼다. `Inconsistent`면 그 `reason`으로
      *      revert, `AlreadyDone`이면 로그만 남기고 return, `Ready`면 브로드캐스트한다.
@@ -424,7 +424,7 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     /**
-     * @notice §15-2 2·3단계: `newOwner`가 `DEFAULT_ADMIN_ROLE`을 수락하고 스스로에게
+     * @notice 2·3단계: `newOwner`가 `DEFAULT_ADMIN_ROLE`을 수락하고 스스로에게
      *         `ADMIN_ROLE`을 부여한다 (`newOwner`의 키로 브로드캐스트됨 —
      *         `vm.startBroadcast(newOwner)`)
      * @dev 판정은 `acceptTransferStatus`에 위임하는 얇은 래퍼다. `Inconsistent`면 그 `reason`으로
@@ -480,14 +480,14 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     /**
-     * @notice §15-2 4단계: `oldOwner`의 `ADMIN_ROLE`을 회수한다 (`newOwner`의 키로
+     * @notice 4단계: `oldOwner`의 `ADMIN_ROLE`을 회수한다 (`newOwner`의 키로
      *         브로드캐스트됨 — `vm.startBroadcast(newOwner)`. `newOwner`가
      *         `acceptOwnershipAndGrantAdmin` 이후 `DEFAULT_ADMIN_ROLE` 보유자이므로
      *         `ADMIN_ROLE`의 role-admin 자격이 있다)
      * @dev 판정은 `revokeOldAdminStatus`에 위임하는 얇은 래퍼다. **그 함수는 절대
      *      `AlreadyDone`을 반환하지 않으므로** 이 함수도 멱등 skip 이 없다 — `Inconsistent`면
      *      그 `reason`으로 revert한다(이미 완료됐거나 `oldOwner`가 잘못됐다는 뜻이므로 온체인
-     *      상태를 직접 확인해야 한다, Fix 1). 재실행 시 매번 revert하는 것이 의도된 안전
+     *      상태를 직접 확인해야 한다). 재실행 시 매번 revert하는 것이 의도된 안전
      *      동작이다.
      * @param factory 팩토리 프록시 주소
      * @param oldOwner `ADMIN_ROLE`을 회수당할 주소
@@ -515,12 +515,12 @@ contract CrossMintableERC20V2CodeScript is Script {
     }
 
     // =====================================================================
-    // 중복 remoteToken 프리플라이트 (§15-1, AC-11) — 온체인 가드가 아니라 배포 절차 가드
+    // 중복 remoteToken 프리플라이트 — 온체인 가드가 아니라 배포 절차 가드
     // =====================================================================
 
     /**
      * @notice 대상 `remoteChainID`에 이미 같은 `remoteToken`으로 등록된 페어가 있으면 revert한다
-     * @dev `BridgeRegistry._registerToken`은 localToken 기준으로만 중복을 막으므로(§15-1),
+     * @dev `BridgeRegistry._registerToken`은 localToken 기준으로만 중복을 막으므로,
      *      새 팩토리가 다른 localToken을 만들면 이 가드를 그냥 통과해 버린다 — 즉 리매핑이
      *      아니라 두 번째 페어가 추가 등록되어 기존 잔고와 신규 유동성이 분리된 채 공존하게
      *      된다. `createToken`(레거시, 브릿지 경유)과 `createMintableERC20`+수동
@@ -719,7 +719,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # factoryAdmin: 팩토리 ADMIN_ROLE을 받을 주소
  * #   - 비콘 업그레이드(전 토큰 로직 교체) · 토큰 역할 관리 패스쓰루
  * #     (grantTokenRole/revokeTokenRole/beginTokenDefaultAdminTransfer) · 팩토리 자신의
- * #     업그레이드 승인을 전부 이 한 계정이 쥔다(D9). **반드시 멀티시그/타임락**.
+ * #     업그레이드 승인을 전부 이 한 계정이 쥔다. **반드시 멀티시그/타임락**.
  *
  * # --------------------------------------------------
  * # 배포 (impl 2종 + 팩토리 프록시(비콘 내부 생성) + Bridge 연결까지 한 번에)
@@ -788,13 +788,14 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #   --broadcast
  *
  * ===================================================================================
- * 배포 전 체인별 사전 조사 (§15-4) — 구현 범위 밖, 배포 체크리스트 항목
+ * 배포 전 체인별 사전 조사 — 구현 범위 밖, 배포 체크리스트 항목
  * ===================================================================================
  *
  * 각 대상 체인에서 `bridge.crossMintableERC20Code()`(현재 팩토리 종류)와
  * `bridge.allTokenPairs(remoteChainID)`(기존 페어)를 실측해 교체 여부를 정한다.
- * 실측(A4): CROSS 테스트넷 612044 · CROSS 메인넷 612055 · BSC 테스트넷 97 · BSC 메인넷 56 네 곳
- * 모두 V1 팩토리다. 미확인 대상: `1000` · `8217`(Kaia) — 배포 전 반드시 확인할 것.
+ * 실측 결과(작성 시점): CROSS 테스트넷 612044 · CROSS 메인넷 612055 · BSC 테스트넷 97 ·
+ * BSC 메인넷 56 네 곳 모두 V1 팩토리였다. 미확인 대상: `1000` · `8217`(Kaia) — 배포 전
+ * 반드시 재확인할 것(시간이 지나 팩토리가 이미 교체됐을 수 있다).
  *
  * ===================================================================================
  * 참고사항
@@ -810,13 +811,13 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # bridge.registerToken(remoteChainID, false, tokenAddress, remoteToken)을 EDITOR_ROLE
  * # 계정으로 별도 호출해야 한다.
  *
- * # 팩토리 소유권 이전(§15-2) — DEFAULT_ADMIN_ROLE과 ADMIN_ROLE은 별개다. 토큰 관리
+ * # 팩토리 소유권 이전 — DEFAULT_ADMIN_ROLE과 ADMIN_ROLE은 별개다. 토큰 관리
  * # 패스쓰루·비콘 업그레이드는 ADMIN_ROLE로 게이트되므로 beginDefaultAdminTransfer만으로는
  * # 새 owner가 아무것도 할 수 없다. 이전은 반드시 4단계이며, 위 세 함수(begin/accept/revoke)가
  * # 각 단계를 구현한다. begin/accept는 이미 완료된 단계면 revert 없이 로그만 남기고 통과하지만,
  * # revokeOldAdmin은 절대 멱등 skip하지 않는다 — 재실행하면 (이미 완료됐어도) revert한다. 이는
  * # 의도된 안전 동작이다: ADMIN_ROLE 부재만으로는 "이미 취소됨"과 "oldOwner를 잘못 넣음"을
- * # 구분할 수 없기 때문이다(Fix 1). 실행 경로는 환경에 따라 셋으로 나뉜다.
+ * # 구분할 수 없기 때문이다. 실행 경로는 환경에 따라 셋으로 나뉜다.
  * #
  * # ---- 경로 1: 개발/테스트넷 (EOA로 통제되는 환경 전용) ----
  * #
@@ -834,7 +835,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #
  * # 1단계 직후, 2단계를 제출하기 전에 acceptSchedule을 확인하고 그 시각을 지난 뒤에 제출할 것
  * # — delay가 0이어도 예약 시각(acceptSchedule) 이후여야 하므로, 곧바로 연달아 제출하면 2단계가
- * # revert한다(Fix 2):
+ * # revert한다:
  * #
  * # cast call $CODE "pendingDefaultAdmin()(address,uint48)" --rpc-url $RPC_URL
  * #   -> (newOwner, acceptSchedule) 확인, block.timestamp > acceptSchedule 이 된 뒤 2단계 제출
@@ -858,13 +859,13 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # ---- 경로 1 예외: CROSS 체인은 forge script를 쓰지 않는다 ----
  * #
  * # CROSS 테스트넷(비표준 포트 RPC)에서는 forge script --broadcast가 조용히 실패할 수 있다
- * # (시뮬레이션 로그만 찍히고 트랜잭션 미전송, §13). CROSS에서는 위 4단계를 cast send로 직접
+ * # (시뮬레이션 로그만 찍히고 트랜잭션 미전송). CROSS에서는 위 4단계를 cast send로 직접
  * # 보내고, 매 단계 후 cast call로 온체인 상태를 직접 조회해 확인한다(스크립트 로그를 성공
- * # 근거로 삼지 않는다). cast send는 forge script의 revokeOldAdmin 래퍼(내장 3중 사전조건,
- * # Fix 1)를 거치지 않고 직접 revokeRole을 호출하므로, 아래 $RECORDED_OLD_OWNER 절차와
+ * # 근거로 삼지 않는다). cast send는 forge script의 revokeOldAdmin 래퍼(내장 3중 사전조건)를
+ * # 거치지 않고 직접 revokeRole을 호출하므로, 아래 $RECORDED_OLD_OWNER 절차와
  * # 4단계 사전조건을 동일하게 수동으로 지켜야 한다:
  * #
- * # $RECORDED_OLD_OWNER 확정 (필수, Fix 1): 이전 시작 **전**에 defaultAdmin()을 조회해 별도
+ * # $RECORDED_OLD_OWNER 확정 (필수): 이전 시작 **전**에 defaultAdmin()을 조회해 별도
  * # 변수로 기록해 둔다. 4단계 revokeRole에 넣을 주소는 그때그때 다시 손으로 입력하지 않고
  * # 이 기록된 값 하나만 계속 쓴다 — 사전조건 확인·실행·사후검증 전부 동일하다.
  * #
@@ -881,7 +882,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #
  * # 다음 명령(수락) 제출 전에 반드시 block.timestamp > acceptSchedule 이 될 때까지 기다릴 것
  * # — delay가 0이어도 예약 시각 이후여야 하므로, 곧바로 연달아 보내면 아래 acceptDefaultAdminTransfer
- * # 호출이 revert한다(Fix 2).
+ * # 호출이 revert한다.
  * #
  * # cast send $CODE "acceptDefaultAdminTransfer()" \
  * #   --rpc-url $CROSS_RPC_URL --private-key $NEW_OWNER_PRIVATE_KEY
@@ -891,7 +892,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #   --rpc-url $CROSS_RPC_URL --private-key $NEW_OWNER_PRIVATE_KEY
  * # cast call  $CODE "hasRole(bytes32,address)(bool)" $ADMIN_ROLE $NEW_OWNER --rpc-url $CROSS_RPC_URL
  * #
- * # ---- 4단계(revokeRole, CROSS) 제출 전 필수 사전조건 (Fix 1) ----
+ * # ---- 4단계(revokeRole, CROSS) 제출 전 필수 사전조건 ----
  * #
  * # revokeRole은 역할이 없는 주소에 대해서도 조용히 성공하는 no-op이다 — 잘못된 주소를 넣어도
  * # revert하지 않는다. 4단계 cast send를 보내기 **전에** 반드시 아래 세 가지를 조회해 확인한다
@@ -920,7 +921,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #
  * # ---- 경로 2: 프로덕션 (멀티시그/타임락) ----
  * #
- * # 팩토리 ADMIN_ROLE 계정은 D9/AR-6에 따라 반드시 멀티시그/타임락이다 — 개인키가 없으므로
+ * # 팩토리 ADMIN_ROLE 계정은 반드시 멀티시그/타임락이다 — 개인키가 없으므로
  * # 위 forge script/cast send 명령(--private-key)은 프로덕션 실행 경로가 될 수 없다. 대신
  * # 재현 가능한 calldata를 멀티시그·타임락 UI에 그대로 입력한다. target은 네 건 모두 팩토리
  * # 프록시 주소($CODE)다. ADMIN_ROLE = keccak256("ADMIN_ROLE")의 리터럴 값(멀티시그 UI에
@@ -928,7 +929,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #
  * #   ADMIN_ROLE = 0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775
  * #
- * # $RECORDED_OLD_OWNER 확정 (필수, Fix 1): 이전 시작 **전**의 defaultAdmin() 조회값이나
+ * # $RECORDED_OLD_OWNER 확정 (필수): 이전 시작 **전**의 defaultAdmin() 조회값이나
  * # 거버넌스 기록에서 확정해 별도 변수로 적어 둔다. 4단계 calldata에 넣을 그 값과 **같은
  * # 출처(그때그때 수동 타이핑)에서 다시 가져오지 않는다** — 사전조건 확인·계산·사후검증에
  * # 전부 이 기록된 값을 쓴다.
@@ -943,7 +944,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #
  * # 1단계(begin) 제출 후, 2단계(accept) calldata를 제출하기 **전에** acceptSchedule을 확인하고
  * # 그 시각을 지난 뒤에 제출할 것 — delay가 0이어도 예약 시각 이후여야 하므로, 곧바로 연달아
- * # 제출하면 2단계가 revert한다(Fix 2):
+ * # 제출하면 2단계가 revert한다:
  * #
  * # cast call $CODE "pendingDefaultAdmin()(address,uint48)" --rpc-url $RPC_URL
  * #   -> (newOwner, acceptSchedule) 확인, block.timestamp > acceptSchedule 이 된 뒤 제출
@@ -951,7 +952,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # cast calldata "acceptDefaultAdminTransfer()"
  * # cast calldata "grantRole(bytes32,address)"  0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775 $NEW_OWNER
  * #
- * # ---- 4단계(revokeRole) 제출 전 필수 사전조건 (Fix 1) ----
+ * # ---- 4단계(revokeRole) 제출 전 필수 사전조건 ----
  * #
  * # revokeRole은 역할이 없는 주소에 대해서도 조용히 성공하는 no-op이다 — 잘못된 주소를 넣어도
  * # revert하지 않고, 문서화된 사후조건("그 주소가 ADMIN_ROLE을 잃었는지 확인")도 자동으로
@@ -975,13 +976,13 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # 따라 별도 제출해야 한다 — 위 4건을 한 번에 밀어넣을 수 없다. 1단계(begin)는 구 owner
  * # 멀티시그/타임락이, 2~4단계(accept/grant/revoke)는 신 owner 멀티시그/타임락이 제출한다.
  * # 4단계(revoke)의 위 세 가지 사전조건은 **schedule 제출 시점과 execute 제출 시점 양쪽
- * # 모두**에서 반복 확인한다(Fix 1) — 그 사이에 상태가 바뀔 수 있다(예: 다른 경로로 이미
- * # 취소됨). 2단계(accept)의 acceptSchedule 대기(Fix 2)도 schedule/execute 각 제출 전에
+ * # 모두**에서 반복 확인한다 — 그 사이에 상태가 바뀔 수 있다(예: 다른 경로로 이미
+ * # 취소됨). 2단계(accept)의 acceptSchedule 대기도 schedule/execute 각 제출 전에
  * # 마찬가지로 재확인한다.
  * #
  * # 각 트랜잭션 실행 후 온체인 사후조건을 직접 조회해 확인한다(스크립트/멀티시그 UI 로그를
  * # 성공 근거로 삼지 않는다). 4단계 사후조건은 **calldata 인자가 아니라 기록된
- * # $RECORDED_OLD_OWNER**로 확인한다(Fix 1):
+ * # $RECORDED_OLD_OWNER**로 확인한다:
  * #
  * # cast call $CODE "defaultAdmin()(address)"                                                                              --rpc-url $RPC_URL
  * # cast call $CODE "pendingDefaultAdmin()(address,uint48)"                                                                --rpc-url $RPC_URL

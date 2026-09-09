@@ -2,14 +2,14 @@
 pragma solidity 0.8.28;
 
 /**
- * @title ICrossBridgeV2
- * @notice ABI surface unique to `CrossBridgeV2`: the executor-only forwarded (hop-2+)
+ * @title ICrossBridge
+ * @notice ABI surface unique to `CrossBridge`: the executor-only forwarded (hop-2+)
  * bridge entrypoint used for multi-hop bridging (A -> B -> C), plus the errors it can
  * revert with.
  * @dev `bridgeTokenForwarded` is intentionally NOT part of `IBaseBridge` — it only
- * exists on relay-hub bridges such as `CrossBridgeV2`, not on `BaseBridge` itself.
+ * exists on relay-hub bridges such as `CrossBridge`, not on `BaseBridge` itself.
  */
-interface ICrossBridgeV2 {
+interface ICrossBridge {
     /**
      * @notice Thrown when `bridgeTokenForwarded` is called by anyone other than the
      * configured `bridgeExecutor`.
@@ -24,7 +24,7 @@ interface ICrossBridgeV2 {
     error BaseBridgeForwardContextInactive();
 
     /**
-     * @notice Thrown when the D1 pass-through invariant is violated for an ERC20
+     * @notice Thrown when the native-pass-through invariant is violated for an ERC20
      * token: both the from-chain and to-chain token pairs must be origin pairs.
      */
     error BaseBridgeForwardNotOrigin();
