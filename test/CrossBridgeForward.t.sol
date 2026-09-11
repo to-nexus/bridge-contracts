@@ -17,6 +17,7 @@ import {BridgeExecutorTest, MockRevertingApproveMintableToken, MockTargetContrac
 import {TestToken} from "./token/TestToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /**
@@ -217,6 +218,22 @@ contract RevertingReceiver {
 }
 
 /**
+ * @title ForwardAmountsHarness
+ * @notice Exposes `CrossBridge._resolveForwardAmounts` (internal pure) to tests so the
+ * settlement-splitting formula can be unit- and fuzz-tested directly, independent of the
+ * full finalize/executor machinery.
+ */
+contract ForwardAmountsHarness is CrossBridge {
+    function resolveForwardAmounts(uint ctxValue, uint quotedValue, uint networkFee, uint rate, uint denom)
+        external
+        pure
+        returns (uint value_, uint exFee_)
+    {
+        return _resolveForwardAmounts(ctxValue, quotedValue, networkFee, rate, denom);
+    }
+}
+
+/**
  * @title CrossBridgeForwardTest
  * @notice Forward (multi-hop) entrypoint test suite: guards / access control, the
  * pass-through invariant for hops that must skip normal deposit/mint accounting, and
@@ -227,6 +244,7 @@ contract RevertingReceiver {
  */
 contract CrossBridgeForwardTest is BridgeExecutorTest {
     CrossBridge internal bridgeCrossV2;
+    ForwardAmountsHarness internal harness;
 
     function setUp() public virtual override {
         super.setUp();
@@ -244,6 +262,8 @@ contract CrossBridgeForwardTest is BridgeExecutorTest {
         bridgeVerifierCross.setVerificationAmountThreshold(0);
         bridgeVerifierCross.setPeriodTotalValueThreshold(0);
         vm.stopPrank();
+
+        harness = new ForwardAmountsHarness();
     }
 
     // ----------------------------------------------------------------
@@ -433,7 +453,7 @@ contract CrossBridgeForwardTest is BridgeExecutorTest {
     /// `script/ForwardLibVerify.s.sol`'s own JSON-based approach instead of hardcoding.
     function _discoverForwardLibAddress() internal returns (address addr) {
         bytes memory code = address(new CrossBridge()).code;
-        uint offset = 8638;
+        uint offset = 8640;
         assembly ("memory-safe") {
             addr := shr(96, mload(add(add(code, 32), offset)))
         }
@@ -1592,5 +1612,349 @@ contract CrossBridgeForwardTest is BridgeExecutorTest {
         bridgeCrossV2.bridgeToken{value: 1 ether}(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), USER, 1 ether, 0, 0, "");
         vm.prank(CrossOWNER);
         bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, false);
+    }
+
+    // ----------------------------------------------------------------
+    // Settlement drift: the on-chain fee configuration changes between a hop-1 encode
+    // and the hop-2 settlement it stages. The tests above only ever exercise
+    // `supplied == calculated`; these cover drift.
+    // ----------------------------------------------------------------
+
+    /// @notice fee unchanged, boundary value that a naive inverse would round down
+    /// by one -- settlement must still reproduce the exact quote.
+    function test_feeUnchanged_boundaryValueNotDivisible_settlesIdentically() public {
+        vm.selectFork(crossForkID);
+        vm.startPrank(CrossOWNER);
+        // Isolate the exchange-fee rounding boundary from the network fee and the
+        // minimum-value gate.
+        bridgeVerifierCross.updateGasPrice(BSC_CHAIN_ID, 0);
+        bridgeVerifierCross.setMinimumTokenValue(0);
+        bridgeVerifierCross.setExFeeRate(IERC20(Const.NATIVE_TOKEN), 100); // 1%
+        vm.stopPrank();
+
+        uint value2 = 1005;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        assertEq(fee2, 0);
+        assertEq(ex2, 10, "floor(1005*100/10000) == 10, the boundary case where a naive inverse rounds one unit low");
+
+        uint ctxValue = value2 + fee2 + ex2; // 1015
+        bytes memory extraData = _forwardExtraData(BSC_CHAIN_ID, USER, value2, fee2, ex2, "");
+
+        vm.recordLogs();
+        _hop1NativeAndFinalize(ctxValue, extraData);
+
+        (bool found,,,,,, uint settledValue, uint settledNetworkFee, uint settledExFee,) =
+            _findForwardInitiated(vm.getRecordedLogs());
+        assertTrue(found, "forward must succeed identically to the no-drift case");
+        assertEq(settledValue, value2, "must reproduce the exact quote, not the naive inverse's one-unit-low result");
+        assertEq(settledNetworkFee, fee2);
+        assertEq(settledExFee, ex2);
+        assertEq(settledValue + settledNetworkFee + settledExFee, ctxValue);
+
+        vm.selectFork(crossForkID);
+        assertEq(USER.balance, 0, "forward succeeded via pass-through, no fallback payout");
+    }
+
+    /// @notice network fee decreases between encode and settlement (native) --
+    /// forward must still succeed, consuming `ctxValue` exactly with a larger delivered
+    /// value.
+    function test_networkFeeDecrease_native_succeedsWithLargerValue() public {
+        vm.selectFork(crossForkID);
+        uint value2 = 1 ether;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        assertGt(fee2, 0, "fixture must configure a nonzero BSC_CHAIN_ID network fee for this drift to be observable");
+        bytes memory extraData = _forwardExtraData(BSC_CHAIN_ID, USER, value2, fee2, ex2, "");
+        uint ctxValue = value2 + fee2 + ex2;
+
+        uint currentGasPrice = bridgeVerifierCross.getGasPrice(BSC_CHAIN_ID);
+        vm.prank(CrossOWNER);
+        bridgeVerifierCross.updateGasPrice(BSC_CHAIN_ID, currentGasPrice / 2);
+        (, uint newFee2,) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        assertLt(newFee2, fee2, "network fee must actually have dropped between encode and settlement");
+
+        vm.recordLogs();
+        _hop1NativeAndFinalize(ctxValue, extraData);
+
+        (bool found,,,,,, uint settledValue, uint settledNetworkFee, uint settledExFee,) =
+            _findForwardInitiated(vm.getRecordedLogs());
+        assertTrue(found, "forward must succeed despite the fee drop");
+        assertEq(settledValue + settledNetworkFee + settledExFee, ctxValue, "ctxValue must be consumed exactly");
+        assertEq(settledNetworkFee, newFee2);
+        assertGt(settledValue, value2, "the dropped fee must be redistributed into a larger delivered value");
+
+        vm.selectFork(crossForkID);
+        assertEq(USER.balance, 0, "hub `to` balance unchanged -- forward succeeded, no fallback payout");
+    }
+
+    /// @notice network fee decreases between encode and settlement (ERC20, both
+    /// origin) -- forward must still succeed with `remaining == 0` and `deposited`
+    /// matching the actual settled value, not the stale quote.
+    function test_networkFeeDecrease_erc20_succeedsWithLargerValue() public {
+        vm.selectFork(crossForkID);
+        TestToken myToken = new TestToken("Origin", "ORG3", 18);
+        uint chainX = 90201;
+
+        vm.startPrank(CrossOWNER);
+        bridgeCross.registerToken(chainX, true, address(myToken), address(0xA301));
+        bridgeCross.registerToken(BSC_CHAIN_ID, true, address(myToken), address(0xA302));
+        address[] memory tokens = new address[](1);
+        uint[] memory prices = new uint[](1);
+        uint[] memory pricesAt = new uint[](1);
+        tokens[0] = address(myToken);
+        prices[0] = 10 ** DOLLAR_DECIMALS; // $1
+        pricesAt[0] = block.timestamp;
+        priceFeedCross.updatePrice(tokens, prices, pricesAt);
+        vm.stopPrank();
+
+        uint value2 = 10 ether;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(address(myToken)), value2);
+        assertGt(fee2, 0, "token price + BSC_CHAIN_ID gas price must combine to a nonzero network fee");
+        bytes memory extraData = _forwardExtraData(BSC_CHAIN_ID, USER, value2, fee2, ex2, "");
+        uint ctxValue = value2 + fee2 + ex2;
+
+        // chainX's pair is isOrigin=true, so the hop-1 finalize's `_withdrawToken` will
+        // decrement `deposited[chainX][myToken]` -- seed it first.
+        _bumpDeposited(chainX, IERC20(address(myToken)), ctxValue * 2);
+
+        uint currentGasPrice = bridgeVerifierCross.getGasPrice(BSC_CHAIN_ID);
+        vm.prank(CrossOWNER);
+        bridgeVerifierCross.updateGasPrice(BSC_CHAIN_ID, currentGasPrice / 2);
+        (, uint newFee2,) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(address(myToken)), value2);
+        assertLt(newFee2, fee2, "network fee must actually have dropped between encode and settlement");
+
+        vm.recordLogs();
+        assertTrue(_signAndFinalize(chainX, 1, address(myToken), USER, ctxValue, extraData, 5));
+
+        (bool found,,,,,, uint settledValue, uint settledNetworkFee, uint settledExFee,) =
+            _findForwardInitiated(vm.getRecordedLogs());
+        assertTrue(found, "forward must succeed despite the fee drop");
+        assertEq(settledValue + settledNetworkFee + settledExFee, ctxValue, "ctxValue must be consumed exactly");
+        assertEq(settledNetworkFee, newFee2);
+        assertGt(settledValue, value2, "the dropped fee must be redistributed into a larger delivered value");
+
+        assertEq(myToken.balanceOf(address(bridgeExecutorCross)), 0, "remaining == 0: executor retains no token");
+        assertEq(
+            bridgeCross.getTokenPair(BSC_CHAIN_ID, address(myToken)).deposited,
+            settledValue,
+            "deposited must match the actual settled value, not the stale quote"
+        );
+        assertEq(myToken.balanceOf(USER), 0, "both-origin success must not fall back to a direct USER payout");
+    }
+
+    /// @notice exchange fee rate decreases between encode and settlement -- forward
+    /// must still succeed with a larger delivered value.
+    function test_exFeeRateDecrease_native_succeedsWithLargerValue() public {
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        bridgeVerifierCross.setExFeeRate(IERC20(Const.NATIVE_TOKEN), 500); // encode-time rate: 5%
+
+        uint value2 = 1 ether;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        bytes memory extraData = _forwardExtraData(BSC_CHAIN_ID, USER, value2, fee2, ex2, "");
+        uint ctxValue = value2 + fee2 + ex2;
+
+        vm.prank(CrossOWNER);
+        bridgeVerifierCross.setExFeeRate(IERC20(Const.NATIVE_TOKEN), 100); // settlement-time rate: 1%
+
+        vm.recordLogs();
+        _hop1NativeAndFinalize(ctxValue, extraData);
+
+        (bool found,,,,,, uint settledValue, uint settledNetworkFee, uint settledExFee,) =
+            _findForwardInitiated(vm.getRecordedLogs());
+        assertTrue(found);
+        assertEq(settledValue + settledNetworkFee + settledExFee, ctxValue);
+        assertGt(settledValue, value2, "a lower exchange fee rate must be redistributed into a larger delivered value");
+
+        vm.selectFork(crossForkID);
+        assertEq(USER.balance, 0);
+    }
+
+    /// @notice network fee rises between encode and settlement, but the extraData's
+    /// exFee was padded enough to absorb it -- forward must still succeed, delivering
+    /// exactly the quoted value.
+    function test_networkFeeIncrease_withinPaddedExFee_stillDeliversQuotedValue() public {
+        vm.selectFork(crossForkID);
+        uint value2 = 1 ether;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+
+        uint currentGasPrice = bridgeVerifierCross.getGasPrice(BSC_CHAIN_ID);
+        vm.prank(CrossOWNER);
+        bridgeVerifierCross.updateGasPrice(BSC_CHAIN_ID, currentGasPrice * 3);
+        (, uint fee2Bumped,) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        uint delta = fee2Bumped - fee2;
+        assertGt(delta, 0, "the bumped gas price must actually raise the network fee");
+
+        // extraData is encoded with the ORIGINAL (pre-bump) network fee but an exFee
+        // padded by exactly the anticipated increase, leaving just enough room to
+        // absorb it without the delivered value falling below the quote.
+        uint ex2Padded = ex2 + delta;
+        bytes memory extraData = _forwardExtraData(BSC_CHAIN_ID, USER, value2, fee2, ex2Padded, "");
+        uint ctxValue = value2 + fee2 + ex2Padded;
+
+        vm.recordLogs();
+        _hop1NativeAndFinalize(ctxValue, extraData);
+
+        (bool found,,,,,, uint settledValue, uint settledNetworkFee, uint settledExFee,) =
+            _findForwardInitiated(vm.getRecordedLogs());
+        assertTrue(found, "the padded exFee must absorb the fee increase and still succeed");
+        assertEq(settledValue, value2, "delivered value is unaffected by a netFee increase absorbed by exFee");
+        assertEq(settledNetworkFee, fee2Bumped);
+        assertEq(settledExFee, ex2, "the padding is exactly consumed by the increase, leaving the bare-minimum exFee");
+        assertEq(settledValue + settledNetworkFee + settledExFee, ctxValue);
+
+        vm.selectFork(crossForkID);
+        assertEq(USER.balance, 0);
+    }
+
+    /// @notice network fee rises between encode and settlement beyond what the
+    /// unpadded exFee can absorb -- must revert and fall back exactly as before this
+    /// feature existed.
+    function test_networkFeeIncrease_beyondExFee_revertsAndFallsBack() public {
+        vm.selectFork(crossForkID);
+        uint value2 = 1 ether;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        bytes memory extraData = _forwardExtraData(BSC_CHAIN_ID, USER, value2, fee2, ex2, "");
+        uint ctxValue = value2 + fee2 + ex2;
+
+        uint currentGasPrice = bridgeVerifierCross.getGasPrice(BSC_CHAIN_ID);
+        vm.prank(CrossOWNER);
+        bridgeVerifierCross.updateGasPrice(BSC_CHAIN_ID, currentGasPrice * 3);
+        (, uint fee2Bumped,) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        assertGt(fee2Bumped, fee2, "the bumped gas price must actually raise the network fee");
+
+        vm.recordLogs();
+        _hop1NativeAndFinalize(ctxValue, extraData);
+
+        vm.selectFork(crossForkID);
+        assertEq(USER.balance, ctxValue, "must fall back to a direct USER payout, same as before this feature existed");
+
+        (bool found,,, ForwardLib.ForwardFailureCode code,) = _findForwardFailed(vm.getRecordedLogs());
+        assertTrue(found, "ForwardFailed must be emitted");
+        assertTrue(code == ForwardLib.ForwardFailureCode.ExecutorCallReverted);
+    }
+
+    /// @notice ERC20 exchange-fee dust, no drift -- exact consumption must still
+    /// hold when the fee doesn't divide evenly.
+    function test_erc20Dust_exactConsumption() public {
+        vm.selectFork(crossForkID);
+        TestToken myToken = new TestToken("Origin", "ORG7", 18);
+        uint chainX = 90301;
+        uint chainY = 90302;
+
+        vm.startPrank(CrossOWNER);
+        bridgeCross.registerToken(chainX, true, address(myToken), address(0xA701));
+        bridgeCross.registerToken(chainY, true, address(myToken), address(0xA702));
+        bridgeVerifierCross.setExFeeRate(IERC20(address(myToken)), 333); // 3.33%, chosen not to divide evenly
+        // Without a registered price, minimumValue falls back to a full token unit
+        // (1e18), which would dominate this test's small, dust-producing `value2`. Give
+        // it a price so `setMinimumTokenValue(0)` below actually zeroes minimumValue,
+        // isolating the exchange-fee dust behavior under test.
+        address[] memory tokens = new address[](1);
+        uint[] memory prices = new uint[](1);
+        uint[] memory pricesAt = new uint[](1);
+        tokens[0] = address(myToken);
+        prices[0] = 10 ** DOLLAR_DECIMALS; // $1
+        pricesAt[0] = block.timestamp;
+        priceFeedCross.updatePrice(tokens, prices, pricesAt);
+        bridgeVerifierCross.setMinimumTokenValue(0);
+        vm.stopPrank();
+
+        uint value2 = 777;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(chainY, IERC20(address(myToken)), value2);
+        assertGt(ex2, 0, "the chosen rate/value must actually produce a fractional (dust) exchange fee");
+        bytes memory extraData = _forwardExtraData(chainY, USER, value2, fee2, ex2, "");
+        uint ctxValue = value2 + fee2 + ex2;
+
+        _bumpDeposited(chainX, IERC20(address(myToken)), ctxValue * 2);
+
+        vm.recordLogs();
+        assertTrue(_signAndFinalize(chainX, 1, address(myToken), USER, ctxValue, extraData, 5));
+
+        (bool found,,,,,, uint settledValue, uint settledNetworkFee, uint settledExFee,) =
+            _findForwardInitiated(vm.getRecordedLogs());
+        assertTrue(found);
+        assertEq(
+            settledValue + settledNetworkFee + settledExFee,
+            ctxValue,
+            "ctxValue must be consumed exactly even with fractional exchange-fee dust"
+        );
+        assertEq(myToken.balanceOf(address(bridgeExecutorCross)), 0, "remaining == 0");
+    }
+
+    /// @notice fuzzes the settlement-splitting formula directly against the
+    /// properties the design relies on -- exact consumption, never below the quote, and
+    /// (on the unclamped path) the verifier's own fee check passing by construction.
+    function testFuzz_resolveForwardAmounts(uint ctxValue, uint quotedValue, uint netFee, uint rate) public view {
+        uint denom = bridgeVerifierCross.denominator(); // the fixed production denominator (10000)
+        rate = bound(rate, 0, 1_000_000);
+        quotedValue = bound(quotedValue, 0, 1e30);
+        netFee = bound(netFee, 0, 1e30);
+        ctxValue = bound(ctxValue, quotedValue + netFee, quotedValue + netFee + 1e30);
+
+        (uint value_, uint exFee_) = harness.resolveForwardAmounts(ctxValue, quotedValue, netFee, rate, denom);
+
+        // (a) exact consumption
+        assertEq(value_ + netFee + exFee_, ctxValue, "ctxValue must be consumed exactly");
+        // (b) never below the quote
+        assertGe(value_, quotedValue, "delivered value must never fall below the quote");
+        // (c) whenever the rounded-fee path determines `value_` (i.e. it isn't clamped
+        // up to `quotedValue`), the verifier's own fee formula is satisfied by
+        // construction.
+        uint avail = ctxValue - netFee;
+        uint v0 = Math.mulDiv(avail, denom, denom + rate);
+        if (v0 >= quotedValue) {
+            assertEq(value_, v0);
+            assertLe(Math.mulDiv(value_, rate, denom), exFee_, "verifier fee check must pass on the v0 path");
+        }
+    }
+
+    /// @notice the new `BaseBridgeForwardStagedInsufficient` error is declared and fires
+    /// exactly when the extraData-quoted `value` plus the current on-chain network fee
+    /// read at settlement time leaves no room in the staged `ctxValue`.
+    function test_resolveForwardAmounts_stagedInsufficient_reverts() public {
+        uint ctxValue = 100;
+        uint quotedValue = 60;
+        uint netFee = 50; // 60 + 50 = 110 > 100 -- violates (G)
+        vm.expectRevert(
+            abi.encodeWithSelector(ICrossBridge.BaseBridgeForwardStagedInsufficient.selector, quotedValue + netFee, ctxValue)
+        );
+        harness.resolveForwardAmounts(ctxValue, quotedValue, netFee, 100, 10000);
+    }
+
+    /// @notice the minimum-value gate is driven independently by token price, not
+    /// by the fee configuration this feature redistributes against -- it can still
+    /// reject settlement even when the fee has dropped.
+    function test_minimumValueIncrease_revertsDespiteFeeDecrease() public {
+        vm.selectFork(crossForkID);
+        uint value2 = 1 ether;
+        (, uint fee2, uint ex2) = bridgeVerifierCross.calculateFee(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN), value2);
+        bytes memory extraData = _forwardExtraData(BSC_CHAIN_ID, USER, value2, fee2, ex2, "");
+        uint ctxValue = value2 + fee2 + ex2;
+
+        vm.startPrank(CrossOWNER);
+        // The fee drops -- redistribution alone would normally increase the delivered
+        // value -- but the minimum-value gate, driven independently by token price,
+        // rises past whatever redistribution can deliver.
+        uint currentGasPrice = bridgeVerifierCross.getGasPrice(BSC_CHAIN_ID);
+        bridgeVerifierCross.updateGasPrice(BSC_CHAIN_ID, currentGasPrice / 2);
+        bridgeVerifierCross.setMinimumTokenValue(type(uint128).max);
+        vm.stopPrank();
+
+        (uint minimumValueNow,,) = bridgeVerifierCross.getTokenConfig(BSC_CHAIN_ID, IERC20(Const.NATIVE_TOKEN));
+        assertGt(minimumValueNow, value2, "minimumValue must now exceed even a redistributed value_");
+
+        vm.recordLogs();
+        _hop1NativeAndFinalize(ctxValue, extraData);
+
+        vm.selectFork(crossForkID);
+        assertEq(
+            USER.balance,
+            ctxValue,
+            "must fall back to USER despite the fee drop -- minimumValue is independent of fee drift"
+        );
+
+        (bool found,,, ForwardLib.ForwardFailureCode code,) = _findForwardFailed(vm.getRecordedLogs());
+        assertTrue(found, "ForwardFailed must be emitted");
+        assertTrue(code == ForwardLib.ForwardFailureCode.ExecutorCallReverted);
     }
 }

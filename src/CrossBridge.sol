@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {BaseBridge} from "./BaseBridge.sol";
 import {ICrossBridge} from "./interface/ICrossBridge.sol";
@@ -208,16 +209,36 @@ contract CrossBridge is BaseBridge, ICrossBridge {
             );
         }
 
-        // Exact equality (not `<=`): for native, the executor structurally forwards the
-        // full staged value and `_initiateBridge` requires msg.value == value + fee, so
-        // this is enforced either way. For ERC20, exact equality prevents a silent
-        // partial forward and guarantees `remaining == 0` for the executor's accounting.
+        // Exact equality (not `<=`): validates that extraData's declared breakdown
+        // reconstructs the staged context's value exactly, catching a corrupted or
+        // stale hop-1 encoding. It does NOT by itself determine what gets settled below
+        // -- settlement amounts are recomputed from the current on-chain fee
+        // configuration (see `_resolveForwardAmounts`), and it is THAT recomputation,
+        // always redistributing the full `ctxValue`, that guarantees `remaining == 0`
+        // for the executor's accounting regardless of fee drift between hop-1 encoding
+        // and hop-2 execution.
         require(
             value + networkFee + exFee == ctxValue,
             BaseBridgeForwardAmountMismatch(value + networkFee + exFee, ctxValue)
         );
 
-        (networkFee, exFee) = _checkInitiateAmount(toChainID, IERC20(ctxToken), value, networkFee, exFee);
+        // Settle on the CURRENT on-chain fee configuration rather than the extraData's
+        // (potentially stale) declared fees, so `ctxValue` is always consumed exactly
+        // regardless of fee drift between hop-1 encoding and hop-2 execution. `value` is
+        // honored as a floor: the amount delivered to `to` never falls below what hop-1
+        // quoted, and the exchange fee absorbs the rest of `ctxValue` after the network
+        // fee.
+        (, uint currentNetworkFee, uint exFeeRate) = bridgeVerifier.getTokenConfig(toChainID, IERC20(ctxToken));
+        (uint value_, uint exFee_) =
+            _resolveForwardAmounts(ctxValue, value, currentNetworkFee, exFeeRate, bridgeVerifier.denominator());
+
+        // Re-derives the same fee configuration internally; the verifier remains the
+        // final authority on whether `value_`/`currentNetworkFee`/`exFee_` are
+        // acceptable (minimum value, minted ceiling, and the fee formula itself), so a
+        // divergence between this reconstruction and the verifier's own formula surfaces
+        // as a revert here rather than a silent under-charge. Return values discarded --
+        // reusing them would reintroduce the calculated-vs-supplied gap this replaces.
+        _checkInitiateAmount(toChainID, IERC20(ctxToken), value_, currentNetworkFee, exFee_);
 
         _executeBridge(
             BridgeTokenArguments({
@@ -225,18 +246,63 @@ contract CrossBridge is BaseBridge, ICrossBridge {
                 fromToken: IERC20(ctxToken),
                 from: address(bridgeExecutor),
                 to: to,
-                value: value,
-                networkFee: networkFee,
-                exFee: exFee,
+                value: value_,
+                networkFee: currentNetworkFee,
+                exFee: exFee_,
                 extraData: extraData
             })
         );
 
         ForwardLib.emitInitiated(
-            ctxFromChainID, ctxIndex, toChainID, ctxToken, to, value, networkFee, exFee, keccak256(extraData)
+            ctxFromChainID, ctxIndex, toChainID, ctxToken, to, value_, currentNetworkFee, exFee_, keccak256(extraData)
         );
 
         ForwardLib.releaseGuard();
+    }
+
+    /**
+     * @notice Splits a staged forward context's fixed total (`ctxValue`) into a
+     * delivered `value_` and exchange fee `exFee_`, given the current on-chain network
+     * fee and exchange fee rate, such that `value_ + networkFee + exFee_ == ctxValue`
+     * exactly and `value_ >= quotedValue`.
+     * @dev `avail = ctxValue - networkFee` is the amount split between `value_` and
+     * `exFee_`. `v0` is `avail` reduced by the exchange fee rate, floor-rounded down from
+     * the real-valued solution: `v0 * (denom + rate) <= avail * denom` always holds, which
+     * guarantees `floor(v0 * rate / denom) <= avail - v0` -- so taking `value_ = v0` always
+     * clears the verifier's fee check. Floor rounding means `v0` is not necessarily the
+     * largest `value_` for which the check holds; it is a provable floor, and quote
+     * preservation is handled separately by `max(v0, quotedValue)` below, not by `v0`
+     * being maximal. Because floor division does not invert exactly, `v0` can land one
+     * unit below `quotedValue` even when the fee rate hasn't changed at all: encoding
+     * rounds `exFee` down from `value`, decoding rounds `value_` down from `avail`, and
+     * the two roundings don't compose back to the identity. `max(v0, quotedValue)` is the
+     * floor that makes the no-drift case reproduce the original quote exactly, not merely
+     * a slippage guard.
+     * Any remainder after `value_` is assigned entirely to `exFee_`, which is safe
+     * because `_checkInitiateAmount` re-validates the split against the verifier's own
+     * formula immediately after this returns.
+     * @param ctxValue The staged forward context's fixed total to redistribute.
+     * @param quotedValue The hop-1-encoded `value`, honored as a floor on `value_`.
+     * @param networkFee The current on-chain network fee for the destination chain/token.
+     * @param rate The current on-chain exchange fee rate.
+     * @param denom The exchange fee rate's denominator.
+     * @return value_ The amount to deliver to `to`, always `>= quotedValue`.
+     * @return exFee_ The exchange fee absorbing whatever `avail` does not go to `value_`.
+     */
+    function _resolveForwardAmounts(uint ctxValue, uint quotedValue, uint networkFee, uint rate, uint denom)
+        internal
+        pure
+        returns (uint value_, uint exFee_)
+    {
+        require(
+            quotedValue + networkFee <= ctxValue,
+            BaseBridgeForwardStagedInsufficient(quotedValue + networkFee, ctxValue)
+        );
+
+        uint avail = ctxValue - networkFee;
+        uint v0 = Math.mulDiv(avail, denom, denom + rate);
+        value_ = v0 > quotedValue ? v0 : quotedValue;
+        exFee_ = avail - value_;
     }
 
     /**
