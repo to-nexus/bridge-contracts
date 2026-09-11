@@ -38,6 +38,17 @@ interface ICrossBridge {
     error BaseBridgeForwardAmountMismatch(uint computed, uint ctxValue);
 
     /**
+     * @notice Thrown when the staged forward context's total cannot cover the
+     * extraData-quoted delivery amount plus the current on-chain network fee -- i.e.
+     * the network fee rose enough between hop-1 encoding and hop-2 settlement that the
+     * quoted floor can no longer be honored.
+     * @param required The extraData-declared quoted `value` plus the current on-chain
+     * network fee read at settlement time.
+     * @param staged The staged forward context's fixed total (`ctxValue`).
+     */
+    error BaseBridgeForwardStagedInsufficient(uint required, uint staged);
+
+    /**
      * @notice Executor-only entrypoint used to initiate hop-2+ of a multi-hop bridge.
      * @dev No modifiers: `fromToken`/`fromChainID` are never parameters and are only
      * obtained from the trusted, transient forward context staged by `_forwardBegin`
