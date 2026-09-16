@@ -40,6 +40,8 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     error BridgeVerifierInvalidSignature();
     error BridgeVerifierInvalidPermit();
     error BaseBridgeDeadlineExpired();
+    error BridgeVerifierWhitelistAlreadyAdded(address account);
+    error BridgeVerifierWhitelistNotFound(address account);
 
     event FinalizeBridgeGasSet(uint finalizeBridgeGas);
     event GasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
@@ -50,6 +52,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     event TimeWindowSet(uint timeWindow);
     event PeriodTotalValueThresholdSet(uint periodTotalValueThreshold);
     event MinimumTokenValueSet(uint minimumTokenValue);
+    event ValueLimitWhitelistAdded(address indexed account);
+    event ValueLimitWhitelistRemoved(address indexed account);
+    event ValueLimitWhitelistBypassed(IERC20 indexed token, address indexed to, uint value);
 
     bytes32 private constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
@@ -97,6 +102,11 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     mapping(IERC20 => DoubleEndedQueue.Bytes32Deque) private _tokenMovementHistory;
 
     mapping(bytes32 role => EnumerableSet.AddressSet) private _roleMembers;
+
+    /// @dev Recipients exempt from the single-transfer and period-total value thresholds.
+    /// @notice Finalize transfers to a whitelisted recipient bypass both thresholds and are
+    /// @notice never recorded in the period accumulator (`_tokenCurrentVolume` / `_tokenMovementHistory`).
+    EnumerableSet.AddressSet private _valueLimitWhitelist;
 
     /**
      * @notice Initializes the BridgeVerifier contract
@@ -151,15 +161,26 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * expired records and adding new ones. Dollar value of tokens is calculated
      * using price feed or default price.
      *
+     * @dev Recipients registered in the value-limit whitelist bypass both thresholds
+     * entirely (checked before any price lookup, so the bypass works even if the price
+     * feed is unavailable) and are never recorded in the period accumulator.
+     *
      * @param token The token to verify
      * @param value The amount of tokens
+     * @param to The finalize recipient. `address(0)` (used by the legacy 2-arg overload)
+     * is never whitelisted, so it always evaluates with full limits applied.
      * @return status Success status
      */
-    function validateBridgeTokenValue(IERC20 token, uint value)
-        external
+    function validateBridgeTokenValue(IERC20 token, uint value, address to)
+        public
         onlyRole(Const.BRIDGE_ROLE)
         returns (Const.FinalizeStatus status)
     {
+        if (to != address(0) && _valueLimitWhitelist.contains(to)) {
+            emit ValueLimitWhitelistBypassed(token, to, value);
+            return Const.FinalizeStatus.Success;
+        }
+
         // Verify token price and threshold
         (, uint score) = getTokenPriceWithValue(token, value);
         if (score > type(uint192).max) return Const.FinalizeStatus.TokenScoreOverflow;
@@ -217,6 +238,20 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         }
 
         return Const.FinalizeStatus.Success;
+    }
+
+    /**
+     * @notice Legacy entrypoint for token value verification, kept for backward compatibility
+     * @dev Always evaluated as a non-whitelisted call (`to = address(0)`): this is an
+     * intentional fail-safe, since a caller using this overload has no way to identify a
+     * recipient, so full limits always apply. Delegates to the 3-arg overload, which carries
+     * `onlyRole(Const.BRIDGE_ROLE)` and preserves `msg.sender` on this internal call.
+     * @param token The token to verify
+     * @param value The amount of tokens
+     * @return status Success status
+     */
+    function validateBridgeTokenValue(IERC20 token, uint value) external returns (Const.FinalizeStatus status) {
+        return validateBridgeTokenValue(token, value, address(0));
     }
 
     /**
@@ -642,6 +677,100 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(roles.length == accounts.length, BridgeVerifierMissmatchLength());
         for (uint i = 0; i < accounts.length; ++i) {
             revokeRole(roles[i], accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Adds an account to the value-limit whitelist
+     * @dev Whitelisted recipients bypass the single-transfer and period-total value
+     * thresholds in `validateBridgeTokenValue` and are never recorded in the period
+     * accumulator. See `validateBridgeTokenValue`'s NatSpec for details.
+     * @param account Recipient address to whitelist
+     */
+    function addValueLimitWhitelist(address account) public onlyRole(Const.ADMIN_ROLE) {
+        require(account != address(0), BridgeVerifierCanNotZeroValue("account"));
+        require(_valueLimitWhitelist.add(account), BridgeVerifierWhitelistAlreadyAdded(account));
+        emit ValueLimitWhitelistAdded(account);
+    }
+
+    /**
+     * @notice Removes an account from the value-limit whitelist
+     * @param account Recipient address to remove
+     */
+    function removeValueLimitWhitelist(address account) public onlyRole(Const.ADMIN_ROLE) {
+        require(_valueLimitWhitelist.remove(account), BridgeVerifierWhitelistNotFound(account));
+        emit ValueLimitWhitelistRemoved(account);
+    }
+
+    /**
+     * @notice Adds multiple accounts to the value-limit whitelist
+     * @dev Atomic: reuses `addValueLimitWhitelist` for each entry, so a single duplicate
+     * or zero-address entry reverts the whole batch — there is no partial application.
+     * @param accounts Recipient addresses to whitelist
+     */
+    function addValueLimitWhitelistBatch(address[] calldata accounts) external onlyRole(Const.ADMIN_ROLE) {
+        for (uint i = 0; i < accounts.length; ++i) {
+            addValueLimitWhitelist(accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Removes multiple accounts from the value-limit whitelist
+     * @dev Atomic: reuses `removeValueLimitWhitelist` for each entry, so a single missing
+     * entry reverts the whole batch — there is no partial application.
+     * @param accounts Recipient addresses to remove
+     */
+    function removeValueLimitWhitelistBatch(address[] calldata accounts) external onlyRole(Const.ADMIN_ROLE) {
+        for (uint i = 0; i < accounts.length; ++i) {
+            removeValueLimitWhitelist(accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Returns whether an account is on the value-limit whitelist
+     * @param account Address to query
+     * @return True if the account is whitelisted
+     */
+    function isValueLimitWhitelisted(address account) external view returns (bool) {
+        return _valueLimitWhitelist.contains(account);
+    }
+
+    /**
+     * @notice Returns the number of accounts on the value-limit whitelist
+     * @return Length of the whitelist
+     */
+    function getValueLimitWhitelistLength() external view returns (uint) {
+        return _valueLimitWhitelist.length();
+    }
+
+    /**
+     * @notice Returns the entire value-limit whitelist
+     * @dev The whitelist is expected to stay small (registrations are reviewed
+     * individually). If it grows large enough to hit RPC response-size limits, use the
+     * paginated `getValueLimitWhitelist(uint,uint)` overload instead.
+     * @return Array of every whitelisted address
+     */
+    function getValueLimitWhitelist() external view returns (address[] memory) {
+        return _valueLimitWhitelist.values();
+    }
+
+    /**
+     * @notice Returns a page of the value-limit whitelist
+     * @dev `offset >= length` (or `limit == 0`) returns an empty array rather than
+     * reverting. The returned count is clamped with `Math.min` against the remaining
+     * length so `offset + limit` never needs to be computed and cannot overflow.
+     * @param offset Index of the first entry to return
+     * @param limit Maximum number of entries to return
+     * @return page Array of at most `limit` whitelisted addresses starting at `offset`
+     */
+    function getValueLimitWhitelist(uint offset, uint limit) external view returns (address[] memory page) {
+        uint length = _valueLimitWhitelist.length();
+        if (offset >= length || limit == 0) return page;
+
+        uint count = limit.min(length - offset);
+        page = new address[](count);
+        for (uint i = 0; i < count; ++i) {
+            page[i] = _valueLimitWhitelist.at(offset + i);
         }
     }
 

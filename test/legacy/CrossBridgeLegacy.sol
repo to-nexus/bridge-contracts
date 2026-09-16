@@ -21,6 +21,21 @@ pragma solidity 0.8.28;
 // Delete this file once CROSS mainnet has actually been upgraded off this code
 // (a separately-approved, future operation) — at that point it stops being
 // evidence of anything live and becomes pure dead weight.
+//
+// AUTHORIZED DEVIATION (BridgeVerifier value-limit whitelist, 2026-09): the override
+// `_checkFinalizeAmount(uint,IERC20,uint,bool)` below was changed to
+// `_checkFinalizeAmount(uint,IERC20,uint,address,bool)` — adding an `address to`
+// parameter before `retry`, and forwarding it in the `super._checkFinalizeAmount(...)`
+// call — to match the new signature of `BaseBridge._checkFinalizeAmount`. This
+// contract's own logic (the `crossSupplyLimit` check) and storage layout are UNCHANGED
+// by this edit: no state variable was added, removed, or reordered, so this file
+// remains valid evidence that upgrading the live CROSS mainnet proxy to `CrossBridge`
+// is layout-safe. Behavior is NOT unchanged, however: because `_checkFinalizeAmount`
+// delegates to the parent via `super`, this contract's finalize path now inherits
+// `BridgeVerifier`'s recipient-aware value-limit whitelist exemption from the parent —
+// a finalize to a whitelisted recipient bypasses the verification/period thresholds
+// exactly as it does on non-legacy `CrossBridge`. See `src/BridgeVerifier.sol` and
+// `test/BridgeTokenMonitoring.t.sol` for that behavior.
 // ===========================================================================
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -122,11 +137,13 @@ contract CrossBridgeLegacy is BaseBridge {
      * @param fromChainID Source chain ID of the transfer
      * @param token Address of the token being transferred (Const.NATIVE_TOKEN for CROSS native token)
      * @param value Amount of tokens to finalize
+     * @param to Finalize recipient, passed through so the verifier can apply any
+     * recipient-specific exemption (e.g. a value-limit whitelist)
      * @param retry Whether this is a retry of a previous finalization attempt
      * @return status Status code indicating the result of the check
      * @return delay Boolean indicating if finalization should be delayed
      */
-    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, bool retry)
+    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, address to, bool retry)
         internal
         override
         returns (Const.FinalizeStatus status, bool delay)
@@ -137,7 +154,7 @@ contract CrossBridgeLegacy is BaseBridge {
             if (crossSupply() + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
         }
 
-        return super._checkFinalizeAmount(fromChainID, token, value, retry);
+        return super._checkFinalizeAmount(fromChainID, token, value, to, retry);
     }
 
     /**

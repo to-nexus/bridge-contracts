@@ -57,6 +57,7 @@ contract BridgeScript is Script {
     string VERIFIER_ROLE_MEMBERS = "VERIFIER_ROLE_MEMBERS";
     string VERIFIER_GAS_PRICES = "VERIFIER_GAS_PRICES";
     string VERIFIER_GAS_PRICE_CHAINS = "VERIFIER_GAS_PRICE_CHAINS";
+    string VERIFIER_VALUE_LIMIT_WHITELIST = "VERIFIER_VALUE_LIMIT_WHITELIST";
 
     // ============ 환경변수에서 로드된 값들 ============
     address priceFeed;
@@ -81,6 +82,7 @@ contract BridgeScript is Script {
     address[] verifierRoleMembers;
     uint[] verifierGasPrices;
     uint[] verifierGasPriceChains;
+    address[] verifierValueLimitWhitelist;
 
     // 기본값용 빈 배열
     bytes32[] emptyBytes32Array;
@@ -112,6 +114,7 @@ contract BridgeScript is Script {
         verifierRoleMembers = vm.envOr(VERIFIER_ROLE_MEMBERS, ",", emptyAddressArray);
         verifierGasPrices = vm.envOr(VERIFIER_GAS_PRICES, ",", emptyUintArray);
         verifierGasPriceChains = vm.envOr(VERIFIER_GAS_PRICE_CHAINS, ",", emptyUintArray);
+        verifierValueLimitWhitelist = vm.envOr(VERIFIER_VALUE_LIMIT_WHITELIST, ",", emptyAddressArray);
 
         // 로드된 값 출력
         console.log("priceFeed:", priceFeed);
@@ -172,6 +175,12 @@ contract BridgeScript is Script {
                     )
                 )
             );
+        }
+
+        // Value-limit whitelist 목록 출력 (선택적)
+        console.log("verifierValueLimitWhitelist:");
+        for (uint i = 0; i < verifierValueLimitWhitelist.length; i++) {
+            console.log("account:", verifierValueLimitWhitelist[i]);
         }
     }
 
@@ -238,6 +247,13 @@ contract BridgeScript is Script {
             timeWindow
         );
         verifier.grantRoleBatch(verifierRoles, verifierRoleMembers);
+
+        // 초기 value-limit whitelist 등록 (선택적: 설정 배열이 비면 미호출).
+        // 호출자(브로드캐스트 sender)가 verifier 의 ADMIN_ROLE 을 보유해야 하며,
+        // 조회는 페이지네이션 getter(getValueLimitWhitelist(uint,uint))를 사용한다.
+        if (verifierValueLimitWhitelist.length > 0) {
+            verifier.addValueLimitWhitelistBatch(verifierValueLimitWhitelist);
+        }
 
         baseBridge.setBridgeVerifier(verifier);
 
@@ -357,6 +373,14 @@ contract BridgeScript is Script {
  *
  * # 각 체인의 가스 가격 (wei)
  * VERIFIER_GAS_PRICES=20000000000,5000000000
+ *
+ * # --------------------------------------------------
+ * # Value-limit whitelist 초기 등록 (선택적)
+ * # --------------------------------------------------
+ *
+ * # 초기 whitelist 등록 대상 주소 목록 (쉼표로 구분). 비워두면 등록을 건너뛴다.
+ * # 등록 후 조회는 verifier.getValueLimitWhitelist(offset, limit) 페이지네이션 getter 사용을 권장.
+ * VERIFIER_VALUE_LIMIT_WHITELIST=0x...,0x...
  *
  * # --------------------------------------------------
  * # 배포 명령어 예시
