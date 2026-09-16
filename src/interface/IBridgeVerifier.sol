@@ -9,6 +9,13 @@ import {IPriceFeed} from "./IPriceFeed.sol";
 interface IBridgeVerifier {
     function priceFeed() external view returns (IPriceFeed);
     function validateBridgeTokenValue(IERC20 token, uint value) external returns (Const.FinalizeStatus status);
+    function validateBridgeTokenValue(IERC20 token, uint value, address to)
+        external
+        returns (Const.FinalizeStatus status);
+    function isValueLimitWhitelisted(address account) external view returns (bool);
+    function getValueLimitWhitelistLength() external view returns (uint);
+    function getValueLimitWhitelist() external view returns (address[] memory);
+    function getValueLimitWhitelist(uint offset, uint limit) external view returns (address[] memory);
     function safePermit(
         IERC20 token,
         address owner,

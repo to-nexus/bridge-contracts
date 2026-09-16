@@ -408,7 +408,7 @@ contract BaseBridge is
         bool delay;
         uint remaining;
         {
-            (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, false);
+            (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, args.to, false);
             if (status == Const.FinalizeStatus.Success) {
                 (status, remaining) =
                     _finalizeBridge(args.fromChainID, args.index, args.toToken, args.to, args.value, args.extraData);
@@ -465,7 +465,7 @@ contract BaseBridge is
         PendingData memory pending = _pendingData[remoteChainID][index];
 
         (Const.FinalizeStatus status,) =
-            _checkFinalizeAmount(remoteChainID, pending.args.toToken, pending.args.value, true);
+            _checkFinalizeAmount(remoteChainID, pending.args.toToken, pending.args.value, pending.args.to, true);
 
         require(status == Const.FinalizeStatus.Success, string(abi.encode(uint(status))));
         require(
@@ -627,10 +627,13 @@ contract BaseBridge is
      * @param fromChainID Source chain ID
      * @param token Token address
      * @param value Amount to verify
+     * @param to Finalize recipient, passed through so the verifier can apply any
+     * recipient-specific exemption (e.g. a value-limit whitelist)
+     * @param retry Whether this is a retry of a previous finalization attempt
      * @return status Success status
      * @return delay Whether verification delay should be applied
      */
-    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, bool retry)
+    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, address to, bool retry)
         internal
         virtual
         returns (Const.FinalizeStatus status, bool delay)
@@ -642,7 +645,7 @@ contract BaseBridge is
 
         // Skip validation if this is a retry - validation was already completed in the initial attempt
         if (!retry) {
-            status = bridgeVerifier.validateBridgeTokenValue(token, value);
+            status = bridgeVerifier.validateBridgeTokenValue(token, value, to);
             if (status != Const.FinalizeStatus.Success) delay = true;
         } else {
             status = Const.FinalizeStatus.Success;

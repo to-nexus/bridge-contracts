@@ -447,16 +447,63 @@ contract CrossBridgeForwardTest is BridgeExecutorTest {
     /// @dev Discovers the `ForwardLib` address forge auto-linked for `CrossBridge` in
     /// this test run. Foundry predeploys/reuses a SINGLE external-library instance per
     /// test run for a given library, so this is the SAME address baked into
-    /// `bridgeCrossV2`'s real implementation set up in `setUp()`. Offset derived from
-    /// `out/CrossBridge.sol/CrossBridge.json`'s `deployedBytecode.linkReferences`; if
-    /// `CrossBridge.sol`'s logic ever changes and this offset drifts, re-derive it via
-    /// `script/ForwardLibVerify.s.sol`'s own JSON-based approach instead of hardcoding.
+    /// `bridgeCrossV2`'s real implementation set up in `setUp()`.
+    ///
+    /// Content-addressed rather than offset-based: an earlier version of this helper read
+    /// the linked address out of `CrossBridge`'s deployed bytecode at a hardcoded byte
+    /// offset (derived once from `deployedBytecode.linkReferences`). That offset silently
+    /// went stale the moment `CrossBridge.sol`'s compiled bytecode size changed for ANY
+    /// reason, unrelated to `ForwardLib` linking itself (e.g. `BaseBridge._checkFinalizeAmount`
+    /// gaining a parameter shifted it from 8640 to 8650) — the helper kept "succeeding" by
+    /// reading garbage instead of failing loudly, silently defeating every test built on it.
+    /// Scanning for the linked library's own bytecode (which is byte-identical to
+    /// `vm.getDeployedCode`'s unlinked artifact except for the 20-byte solc self-address
+    /// guard at indices 20..39, which we splice in per-candidate and self-validate against)
+    /// makes this helper immune to future bytecode-size drift. Do not reintroduce a magic
+    /// offset here.
     function _discoverForwardLibAddress() internal returns (address addr) {
         bytes memory code = address(new CrossBridge()).code;
-        uint offset = 8640;
-        assembly ("memory-safe") {
-            addr := shr(96, mload(add(add(code, 32), offset)))
+        bytes memory expected = vm.getDeployedCode("ForwardLib.sol:ForwardLib");
+
+        address[] memory matches = new address[](code.length);
+        uint matchCount;
+
+        for (uint off = 0; off + 20 <= code.length; off++) {
+            address cand;
+            assembly ("memory-safe") {
+                cand := shr(96, mload(add(add(code, 32), off)))
+            }
+            if (cand == address(0)) continue;
+            if (cand.code.length != expected.length) continue;
+
+            // Splice this candidate's own 20 address bytes into the solc self-address
+            // guard (indices 20..39) of the unlinked artifact, then compare against the
+            // candidate's real deployed code. This is self-validating: it only matches
+            // when `cand` truly is the address the library code was linked against.
+            bytes memory spliced = bytes.concat(expected);
+            bytes20 candBytes = bytes20(cand);
+            for (uint j = 0; j < 20; j++) {
+                spliced[20 + j] = candBytes[j];
+            }
+
+            if (keccak256(spliced) == keccak256(cand.code)) {
+                bool alreadySeen;
+                for (uint k = 0; k < matchCount; k++) {
+                    if (matches[k] == cand) {
+                        alreadySeen = true;
+                        break;
+                    }
+                }
+                if (!alreadySeen) {
+                    matches[matchCount] = cand;
+                    matchCount++;
+                }
+            }
         }
+
+        require(matchCount > 0, "ForwardLib address not found in CrossBridge bytecode");
+        require(matchCount == 1, "ambiguous ForwardLib candidates");
+        addr = matches[0];
     }
 
     // ----------------------------------------------------------------

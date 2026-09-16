@@ -139,7 +139,7 @@ contract CrossBridge is BaseBridge, ICrossBridge {
      * @notice Verifies if a finalization amount is within allowed limits
      * @dev Extends the base implementation with CROSS token issuance limit checks
      */
-    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, bool retry)
+    function _checkFinalizeAmount(uint fromChainID, IERC20 token, uint value, address to, bool retry)
         internal
         override
         returns (Const.FinalizeStatus status, bool delay)
@@ -148,7 +148,7 @@ contract CrossBridge is BaseBridge, ICrossBridge {
             if (crossSupply() + value > crossSupplyLimit) return (Const.FinalizeStatus.CrossSupplyLimitExceeded, true);
         }
 
-        return super._checkFinalizeAmount(fromChainID, token, value, retry);
+        return super._checkFinalizeAmount(fromChainID, token, value, to, retry);
     }
 
     /**
