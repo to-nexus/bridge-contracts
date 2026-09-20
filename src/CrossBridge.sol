@@ -36,6 +36,10 @@ import {ForwardLib} from "./lib/ForwardLib.sol";
 contract CrossBridge is BaseBridge, ICrossBridge {
     error Disabled();
 
+    /// @notice Thrown when a manual release of native CROSS bridged in from BSC would
+    /// push outstanding CROSS supply past `crossSupplyLimit`
+    error CrossBridgeManualReleaseExceedsSupplyLimit(uint crossSupplyAfter, uint crossSupplyLimit);
+
     /**
      * @notice Emitted when the cross-chain supply limit is updated
      * @param crossSupplyLimit The new maximum supply limit for CROSS native token transfers
@@ -149,6 +153,23 @@ contract CrossBridge is BaseBridge, ICrossBridge {
         }
 
         return super._checkFinalizeAmount(fromChainID, token, value, to, retry);
+    }
+
+    /**
+     * @notice Enforces the CROSS native supply ceiling on manual releases
+     * @dev `manualReleasePendingWithRecipient` bypasses pause and the verification delay
+     * by design (that is what makes it a recovery path), but it must not also bypass
+     * `crossSupplyLimit` -- an operator forcing through a stuck pending record is not
+     * cause to let outstanding CROSS supply exceed what BSC can eventually redeem.
+     */
+    function _checkManualReleaseLimit(uint fromChainID, IERC20 token, uint value) internal view override {
+        if (address(token) == Const.NATIVE_TOKEN && fromChainID == _bscChainID) {
+            uint crossSupplyAfter = crossSupply() + value;
+            require(
+                crossSupplyAfter <= crossSupplyLimit,
+                CrossBridgeManualReleaseExceedsSupplyLimit(crossSupplyAfter, crossSupplyLimit)
+            );
+        }
     }
 
     /**

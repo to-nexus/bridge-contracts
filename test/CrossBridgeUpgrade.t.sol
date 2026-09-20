@@ -243,4 +243,85 @@ contract CrossBridgeUpgradeTest is BridgeExecutorTest {
             "crossSupplyLimit must still be enforced post-upgrade"
         );
     }
+
+    /// @notice `manualReleasePending*` on the pre-upgrade `CrossBridgeLegacy` bypasses
+    /// `crossSupplyLimit` entirely (see `BridgeCrossSupplyLimitTest.test_cross_supply_limit_exceeded`,
+    /// which pins that legacy behavior). The upgraded `CrossBridge` closes that gap via
+    /// `_checkManualReleaseLimit`: a forced release that would push `crossSupply()` past
+    /// `crossSupplyLimit` now reverts, while pause/deadline bypass (the recovery-path
+    /// purpose of manual release) is unaffected.
+    function test_upgrade_manualReleasePending_enforcesSupplyLimit() public {
+        vm.selectFork(crossForkID);
+        CrossBridge newImpl = new CrossBridge();
+        vm.prank(CrossOWNER);
+        bridgeCross.upgradeToAndCall(address(newImpl), bytes(""));
+        CrossBridge bridgeCrossV2 = CrossBridge(payable(address(bridgeCross)));
+
+        vm.prank(CrossOWNER);
+        bridgeCrossV2.setCrossSupplyLimit(10 ether + CROSS_FOUNDATION_INITIAL_SUPPLY);
+
+        // Fill the limit, then push one finalize over it into pending.
+        deposit(false, 5 ether, threshold);
+
+        vm.selectFork(bscForkID);
+        (uint index2,) = bscBridge(address(cross), USER, USER, 10 ether, 0, 0);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        crossFinalize(index2, address(NATIVE_TOKEN), USER, 10 ether, threshold);
+        assertTrue(
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index2).status
+                == Const.FinalizeStatus.CrossSupplyLimitExceeded
+        );
+
+        // Manual release still can't push crossSupply() past crossSupplyLimit.
+        uint crossSupplyAfter = bridgeCrossV2.crossSupply() + 10 ether;
+        uint limitBefore = bridgeCrossV2.crossSupplyLimit();
+        vm.prank(CrossOWNER);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                CrossBridge.CrossBridgeManualReleaseExceedsSupplyLimit.selector, crossSupplyAfter, limitBefore
+            )
+        );
+        bridgeCrossV2.manualReleasePending(BSC_CHAIN_ID, index2);
+        assertTrue(
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index2).status
+                == Const.FinalizeStatus.CrossSupplyLimitExceeded,
+            "a reverted manual release must not remove the pending record"
+        );
+
+        // Raising the limit enough to cover it makes the SAME forced release succeed -
+        // manual release is not disabled, just no longer able to exceed the cap.
+        vm.prank(CrossOWNER);
+        bridgeCrossV2.setCrossSupplyLimit(crossSupplyAfter);
+        vm.prank(CrossOWNER);
+        bridgeCrossV2.manualReleasePending(BSC_CHAIN_ID, index2);
+        assertTrue(bridgeCross.getPendingArguments(BSC_CHAIN_ID, index2).status == Const.FinalizeStatus.None);
+    }
+
+    /// @notice Manual release's OTHER bypasses (pause, safety deadline) survive
+    /// unchanged post-upgrade: `_checkManualReleaseLimit` only ever ADDS a supply-limit
+    /// check, it does not touch the pre-existing pause/deadline bypass this function
+    /// exists to provide.
+    function test_upgrade_manualReleasePending_stillBypassesPauseAndDeadline() public {
+        vm.selectFork(crossForkID);
+        CrossBridge newImpl = new CrossBridge();
+        vm.prank(CrossOWNER);
+        bridgeCross.upgradeToAndCall(address(newImpl), bytes(""));
+        CrossBridge bridgeCrossV2 = CrossBridge(payable(address(bridgeCross)));
+
+        vm.prank(CrossOWNER);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, true); // finalize paused
+
+        uint amount = 5 ether;
+        uint index = deposit(true, amount, threshold);
+        assertTrue(bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status == Const.FinalizeStatus.TokenPaused);
+
+        // Bridge (and the token) stay paused - manual release still goes through.
+        uint balBefore = USER.balance;
+        vm.prank(CrossOWNER);
+        bridgeCrossV2.manualReleasePending(BSC_CHAIN_ID, index);
+        assertEq(USER.balance, balBefore + amount);
+        assertTrue(bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status == Const.FinalizeStatus.None);
+    }
 }

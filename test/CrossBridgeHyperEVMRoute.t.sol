@@ -90,7 +90,7 @@ contract CrossBridgeHyperEVMRouteTest is CrossBridgeMultihopTest {
         priceFeedHyper.grantRole(Const.PRICER_ROLE, hyperOwner);
 
         bridgeVerifierHyper = new BridgeVerifier(
-            hyperOwner, address(bridgeHyper), address(priceFeedHyper), 200_000, 0, 0, 0, 0, 0, 2 hours
+            hyperOwner, address(bridgeHyper), address(priceFeedHyper), 200_000, 1, 0, 0, 0, 0, 2 hours
         );
         bridgeHyper.setBridgeVerifier(bridgeVerifierHyper);
 

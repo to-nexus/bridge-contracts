@@ -140,14 +140,25 @@ abstract contract BridgeRegistry is RoleManager, IBridgeRegistry {
     /// @dev Storage gap for future upgrades
     uint[39] private __gap;
 
+    /// @dev Default cap applied to a newly initialized bridge's `_maxExtraDataLength`.
+    /// Matches the CROSS/BSC operational maximum observed in production, with roughly 3x
+    /// headroom over the deepest multi-hop encoding measured in practice, while still
+    /// bounding the field so a single oversized item can't stall a finalize batch.
+    uint private constant DEFAULT_MAX_EXTRA_DATA_LENGTH = 1024;
+
     /**
      * @notice Initializes the BridgeRegistry
      * @dev Sets up initial state
      * - Grants Admin role to contract owner using Const.EDITOR_ROLE identifier
      * - Sets verification delay to 24 hours
+     * - Caps extra data length at `DEFAULT_MAX_EXTRA_DATA_LENGTH` (0 would mean
+     *   unlimited); already-initialized proxies keep whatever value they were set to and
+     *   are unaffected, since this only runs once at initialization
      */
     function __BridgeRegistry_init() internal onlyInitializing {
         _verificationDelay = 24 hours;
+        _maxExtraDataLength = DEFAULT_MAX_EXTRA_DATA_LENGTH;
+        emit MaxExtraDataLengthSet(DEFAULT_MAX_EXTRA_DATA_LENGTH);
     }
 
     /**

@@ -37,6 +37,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     error BridgeVerifierDoesNotHaveRole(address account, bytes32 role);
     error BridgeVerifierMissmatchLength();
     error BridgeVerifierInvalidTimeWindow();
+    error BridgeVerifierInvalidExFeeRate();
     error BridgeVerifierInvalidSignature();
     error BridgeVerifierInvalidPermit();
     error BaseBridgeDeadlineExpired();
@@ -61,6 +62,12 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
 
     /// @dev Base denominator for fee calculations (10000 = 100%)
     uint private constant DENOMINATOR = 10000;
+
+    /// @dev Upper bound for `_timeWindow`: 168 hourly periods. Bounding the window bounds
+    /// how many expired records a single `validateBridgeTokenValue` call may need to evict
+    /// from `_tokenMovementHistory` (at most one record per `PERIOD_INTERVAL`), which keeps
+    /// that eviction loop well within a block's gas limit.
+    uint private constant MAX_TIME_WINDOW = 7 days;
 
     /// @dev Mask for extracting the score value from the packed movement record
     /// @notice The upper 64 bits of the packed movement record store the timestamp
@@ -137,7 +144,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(initialOwner != address(0), BridgeVerifierCanNotZeroValue("initialOwner"));
         require(bridge != address(0), BridgeVerifierCanNotZeroValue("bridge"));
         require(priceFeed_ != address(0), BridgeVerifierCanNotZeroValue("priceFeed_"));
-        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
+        require(defaultTokenPrice != 0, BridgeVerifierCanNotZeroValue("defaultTokenPrice"));
+        require(defaultExFeeRate <= DENOMINATOR, BridgeVerifierInvalidExFeeRate());
+        _validateTimeWindow(timeWindow);
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
 
@@ -149,6 +158,22 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         _verificationAmountThreshold = verificationAmountThreshold;
         _periodTotalValueThreshold = periodTotalValueThreshold;
         _timeWindow = timeWindow;
+    }
+
+    /**
+     * @notice Validates a candidate `_timeWindow` value
+     * @dev `0` disables period-total monitoring outright and is always allowed. A
+     * non-zero window must still align to `PERIOD_INTERVAL` (the movement-history bucket
+     * size) and must not exceed `MAX_TIME_WINDOW`, which bounds how many expired records
+     * a single call may need to evict.
+     * @param timeWindow Candidate time window in seconds
+     */
+    function _validateTimeWindow(uint timeWindow) private pure {
+        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
+        require(
+            timeWindow == 0 || (timeWindow >= Const.PERIOD_INTERVAL && timeWindow <= MAX_TIME_WINDOW),
+            BridgeVerifierInvalidTimeWindow()
+        );
     }
 
     /**
@@ -181,8 +206,16 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
             return Const.FinalizeStatus.Success;
         }
 
-        // Verify token price and threshold
-        (, uint score) = getTokenPriceWithValue(token, value);
+        // A unit price of zero means the value can't be evaluated at all (as opposed to a
+        // small transfer legitimately flooring to a score of zero). Fail closed only while
+        // monitoring is actually active: with both thresholds off, an unpriced token must
+        // keep behaving exactly as it always has.
+        (, uint unitPrice) = _unitPrice(token);
+        bool monitoringActive =
+            _verificationAmountThreshold != 0 || (_timeWindow != 0 && _periodTotalValueThreshold != 0);
+        if (unitPrice == 0 && monitoringActive) return Const.FinalizeStatus.TokenPriceUnavailable;
+
+        uint score = unitPrice.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
         if (score > type(uint192).max) return Const.FinalizeStatus.TokenScoreOverflow;
 
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
@@ -257,6 +290,14 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     /**
      * @notice Safely permits a token transfer
      * @dev Handles permit signature verification and allowance updates
+     * @dev Restricted to `BRIDGE_ROLE` (the only caller is `BaseBridge`, which is granted
+     * this role at construction): a third party could otherwise call this function directly
+     * with the owner's permit signature, burning its nonce through the mempool before
+     * `BaseBridge` ever gets a chance to use it. The role gate closes that path. Separately,
+     * `BaseBridge` may still end up calling this function with a signature whose nonce was
+     * already burned by a front-run of the token's own public `permit` — in that case the
+     * allowance it would have set is already in place, so the early return below treats it
+     * as success without calling `token.permit` again.
      * @param token Token to permit
      * @param owner Token owner
      * @param spender Spender address
@@ -275,8 +316,15 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external {
+    ) external onlyRole(Const.BRIDGE_ROLE) {
         uint beforeAllowance = token.allowance(owner, spender);
+        // A third party can front-run the owner's permit signature in the mempool,
+        // spending its nonce before this call executes. If that front-run already
+        // granted (or exceeded) the needed allowance, there is nothing left to do here -
+        // retrying the now-consumed signature would only revert. Treat a sufficient
+        // existing allowance as success rather than re-deriving it from `permit`.
+        if (beforeAllowance >= value) return;
+
         IERC20Permit(address(token)).permit(owner, spender, value, deadline, v, r, s);
         uint afterAllowance = token.allowance(owner, spender);
         require(afterAllowance == value, BridgeVerifierInvalidPermit()); // token allowance should be same as value
@@ -343,9 +391,24 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @return price Calculated dollar price for the token amount
      */
     function getTokenPriceWithValue(IERC20 token, uint value) public view returns (bool exist, uint price) {
+        uint unitPrice;
+        (exist, unitPrice) = _unitPrice(token);
+        price = unitPrice.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
+    }
+
+    /**
+     * @notice Resolves a token's per-unit dollar price, falling back to the default price
+     * @dev Shared by `getTokenPriceWithValue` (external/public price queries) and
+     * `validateBridgeTokenValue` (which needs the unit price on its own, before scaling by
+     * a transfer amount, to distinguish "can't price this token" from "priced at zero
+     * because the transfer is small").
+     * @param token Token to price
+     * @return exist Whether the price feed itself returned a valid price
+     * @return price Per-unit dollar price: the feed's price if `exist`, else the default
+     */
+    function _unitPrice(IERC20 token) private view returns (bool exist, uint price) {
         (exist, price,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) price = _defaultTokenPrice;
-        price = price.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
     }
 
     /**
@@ -524,6 +587,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      */
     function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(Const.EDITOR_ROLE) {
         require(address(token) != address(0), BridgeVerifierCanNotZeroValue("token"));
+        // type(uint).max is the fee-exemption sentinel (see getTokenConfig) and is exempt
+        // from the DENOMINATOR bound.
+        require(exFeeRate <= DENOMINATOR || exFeeRate == type(uint).max, BridgeVerifierInvalidExFeeRate());
         _exFeeRate[token] = exFeeRate;
         emit ExchangeFeeUpdated(address(token), exFeeRate);
     }
@@ -565,6 +631,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param defaultTokenPrice New default token price value
      */
     function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(Const.EDITOR_ROLE) {
+        require(defaultTokenPrice != 0, BridgeVerifierCanNotZeroValue("defaultTokenPrice"));
         _defaultTokenPrice = defaultTokenPrice;
         emit DefaultTokenPriceSet(defaultTokenPrice);
     }
@@ -577,6 +644,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param exFeeRate New exchange fee rate
      */
     function setDefaultExFeeRate(uint exFeeRate) external onlyRole(Const.EDITOR_ROLE) {
+        require(exFeeRate <= DENOMINATOR, BridgeVerifierInvalidExFeeRate());
         _defaultExFeeRate = exFeeRate;
         emit ExchangeFeeUpdated(address(0), _defaultExFeeRate);
     }
@@ -611,7 +679,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param timeWindow New time window duration in seconds
      */
     function setTimeWindow(uint timeWindow) external onlyRole(Const.ADMIN_ROLE) {
-        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
+        _validateTimeWindow(timeWindow);
         _timeWindow = timeWindow;
         emit TimeWindowSet(timeWindow);
     }

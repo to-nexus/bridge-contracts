@@ -464,8 +464,23 @@ contract BaseBridge is
 
         PendingData memory pending = _pendingData[remoteChainID][index];
 
-        (Const.FinalizeStatus status,) =
-            _checkFinalizeAmount(remoteChainID, pending.args.toToken, pending.args.value, pending.args.to, true);
+        // A record parked before amount validation ever ran (TokenPaused,
+        // CrossSupplyLimitExceeded, TokenPriceUnavailable — all three return before
+        // reaching validateBridgeTokenValue in _checkFinalizeAmount below) must be
+        // revalidated here; otherwise a transfer that would have failed every check at
+        // finalize time auto-releases once its 24h delay simply expires. A record whose
+        // status instead came FROM validation having already run (threshold-exceeded,
+        // score/volume overflow, or a post-validation settlement failure) is not re-run:
+        // that would double-count its score in the volume accumulator, and for the
+        // threshold-exceeded cases would permanently strand it, since the same amount
+        // would forever re-trip the same threshold.
+        bool alreadyValidated = pending.status != Const.FinalizeStatus.TokenPaused
+            && pending.status != Const.FinalizeStatus.CrossSupplyLimitExceeded
+            && pending.status != Const.FinalizeStatus.TokenPriceUnavailable;
+
+        (Const.FinalizeStatus status,) = _checkFinalizeAmount(
+            remoteChainID, pending.args.toToken, pending.args.value, pending.args.to, alreadyValidated
+        );
 
         require(status == Const.FinalizeStatus.Success, string(abi.encode(uint(status))));
         require(
@@ -492,6 +507,9 @@ contract BaseBridge is
      * @notice Manually release a pending operation regardless of pause or safety deadline with a custom recipient
      * @dev Verifier-only function to force release a pending operation
      * - Bypasses token pause and safety deadline checks
+     * - Still subject to `_checkManualReleaseLimit` (e.g. CROSS native supply ceiling on
+     *   `CrossBridge`): pause and the safety deadline are recovery-time obstacles this
+     *   function is meant to clear, but an issuance ceiling is not one of them
      * - Verifies pending operation exists
      * - Allows overriding the original recipient address
      * @param remoteChainID Chain ID of the pending operation
@@ -504,6 +522,8 @@ contract BaseBridge is
         nonReentrant
     {
         require(_pendingIndex[remoteChainID].contains(index), BaseBridgeNotExistIndex(index));
+        PendingData memory pending = _pendingData[remoteChainID][index];
+        _checkManualReleaseLimit(remoteChainID, pending.args.toToken, pending.args.value);
         _releasePending(remoteChainID, index, recipient);
         emit ManualReleased(remoteChainID, index);
     }
@@ -651,6 +671,20 @@ contract BaseBridge is
             status = Const.FinalizeStatus.Success;
         }
     }
+
+    /**
+     * @notice Hook for a bridge-specific issuance ceiling on manual releases
+     * @dev No-op in the base implementation, since `BaseBridge` alone has no such ceiling
+     * to enforce. `manualReleasePendingWithRecipient` calls this before releasing:
+     * unlike pause and the verification delay (recovery-time obstacles that function is
+     * meant to clear), a supply ceiling is a standing invariant that manual release must
+     * not be able to bypass. `CrossBridge` overrides this to require the CROSS native
+     * supply ceiling on releases originating from a BSC-side burn.
+     * @param fromChainID Source chain ID of the pending operation
+     * @param token Token being released
+     * @param value Amount being released
+     */
+    function _checkManualReleaseLimit(uint fromChainID, IERC20 token, uint value) internal virtual {}
 
     /**
      * @notice Internal function to handle bridge initiation
@@ -882,6 +916,17 @@ contract BaseBridge is
         returns (Const.FinalizeStatus status)
     {
         if (address(toToken) == Const.NATIVE_TOKEN) {
+            // `_safeCall` itself would revert here if the balance is short (it requires
+            // `address(this).balance >= amount`), which would unwind the whole finalize
+            // batch item -- no pending record gets created and _useFinalizeIndex's
+            // increment rolls back with it, stalling every later index for this source
+            // chain. Checking the balance here first turns that into an ordinary pending
+            // outcome instead: the index still advances, and the record becomes
+            // releasable the moment the bridge is topped up. `InsufficientLiquidity` is
+            // reported separately from `TransferFailed` because the operational response
+            // is the opposite one: this means "fund the bridge", not "the recipient
+            // rejected the transfer, retry with a different recipient".
+            if (address(this).balance < value) return Const.FinalizeStatus.InsufficientLiquidity;
             if (!_safeCall(payable(to), value, "")) return Const.FinalizeStatus.TransferFailed;
             return Const.FinalizeStatus.Success;
         }

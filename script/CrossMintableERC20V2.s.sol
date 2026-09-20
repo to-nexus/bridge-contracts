@@ -84,7 +84,7 @@ contract CrossMintableERC20V2Script is Script {
  * # 예시: Wrapped BTC 토큰 배포
  * # forge script script/CrossMintableERC20V2.s.sol:CrossMintableERC20V2Script \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "deployCrossMintableERC20V2(address,address,string,string,uint8)" \
  * #   0x...owner 0x...bridge "Wrapped BTC" "WBTC" 8 \
  * #   --broadcast

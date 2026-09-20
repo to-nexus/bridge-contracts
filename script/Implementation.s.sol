@@ -115,21 +115,21 @@ contract ImplementationScript is Script {
  * # PriceFeed Implementation 배포
  * # forge script script/Implementation.s.sol:ImplementationScript \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "deployPriceFeedImpl()" \
  * #   --broadcast
  *
  * # BaseBridge Implementation 배포
  * # forge script script/Implementation.s.sol:ImplementationScript \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "deployBaseBridgeImpl()" \
  * #   --broadcast
  *
  * # CrossBridge Implementation 배포
  * # forge script script/Implementation.s.sol:ImplementationScript \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "deployCrossBridgeImpl()" \
  * #   --broadcast
  *
@@ -140,7 +140,7 @@ contract ImplementationScript is Script {
  * # 프록시의 Implementation 업그레이드 (reinitialize 불필요 시)
  * # forge script script/Implementation.s.sol:ImplementationScript \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "upgradeBridgeImplWithoutCall(address,address)" \
  * #   $PROXY_ADDRESS $NEW_IMPL_ADDRESS \
  * #   --broadcast

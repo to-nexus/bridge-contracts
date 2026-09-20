@@ -726,7 +726,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # --------------------------------------------------
  *
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "deployAll(address,address,address)" \
  * #   $BRIDGE $FACTORY_ADMIN $INITIAL_BRIDGE_ROLE \
  * #   --broadcast
@@ -754,7 +754,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # --------------------------------------------------
  *
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "createTokenAndVerify(address,address,uint256,address,string,uint8,address)" \
  * #   $BRIDGE $CODE $REMOTE_CHAIN_ID $REMOTE_TOKEN $SYMBOL $DECIMALS $EXPECTED_OR_ZERO \
  * #   --broadcast
@@ -764,7 +764,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # --------------------------------------------------
  *
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "createMintableERC20AndVerify(address,address,uint256,address,string,string,uint8,address,address)" \
  * #   $BRIDGE $CODE $REMOTE_CHAIN_ID $REMOTE_TOKEN $NAME $SYMBOL $DECIMALS $MINTER $EXPECTED_OR_ZERO \
  * #   --broadcast
@@ -775,14 +775,14 @@ contract CrossMintableERC20V2CodeScript is Script {
  *
  * # 토큰 로직 업그레이드 (factoryAdmin 계정 — 팩토리의 upgradeBeacon을 거침, 전 토큰에 즉시 반영)
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "upgradeTokenBeacon(address,address)" \
  * #   $CODE $NEW_TOKEN_IMPLEMENTATION \
  * #   --broadcast
  *
  * # 팩토리 로직 업그레이드 (factoryAdmin 계정, ADMIN_ROLE)
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "upgradeCrossMintableERC20V2Code(address,address)" \
  * #   $CODE $NEW_CODE_IMPLEMENTATION \
  * #   --broadcast
@@ -821,14 +821,14 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #
  * # ---- 경로 1: 개발/테스트넷 (EOA로 통제되는 환경 전용) ----
  * #
- * # 래퍼가 vm.startBroadcast(<명시 주소>)를 쓰므로 --private-key가 그 주소를 정확히 유도해야
+ * # 래퍼가 vm.startBroadcast(<명시 주소>)를 쓰므로 --account가 그 주소를 정확히 가리켜야
  * # 한다 — 아니면 조용히 다른 계정으로 서명되는 게 아니라 즉시 실행 에러가 난다.
- * #   beginOwnershipTransfer          -> oldOwner의 키 ($OLD_OWNER_PRIVATE_KEY)
- * #   acceptOwnershipAndGrantAdmin    -> newOwner의 키 ($NEW_OWNER_PRIVATE_KEY)
- * #   revokeOldAdmin                  -> newOwner의 키 ($NEW_OWNER_PRIVATE_KEY)
+ * #   beginOwnershipTransfer          -> oldOwner의 keystore ($OLD_OWNER_ACCOUNT)
+ * #   acceptOwnershipAndGrantAdmin    -> newOwner의 keystore ($NEW_OWNER_ACCOUNT)
+ * #   revokeOldAdmin                  -> newOwner의 keystore ($NEW_OWNER_ACCOUNT)
  * #
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $OLD_OWNER_PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $OLD_OWNER_ACCOUNT \
  * #   --sig "beginOwnershipTransfer(address,address,address)" \
  * #   $CODE $OLD_OWNER $NEW_OWNER \
  * #   --broadcast
@@ -841,13 +841,13 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #   -> (newOwner, acceptSchedule) 확인, block.timestamp > acceptSchedule 이 된 뒤 2단계 제출
  * #
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $NEW_OWNER_PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $NEW_OWNER_ACCOUNT \
  * #   --sig "acceptOwnershipAndGrantAdmin(address,address)" \
  * #   $CODE $NEW_OWNER \
  * #   --broadcast
  * #
  * # forge script script/CrossMintableERC20V2Code.s.sol:CrossMintableERC20V2CodeScript \
- * #   --rpc-url $RPC_URL --private-key $NEW_OWNER_PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $NEW_OWNER_ACCOUNT \
  * #   --sig "revokeOldAdmin(address,address,address)" \
  * #   $CODE $OLD_OWNER $NEW_OWNER \
  * #   --broadcast
@@ -876,7 +876,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # export RECORDED_OLD_OWNER=0x0000000000000000000000000000000000000000
  * #
  * # cast send $CODE "beginDefaultAdminTransfer(address)" $NEW_OWNER \
- * #   --rpc-url $CROSS_RPC_URL --private-key $OLD_OWNER_PRIVATE_KEY
+ * #   --rpc-url $CROSS_RPC_URL --account $OLD_OWNER_ACCOUNT
  * # cast call  $CODE "pendingDefaultAdmin()(address,uint48)" --rpc-url $CROSS_RPC_URL
  * #   -> (newOwner, acceptSchedule) 확인
  * #
@@ -885,11 +885,11 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # 호출이 revert한다.
  * #
  * # cast send $CODE "acceptDefaultAdminTransfer()" \
- * #   --rpc-url $CROSS_RPC_URL --private-key $NEW_OWNER_PRIVATE_KEY
+ * #   --rpc-url $CROSS_RPC_URL --account $NEW_OWNER_ACCOUNT
  * # cast call  $CODE "defaultAdmin()(address)" --rpc-url $CROSS_RPC_URL
  * #
  * # cast send $CODE "grantRole(bytes32,address)" $ADMIN_ROLE $NEW_OWNER \
- * #   --rpc-url $CROSS_RPC_URL --private-key $NEW_OWNER_PRIVATE_KEY
+ * #   --rpc-url $CROSS_RPC_URL --account $NEW_OWNER_ACCOUNT
  * # cast call  $CODE "hasRole(bytes32,address)(bool)" $ADMIN_ROLE $NEW_OWNER --rpc-url $CROSS_RPC_URL
  * #
  * # ---- 4단계(revokeRole, CROSS) 제출 전 필수 사전조건 ----
@@ -910,7 +910,7 @@ contract CrossMintableERC20V2CodeScript is Script {
  * # 제출을 중단하고 원인을 확인한다.
  * #
  * # cast send $CODE "revokeRole(bytes32,address)" $ADMIN_ROLE $RECORDED_OLD_OWNER \
- * #   --rpc-url $CROSS_RPC_URL --private-key $NEW_OWNER_PRIVATE_KEY
+ * #   --rpc-url $CROSS_RPC_URL --account $NEW_OWNER_ACCOUNT
  * #
  * # 실행 후 사후검증도 calldata에 쓴 값이 아니라 기록된 주소로 한다:
  * #
@@ -921,9 +921,9 @@ contract CrossMintableERC20V2CodeScript is Script {
  * #
  * # ---- 경로 2: 프로덕션 (멀티시그/타임락) ----
  * #
- * # 팩토리 ADMIN_ROLE 계정은 반드시 멀티시그/타임락이다 — 개인키가 없으므로
- * # 위 forge script/cast send 명령(--private-key)은 프로덕션 실행 경로가 될 수 없다. 대신
- * # 재현 가능한 calldata를 멀티시그·타임락 UI에 그대로 입력한다. target은 네 건 모두 팩토리
+ * # 팩토리 ADMIN_ROLE 계정은 반드시 멀티시그/타임락이다 — 서명할 단일 계정 자체가 없으므로
+ * # (keystore로 대체해도 마찬가지) 위 forge script/cast send 명령은 프로덕션 실행 경로가 될
+ * # 수 없다. 대신 재현 가능한 calldata를 멀티시그·타임락 UI에 그대로 입력한다. target은 네 건 모두 팩토리
  * # 프록시 주소($CODE)다. ADMIN_ROLE = keccak256("ADMIN_ROLE")의 리터럴 값(멀티시그 UI에
  * # bytes32를 직접 입력해야 하므로 미리 계산해 둔다):
  * #

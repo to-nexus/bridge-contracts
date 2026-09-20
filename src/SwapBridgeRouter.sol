@@ -93,7 +93,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         checkDeadline(deadline)
         returns (uint amountOut)
     {
-        _prepareSwap(params.tokenIn, params.amountIn);
+        uint preBalance = _prepareSwap(params.tokenIn, params.amountIn);
 
         amountOut = swapRouter.exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
@@ -109,7 +109,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         );
 
         // Refund unspent tokens (when sqrtPriceLimitX96 causes early termination)
-        _refundUnspent(params.tokenIn);
+        _refundUnspent(params.tokenIn, preBalance);
 
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
@@ -137,7 +137,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         returns (uint amountOut)
     {
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, false);
-        _prepareSwap(tokenIn, params.amountIn);
+        uint preBalance = _prepareSwap(tokenIn, params.amountIn);
 
         amountOut = swapRouter.exactInput(
             ISwapRouter.ExactInputParams({
@@ -150,7 +150,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         );
 
         // Refund unspent tokens (safety measure for edge cases)
-        _refundUnspent(tokenIn);
+        _refundUnspent(tokenIn, preBalance);
 
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
@@ -302,7 +302,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         require(msg.value == params.amountIn, SBRInvalidValue());
         require(params.tokenIn == address(WETH9), SBRInvalidAddress());
 
-        _prepareSwapETH(params.amountIn);
+        uint preBalance = _prepareSwapETH(params.amountIn);
 
         amountOut = swapRouter.exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
@@ -318,7 +318,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         );
 
         // Refund unspent WETH as ETH (when sqrtPriceLimitX96 causes early termination)
-        _refundUnspentETH();
+        _refundUnspentETH(preBalance);
 
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(params.tokenOut, amountOut, params.bridgeParams);
@@ -351,7 +351,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, false);
         require(tokenIn == address(WETH9), SBRInvalidAddress());
 
-        _prepareSwapETH(params.amountIn);
+        uint preBalance = _prepareSwapETH(params.amountIn);
 
         amountOut = swapRouter.exactInput(
             ISwapRouter.ExactInputParams({
@@ -364,7 +364,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         );
 
         // Refund unspent WETH as ETH (safety measure for edge cases)
-        _refundUnspentETH();
+        _refundUnspentETH(preBalance);
 
         (uint initiateIndex, uint bridgeValue, uint networkFee, uint exFee) =
             _bridgeToken(tokenOut, amountOut, params.bridgeParams);
@@ -658,8 +658,12 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
      * @notice Prepare ERC20 swap by transferring tokens and setting approval
      * @param tokenIn Input token address
      * @param amountIn Amount to transfer and approve
+     * @return preBalance This contract's `tokenIn` balance immediately before the
+     * transfer, so a later refund can be computed as a delta over it instead of the
+     * contract's full balance (which may include tokens pre-funded by someone else).
      */
-    function _prepareSwap(address tokenIn, uint amountIn) internal {
+    function _prepareSwap(address tokenIn, uint amountIn) internal returns (uint preBalance) {
+        preBalance = IERC20(tokenIn).balanceOf(address(this));
         IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
         IERC20(tokenIn).forceApprove(address(swapRouter), amountIn);
     }
@@ -667,8 +671,12 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     /**
      * @notice Prepare ETH swap by wrapping to WETH and setting approval
      * @param amountIn Amount to wrap and approve
+     * @return preBalance This contract's WETH balance immediately before the deposit, so
+     * a later refund can be computed as a delta over it instead of the contract's full
+     * WETH balance.
      */
-    function _prepareSwapETH(uint amountIn) internal {
+    function _prepareSwapETH(uint amountIn) internal returns (uint preBalance) {
+        preBalance = WETH9.balanceOf(address(this));
         WETH9.deposit{value: amountIn}();
         WETH9.approve(address(swapRouter), amountIn);
     }
@@ -706,27 +714,36 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
     /**
      * @notice Refund unspent ERC20 tokens after exactInputSingle swap
-     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent tokens
+     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent
+     * tokens. Refunds only the delta above `preBalance` (this contract's balance
+     * immediately before the swap's transferFrom) rather than the full contract balance,
+     * so tokens someone else already holds in this contract are never swept into the
+     * caller's refund.
      * @param tokenIn Input token address
+     * @param preBalance Balance recorded by `_prepareSwap` before the transfer
      */
-    function _refundUnspent(address tokenIn) internal {
+    function _refundUnspent(address tokenIn, uint preBalance) internal {
         // Clear allowance
         IERC20(tokenIn).forceApprove(address(swapRouter), 0);
-        // Refund any unspent tokens
-        uint remaining = IERC20(tokenIn).balanceOf(address(this));
-        if (remaining > 0) IERC20(tokenIn).safeTransfer(msg.sender, remaining);
+        // Refund only this call's unspent input, not the contract's whole balance
+        uint currentBalance = IERC20(tokenIn).balanceOf(address(this));
+        if (currentBalance > preBalance) IERC20(tokenIn).safeTransfer(msg.sender, currentBalance - preBalance);
     }
 
     /**
      * @notice Refund unspent WETH as ETH after exactInputSingle swap
-     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent WETH
+     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent
+     * WETH. Refunds only the delta above `preBalance` (this contract's WETH balance
+     * immediately before the swap's deposit), mirroring `_refundUnspent`.
+     * @param preBalance WETH balance recorded by `_prepareSwapETH` before the deposit
      */
-    function _refundUnspentETH() internal {
+    function _refundUnspentETH(uint preBalance) internal {
         // Clear allowance
         WETH9.approve(address(swapRouter), 0);
-        // Refund any unspent WETH as ETH
-        uint remaining = WETH9.balanceOf(address(this));
-        if (remaining > 0) {
+        // Refund only this call's unspent input, not the contract's whole WETH balance
+        uint currentBalance = WETH9.balanceOf(address(this));
+        if (currentBalance > preBalance) {
+            uint remaining = currentBalance - preBalance;
             WETH9.withdraw(remaining);
             (bool success,) = msg.sender.call{value: remaining}("");
             require(success, SBRRefundFailed());
