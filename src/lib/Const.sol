@@ -21,7 +21,9 @@ library Const {
         MintFailed,
         TokenScoreOverflow,
         TokenCurrentVolumeOverflow,
-        CrossSupplyLimitExceeded
+        CrossSupplyLimitExceeded,
+        TokenPriceUnavailable,
+        InsufficientLiquidity
     }
 
     /**

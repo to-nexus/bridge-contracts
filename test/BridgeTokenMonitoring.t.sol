@@ -182,7 +182,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
     }
 
     // ============================================================
-    // Value-limit whitelist (T1-T11, T15-T16)
+    // Value-limit whitelist
     // ============================================================
 
     /**
@@ -540,7 +540,7 @@ contract BridgeVerifierTokenValueTest is BridgeTest {
     }
 
     // ============================================================
-    // Event verification, positive and negative (T17-T20)
+    // Event verification, positive and negative
     // ============================================================
 
     /**

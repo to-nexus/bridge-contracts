@@ -84,15 +84,32 @@ if (executableConfigs.length > 0) {
 
 ### Foundry 스크립트로 배포 및 설정
 
+배포자 키는 raw `--private-key`로 넘기지 말고, `cast wallet import`로 만든 keystore를
+`--account`로 참조한다. 서명은 매 트랜잭션마다 keystore 비밀번호 프롬프트를 거친다.
+
 ```bash
-# 배포 및 초기 설정
-forge script script/BridgeBotExample.s.sol:BridgeBotExample --sig "deployAndSetup()" --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
+# 최초 1회: keystore 등록 (비밀번호는 대화형으로 입력, 셸 히스토리에 남지 않음)
+cast wallet import deployer --interactive
+
+# 배포
+forge script script/BridgeBotDeploy.s.sol:BridgeBotDeploy \
+  --sig "deploy(address,address,address,address,uint48)" \
+  <BRIDGE_ADDRESS> <OWNER_ADDRESS> <EDITOR_ADDRESS> <EXECUTOR_ADDRESS> <ADMIN_DELAY> \
+  --rpc-url <RPC_URL> --account deployer --broadcast
 
 # 브릿지 설정 추가
-forge script script/BridgeBotExample.s.sol:BridgeBotExample --sig "addBridgeConfigs()" --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
+forge script script/BridgeBotSetConfig.s.sol:BridgeBotSetConfig \
+  --sig "setConfig(address,address,address,uint256,uint256,uint256)" \
+  <BRIDGE_BOT_ADDRESS> <TOKEN_ADDRESS> <RECIPIENT> <TO_CHAIN_ID> <INTERVAL> <LAST_EXECUTED> \
+  --rpc-url <RPC_URL> --account deployer --broadcast
+```
 
-# 브릿지 실행
-forge script script/BridgeBotExample.s.sol:BridgeBotExample --sig "executeBridges()" --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
+`executeBridge()` / `executeBridgeBatch()`는 오너 전용이 아니므로(위 "공개 함수" 표 참고) 별도
+배포 스크립트 없이 `cast send`로 직접 호출한다 — 이 역시 실행 계정을 `--account`로 참조한다:
+
+```bash
+cast send <BRIDGE_BOT_ADDRESS> "executeBridge(uint256)" <CONFIG_ID> \
+  --rpc-url <RPC_URL> --account executor
 ```
 
 ## 주요 함수

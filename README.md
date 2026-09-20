@@ -368,6 +368,8 @@ time window), a paused token, or a recipient that rejects the transfer.
 | `TransferFailed` / `MintFailed` | Payout to the recipient failed. |
 | `CrossSupplyLimitExceeded` | Cross chain native supply cap would be exceeded. |
 | `TokenScoreOverflow` / `TokenCurrentVolumeOverflow` | Value could not be evaluated safely. |
+| `TokenPriceUnavailable` | The token's dollar price could not be determined while value-limit monitoring is active. Resolve by restoring the price feed so it reports a non-zero price for the token, or by replacing the feed; the held transfer then re-evaluates on the next `releasePending`. |
+| `InsufficientLiquidity` | The bridge does not currently hold enough native coin to pay this transfer out. Resolve by funding the bridge with native coin; unlike `TransferFailed`, the recipient did nothing wrong here, so redirecting to a different recipient will not help. |
 
 ```solidity
 function releasePending(uint remoteChainID, uint index) external;
@@ -380,15 +382,21 @@ function releasePending(uint remoteChainID, uint index) external;
 - the review delay stored on the held record has expired (`delayExpiration`, `0` meaning no delay);
 - the payout itself succeeds.
 
-The single-transfer and time-window value limits are **not** re-evaluated on retry — they were already
-evaluated when the transfer was first accepted. On the Cross chain, the native supply cap **is** re-checked.
+Whether value-limit checks re-run on retry depends on whether they ran at all the first time. A record held for
+a reason that never reached value-limit evaluation (paused token, unavailable price) is re-evaluated against
+the current limits on every `releasePending` call — so it stays held for as long as that condition does, even
+past its review delay. A record held **because** value-limit evaluation already ran and made a decision
+(the single-transfer or time-window limit, or a scoring overflow) is not re-evaluated again; retrying only
+re-attempts the payout. On the Cross chain, the native supply cap **is** re-checked on every retry regardless.
 
 Composed `extraData` calls are never re-executed on a retry; a held transfer always pays out plainly.
 
-**Privileged resolution.** `VERIFIER_ROLE` can force-release a held transfer, bypassing pause, delay and limit
-checks, and can redirect the payout to a different recipient — this is the recovery path when the original
-recipient permanently rejects funds. `ADMIN_ROLE` can remove a held record without paying out. These are
-trusted-governance powers; see [§6](#6-security-and-trust-model).
+**Privileged resolution.** `VERIFIER_ROLE` can force-release a held transfer, bypassing pause and the review
+delay, and can redirect the payout to a different recipient — this is the recovery path when the original
+recipient permanently rejects funds. On the Cross chain it does **not** bypass the native supply cap
+(`crossSupplyLimit`): a forced release that would push outstanding supply over the cap still reverts.
+`ADMIN_ROLE` can remove a held record without paying out. These are trusted-governance powers; see
+[§6](#6-security-and-trust-model).
 
 Inspect a held transfer with `getPendingArguments(remoteChainID, index)` and list all held indices with
 `allPendingIndex(remoteChainID)`. The review delay is initialized to 24 hours but is administrator-configurable,
@@ -441,8 +449,8 @@ before showing a transfer as complete, handle logs removed by a chain reorganiza
 
 **Cross chain — native supply cap.** The amount of native CROSS that may be paid out by the bridge is bounded
 by a configurable cap, readable via `crossSupply()` and `crossSupplyLimit()`. A settlement that would exceed
-it is held with `CrossSupplyLimitExceeded`. The cap applies to automatic settlement and to public retries; a
-privileged manual release bypasses it.
+it is held with `CrossSupplyLimitExceeded`. The cap applies to automatic settlement, public retries, and a
+privileged manual release alike — manual release bypasses pause and the review delay, but not this cap.
 
 **BSC — coordinated burn.**
 
@@ -604,13 +612,36 @@ policies, and key management — are outside the scope of this document.
   without paying out.
 - `BridgeVerifier`'s and `BridgeExecutor`'s own `ADMIN_ROLE` holders — independent membership sets — control the
   value limits and price-feed reference, and the composed-call whitelist, respectively.
-- `VERIFIER_ROLE` can force-release a held transfer, bypassing pause, delay and limit checks, and can redirect
-  the payout to a different recipient.
+- `VERIFIER_ROLE` can force-release a held transfer, bypassing pause and the review delay, and can redirect
+  the payout to a different recipient. On the Cross chain this does **not** bypass the native supply cap
+  (`crossSupplyLimit`).
 - `OPERATOR_ROLE` can pause transfers globally, per chain, or per token.
 - `PRICER_ROLE` publishes the prices that drive fees and value limits.
 - Each `CrossMintableERC20V2` wrapped token has its **own** default administrator, which controls `MINTER_ROLE`
   on that token independently of the bridge's roles. (The earlier `CrossMintableERC20` has no such
   administrator — its minter is a single immutable bridge address.)
+
+**Replacing `BridgeVerifier`.** `BridgeVerifier` is not a proxy — it is deployed fresh and swapped in with
+`setBridgeVerifier`. A new instance starts with an **empty** rolling-volume history: it has no record of
+anything settled before its own deployment. This is harmless whenever `periodTotalValueThreshold()` is `0`
+(rolling-volume monitoring disabled) — there is nothing for an empty history to under-count. When it is
+**not** `0`, follow this checklist so the swap does not open a silent gap in volume monitoring:
+
+1. Pause finalize for the affected token(s) (`setTokenPause(..., finalizePause: true)`) or the whole chain
+   (`setChainPause`), so no more finalizes can accrue against the old instance's window.
+2. Wait out the **full** `getTimeWindow()` duration with finalize still paused — pausing is what lets the
+   window drain. Hold off on `manualReleasePending*` during the wait as well: a manual release settles value
+   the same as an ordinary finalize, so it refills the window this step exists to empty.
+3. Deploy the new `BridgeVerifier` and call `setBridgeVerifier`.
+4. Confirm on-chain that the bridge address holds `BRIDGE_ROLE` on the new instance
+   (`newVerifier.hasRole(BRIDGE_ROLE, bridgeAddress) == true`), and that
+   `getTimeWindow()` / `getPeriodTotalValueThreshold()` / `getVerificationAmountThreshold()` /
+   `getMinimumTokenValue()` / token prices all match the intended configuration — a fresh instance starts from
+   its constructor arguments, not the old instance's live values.
+5. Unpause and resume finalize.
+
+If a drain is not possible (an emergency swap, say), treat that window as a known gap in volume monitoring
+and record it as such.
 
 ---
 
@@ -657,7 +688,7 @@ Enumerating members is not uniformly available: `getRoleMembers(role)` exists on
 | `OPERATOR_ROLE` | Bridge | Pausing globally, per chain, or per token |
 | `EDITOR_ROLE` | Bridge | Registering token pairs, `extraData` size limit |
 | | Verifier | Exchange-fee rates, default price, minimum transfer value |
-| `VERIFIER_ROLE` | Bridge | Force-releasing held transfers, redirecting a payout, adjusting a review window |
+| `VERIFIER_ROLE` | Bridge | Force-releasing held transfers (bypassing pause and delay, but not the Cross chain native supply cap), redirecting a payout, adjusting a review window |
 | `PRICER_ROLE` | PriceFeed | Publishing token and native-coin prices |
 | | Verifier | Publishing destination-chain gas prices |
 | `INITIATOR_ROLE` | Bridge | Submitting permit-based batched transfers |

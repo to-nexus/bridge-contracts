@@ -389,7 +389,7 @@ contract BridgeScript is Script {
  * # BaseBridge 전체 설정 (프록시 + Verifier + ERC20Code)
  * # forge script script/Bridge.s.sol:BridgeScript \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "setupBaseBridge()" \
  * #   --broadcast
  *

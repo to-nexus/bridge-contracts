@@ -355,6 +355,8 @@ revert시키며, 기대 인덱스도 그대로 유지됩니다.
 | `TransferFailed` / `MintFailed` | 수신자에게 지급 실패 |
 | `CrossSupplyLimitExceeded` | Cross 체인 네이티브 공급 한도 초과 |
 | `TokenScoreOverflow` / `TokenCurrentVolumeOverflow` | 금액을 안전하게 평가할 수 없음 |
+| `TokenPriceUnavailable` | 금액 통제가 활성 상태인데 토큰의 달러 가격을 확인할 수 없음. 가격 피드가 해당 토큰에 대해 0이 아닌 가격을 반환하도록 복구하거나 피드 자체를 교체해 해소하면, 다음 `releasePending` 호출에서 다시 평가됩니다. |
+| `InsufficientLiquidity` | 브리지가 이 지급에 필요한 네이티브 코인을 현재 보유하고 있지 않음. 브리지에 네이티브 코인을 충전해 해소합니다 — `TransferFailed`와 달리 수신자 쪽 문제가 아니므로 지급 대상을 바꿔도 소용없습니다. |
 
 ```solidity
 function releasePending(uint remoteChainID, uint index) external;
@@ -367,15 +369,20 @@ function releasePending(uint remoteChainID, uint index) external;
 - 보류 기록에 저장된 검토 지연이 만료됨(`delayExpiration`, `0`이면 지연 없음)
 - 지급 자체가 성공함
 
-단일 전송·시간창 금액 한도는 재시도 시 **다시 평가되지 않습니다** — 최초 접수 시점에 이미 평가되었기
-때문입니다. 단, Cross 체인의 네이티브 공급 한도는 **다시 확인**됩니다.
+금액 한도가 재시도 시 다시 평가되는지는 최초 접수 시점에 애초에 평가가 이루어졌는지에 달려 있습니다. 금액
+평가에 도달하기도 전에 보류된 기록(토큰 정지, 가격 확인 불가)은 `releasePending`을 호출할 때마다 현재
+한도로 다시 평가됩니다 — 따라서 검토 지연이 지나도 그 사유가 해소될 때까지 계속 보류 상태로 남습니다.
+반대로 금액 평가가 **이미 실행되어 판정을 내렸기 때문에** 보류된 기록(단일 전송·시간창 한도, 또는 평가
+오버플로)은 다시 평가되지 않습니다 — 재시도는 지급만 다시 시도합니다. Cross 체인의 네이티브 공급 한도는
+재시도할 때마다 예외 없이 **다시 확인**됩니다.
 
 결합 `extraData` 호출은 재시도 시 절대 재실행되지 않으며, 보류된 전송은 항상 단순 지급으로 처리됩니다.
 
-**권한 기반 해소.** `VERIFIER_ROLE`은 정지·지연·한도 검사를 우회해 보류된 전송을 강제 지급할 수 있고,
-지급 대상을 다른 주소로 변경할 수 있습니다(원래 수신자가 수령을 영구 거부할 때의 복구 경로).
-`ADMIN_ROLE`은 지급 없이 보류 기록을 제거할 수 있습니다. 이는 신뢰가 필요한 거버넌스 권한이며
-[§6](#6-보안과-신뢰-모델)에 정리되어 있습니다.
+**권한 기반 해소.** `VERIFIER_ROLE`은 정지와 검토 지연을 우회해 보류된 전송을 강제 지급할 수 있고,
+지급 대상을 다른 주소로 변경할 수 있습니다(원래 수신자가 수령을 영구 거부할 때의 복구 경로). Cross
+체인에서는 네이티브 공급 한도(`crossSupplyLimit`)는 우회하지 못합니다 — 한도를 넘기는 강제 지급은
+그대로 revert됩니다. `ADMIN_ROLE`은 지급 없이 보류 기록을 제거할 수 있습니다. 이는 신뢰가 필요한
+거버넌스 권한이며 [§6](#6-보안과-신뢰-모델)에 정리되어 있습니다.
 
 보류된 전송은 `getPendingArguments(remoteChainID, index)`로 확인하고, 보류 중인 인덱스 목록은
 `allPendingIndex(remoteChainID)`로 조회합니다. 검토 지연은 24시간으로 초기화되지만 관리자가 변경할 수 있으므로,
@@ -428,8 +435,8 @@ function releasePending(uint remoteChainID, uint index) external;
 
 **Cross 체인 — 네이티브 공급 한도.** 브리지가 지급할 수 있는 네이티브 CROSS 총량이 설정 가능한 한도로
 제한되며 `crossSupply()`, `crossSupplyLimit()`으로 조회할 수 있습니다. 한도를 넘기는 정산은
-`CrossSupplyLimitExceeded`로 보류됩니다. 이 한도는 자동 정산과 공개 재시도에 적용되며, 권한 기반 강제
-지급은 우회합니다.
+`CrossSupplyLimitExceeded`로 보류됩니다. 이 한도는 자동 정산·공개 재시도·권한 기반 강제 지급 모두에
+동일하게 적용됩니다 — 강제 지급이 우회하는 것은 정지와 검토 지연뿐이고, 이 한도는 우회하지 못합니다.
 
 **BSC — 크로스체인 소각.**
 
@@ -588,13 +595,33 @@ params 구조체와 `deadline`을 받습니다.
   수수료/한도 및 executor 구성요소 교체, 지급 없이 보류 기록 제거를 수행할 수 있습니다.
 - `BridgeVerifier`와 `BridgeExecutor`의 `ADMIN_ROLE`은 브리지와 독립적인 구성원 집합으로, 각각 금액 한도와
   가격 피드 참조, 결합 호출 화이트리스트를 통제합니다.
-- `VERIFIER_ROLE`은 정지·지연·한도 검사를 우회해 보류된 전송을 강제 지급하고, 지급 대상을 다른 주소로
-  변경할 수 있습니다.
+- `VERIFIER_ROLE`은 정지와 검토 지연을 우회해 보류된 전송을 강제 지급하고, 지급 대상을 다른 주소로
+  변경할 수 있습니다. Cross 체인에서는 네이티브 공급 한도(`crossSupplyLimit`)는 우회하지 못합니다.
 - `OPERATOR_ROLE`은 전체·체인별·토큰별로 전송을 정지할 수 있습니다.
 - `PRICER_ROLE`은 수수료와 금액 한도의 기준이 되는 가격을 게시합니다.
 - 각 `CrossMintableERC20V2` wrapped 토큰은 **자체** 기본 관리자를 가지며, 브리지의 역할과 무관하게 그 토큰의
   `MINTER_ROLE`을 통제합니다. (이전 버전 `CrossMintableERC20`에는 그런 관리자가 없고, 불변 브리지 주소가
   유일한 발행자입니다.)
+
+**`BridgeVerifier` 교체.** `BridgeVerifier`는 프록시가 아니다 — 새로 배포해 `setBridgeVerifier`로 교체한다.
+새 인스턴스는 롤링 거래량 이력이 **비어 있는** 상태로 시작한다 — 자신이 배포되기 전에 정산된 것을 전혀
+알지 못한다. `periodTotalValueThreshold()`가 `0`(롤링 거래량 통제 비활성)이면 무해하다 — 빈 이력이 과소
+집계할 대상 자체가 없다. `0`이 **아닐** 때는 교체가 거래량 통제에 조용한 공백을 만들지 않도록 아래 절차를
+따른다:
+
+1. 대상 토큰의 finalize를 정지한다(`setTokenPause(..., finalizePause: true)`), 또는 체인 전체를 정지한다
+   (`setChainPause`) — 이전 인스턴스의 창에 더 이상 거래량이 쌓이지 않도록 한다.
+2. finalize를 정지한 채로 `getTimeWindow()` 전체 기간을 **완전히** 기다린다 — 창이 비워지는 것은 정지
+   상태로 기다렸기 때문이다. 대기 중에는 `manualReleasePending*`도 보류한다: 수동 지급도 일반 finalize와
+   똑같이 거래량을 정산시키므로 이 단계가 비우려는 창을 다시 채운다.
+3. 새 `BridgeVerifier`를 배포하고 `setBridgeVerifier`를 호출한다.
+4. 브리지 주소가 새 인스턴스의 `BRIDGE_ROLE`을 보유하는지(`newVerifier.hasRole(BRIDGE_ROLE, bridgeAddress) == true`),
+   그리고 `getTimeWindow()` / `getPeriodTotalValueThreshold()` / `getVerificationAmountThreshold()` /
+   `getMinimumTokenValue()` / 토큰 가격들이 의도한 설정과 일치하는지 온체인 재조회로 확인한다 — 새 인스턴스는
+   이전 인스턴스의 현재 값이 아니라 자신의 생성자 인자에서 시작한다.
+5. 정지를 해제하고 finalize를 재개한다.
+
+드레인이 불가능하다면(예: 긴급 교체) 그 창을 거래량 통제의 공백 구간으로 인정하고 그렇게 기록한다.
 
 ---
 
@@ -640,7 +667,7 @@ params 구조체와 `deadline`을 받습니다.
 | `OPERATOR_ROLE` | 브리지 | 전체·체인별·토큰별 정지 |
 | `EDITOR_ROLE` | 브리지 | 토큰 페어 등록, `extraData` 길이 제한 |
 | | Verifier | 교환 수수료 요율, 기본 가격, 최소 전송 금액 |
-| `VERIFIER_ROLE` | 브리지 | 보류 전송 강제 지급, 지급 대상 변경, 검토 기간 조정 |
+| `VERIFIER_ROLE` | 브리지 | 보류 전송 강제 지급(정지·지연은 우회하나 Cross 체인 네이티브 공급 한도는 우회 못함), 지급 대상 변경, 검토 기간 조정 |
 | `PRICER_ROLE` | PriceFeed | 토큰·네이티브 코인 가격 게시 |
 | | Verifier | 목적지 체인 가스 가격 게시 |
 | `INITIATOR_ROLE` | 브리지 | permit 기반 배치 전송 제출 |

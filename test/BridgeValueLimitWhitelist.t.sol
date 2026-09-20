@@ -8,7 +8,7 @@ import {Vm} from "forge-std/Vm.sol";
 
 /**
  * @title BridgeValueLimitWhitelistE2ETest
- * @notice E2E tests (T12-T14) verifying the `BaseBridge` / `CrossBridge` wiring of the
+ * @notice E2E tests verifying the `BaseBridge` / `CrossBridge` wiring of the
  * `BridgeVerifier` value-limit whitelist through an actual finalize, reusing the same
  * fork harness as `BridgeCrossSupplyLimit.t.sol`.
  */

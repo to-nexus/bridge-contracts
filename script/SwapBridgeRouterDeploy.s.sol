@@ -166,13 +166,13 @@ contract SwapBridgeRouterDeploy is Script {
  * # 1. 기본 배포 (환경 변수 사용):
  * # forge script script/SwapBridgeRouterDeploy.s.sol:SwapBridgeRouterDeploy \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --broadcast
  *
  * # 2. 배포 + Etherscan 검증:
  * # forge script script/SwapBridgeRouterDeploy.s.sol:SwapBridgeRouterDeploy \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --broadcast \
  * #   --verify \
  * #   --etherscan-api-key $ETHERSCAN_API_KEY

@@ -92,10 +92,11 @@ contract CrossBridgeMultihopTest is CrossBridgeForwardTest {
         }
         bridgeChainC.grantRoleBatch(roles, VALIDATORS);
 
-        // Fee table: deliberately minimal (zero default price/fee/thresholds, no
-        // per-chain gas price configured) — every fee/minimum resolves to 0 except the
-        // 1-token-unit minimum floor, keeping this leg's arithmetic simple and
-        // orthogonal to the (already-covered-elsewhere) fee-calculation logic itself.
+        // Fee table: deliberately minimal (nominal nonzero default price, zero
+        // fee/thresholds otherwise, no per-chain gas price configured) — every
+        // fee/minimum resolves to 0, keeping this leg's arithmetic simple and orthogonal
+        // to the (already-covered-elsewhere) fee-calculation logic itself. The default
+        // price only needs to be nonzero to satisfy BridgeVerifier's constructor.
         PriceFeed priceFeedChainCImpl = new PriceFeed();
         ERC1967Proxy priceFeedChainCProxy = new ERC1967Proxy(address(priceFeedChainCImpl), bytes(""));
         priceFeedChainC = PriceFeed(address(priceFeedChainCProxy));
@@ -103,7 +104,7 @@ contract CrossBridgeMultihopTest is CrossBridgeForwardTest {
         priceFeedChainC.grantRole(Const.PRICER_ROLE, chainCOwner);
 
         bridgeVerifierChainC = new BridgeVerifier(
-            chainCOwner, address(bridgeChainC), address(priceFeedChainC), 200_000, 0, 0, 0, 0, 0, 2 hours
+            chainCOwner, address(bridgeChainC), address(priceFeedChainC), 200_000, 1, 0, 0, 0, 0, 2 hours
         );
         bridgeChainC.setBridgeVerifier(bridgeVerifierChainC);
 
@@ -164,7 +165,7 @@ contract CrossBridgeMultihopTest is CrossBridgeForwardTest {
         priceFeedChainA.grantRole(Const.PRICER_ROLE, chainAOwner);
 
         bridgeVerifierChainA = new BridgeVerifier(
-            chainAOwner, address(bridgeChainA), address(priceFeedChainA), 200_000, 0, 0, 0, 0, 0, 2 hours
+            chainAOwner, address(bridgeChainA), address(priceFeedChainA), 200_000, 1, 0, 0, 0, 0, 2 hours
         );
         bridgeChainA.setBridgeVerifier(bridgeVerifierChainA);
 

@@ -323,7 +323,7 @@ contract PriceFeedScript is Script {
  * # 전체 설정 (프록시 배포 + 역할 + 가격)
  * # forge script script/PriceFeed.s.sol:PriceFeedScript \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "setupPriceFeed()" \
  * #   --broadcast
  *

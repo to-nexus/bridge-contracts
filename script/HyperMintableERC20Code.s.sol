@@ -448,10 +448,10 @@ contract HyperMintableERC20CodeScript is Script {
  * # 배포 (impl 2종 + 팩토리 프록시, 원자 초기화 시 자체 beacon 생성, Bridge 연결까지 한 번에)
  * # --------------------------------------------------
  *
- * # PRIVATE_KEY는 bridge의 ADMIN_ROLE 계정이어야 함 (setCrossMintableERC20Code 호출) —
+ * # $DEPLOYER_ACCOUNT는 bridge의 ADMIN_ROLE 계정이어야 함 (setCrossMintableERC20Code 호출) —
  * # 아래 "토큰 생성" 단계의 EDITOR_ROLE 계정과는 다른 권한이다.
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "deployAll(address,address)" \
  * #   $BRIDGE $FACTORY_ADMIN \
  * #   --broadcast
@@ -470,7 +470,7 @@ contract HyperMintableERC20CodeScript is Script {
  * # --------------------------------------------------
  *
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "createTokenAndVerify(address,address,uint256,address,string,uint8,address)" \
  * #   $BRIDGE $CODE $REMOTE_CHAIN_ID $REMOTE_TOKEN $SYMBOL $DECIMALS $EXPECTED_OR_ZERO \
  * #   --broadcast
@@ -480,7 +480,7 @@ contract HyperMintableERC20CodeScript is Script {
  * # --------------------------------------------------
  *
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "createHyperMintableERC20AndVerify(address,uint256,address,string,string,uint8,address,address)" \
  * #   $CODE $REMOTE_CHAIN_ID $REMOTE_TOKEN $NAME $SYMBOL $DECIMALS $MINTER $EXPECTED_OR_ZERO \
  * #   --broadcast
@@ -490,7 +490,7 @@ contract HyperMintableERC20CodeScript is Script {
  * # --------------------------------------------------
  *
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "setHyperCoreDeployer(address,address,address)" \
  * #   $CODE $TOKEN $FINALIZER \
  * #   --broadcast
@@ -505,7 +505,7 @@ contract HyperMintableERC20CodeScript is Script {
  * # --------------------------------------------------
  *
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "setCoreTokenIndex(address,address,uint64)" \
  * #   $CODE $TOKEN $CORE_TOKEN_INDEX \
  * #   --broadcast
@@ -517,14 +517,14 @@ contract HyperMintableERC20CodeScript is Script {
  * # 토큰 로직 업그레이드 (factoryAdmin 계정 — beacon owner가 팩토리 자신이므로 팩토리의
  * # ADMIN_ROLE을 거친다. 이 beacon을 쓰는 모든 토큰에 즉시 반영됨)
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "upgradeBeacon(address,address)" \
  * #   $CODE $NEW_TOKEN_IMPLEMENTATION \
  * #   --broadcast
  *
  * # 팩토리 로직 업그레이드 (factoryAdmin 계정, ADMIN_ROLE)
  * # forge script script/HyperMintableERC20Code.s.sol:HyperMintableERC20CodeScript \
- * #   --rpc-url $RPC_URL --private-key $PRIVATE_KEY \
+ * #   --rpc-url $RPC_URL --account $DEPLOYER_ACCOUNT \
  * #   --sig "upgradeHyperMintableERC20Code(address,address)" \
  * #   $CODE $NEW_CODE_IMPLEMENTATION \
  * #   --broadcast

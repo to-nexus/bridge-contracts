@@ -1904,4 +1904,110 @@ contract SwapBridgeRouterTest is BridgeTest {
         // Verify router has no leftover tokens
         assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), 0, "Router should have no leftover tokens");
     }
+
+    // ============ Pre-funded Balance Refund Isolation Tests ============
+
+    /**
+     * @notice T1: `_refundUnspent` must refund only THIS call's unspent input, not the
+     * router's whole balance. A third party who pre-funds the router with `tokenIn`
+     * directly (not through a swap call) must not have that balance swept into some
+     * unrelated user's refund the next time anyone performs a normal exactInput swap.
+     */
+    function test_swapBridgeExactInputSingle_doesNotRefundPreFundedBalance() public {
+        vm.selectFork(bscForkID);
+
+        // Someone (an attacker, or simply leftover dust from any other source) sends
+        // tokenIn directly to the router - NOT through a swap call.
+        uint preFunded = 500 * 1e18;
+        address attacker = makeAddr("attacker_prefund_cross");
+        vm.prank(OWNER);
+        cross.transfer(attacker, preFunded);
+        vm.prank(attacker);
+        cross.transfer(address(swapBridgeRouterBSC), preFunded);
+        assertEq(
+            cross.balanceOf(address(swapBridgeRouterBSC)), preFunded, "router should hold the pre-funded balance"
+        );
+
+        // A normal, unrelated user performs an ordinary full-consumption swap+bridge.
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0, // full consumption: this call alone leaves nothing unspent
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        uint userBalanceBefore = cross.balanceOf(USER);
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
+        uint userBalanceAfter = cross.balanceOf(USER);
+
+        // The user spent exactly their own input - the attacker's pre-funded balance was
+        // not swept into their "refund".
+        assertEq(userBalanceBefore - userBalanceAfter, amountIn, "user must only spend their own input");
+        // The pre-funded balance is untouched, still sitting in the router.
+        assertEq(
+            cross.balanceOf(address(swapBridgeRouterBSC)),
+            preFunded,
+            "pre-funded balance must remain in the router, not be refunded to the swapper"
+        );
+    }
+
+    /**
+     * @notice T2: Same isolation as T1, for the WETH/ETH refund path
+     * (`_refundUnspentETH`). A third party's pre-funded WETH balance must not be
+     * swept into another user's ETH refund.
+     */
+    function test_swapBridgeExactInputSingleETH_doesNotRefundPreFundedWETH() public {
+        vm.selectFork(bscForkID);
+
+        // Someone sends WETH directly to the router - NOT through a swap call.
+        uint preFunded = 3 ether;
+        address attacker = makeAddr("attacker_prefund_weth");
+        vm.deal(attacker, preFunded);
+        vm.prank(attacker);
+        mockWETHBSC.deposit{value: preFunded}();
+        vm.prank(attacker);
+        mockWETHBSC.transfer(address(swapBridgeRouterBSC), preFunded);
+        assertEq(
+            mockWETHBSC.balanceOf(address(swapBridgeRouterBSC)), preFunded, "router should hold the pre-funded WETH"
+        );
+
+        // A normal, unrelated user performs an ordinary full-consumption ETH swap+bridge.
+        uint amountIn = 1 ether;
+        vm.deal(USER, 10 ether);
+
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(mockWETHBSC),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0, // full consumption: this call alone leaves nothing unspent
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        uint userEthBefore = USER.balance;
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactInputSingleETH{value: amountIn}(params, block.timestamp + 1 hours);
+        uint userEthAfter = USER.balance;
+
+        // The user spent exactly their own ETH input - no extra "refund" from the
+        // attacker's pre-funded WETH.
+        assertEq(userEthBefore - userEthAfter, amountIn, "user must only spend their own ETH input");
+        // The pre-funded WETH is untouched, still sitting in the router.
+        assertEq(
+            mockWETHBSC.balanceOf(address(swapBridgeRouterBSC)),
+            preFunded,
+            "attacker's pre-funded WETH must remain in the router, not be refunded to the swapper"
+        );
+    }
 }
