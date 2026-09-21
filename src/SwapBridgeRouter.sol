@@ -47,6 +47,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     /// @notice Thrown when Uniswap V3 path format is invalid
     error SBRInvalidPath();
 
+    /// @notice Thrown when a path starts and ends with the same token
+    error SBRCircularPath(address token);
+
     /// @notice Thrown when bridge calculation fails (includes failure reason)
     error SBRQuoteFailed(QuoteStatus status);
 
@@ -93,6 +96,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         checkDeadline(deadline)
         returns (uint amountOut)
     {
+        _requireDistinctTokens(params.tokenIn, params.tokenOut);
+
         uint preBalance = _prepareSwap(params.tokenIn, params.amountIn);
 
         amountOut = swapRouter.exactInputSingle(
@@ -177,6 +182,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         checkDeadline(deadline)
         returns (uint amountIn)
     {
+        _requireDistinctTokens(params.tokenIn, params.tokenOut);
+
         // Calculate fees for exact bridgeValue (no reverse calculation needed)
         IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
         (uint minimumValue, uint networkFee, uint exFee) =
@@ -301,6 +308,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     {
         require(msg.value == params.amountIn, SBRInvalidValue());
         require(params.tokenIn == address(WETH9), SBRInvalidAddress());
+        _requireDistinctTokens(params.tokenIn, params.tokenOut);
 
         uint preBalance = _prepareSwapETH(params.amountIn);
 
@@ -394,6 +402,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     {
         require(msg.value >= params.amountInMaximum, SBRInvalidValue());
         require(params.tokenIn == address(WETH9), SBRInvalidAddress());
+        _requireDistinctTokens(params.tokenIn, params.tokenOut);
 
         // Calculate fees for exact bridgeValue (no reverse calculation needed)
         IBridgeVerifier bridgeVerifier = bridge.bridgeVerifier();
@@ -540,6 +549,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         override
         returns (QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee)
     {
+        _requireDistinctTokens(tokenIn, tokenOut);
+
         // Get swap quote from Uniswap V3 QuoterV2
         try quoter.quoteExactInputSingle(
             IQuoterV2.QuoteExactInputSingleParams({
@@ -565,9 +576,10 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         override
         returns (QuoteStatus status, uint swapAmountOut, uint bridgeValue, uint networkFee, uint exFee)
     {
-        // Extract tokenOut from path (last 20 bytes)
+        // Extract both path ends so a quote answers the same as execution would
         require(path.length >= 43, SBRInvalidAddress());
         address tokenOut = _extractTokenFromPath(path, false);
+        _requireDistinctTokens(_extractTokenFromPath(path, true), tokenOut);
 
         // Get swap quote from Uniswap V3 QuoterV2
         try quoter.quoteExactInput(path, amountIn) returns (
@@ -588,6 +600,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         override
         returns (QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee)
     {
+        _requireDistinctTokens(tokenIn, tokenOut);
+
         // Validate token pair exists for the target chain
         IBridgeRegistry.TokenPair memory pair = bridge.getTokenPair(toChainID, tokenOut);
         if (pair.localToken != tokenOut) return (QuoteStatus.NoPair, 0, 0, 0, 0);
@@ -624,9 +638,11 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         override
         returns (QuoteStatus status, uint amountIn, uint swapAmountOut, uint networkFee, uint exFee)
     {
-        // For exactOutput path, tokenOut is first 20 bytes
+        // For exactOutput path, tokenOut is first 20 bytes; check both ends so a quote
+        // answers the same as execution would
         require(path.length >= 43, SBRInvalidAddress());
         address tokenOut = _extractTokenFromPath(path, true);
+        _requireDistinctTokens(_extractTokenFromPath(path, false), tokenOut);
 
         // Validate token pair exists for the target chain
         IBridgeRegistry.TokenPair memory pair = bridge.getTokenPair(toChainID, tokenOut);
@@ -761,7 +777,24 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /**
+     * @notice Reject a swap whose input and output token are the same
+     * @dev The swap output would land in the same balance the unspent-input refund is
+     * measured against, so the refund would hand out the output as if it were unspent
+     * input and the bridge settlement would then have to draw on whatever balance this
+     * contract already held. Swapping a token into itself has no use here, so it is
+     * refused outright rather than accounted for.
+     * @param tokenIn Input token address
+     * @param tokenOut Output token address
+     */
+    function _requireDistinctTokens(address tokenIn, address tokenOut) internal pure {
+        require(tokenIn != tokenOut, SBRCircularPath(tokenIn));
+    }
+
+    /**
      * @notice Decode tokenIn and tokenOut from path bytes
+     * @dev Only the two ends are checked against each other: Uniswap's router keeps
+     * intermediate hop output on itself and sends only the final hop to `recipient`, so
+     * a token revisited mid-path never reaches this contract.
      * @param path The swap path
      * @param reversed If true, path is in reverse order (exactOutput format)
      * @return tokenIn The input token address
@@ -783,6 +816,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             tokenIn = address(bytes20(path[0:20]));
             tokenOut = address(bytes20(path[path.length - 20:]));
         }
+
+        _requireDistinctTokens(tokenIn, tokenOut);
     }
 
     /**
