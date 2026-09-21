@@ -98,7 +98,10 @@ contract BridgeScript is Script {
         impl = vm.envAddress(IMPLEMENTATION);
         owner = vm.envAddress(OWNER);
         dev = payable(vm.envAddress(BRIDGE_DEV));
-        threshold = uint8(vm.envUint(BRIDGE_THRESHOLD));
+        uint thresholdValue = vm.envUint(BRIDGE_THRESHOLD);
+        // A value above 255 would silently truncate, and 257 would become a threshold of 1.
+        require(thresholdValue != 0 && thresholdValue <= type(uint8).max, "THRESHOLD must be 1..255");
+        threshold = uint8(thresholdValue);
         cross = vm.envAddress(BRIDGE_CROSS);
         crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
         finalizeBridgeGas = vm.envUint(VERIFIER_FINALIZE_BRIDGE_GAS);
