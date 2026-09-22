@@ -37,9 +37,12 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     error BridgeVerifierDoesNotHaveRole(address account, bytes32 role);
     error BridgeVerifierMissmatchLength();
     error BridgeVerifierInvalidTimeWindow();
+    error BridgeVerifierInvalidExFeeRate();
     error BridgeVerifierInvalidSignature();
     error BridgeVerifierInvalidPermit();
     error BaseBridgeDeadlineExpired();
+    error BridgeVerifierWhitelistAlreadyAdded(address account);
+    error BridgeVerifierWhitelistNotFound(address account);
 
     event FinalizeBridgeGasSet(uint finalizeBridgeGas);
     event GasPriceUpdated(uint indexed remoteChainID, uint gasPrice);
@@ -50,12 +53,21 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     event TimeWindowSet(uint timeWindow);
     event PeriodTotalValueThresholdSet(uint periodTotalValueThreshold);
     event MinimumTokenValueSet(uint minimumTokenValue);
+    event ValueLimitWhitelistAdded(address indexed account);
+    event ValueLimitWhitelistRemoved(address indexed account);
+    event ValueLimitWhitelistBypassed(IERC20 indexed token, address indexed to, uint value);
 
     bytes32 private constant PERMIT_TYPEHASH =
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     /// @dev Base denominator for fee calculations (10000 = 100%)
     uint private constant DENOMINATOR = 10000;
+
+    /// @dev Upper bound for `_timeWindow`: 168 hourly periods. Bounding the window bounds
+    /// how many expired records a single `validateBridgeTokenValue` call may need to evict
+    /// from `_tokenMovementHistory` (at most one record per `PERIOD_INTERVAL`), which keeps
+    /// that eviction loop well within a block's gas limit.
+    uint private constant MAX_TIME_WINDOW = 7 days;
 
     /// @dev Mask for extracting the score value from the packed movement record
     /// @notice The upper 64 bits of the packed movement record store the timestamp
@@ -98,6 +110,11 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
 
     mapping(bytes32 role => EnumerableSet.AddressSet) private _roleMembers;
 
+    /// @dev Recipients exempt from the single-transfer and period-total value thresholds.
+    /// @notice Finalize transfers to a whitelisted recipient bypass both thresholds and are
+    /// @notice never recorded in the period accumulator (`_tokenCurrentVolume` / `_tokenMovementHistory`).
+    EnumerableSet.AddressSet private _valueLimitWhitelist;
+
     /**
      * @notice Initializes the BridgeVerifier contract
      * @param initialOwner Admin address
@@ -127,7 +144,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(initialOwner != address(0), BridgeVerifierCanNotZeroValue("initialOwner"));
         require(bridge != address(0), BridgeVerifierCanNotZeroValue("bridge"));
         require(priceFeed_ != address(0), BridgeVerifierCanNotZeroValue("priceFeed_"));
-        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
+        require(defaultTokenPrice != 0, BridgeVerifierCanNotZeroValue("defaultTokenPrice"));
+        require(defaultExFeeRate <= DENOMINATOR, BridgeVerifierInvalidExFeeRate());
+        _validateTimeWindow(timeWindow);
         _grantRole(DEFAULT_ADMIN_ROLE, initialOwner);
         _grantRole(Const.BRIDGE_ROLE, bridge);
 
@@ -142,6 +161,22 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     }
 
     /**
+     * @notice Validates a candidate `_timeWindow` value
+     * @dev `0` disables period-total monitoring outright and is always allowed. A
+     * non-zero window must still align to `PERIOD_INTERVAL` (the movement-history bucket
+     * size) and must not exceed `MAX_TIME_WINDOW`, which bounds how many expired records
+     * a single call may need to evict.
+     * @param timeWindow Candidate time window in seconds
+     */
+    function _validateTimeWindow(uint timeWindow) private pure {
+        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
+        require(
+            timeWindow == 0 || (timeWindow >= Const.PERIOD_INTERVAL && timeWindow <= MAX_TIME_WINDOW),
+            BridgeVerifierInvalidTimeWindow()
+        );
+    }
+
+    /**
      * @notice Verifies token transfer value against security thresholds
      * @dev Implements a time-window based monitoring system with dual thresholds:
      * 1. Single transfer threshold (_verificationAmountThreshold)
@@ -151,17 +186,36 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * expired records and adding new ones. Dollar value of tokens is calculated
      * using price feed or default price.
      *
+     * @dev Recipients registered in the value-limit whitelist bypass both thresholds
+     * entirely (checked before any price lookup, so the bypass works even if the price
+     * feed is unavailable) and are never recorded in the period accumulator.
+     *
      * @param token The token to verify
      * @param value The amount of tokens
+     * @param to The finalize recipient. `address(0)` (used by the legacy 2-arg overload)
+     * is never whitelisted, so it always evaluates with full limits applied.
      * @return status Success status
      */
-    function validateBridgeTokenValue(IERC20 token, uint value)
-        external
+    function validateBridgeTokenValue(IERC20 token, uint value, address to)
+        public
         onlyRole(Const.BRIDGE_ROLE)
         returns (Const.FinalizeStatus status)
     {
-        // Verify token price and threshold
-        (, uint score) = getTokenPriceWithValue(token, value);
+        if (to != address(0) && _valueLimitWhitelist.contains(to)) {
+            emit ValueLimitWhitelistBypassed(token, to, value);
+            return Const.FinalizeStatus.Success;
+        }
+
+        // A unit price of zero means the value can't be evaluated at all (as opposed to a
+        // small transfer legitimately flooring to a score of zero). Fail closed only while
+        // monitoring is actually active: with both thresholds off, an unpriced token must
+        // keep behaving exactly as it always has.
+        (, uint unitPrice) = _unitPrice(token);
+        bool monitoringActive =
+            _verificationAmountThreshold != 0 || (_timeWindow != 0 && _periodTotalValueThreshold != 0);
+        if (unitPrice == 0 && monitoringActive) return Const.FinalizeStatus.TokenPriceUnavailable;
+
+        uint score = unitPrice.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
         if (score > type(uint192).max) return Const.FinalizeStatus.TokenScoreOverflow;
 
         if (_verificationAmountThreshold != 0 && _verificationAmountThreshold < score) {
@@ -220,8 +274,30 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     }
 
     /**
+     * @notice Legacy entrypoint for token value verification, kept for backward compatibility
+     * @dev Always evaluated as a non-whitelisted call (`to = address(0)`): this is an
+     * intentional fail-safe, since a caller using this overload has no way to identify a
+     * recipient, so full limits always apply. Delegates to the 3-arg overload, which carries
+     * `onlyRole(Const.BRIDGE_ROLE)` and preserves `msg.sender` on this internal call.
+     * @param token The token to verify
+     * @param value The amount of tokens
+     * @return status Success status
+     */
+    function validateBridgeTokenValue(IERC20 token, uint value) external returns (Const.FinalizeStatus status) {
+        return validateBridgeTokenValue(token, value, address(0));
+    }
+
+    /**
      * @notice Safely permits a token transfer
      * @dev Handles permit signature verification and allowance updates
+     * @dev Restricted to `BRIDGE_ROLE` (the only caller is `BaseBridge`, which is granted
+     * this role at construction): a third party could otherwise call this function directly
+     * with the owner's permit signature, burning its nonce through the mempool before
+     * `BaseBridge` ever gets a chance to use it. The role gate closes that path. Separately,
+     * `BaseBridge` may still end up calling this function with a signature whose nonce was
+     * already burned by a front-run of the token's own public `permit` — in that case the
+     * allowance it would have set is already in place, so the early return below treats it
+     * as success without calling `token.permit` again.
      * @param token Token to permit
      * @param owner Token owner
      * @param spender Spender address
@@ -240,8 +316,15 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external {
+    ) external onlyRole(Const.BRIDGE_ROLE) {
         uint beforeAllowance = token.allowance(owner, spender);
+        // A third party can front-run the owner's permit signature in the mempool,
+        // spending its nonce before this call executes. If that front-run already
+        // granted (or exceeded) the needed allowance, there is nothing left to do here -
+        // retrying the now-consumed signature would only revert. Treat a sufficient
+        // existing allowance as success rather than re-deriving it from `permit`.
+        if (beforeAllowance >= value) return;
+
         IERC20Permit(address(token)).permit(owner, spender, value, deadline, v, r, s);
         uint afterAllowance = token.allowance(owner, spender);
         require(afterAllowance == value, BridgeVerifierInvalidPermit()); // token allowance should be same as value
@@ -308,9 +391,24 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @return price Calculated dollar price for the token amount
      */
     function getTokenPriceWithValue(IERC20 token, uint value) public view returns (bool exist, uint price) {
+        uint unitPrice;
+        (exist, unitPrice) = _unitPrice(token);
+        price = unitPrice.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
+    }
+
+    /**
+     * @notice Resolves a token's per-unit dollar price, falling back to the default price
+     * @dev Shared by `getTokenPriceWithValue` (external/public price queries) and
+     * `validateBridgeTokenValue` (which needs the unit price on its own, before scaling by
+     * a transfer amount, to distinguish "can't price this token" from "priced at zero
+     * because the transfer is small").
+     * @param token Token to price
+     * @return exist Whether the price feed itself returned a valid price
+     * @return price Per-unit dollar price: the feed's price if `exist`, else the default
+     */
+    function _unitPrice(IERC20 token) private view returns (bool exist, uint price) {
         (exist, price,) = priceFeed.getTokenPriceInDollars(address(token));
         if (!exist) price = _defaultTokenPrice;
-        price = price.mulDiv(value, (10 ** CalcAmountLib.decimals(address(token))));
     }
 
     /**
@@ -489,6 +587,9 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      */
     function setExFeeRate(IERC20 token, uint exFeeRate) public onlyRole(Const.EDITOR_ROLE) {
         require(address(token) != address(0), BridgeVerifierCanNotZeroValue("token"));
+        // type(uint).max is the fee-exemption sentinel (see getTokenConfig) and is exempt
+        // from the DENOMINATOR bound.
+        require(exFeeRate <= DENOMINATOR || exFeeRate == type(uint).max, BridgeVerifierInvalidExFeeRate());
         _exFeeRate[token] = exFeeRate;
         emit ExchangeFeeUpdated(address(token), exFeeRate);
     }
@@ -530,6 +631,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param defaultTokenPrice New default token price value
      */
     function setDefaultTokenPrice(uint defaultTokenPrice) external onlyRole(Const.EDITOR_ROLE) {
+        require(defaultTokenPrice != 0, BridgeVerifierCanNotZeroValue("defaultTokenPrice"));
         _defaultTokenPrice = defaultTokenPrice;
         emit DefaultTokenPriceSet(defaultTokenPrice);
     }
@@ -542,6 +644,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param exFeeRate New exchange fee rate
      */
     function setDefaultExFeeRate(uint exFeeRate) external onlyRole(Const.EDITOR_ROLE) {
+        require(exFeeRate <= DENOMINATOR, BridgeVerifierInvalidExFeeRate());
         _defaultExFeeRate = exFeeRate;
         emit ExchangeFeeUpdated(address(0), _defaultExFeeRate);
     }
@@ -576,7 +679,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      * @param timeWindow New time window duration in seconds
      */
     function setTimeWindow(uint timeWindow) external onlyRole(Const.ADMIN_ROLE) {
-        require(timeWindow % Const.PERIOD_INTERVAL == 0, BridgeVerifierInvalidTimeWindow());
+        _validateTimeWindow(timeWindow);
         _timeWindow = timeWindow;
         emit TimeWindowSet(timeWindow);
     }
@@ -642,6 +745,100 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         require(roles.length == accounts.length, BridgeVerifierMissmatchLength());
         for (uint i = 0; i < accounts.length; ++i) {
             revokeRole(roles[i], accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Adds an account to the value-limit whitelist
+     * @dev Whitelisted recipients bypass the single-transfer and period-total value
+     * thresholds in `validateBridgeTokenValue` and are never recorded in the period
+     * accumulator. See `validateBridgeTokenValue`'s NatSpec for details.
+     * @param account Recipient address to whitelist
+     */
+    function addValueLimitWhitelist(address account) public onlyRole(Const.ADMIN_ROLE) {
+        require(account != address(0), BridgeVerifierCanNotZeroValue("account"));
+        require(_valueLimitWhitelist.add(account), BridgeVerifierWhitelistAlreadyAdded(account));
+        emit ValueLimitWhitelistAdded(account);
+    }
+
+    /**
+     * @notice Removes an account from the value-limit whitelist
+     * @param account Recipient address to remove
+     */
+    function removeValueLimitWhitelist(address account) public onlyRole(Const.ADMIN_ROLE) {
+        require(_valueLimitWhitelist.remove(account), BridgeVerifierWhitelistNotFound(account));
+        emit ValueLimitWhitelistRemoved(account);
+    }
+
+    /**
+     * @notice Adds multiple accounts to the value-limit whitelist
+     * @dev Atomic: reuses `addValueLimitWhitelist` for each entry, so a single duplicate
+     * or zero-address entry reverts the whole batch — there is no partial application.
+     * @param accounts Recipient addresses to whitelist
+     */
+    function addValueLimitWhitelistBatch(address[] calldata accounts) external onlyRole(Const.ADMIN_ROLE) {
+        for (uint i = 0; i < accounts.length; ++i) {
+            addValueLimitWhitelist(accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Removes multiple accounts from the value-limit whitelist
+     * @dev Atomic: reuses `removeValueLimitWhitelist` for each entry, so a single missing
+     * entry reverts the whole batch — there is no partial application.
+     * @param accounts Recipient addresses to remove
+     */
+    function removeValueLimitWhitelistBatch(address[] calldata accounts) external onlyRole(Const.ADMIN_ROLE) {
+        for (uint i = 0; i < accounts.length; ++i) {
+            removeValueLimitWhitelist(accounts[i]);
+        }
+    }
+
+    /**
+     * @notice Returns whether an account is on the value-limit whitelist
+     * @param account Address to query
+     * @return True if the account is whitelisted
+     */
+    function isValueLimitWhitelisted(address account) external view returns (bool) {
+        return _valueLimitWhitelist.contains(account);
+    }
+
+    /**
+     * @notice Returns the number of accounts on the value-limit whitelist
+     * @return Length of the whitelist
+     */
+    function getValueLimitWhitelistLength() external view returns (uint) {
+        return _valueLimitWhitelist.length();
+    }
+
+    /**
+     * @notice Returns the entire value-limit whitelist
+     * @dev The whitelist is expected to stay small (registrations are reviewed
+     * individually). If it grows large enough to hit RPC response-size limits, use the
+     * paginated `getValueLimitWhitelist(uint,uint)` overload instead.
+     * @return Array of every whitelisted address
+     */
+    function getValueLimitWhitelist() external view returns (address[] memory) {
+        return _valueLimitWhitelist.values();
+    }
+
+    /**
+     * @notice Returns a page of the value-limit whitelist
+     * @dev `offset >= length` (or `limit == 0`) returns an empty array rather than
+     * reverting. The returned count is clamped with `Math.min` against the remaining
+     * length so `offset + limit` never needs to be computed and cannot overflow.
+     * @param offset Index of the first entry to return
+     * @param limit Maximum number of entries to return
+     * @return page Array of at most `limit` whitelisted addresses starting at `offset`
+     */
+    function getValueLimitWhitelist(uint offset, uint limit) external view returns (address[] memory page) {
+        uint length = _valueLimitWhitelist.length();
+        if (offset >= length || limit == 0) return page;
+
+        uint count = limit.min(length - offset);
+        page = new address[](count);
+        for (uint i = 0; i < count; ++i) {
+            page[i] = _valueLimitWhitelist.at(offset + i);
         }
     }
 

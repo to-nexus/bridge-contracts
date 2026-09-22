@@ -1904,4 +1904,370 @@ contract SwapBridgeRouterTest is BridgeTest {
         // Verify router has no leftover tokens
         assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), 0, "Router should have no leftover tokens");
     }
+
+    // ============ Pre-funded Balance Refund Isolation Tests ============
+
+    /**
+     * @notice `_refundUnspent` must refund only THIS call's unspent input, not the
+     * router's whole balance. A third party who pre-funds the router with `tokenIn`
+     * directly (not through a swap call) must not have that balance swept into some
+     * unrelated user's refund the next time anyone performs a normal exactInput swap.
+     */
+    function test_swapBridgeExactInputSingle_doesNotRefundPreFundedBalance() public {
+        vm.selectFork(bscForkID);
+
+        // Someone (an attacker, or simply leftover dust from any other source) sends
+        // tokenIn directly to the router - NOT through a swap call.
+        uint preFunded = 500 * 1e18;
+        address attacker = makeAddr("attacker_prefund_cross");
+        vm.prank(OWNER);
+        cross.transfer(attacker, preFunded);
+        vm.prank(attacker);
+        cross.transfer(address(swapBridgeRouterBSC), preFunded);
+        assertEq(
+            cross.balanceOf(address(swapBridgeRouterBSC)), preFunded, "router should hold the pre-funded balance"
+        );
+
+        // A normal, unrelated user performs an ordinary full-consumption swap+bridge.
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0, // full consumption: this call alone leaves nothing unspent
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        uint userBalanceBefore = cross.balanceOf(USER);
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
+        uint userBalanceAfter = cross.balanceOf(USER);
+
+        // The user spent exactly their own input - the attacker's pre-funded balance was
+        // not swept into their "refund".
+        assertEq(userBalanceBefore - userBalanceAfter, amountIn, "user must only spend their own input");
+        // The pre-funded balance is untouched, still sitting in the router.
+        assertEq(
+            cross.balanceOf(address(swapBridgeRouterBSC)),
+            preFunded,
+            "pre-funded balance must remain in the router, not be refunded to the swapper"
+        );
+    }
+
+    /**
+     * @notice The same isolation for the WETH/ETH refund path
+     * (`_refundUnspentETH`). A third party's pre-funded WETH balance must not be
+     * swept into another user's ETH refund.
+     */
+    function test_swapBridgeExactInputSingleETH_doesNotRefundPreFundedWETH() public {
+        vm.selectFork(bscForkID);
+
+        // Someone sends WETH directly to the router - NOT through a swap call.
+        uint preFunded = 3 ether;
+        address attacker = makeAddr("attacker_prefund_weth");
+        vm.deal(attacker, preFunded);
+        vm.prank(attacker);
+        mockWETHBSC.deposit{value: preFunded}();
+        vm.prank(attacker);
+        mockWETHBSC.transfer(address(swapBridgeRouterBSC), preFunded);
+        assertEq(
+            mockWETHBSC.balanceOf(address(swapBridgeRouterBSC)), preFunded, "router should hold the pre-funded WETH"
+        );
+
+        // A normal, unrelated user performs an ordinary full-consumption ETH swap+bridge.
+        uint amountIn = 1 ether;
+        vm.deal(USER, 10 ether);
+
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(mockWETHBSC),
+            tokenOut: address(swapOutputTokenBSC),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0, // full consumption: this call alone leaves nothing unspent
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        uint userEthBefore = USER.balance;
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactInputSingleETH{value: amountIn}(params, block.timestamp + 1 hours);
+        uint userEthAfter = USER.balance;
+
+        // The user spent exactly their own ETH input - no extra "refund" from the
+        // attacker's pre-funded WETH.
+        assertEq(userEthBefore - userEthAfter, amountIn, "user must only spend their own ETH input");
+        // The pre-funded WETH is untouched, still sitting in the router.
+        assertEq(
+            mockWETHBSC.balanceOf(address(swapBridgeRouterBSC)),
+            preFunded,
+            "attacker's pre-funded WETH must remain in the router, not be refunded to the swapper"
+        );
+    }
+
+    /**
+     * @notice A path that starts and ends with the same token is refused, and a balance
+     * the router already held is untouched.
+     * @dev Without the refusal the swap output lands in the same balance the
+     * unspent-input refund measures, so the refund hands the output back to the caller
+     * and the bridge settlement then has to draw on whatever the router already held.
+     */
+    function test_swapBridgeExactInput_circularPath_reverts() public {
+        vm.selectFork(bscForkID);
+
+        uint preFunded = 5000 * 1e18;
+        address stranger = makeAddr("stranger_circular_in");
+        vm.prank(OWNER);
+        cross.transfer(stranger, preFunded);
+        vm.prank(stranger);
+        cross.transfer(address(swapBridgeRouterBSC), preFunded);
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        // CROSS -> SwapOutputToken -> CROSS
+        bytes memory path =
+            abi.encodePacked(address(cross), uint24(3000), address(swapOutputTokenBSC), uint24(3000), address(cross));
+
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = ISwapBridgeRouter.SwapBridgeExactInputParams({
+            path: path,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        uint userBefore = cross.balanceOf(USER);
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
+
+        assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), preFunded, "router balance must be untouched");
+        assertEq(cross.balanceOf(USER), userBefore, "caller must not receive anything");
+    }
+
+    /**
+     * @notice Same refusal on the WETH/ETH entrypoint, where the refund pays out as ETH.
+     */
+    function test_swapBridgeExactInputETH_circularPath_reverts() public {
+        vm.selectFork(bscForkID);
+
+        uint preFunded = 5 ether;
+        address stranger = makeAddr("stranger_circular_eth");
+        vm.deal(stranger, preFunded);
+        vm.prank(stranger);
+        mockWETHBSC.deposit{value: preFunded}();
+        vm.prank(stranger);
+        mockWETHBSC.transfer(address(swapBridgeRouterBSC), preFunded);
+
+        uint amountIn = 1 ether;
+        vm.deal(USER, 10 ether);
+
+        // WETH -> SwapOutputToken -> WETH
+        bytes memory path = abi.encodePacked(
+            address(mockWETHBSC), uint24(3000), address(swapOutputTokenBSC), uint24(3000), address(mockWETHBSC)
+        );
+
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = ISwapBridgeRouter.SwapBridgeExactInputParams({
+            path: path,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        uint userEthBefore = USER.balance;
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(mockWETHBSC)));
+        swapBridgeRouterBSC.swapBridgeExactInputETH{value: amountIn}(params, block.timestamp + 1 hours);
+
+        assertEq(mockWETHBSC.balanceOf(address(swapBridgeRouterBSC)), preFunded, "router WETH must be untouched");
+        assertEq(USER.balance, userEthBefore, "caller must not receive anything");
+    }
+
+    /**
+     * @notice The exactOutput entrypoints refuse the same path, so both directions
+     * answer identically for the same input.
+     */
+    function test_swapBridgeExactOutput_circularPath_reverts() public {
+        vm.selectFork(bscForkID);
+
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), 1000 * 1e18);
+
+        // exactOutput path is reversed: tokenOut -> ... -> tokenIn
+        bytes memory path =
+            abi.encodePacked(address(cross), uint24(3000), address(swapOutputTokenBSC), uint24(3000), address(cross));
+
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter.SwapBridgeExactOutputParams({
+            path: path,
+            amountOut: 500 * 1e18,
+            amountInMaximum: 1000 * 1e18,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.swapBridgeExactOutput(params, block.timestamp + 1 hours);
+    }
+
+    function test_swapBridgeExactOutputETH_circularPath_reverts() public {
+        vm.selectFork(bscForkID);
+        vm.deal(USER, 10 ether);
+
+        bytes memory path = abi.encodePacked(
+            address(mockWETHBSC), uint24(3000), address(swapOutputTokenBSC), uint24(3000), address(mockWETHBSC)
+        );
+
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter.SwapBridgeExactOutputParams({
+            path: path,
+            amountOut: 1 ether,
+            amountInMaximum: 2 ether,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(mockWETHBSC)));
+        swapBridgeRouterBSC.swapBridgeExactOutputETH{value: 2 ether}(params, block.timestamp + 1 hours);
+    }
+
+    /**
+     * @notice An ordinary multihop with distinct ends still works and leaves a balance
+     * the router already held alone.
+     */
+    function test_swapBridgeExactInput_multihop_doesNotTouchPreFundedBalance() public {
+        vm.selectFork(bscForkID);
+
+        uint preFundedOut = 4000 * 1e18;
+        address stranger = makeAddr("stranger_multihop_out");
+        vm.prank(OWNER);
+        TestToken(address(swapOutputTokenBSC)).transfer(stranger, preFundedOut);
+        vm.prank(stranger);
+        swapOutputTokenBSC.transfer(address(swapBridgeRouterBSC), preFundedOut);
+
+        uint preFundedIn = 2000 * 1e18;
+        vm.prank(OWNER);
+        cross.transfer(address(swapBridgeRouterBSC), preFundedIn);
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        // CROSS -> WETH -> SwapOutputToken : distinct ends
+        bytes memory path = abi.encodePacked(
+            address(cross), uint24(3000), address(mockWETHBSC), uint24(3000), address(swapOutputTokenBSC)
+        );
+
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = ISwapBridgeRouter.SwapBridgeExactInputParams({
+            path: path,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        uint userBefore = cross.balanceOf(USER);
+
+        vm.prank(USER);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
+
+        assertEq(amountOut, amountIn, "1:1 mock rate");
+        assertEq(cross.balanceOf(USER), userBefore - amountIn, "caller spends only their own input");
+        assertEq(
+            swapOutputTokenBSC.balanceOf(address(swapBridgeRouterBSC)),
+            preFundedOut,
+            "pre-funded output balance must be untouched"
+        );
+        assertEq(
+            cross.balanceOf(address(swapBridgeRouterBSC)), preFundedIn, "pre-funded input balance must be untouched"
+        );
+    }
+
+    /**
+     * @notice The single-hop entrypoints refuse the same token on both sides on their
+     * own, rather than relying on the swap router having no pool for a token pair with
+     * itself. That rejection belongs to this contract, not to an external dependency.
+     */
+    function test_swapBridgeExactInputSingle_sameToken_reverts() public {
+        vm.selectFork(bscForkID);
+
+        uint preFunded = 5000 * 1e18;
+        address stranger = makeAddr("stranger_same_token_single");
+        vm.prank(OWNER);
+        cross.transfer(stranger, preFunded);
+        vm.prank(stranger);
+        cross.transfer(address(swapBridgeRouterBSC), preFunded);
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactInputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(cross),
+            fee: 3000,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.swapBridgeExactInputSingle(params, block.timestamp + 1 hours);
+
+        assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), preFunded, "router balance must be untouched");
+    }
+
+    function test_swapBridgeExactOutputSingle_sameToken_reverts() public {
+        vm.selectFork(bscForkID);
+
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), 1000 * 1e18);
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params = ISwapBridgeRouter
+            .SwapBridgeExactOutputSingleParams({
+            tokenIn: address(cross),
+            tokenOut: address(cross),
+            fee: 3000,
+            amountOut: 500 * 1e18,
+            amountInMaximum: 1000 * 1e18,
+            sqrtPriceLimitX96: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
+    }
+
+    /**
+     * @notice A quote must answer the same as execution would, so an integrator cannot
+     * read a successful quote as a signal that the swap is executable.
+     */
+    function test_quotes_rejectSameTokenAndCircularPath() public {
+        vm.selectFork(bscForkID);
+
+        bytes memory circularIn =
+            abi.encodePacked(address(cross), uint24(3000), address(swapOutputTokenBSC), uint24(3000), address(cross));
+
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.getAmountSwapBridgeOut(CROSS_CHAIN_ID, address(cross), address(cross), 3000, 1000 * 1e18);
+
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.getAmountSwapBridgeIn(CROSS_CHAIN_ID, address(cross), address(cross), 3000, 500 * 1e18);
+
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.getAmountSwapBridgeOutMultihop(CROSS_CHAIN_ID, circularIn, 1000 * 1e18);
+
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
+        swapBridgeRouterBSC.getAmountSwapBridgeInMultihop(CROSS_CHAIN_ID, circularIn, 500 * 1e18);
+    }
 }

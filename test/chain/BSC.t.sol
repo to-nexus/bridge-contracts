@@ -81,8 +81,9 @@ contract BSCTest is CrossChainTest {
                 priceFeedBSC.updatePrice(tokens, prices, pricesAt);
             }
 
-            bridgeVerifierBSC =
-                new BridgeVerifier(OWNER, address(bridgeBSC), address(priceFeedBSC), 200000, 0, 0, 0, 0, 0, 2 hours);
+            bridgeVerifierBSC = new BridgeVerifier(
+                OWNER, address(bridgeBSC), address(priceFeedBSC), 200000, 1, 0, 0, 0, 0, 2 hours
+            );
             bridgeVerifierBSC.grantRole(PRICER_ROLE, OWNER);
             bridgeVerifierBSC.grantRole(ADMIN_ROLE, OWNER);
             bridgeVerifierBSC.grantRole(EDITOR_ROLE, OWNER);

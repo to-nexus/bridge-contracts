@@ -131,6 +131,54 @@ sequenceDiagram
 - wrapped 토큰은 브리지가 배포하는 표준 `ERC20` + `ERC20Permit` 컨트랙트로, 이름은 `Cross Bridge <SYMBOL>`,
   심볼은 `<SYMBOL>x`이며 **등록 시 전달된** 심볼과 decimals를 사용합니다. 원본 토큰과 동일하다고 가정하지 말고
   토큰의 `decimals()`를 직접 조회하세요.
+- **HyperEVM** 배포에서는 wrapped 토큰으로 `CrossMintableERC20V2` 대신 `HyperMintableERC20`을 씁니다.
+  구조는 동일하고, 그 위에 HyperCore 링크 계층이 얹혀 있습니다 — 고정 스토리지 슬롯
+  (`keccak256("HyperCore deployer")`)에 HyperCore의 `finalizeEvmContract{customStorageSlot}` 액션이 읽어가는
+  finalizer 주소를 기록해 토큰을 HyperCore 스팟 자산에 연결하고, 그 토큰이 프로비저닝될 수 있는 HyperCore
+  시스템 주소를 유도합니다. 그 시스템 주소를 채우려면 직접 민팅해야 하는데(브리지의 일반적인 예치 기반
+  발행 경로 밖의 운영자 조작), 그 잔고는 브리지 자체의 페어별 `minted` 회계에 **반영되지 않습니다** — 버그가
+  아니라 의도된 회계상의 괴리입니다(§8의 `LINKER_ROLE`과 운영 절차·링크 런북은
+  `script/HyperMintableERC20Code.s.sol` 참조).
+  - **링크 안전장치 강화.** `setCoreTokenIndex`는 더 이상 임의의 index를 무조건 받아들이지 않습니다.
+    HyperEVM의 Core read precompile(`0x…080C`의 `tokenInfo(uint32)`)을 호출해 `evmContract ==
+    address(this)`(Core가 실제로 **바로 이 컨트랙트**에 링크했다는 위조 불가능한 온체인 증거 — 그럴듯해
+    보이는 다른 index, 예컨대 다른 토큰을 가리키는 스팟 페어 index로는 통과하지 못함)와 `decimals() ==
+    weiDecimals + evmExtraWeiDecimals`가 확인될 때만 index를 기록합니다. 또한 토큰당 **최대 1회만**
+    성공하며, 성공하는 순간 `setHyperCoreDeployer`가 영구히 잠깁니다. 이 검증들은 운영 실수(오타 index,
+    쓰기 가능 상태로 방치된 옛 finalizer)를 막는 장치이지, 탈취된 업그레이드 권한에 대한 방어는
+    아닙니다 — 아래 AR-1 항목 참고.
+  - **내림 전송.** `transferToCore(amount)`는 이제 전송 전에 `amount`를 Core wei 단위(`coreUnit()`, 링크의
+    `evmExtraWeiDecimals`에서 유도)로 내림해, 더 이상 잔여분을 소각하지 않습니다. 내림된 나머지는 호출자
+    잔고에 그대로 남고, 함수는 실제로 전송된 금액을 반환합니다. 이 함수는 표준이 아니라 **편의
+    래퍼**입니다 — Core는 시스템 주소로의 평범한 ERC20 `transfer`가 남기는 `Transfer.from`을 기준으로
+    크레딧하므로, 표준을 따르는 어떤 전송이든 동일하게 동작하며, 이 함수에 건 어떤 가드도 우회 불가능한
+    보장으로 취급할 수 없습니다.
+  - **원-액션 HyperCore 전달.** 단일 `transferToCore` 호출은 오직 그 호출자만 Core에서 크레딧받는데,
+    호출자가 결합 `extraData` 호출을 실행 중인 `BridgeExecutor`인 경우 문제가 됩니다 — executor는
+    컨트랙트이므로 이후 Core 액션에 서명할 수 없어, executor의 Core 계정에 크레딧된 토큰은 영구히
+    묶입니다. `transferToCoreFor(address coreRecipient, uint amount)`가 이를 해결합니다: 같은 트랜잭션
+    안에서 (내림된) 금액을 호출자 → `coreRecipient` → Core 시스템 주소 순으로 옮기므로, 두 번째
+    `Transfer`의 `from`이 `coreRecipient`가 되어 Core가 호출자가 아니라 **그들을** 크레딧합니다 —
+    `coreRecipient`의 EVM 잔고는 정확히 0으로 순증감하므로 이 함수에는 별도 role 게이트가 필요 없습니다.
+    이를 `extraData` 결합 호출로 구성하면(`target` = 토큰, `selector` = `transferToCoreFor`, 인자 =
+    `(finalRecipient, amount)`) 전송을 시작하는 단 한 번의 사용자 액션으로 BSC → CROSS → HyperEVM →
+    HyperCore까지 토큰을 옮길 수 있습니다.
+  - **업그레이더블 토큰 + 팩토리.** 토큰과 그 팩토리(`HyperMintableERC20Code`) 모두 프록시입니다: 한
+    팩토리가 생성한 모든 토큰은 하나의 `UpgradeableBeacon`을 공유하는 `BeaconProxy`이고(업그레이드 한
+    번으로 모든 토큰이 동시에 반영됩니다 — 이렇게 생기는 권한 집중은 멀티시그·타임락 beacon owner
+    뒤에 두어야 합니다), 팩토리 자신은 자기 자신의 `ADMIN_ROLE`이 지배하는 UUPS(`ERC1967Proxy`)
+    단일 인스턴스입니다. 이 구조가 필요한 이유는 HyperCore 링크가 Core가 finalize한 그 EVM 주소에
+    영구히 귀속되기 때문입니다 — 업그레이더블이 아니라면, 이미 링크된 토큰의 버그를 고치는 방법은
+    HyperCore 토큰을 완전히 새로 발행하는 것뿐입니다. 팩토리가 예측에 사용하는 CREATE2 initcode에는
+    beacon의 (고정된) 주소만 들어가고 그 순간 beacon이 가리키는 로직 impl 주소는 들어가지 않으므로,
+    `computeTokenAddress` / `computeTokenAddressWithName` 예측값은 beacon 업그레이드 이후에도
+    안정적입니다.
+  - **AR-1 — 1회성 잠금은 업그레이드에 대해서는 안전하지 않습니다.** 토큰과 팩토리가 업그레이더블이므로,
+    beacon owner 또는 팩토리 `ADMIN_ROLE`을 쥔 계정은 위에서 설명한 `setCoreTokenIndex` /
+    `setHyperCoreDeployer` 잠금을 제거하는 새 구현을 올릴 수 있습니다. 이 잠금들은 **운영 실수**(오타
+    index, 쓰기 가능 상태로 방치된 옛 finalizer)에 대한 방어로 취급하고, 탈취된 업그레이드 키에 대한
+    방어는 아니라고 간주하세요 — 그 방어는 오직 beacon owner와 팩토리의 업그레이드 승인 `ADMIN_ROLE`을
+    EOA가 아닌 멀티시그·타임락에 두는 것으로만 확보됩니다.
 - **등록된 페어**만 전송할 수 있습니다. 해당 배포에서 지원되는 조합은 `allChainIDs()` / `allTokenPairs()` /
   `getTokenPair()`로 확인하세요.
 
@@ -307,6 +355,8 @@ revert시키며, 기대 인덱스도 그대로 유지됩니다.
 | `TransferFailed` / `MintFailed` | 수신자에게 지급 실패 |
 | `CrossSupplyLimitExceeded` | Cross 체인 네이티브 공급 한도 초과 |
 | `TokenScoreOverflow` / `TokenCurrentVolumeOverflow` | 금액을 안전하게 평가할 수 없음 |
+| `TokenPriceUnavailable` | 금액 통제가 활성 상태인데 토큰의 달러 가격을 확인할 수 없음. 가격 피드가 해당 토큰에 대해 0이 아닌 가격을 반환하도록 복구하거나 피드 자체를 교체해 해소하면, 다음 `releasePending` 호출에서 다시 평가됩니다. |
+| `InsufficientLiquidity` | 브리지가 이 지급에 필요한 네이티브 코인을 현재 보유하고 있지 않음. 브리지에 네이티브 코인을 충전해 해소합니다 — `TransferFailed`와 달리 수신자 쪽 문제가 아니므로 지급 대상을 바꿔도 소용없습니다. |
 
 ```solidity
 function releasePending(uint remoteChainID, uint index) external;
@@ -319,15 +369,20 @@ function releasePending(uint remoteChainID, uint index) external;
 - 보류 기록에 저장된 검토 지연이 만료됨(`delayExpiration`, `0`이면 지연 없음)
 - 지급 자체가 성공함
 
-단일 전송·시간창 금액 한도는 재시도 시 **다시 평가되지 않습니다** — 최초 접수 시점에 이미 평가되었기
-때문입니다. 단, Cross 체인의 네이티브 공급 한도는 **다시 확인**됩니다.
+금액 한도가 재시도 시 다시 평가되는지는 최초 접수 시점에 애초에 평가가 이루어졌는지에 달려 있습니다. 금액
+평가에 도달하기도 전에 보류된 기록(토큰 정지, 가격 확인 불가)은 `releasePending`을 호출할 때마다 현재
+한도로 다시 평가됩니다 — 따라서 검토 지연이 지나도 그 사유가 해소될 때까지 계속 보류 상태로 남습니다.
+반대로 금액 평가가 **이미 실행되어 판정을 내렸기 때문에** 보류된 기록(단일 전송·시간창 한도, 또는 평가
+오버플로)은 다시 평가되지 않습니다 — 재시도는 지급만 다시 시도합니다. Cross 체인의 네이티브 공급 한도는
+재시도할 때마다 예외 없이 **다시 확인**됩니다.
 
 결합 `extraData` 호출은 재시도 시 절대 재실행되지 않으며, 보류된 전송은 항상 단순 지급으로 처리됩니다.
 
-**권한 기반 해소.** `VERIFIER_ROLE`은 정지·지연·한도 검사를 우회해 보류된 전송을 강제 지급할 수 있고,
-지급 대상을 다른 주소로 변경할 수 있습니다(원래 수신자가 수령을 영구 거부할 때의 복구 경로).
-`ADMIN_ROLE`은 지급 없이 보류 기록을 제거할 수 있습니다. 이는 신뢰가 필요한 거버넌스 권한이며
-[§6](#6-보안과-신뢰-모델)에 정리되어 있습니다.
+**권한 기반 해소.** `VERIFIER_ROLE`은 정지와 검토 지연을 우회해 보류된 전송을 강제 지급할 수 있고,
+지급 대상을 다른 주소로 변경할 수 있습니다(원래 수신자가 수령을 영구 거부할 때의 복구 경로). Cross
+체인에서는 네이티브 공급 한도(`crossSupplyLimit`)는 우회하지 못합니다 — 한도를 넘기는 강제 지급은
+그대로 revert됩니다. `ADMIN_ROLE`은 지급 없이 보류 기록을 제거할 수 있습니다. 이는 신뢰가 필요한
+거버넌스 권한이며 [§6](#6-보안과-신뢰-모델)에 정리되어 있습니다.
 
 보류된 전송은 `getPendingArguments(remoteChainID, index)`로 확인하고, 보류 중인 인덱스 목록은
 `allPendingIndex(remoteChainID)`로 조회합니다. 검토 지연은 24시간으로 초기화되지만 관리자가 변경할 수 있으므로,
@@ -380,8 +435,8 @@ function releasePending(uint remoteChainID, uint index) external;
 
 **Cross 체인 — 네이티브 공급 한도.** 브리지가 지급할 수 있는 네이티브 CROSS 총량이 설정 가능한 한도로
 제한되며 `crossSupply()`, `crossSupplyLimit()`으로 조회할 수 있습니다. 한도를 넘기는 정산은
-`CrossSupplyLimitExceeded`로 보류됩니다. 이 한도는 자동 정산과 공개 재시도에 적용되며, 권한 기반 강제
-지급은 우회합니다.
+`CrossSupplyLimitExceeded`로 보류됩니다. 이 한도는 자동 정산·공개 재시도·권한 기반 강제 지급 모두에
+동일하게 적용됩니다 — 강제 지급이 우회하는 것은 정지와 검토 지연뿐이고, 이 한도는 우회하지 못합니다.
 
 **BSC — 크로스체인 소각.**
 
@@ -540,13 +595,33 @@ params 구조체와 `deadline`을 받습니다.
   수수료/한도 및 executor 구성요소 교체, 지급 없이 보류 기록 제거를 수행할 수 있습니다.
 - `BridgeVerifier`와 `BridgeExecutor`의 `ADMIN_ROLE`은 브리지와 독립적인 구성원 집합으로, 각각 금액 한도와
   가격 피드 참조, 결합 호출 화이트리스트를 통제합니다.
-- `VERIFIER_ROLE`은 정지·지연·한도 검사를 우회해 보류된 전송을 강제 지급하고, 지급 대상을 다른 주소로
-  변경할 수 있습니다.
+- `VERIFIER_ROLE`은 정지와 검토 지연을 우회해 보류된 전송을 강제 지급하고, 지급 대상을 다른 주소로
+  변경할 수 있습니다. Cross 체인에서는 네이티브 공급 한도(`crossSupplyLimit`)는 우회하지 못합니다.
 - `OPERATOR_ROLE`은 전체·체인별·토큰별로 전송을 정지할 수 있습니다.
 - `PRICER_ROLE`은 수수료와 금액 한도의 기준이 되는 가격을 게시합니다.
 - 각 `CrossMintableERC20V2` wrapped 토큰은 **자체** 기본 관리자를 가지며, 브리지의 역할과 무관하게 그 토큰의
   `MINTER_ROLE`을 통제합니다. (이전 버전 `CrossMintableERC20`에는 그런 관리자가 없고, 불변 브리지 주소가
   유일한 발행자입니다.)
+
+**`BridgeVerifier` 교체.** `BridgeVerifier`는 프록시가 아니다 — 새로 배포해 `setBridgeVerifier`로 교체한다.
+새 인스턴스는 롤링 거래량 이력이 **비어 있는** 상태로 시작한다 — 자신이 배포되기 전에 정산된 것을 전혀
+알지 못한다. `periodTotalValueThreshold()`가 `0`(롤링 거래량 통제 비활성)이면 무해하다 — 빈 이력이 과소
+집계할 대상 자체가 없다. `0`이 **아닐** 때는 교체가 거래량 통제에 조용한 공백을 만들지 않도록 아래 절차를
+따른다:
+
+1. 대상 토큰의 finalize를 정지한다(`setTokenPause(..., finalizePause: true)`), 또는 체인 전체를 정지한다
+   (`setChainPause`) — 이전 인스턴스의 창에 더 이상 거래량이 쌓이지 않도록 한다.
+2. finalize를 정지한 채로 `getTimeWindow()` 전체 기간을 **완전히** 기다린다 — 창이 비워지는 것은 정지
+   상태로 기다렸기 때문이다. 대기 중에는 `manualReleasePending*`도 보류한다: 수동 지급도 일반 finalize와
+   똑같이 거래량을 정산시키므로 이 단계가 비우려는 창을 다시 채운다.
+3. 새 `BridgeVerifier`를 배포하고 `setBridgeVerifier`를 호출한다.
+4. 브리지 주소가 새 인스턴스의 `BRIDGE_ROLE`을 보유하는지(`newVerifier.hasRole(BRIDGE_ROLE, bridgeAddress) == true`),
+   그리고 `getTimeWindow()` / `getPeriodTotalValueThreshold()` / `getVerificationAmountThreshold()` /
+   `getMinimumTokenValue()` / 토큰 가격들이 의도한 설정과 일치하는지 온체인 재조회로 확인한다 — 새 인스턴스는
+   이전 인스턴스의 현재 값이 아니라 자신의 생성자 인자에서 시작한다.
+5. 정지를 해제하고 finalize를 재개한다.
+
+드레인이 불가능하다면(예: 긴급 교체) 그 창을 거래량 통제의 공백 구간으로 인정하고 그렇게 기록한다.
 
 ---
 
@@ -561,6 +636,8 @@ params 구조체와 `deadline`을 받습니다.
 | `BridgeExecutor` | 정산 시 화이트리스트된 `extraData` 호출을 실행합니다. |
 | `PriceFeed` | 수수료·한도 계산에 사용되는 토큰/네이티브 가격 소스. 업그레이더블(UUPS). |
 | `CrossMintableERC20V2` | 브리지가 발행하는 wrapped 토큰(`ERC20` + `ERC20Permit`). |
+| `HyperMintableERC20` | HyperEVM 전용 wrapped 토큰. `CrossMintableERC20V2`에 강화된 HyperCore 링크 슬롯을 더함. 업그레이더블(`BeaconProxy`, 팩토리별 공유 `UpgradeableBeacon`). |
+| `HyperMintableERC20Code` | `HyperMintableERC20`의 팩토리. CREATE2로 결정적이고, beacon 로직 업그레이드 이후에도 안정적인, 사전 계산 가능한 주소에 배포. 업그레이더블(UUPS). |
 | `SwapBridgeRouter` | 선택적 스왑 + 브리지 라우터(Uniswap V3). |
 | `BridgeBot` | 주기적 반복 전송을 위한 선택적 보조 컨트랙트. |
 
@@ -590,12 +667,42 @@ params 구조체와 `deadline`을 받습니다.
 | `OPERATOR_ROLE` | 브리지 | 전체·체인별·토큰별 정지 |
 | `EDITOR_ROLE` | 브리지 | 토큰 페어 등록, `extraData` 길이 제한 |
 | | Verifier | 교환 수수료 요율, 기본 가격, 최소 전송 금액 |
-| `VERIFIER_ROLE` | 브리지 | 보류 전송 강제 지급, 지급 대상 변경, 검토 기간 조정 |
+| `VERIFIER_ROLE` | 브리지 | 보류 전송 강제 지급(정지·지연은 우회하나 Cross 체인 네이티브 공급 한도는 우회 못함), 지급 대상 변경, 검토 기간 조정 |
 | `PRICER_ROLE` | PriceFeed | 토큰·네이티브 코인 가격 게시 |
 | | Verifier | 목적지 체인 가스 가격 게시 |
 | `INITIATOR_ROLE` | 브리지 | permit 기반 배치 전송 제출 |
 | `EXECUTOR_ROLE` | Executor | 결합 `extraData` 호출 실행 — 브리지가 보유 |
 | `MINTER_ROLE` | wrapped 토큰 | 발행·소각. 생성 시 브리지에 부여되며, `CrossMintableERC20V2`에서는 해당 토큰 자체의 기본 관리자가 관리 |
+| `LINKER_ROLE` | `HyperMintableERC20` | `setHyperCoreDeployer` / `setCoreTokenIndex`가 검사하는 role — 하지만 이 role을 **보유하는 것**과 실제로 호출할 수 있는 것은 다릅니다. 아래 설명 참고. `setCoreTokenIndex`는 토큰당 최대 1회만 성공하고, `setHyperCoreDeployer`는 성공하는 순간 영구히 잠깁니다(AR-1 한계는 §3 참고) |
+
+`HyperMintableERC20`은 **role 보유**와 **실효 권한**을 구분합니다. `hasRole(LINKER_ROLE, account)`는
+`account`가 이 role을 부여받았는지(일반적인, 회수 가능한 OZ grant)를 알려줄 뿐입니다. `account`가 지금
+실제로 `setHyperCoreDeployer` / `setCoreTokenIndex`를 호출할 수 있는지는 `isLinkAuthority(account)`이며,
+이번 라운드 이후 두 질문은 더 이상 같지 않습니다: 토큰의 **현재** `defaultAdmin()`은 `LINKER_ROLE` 보유
+여부와 무관하게 항상 권한이 있고, `beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`를 그대로
+따라갑니다 — 이전이 완료되는 즉시 예전 admin은 별도의 role 정리 없이도 권한을 잃습니다. 유일한 다른
+권한 주체는 immutable `factoryLinker()`(생성한 `HyperMintableERC20Code`)이며, 이마저도 `LINKER_ROLE`을
+보유하는 동안만 유효합니다 — 토큰의 기본 관리자가 `revokeRole(LINKER_ROLE, factoryLinker())`로 팩토리를
+차단할 수 있고, 나중에 `grantRole`로 다시 되돌릴 수 있습니다. 다른 주소에 `LINKER_ROLE`을 부여해도
+`hasRole`은 바뀌지만 `isLinkAuthority`는 생기지 않으므로, 슬롯 쓰기는 항상 이 두 주체로만 제한됩니다.
+
+`HyperMintableERC20Code`가 생성하는 모든 토큰의 기본 관리자가 되는 `tokenAdmin()`과, 생성되는 모든 토큰의
+`BeaconProxy`가 가리키는 `beacon()`은 `initialize` 시점에 고정되고 별도 setter가 없지만, `immutable`이
+아니라 일반 스토리지입니다 — 팩토리 자신이 UUPS 프록시이므로, 그 로직 컨트랙트의 생성자는 initializer를
+막는 것 외에는 아무 것도 하지 않고, 비프록시 생성자처럼 배포별 값을 바이트코드에 구울 수 없기
+때문입니다. 앞으로 생성될 토큰에 대해 둘 중 하나를 바꾸려면 여전히 팩토리를 재배포해야 하고, **이미
+배포된** 토큰의 관리자는 토큰 자체의 `beginDefaultAdminTransfer` / `acceptDefaultAdminTransfer`로 이전할
+수 있으며, 그 토큰의 로직도 팩토리를 전혀 재배포하지 않고 beacon 업그레이드만으로 그 자리에서 고칠 수
+있습니다. 마찬가지로 토큰의 `factoryLinker`는 생성 시점에 그 토큰을 만든 팩토리로 고정됩니다 — 브리지의
+`crossMintableERC20Code`를 교체해도 기존에 생성된 토큰의 관리 권한이 새 팩토리로 넘어가지 **않습니다.**
+그런 토큰들을 위해 예전 팩토리를 계속 유지하거나, 토큰의 기본 관리자가 직접 호출하세요. 토큰별 생성
+팩토리 주소와 beacon 주소는 운영 장부에 기록해 두는 것이 좋습니다.
+
+finalize 이전 구간(런북은 `script/HyperMintableERC20Code.s.sol` 참고) 동안에는 `HyperCoreDeployerSet`,
+`CoreTokenIndexSet`, `LINKER_ROLE`과 `DEFAULT_ADMIN_ROLE` 양쪽의 `RoleGranted` / `RoleRevoked`(실효
+권한이 실제로 옮겨가는 시점은 후자입니다 — 2단계 이전의 `DefaultAdminTransferScheduled` /
+`DefaultAdminTransferCanceled`는 예고일 뿐입니다)를 모니터링하고, 이벤트를 놓치더라도 현재 통제 주체를
+알 수 있도록 `defaultAdmin()` / `isLinkAuthority()`를 주기적으로 재조회해 대조하세요.
 
 ---
 

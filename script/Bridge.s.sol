@@ -5,6 +5,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 import {BaseBridge} from "../src/BaseBridge.sol";
 import {BridgeVerifier} from "../src/BridgeVerifier.sol";
+import {CrossMintableERC20V2} from "../src/token/CrossMintableERC20V2.sol";
 import {CrossMintableERC20V2Code} from "../src/token/CrossMintableERC20V2Code.sol";
 import {Script, console} from "forge-std/Script.sol";
 
@@ -56,6 +57,7 @@ contract BridgeScript is Script {
     string VERIFIER_ROLE_MEMBERS = "VERIFIER_ROLE_MEMBERS";
     string VERIFIER_GAS_PRICES = "VERIFIER_GAS_PRICES";
     string VERIFIER_GAS_PRICE_CHAINS = "VERIFIER_GAS_PRICE_CHAINS";
+    string VERIFIER_VALUE_LIMIT_WHITELIST = "VERIFIER_VALUE_LIMIT_WHITELIST";
 
     // ============ 환경변수에서 로드된 값들 ============
     address priceFeed;
@@ -80,6 +82,7 @@ contract BridgeScript is Script {
     address[] verifierRoleMembers;
     uint[] verifierGasPrices;
     uint[] verifierGasPriceChains;
+    address[] verifierValueLimitWhitelist;
 
     // 기본값용 빈 배열
     bytes32[] emptyBytes32Array;
@@ -95,7 +98,10 @@ contract BridgeScript is Script {
         impl = vm.envAddress(IMPLEMENTATION);
         owner = vm.envAddress(OWNER);
         dev = payable(vm.envAddress(BRIDGE_DEV));
-        threshold = uint8(vm.envUint(BRIDGE_THRESHOLD));
+        uint thresholdValue = vm.envUint(BRIDGE_THRESHOLD);
+        // A value above 255 would silently truncate, and 257 would become a threshold of 1.
+        require(thresholdValue != 0 && thresholdValue <= type(uint8).max, "THRESHOLD must be 1..255");
+        threshold = uint8(thresholdValue);
         cross = vm.envAddress(BRIDGE_CROSS);
         crossInitialSupply = vm.envUint(BRIDGE_CROSS_INITIAL_SUPPLY) * 1 ether;
         finalizeBridgeGas = vm.envUint(VERIFIER_FINALIZE_BRIDGE_GAS);
@@ -111,6 +117,7 @@ contract BridgeScript is Script {
         verifierRoleMembers = vm.envOr(VERIFIER_ROLE_MEMBERS, ",", emptyAddressArray);
         verifierGasPrices = vm.envOr(VERIFIER_GAS_PRICES, ",", emptyUintArray);
         verifierGasPriceChains = vm.envOr(VERIFIER_GAS_PRICE_CHAINS, ",", emptyUintArray);
+        verifierValueLimitWhitelist = vm.envOr(VERIFIER_VALUE_LIMIT_WHITELIST, ",", emptyAddressArray);
 
         // 로드된 값 출력
         console.log("priceFeed:", priceFeed);
@@ -172,6 +179,12 @@ contract BridgeScript is Script {
                 )
             );
         }
+
+        // Value-limit whitelist 목록 출력 (선택적)
+        console.log("verifierValueLimitWhitelist:");
+        for (uint i = 0; i < verifierValueLimitWhitelist.length; i++) {
+            console.log("account:", verifierValueLimitWhitelist[i]);
+        }
     }
 
     /**
@@ -210,8 +223,17 @@ contract BridgeScript is Script {
         // Bridge 역할 부여
         baseBridge.grantRoleBatch(bridgeRoles, bridgeRoleMembers);
 
-        // CrossMintableERC20V2Code 배포 및 연결
-        CrossMintableERC20V2Code erc20 = new CrossMintableERC20V2Code(owner, address(baseBridge));
+        // CrossMintableERC20V2Code 배포 및 연결 (토큰과 팩토리 모두 프록시로 배포되며,
+        // 팩토리가 initialize 내부에서 토큰 beacon을 직접 만들어 소유하므로 별도의 beacon 배포 단계는 없다)
+        CrossMintableERC20V2 erc20TokenImplementation = new CrossMintableERC20V2();
+        CrossMintableERC20V2Code erc20Implementation = new CrossMintableERC20V2Code();
+        ERC1967Proxy erc20Proxy = new ERC1967Proxy(
+            address(erc20Implementation),
+            abi.encodeCall(
+                CrossMintableERC20V2Code.initialize, (owner, address(baseBridge), address(erc20TokenImplementation))
+            )
+        );
+        CrossMintableERC20V2Code erc20 = CrossMintableERC20V2Code(address(erc20Proxy));
         baseBridge.setCrossMintableERC20Code(erc20);
 
         // BridgeVerifier 배포 및 연결
@@ -228,6 +250,13 @@ contract BridgeScript is Script {
             timeWindow
         );
         verifier.grantRoleBatch(verifierRoles, verifierRoleMembers);
+
+        // 초기 value-limit whitelist 등록 (선택적: 설정 배열이 비면 미호출).
+        // 호출자(브로드캐스트 sender)가 verifier 의 ADMIN_ROLE 을 보유해야 하며,
+        // 조회는 페이지네이션 getter(getValueLimitWhitelist(uint,uint))를 사용한다.
+        if (verifierValueLimitWhitelist.length > 0) {
+            verifier.addValueLimitWhitelistBatch(verifierValueLimitWhitelist);
+        }
 
         baseBridge.setBridgeVerifier(verifier);
 
@@ -349,13 +378,21 @@ contract BridgeScript is Script {
  * VERIFIER_GAS_PRICES=20000000000,5000000000
  *
  * # --------------------------------------------------
+ * # Value-limit whitelist 초기 등록 (선택적)
+ * # --------------------------------------------------
+ *
+ * # 초기 whitelist 등록 대상 주소 목록 (쉼표로 구분). 비워두면 등록을 건너뛴다.
+ * # 등록 후 조회는 verifier.getValueLimitWhitelist(offset, limit) 페이지네이션 getter 사용을 권장.
+ * VERIFIER_VALUE_LIMIT_WHITELIST=0x...,0x...
+ *
+ * # --------------------------------------------------
  * # 배포 명령어 예시
  * # --------------------------------------------------
  *
  * # BaseBridge 전체 설정 (프록시 + Verifier + ERC20Code)
  * # forge script script/Bridge.s.sol:BridgeScript \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "setupBaseBridge()" \
  * #   --broadcast
  *

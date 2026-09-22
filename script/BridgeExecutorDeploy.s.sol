@@ -233,20 +233,20 @@ contract BridgeExecutorDeploy is Script {
  * # 1. BridgeExecutor 배포:
  * # forge script script/BridgeExecutorDeploy.s.sol:BridgeExecutorDeploy \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --broadcast
  *
  * # 2. Bridge에 Executor 연결 (ADMIN_ROLE 필요):
  * # forge script script/BridgeExecutorDeploy.s.sol:BridgeExecutorDeploy \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "setBridgeExecutor(address)" $EXECUTOR_ADDRESS \
  * #   --broadcast
  *
  * # 3. 화이트리스트 타겟 추가:
  * # forge script script/BridgeExecutorDeploy.s.sol:BridgeExecutorDeploy \
  * #   --rpc-url $RPC_URL \
- * #   --private-key $PRIVATE_KEY \
+ * #   --account $DEPLOYER_ACCOUNT \
  * #   --sig "addWhitelistTarget(address,address)" $EXECUTOR $TARGET \
  * #   --broadcast
  *

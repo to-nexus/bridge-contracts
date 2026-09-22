@@ -65,11 +65,11 @@ contract BridgeBotTest is Test {
             address(mockBridge), // bridge address
             address(priceFeed),
             200000, // finalizeBridgeGas
+            1, // defaultTokenPrice
+            0, // defaultExFeeRate
+            0, // minimumTokenValue
             0, // verificationAmountThreshold
-            0, // defaultTokenPrice
             0, // periodTotalValueThreshold
-            0, // tokenScoreThreshold
-            0, // tokenCurrentVolumeThreshold
             2 hours // timeWindow
         );
 

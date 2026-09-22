@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import {BaseBridge} from "../src/BaseBridge.sol";
 import {BridgeVerifier, IBridgeVerifier} from "../src/BridgeVerifier.sol";
 import {IPriceFeed} from "../src/PriceFeed.sol";
+import {Const} from "../src/lib/Const.sol";
 import {ICrossMintableERC20Code} from "../src/token/ICrossMintableERC20Code.sol";
 import {BridgeTest} from "./Bridge.t.sol";
 import {TestToken} from "./token/TestToken.sol";
@@ -403,5 +405,212 @@ contract BridgeSetTest is BridgeTest {
         vm.selectFork(crossForkID);
         vm.prank(CrossOWNER);
         bridgeCross.setVerificationDelay(newDelay);
+    }
+
+    // ============ BridgeVerifier input validation ============
+
+    uint private constant _MAX_TIME_WINDOW = 7 days;
+
+    /**
+     * @notice T5: Each setter rejects an out-of-range value.
+     */
+    function test_bridgeVerifier_setters_reject_out_of_range() public {
+        vm.selectFork(crossForkID);
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
+
+        vm.startPrank(CrossOWNER);
+
+        vm.expectRevert(abi.encodeWithSelector(BridgeVerifier.BridgeVerifierCanNotZeroValue.selector, "defaultTokenPrice"));
+        bridgeVerifierCross.setDefaultTokenPrice(0);
+
+        vm.expectRevert(BridgeVerifier.BridgeVerifierInvalidExFeeRate.selector);
+        bridgeVerifierCross.setExFeeRate(IERC20(address(weth)), 10001);
+
+        vm.expectRevert(BridgeVerifier.BridgeVerifierInvalidExFeeRate.selector);
+        bridgeVerifierCross.setDefaultExFeeRate(10001);
+
+        vm.expectRevert(BridgeVerifier.BridgeVerifierInvalidTimeWindow.selector);
+        bridgeVerifierCross.setTimeWindow(8 days);
+
+        // 1800 is both not a multiple of PERIOD_INTERVAL and below it - either bound alone
+        // would already reject it.
+        vm.expectRevert(BridgeVerifier.BridgeVerifierInvalidTimeWindow.selector);
+        bridgeVerifierCross.setTimeWindow(1800);
+
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice T5b: The constructor applies the same validation as the setters. This is
+     * the path that actually matters for a redeploy, since `BridgeVerifier` is not a
+     * proxy (see AC-2).
+     */
+    function test_bridgeVerifier_constructor_rejects_out_of_range() public {
+        vm.selectFork(crossForkID);
+
+        vm.expectRevert(abi.encodeWithSelector(BridgeVerifier.BridgeVerifierCanNotZeroValue.selector, "defaultTokenPrice"));
+        new BridgeVerifier(
+            CrossOWNER,
+            address(bridgeCross),
+            address(priceFeedCross),
+            200000,
+            0, // defaultTokenPrice
+            10,
+            10_000,
+            0,
+            0,
+            2 hours
+        );
+
+        vm.expectRevert(BridgeVerifier.BridgeVerifierInvalidExFeeRate.selector);
+        new BridgeVerifier(
+            CrossOWNER,
+            address(bridgeCross),
+            address(priceFeedCross),
+            200000,
+            10000,
+            10001, // defaultExFeeRate > DENOMINATOR
+            10_000,
+            0,
+            0,
+            2 hours
+        );
+
+        vm.expectRevert(BridgeVerifier.BridgeVerifierInvalidTimeWindow.selector);
+        new BridgeVerifier(
+            CrossOWNER,
+            address(bridgeCross),
+            address(priceFeedCross),
+            200000,
+            10000,
+            10,
+            10_000,
+            0,
+            0,
+            8 days // out of range timeWindow
+        );
+
+        vm.expectRevert(BridgeVerifier.BridgeVerifierInvalidTimeWindow.selector);
+        new BridgeVerifier(
+            CrossOWNER,
+            address(bridgeCross),
+            address(priceFeedCross),
+            200000,
+            10000,
+            10,
+            10_000,
+            0,
+            0,
+            1800 // out of range timeWindow
+        );
+    }
+
+    /**
+     * @notice T6: Boundary/sentinel values are accepted by the setters -
+     * `type(uint).max` (fee-exemption sentinel) for `setExFeeRate`, and the current
+     * on-chain `timeWindow` value for `setTimeWindow`.
+     */
+    function test_bridgeVerifier_setters_accept_boundary_values() public {
+        vm.selectFork(crossForkID);
+        BridgeVerifier bridgeVerifierCross = BridgeVerifier(address(bridgeCross.bridgeVerifier()));
+
+        vm.startPrank(CrossOWNER);
+        bridgeVerifierCross.setExFeeRate(IERC20(address(weth)), type(uint).max);
+        bridgeVerifierCross.setTimeWindow(21600); // current on-chain value
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice T6b: The constructor's boundary values all succeed: `timeWindow == 0`
+     * (monitoring disabled), `timeWindow == PERIOD_INTERVAL` (lower bound),
+     * `timeWindow == MAX_TIME_WINDOW` (upper bound), and `defaultExFeeRate ==
+     * DENOMINATOR` (100%).
+     */
+    function test_bridgeVerifier_constructor_accepts_boundary_values() public {
+        vm.selectFork(crossForkID);
+
+        new BridgeVerifier(
+            CrossOWNER, address(bridgeCross), address(priceFeedCross), 200000, 10000, 10, 10_000, 0, 0, 0
+        );
+        new BridgeVerifier(
+            CrossOWNER,
+            address(bridgeCross),
+            address(priceFeedCross),
+            200000,
+            10000,
+            10,
+            10_000,
+            0,
+            0,
+            Const.PERIOD_INTERVAL
+        );
+        new BridgeVerifier(
+            CrossOWNER,
+            address(bridgeCross),
+            address(priceFeedCross),
+            200000,
+            10000,
+            10,
+            10_000,
+            0,
+            0,
+            _MAX_TIME_WINDOW
+        );
+        new BridgeVerifier(
+            CrossOWNER,
+            address(bridgeCross),
+            address(priceFeedCross),
+            200000,
+            10000,
+            10000, // defaultExFeeRate == DENOMINATOR
+            10_000,
+            0,
+            0,
+            2 hours
+        );
+    }
+
+    // ============ Default maxExtraDataLength ============
+
+    /**
+     * @notice T16: A freshly-initialized bridge's `maxExtraDataLength()` is the finite
+     * default (1024), not unlimited - and a bridge call with extraData one byte over
+     * that reverts at the initiate step.
+     */
+    function test_maxExtraDataLength_defaultsToFiniteValue_onFreshInit() public {
+        vm.selectFork(bscForkID);
+        assertEq(bridgeBSC.maxExtraDataLength(), 1024, "fresh init must default to the finite cap, not unlimited");
+
+        vm.prank(OWNER);
+        cross.transfer(USER, 1000 ether);
+        vm.prank(USER);
+        cross.approve(address(bridgeBSC), 1000 ether);
+
+        bytes memory tooLong = new bytes(1025);
+        vm.prank(USER);
+        vm.expectRevert(BaseBridge.BaseBridgeExtraDataTooLong.selector);
+        bridgeBSC.bridgeToken(CROSS_CHAIN_ID, IERC20(address(cross)), USER, 1000 ether, 0, 0, tooLong);
+    }
+
+    /**
+     * @notice T17: An already-initialized proxy's `maxExtraDataLength` is unaffected by
+     * the new default - `__BridgeRegistry_init` only ever runs once, at initialization,
+     * so it cannot silently reset a value an operator has since changed (e.g. to `0`,
+     * simulating a real proxy that predates this change and still allows unlimited
+     * extraData).
+     */
+    function test_maxExtraDataLength_existingInitializedProxy_unaffectedByNewDefault() public {
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        bridgeBSC.setMaxExtraDataLength(0);
+        assertEq(bridgeBSC.maxExtraDataLength(), 0);
+
+        // Re-running initialize is impossible (OZ Initializable guards against it) -
+        // proving the stored value can only change via the explicit setter, never via a
+        // silent re-application of __BridgeRegistry_init's default.
+        vm.expectRevert();
+        bridgeBSC.initialize(OWNER, REWARD, threshold);
+
+        assertEq(bridgeBSC.maxExtraDataLength(), 0, "an already-initialized proxy's value must not be reset");
     }
 }

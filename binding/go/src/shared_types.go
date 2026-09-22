@@ -20,13 +20,6 @@ type IBridgeRegistryTokenPair struct {
 }
 
 
-type IBridgeRegistryPendingData struct {
-	Args            IBridgeRegistryFinalizeArguments
-	Status          uint8
-	DelayExpiration *big.Int
-}
-
-
 type IBridgeRegistryFinalizeArguments struct {
 	FromChainID *big.Int
 	Index       *big.Int
@@ -57,6 +50,13 @@ type IBaseBridgeBridgeTokenArguments struct {
 	NetworkFee *big.Int
 	ExFee      *big.Int
 	ExtraData  []byte
+}
+
+
+type IBridgeRegistryPendingData struct {
+	Args            IBridgeRegistryFinalizeArguments
+	Status          uint8
+	DelayExpiration *big.Int
 }
 
 
