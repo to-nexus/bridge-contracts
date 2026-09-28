@@ -53,6 +53,7 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     event TimeWindowSet(uint timeWindow);
     event PeriodTotalValueThresholdSet(uint periodTotalValueThreshold);
     event MinimumTokenValueSet(uint minimumTokenValue);
+    event MinimumTokenValueOfSet(address indexed token, uint minimumTokenValue);
     event ValueLimitWhitelistAdded(address indexed account);
     event ValueLimitWhitelistRemoved(address indexed account);
     event ValueLimitWhitelistBypassed(IERC20 indexed token, address indexed to, uint value);
@@ -114,6 +115,14 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     /// @notice Finalize transfers to a whitelisted recipient bypass both thresholds and are
     /// @notice never recorded in the period accumulator (`_tokenCurrentVolume` / `_tokenMovementHistory`).
     EnumerableSet.AddressSet private _valueLimitWhitelist;
+
+    /// @dev Token-specific minimum transfer value in dollars. `0` means "not set" and
+    /// falls back to the global `_minimumTokenValue`; there is no exemption sentinel, so
+    /// an effectively-unbounded token is expressed by setting this to `1`.
+    /// @notice Declared last on purpose: appending keeps every existing storage slot
+    /// (0-15) where it was, so the redeploy-migration tooling that reads those slots by
+    /// number (`script/verifier-settings-diff.sh`) stays valid.
+    mapping(IERC20 => uint) private _minimumTokenValueOf;
 
     /**
      * @notice Initializes the BridgeVerifier contract
@@ -443,11 +452,17 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
         if (!exist) tokenPrice = _defaultTokenPrice;
 
         uint tokenDecimals = 10 ** CalcAmountLib.decimals(address(token));
+
+        // A token-specific minimum overrides the global one. `0` is the unset marker, so a
+        // token that has never been configured keeps following `_minimumTokenValue`.
+        uint minimumTokenValue = _minimumTokenValueOf[token];
+        if (minimumTokenValue == 0) minimumTokenValue = _minimumTokenValue;
+
         // Calculate how many tokens are required to meet the minimum dollar value
         // If token price is 0, set a default minimum value to prevent division by zero
         if (tokenPrice == 0) minimumValue = tokenDecimals; // Default to 1 token with decimals if price is unknown
 
-        else minimumValue = _minimumTokenValue * tokenDecimals / tokenPrice;
+        else minimumValue = minimumTokenValue * tokenDecimals / tokenPrice;
 
         // Get exchange fee rate
         exFeeRate = _exFeeRate[token];
@@ -465,6 +480,19 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
      */
     function getMinimumTokenValue() external view returns (uint) {
         return _minimumTokenValue;
+    }
+
+    /**
+     * @notice Returns the token-specific minimum transfer value in USD
+     * @dev `0` means no override is set for this token, in which case `getTokenConfig`
+     * uses the global `getMinimumTokenValue()`. This getter deliberately reports the raw
+     * stored value rather than the resolved one, so an operator can tell "unset" apart
+     * from "set to the same value as the global".
+     * @param token Token to query
+     * @return Token-specific minimum value in USD, or `0` if unset
+     */
+    function getMinimumTokenValueOf(IERC20 token) external view returns (uint) {
+        return _minimumTokenValueOf[token];
     }
 
     /**
@@ -656,6 +684,52 @@ contract BridgeVerifier is AccessControl, IBridgeVerifier {
     function setMinimumTokenValue(uint minimumTokenValue) external onlyRole(Const.EDITOR_ROLE) {
         _minimumTokenValue = minimumTokenValue;
         emit MinimumTokenValueSet(minimumTokenValue);
+    }
+
+    /**
+     * @notice Sets a token-specific minimum transfer value in USD
+     * @dev Mirrors the per-token override that `setExFeeRate` provides for fee rates, but
+     * without an exemption sentinel: `0` is the unset marker and nothing else, so the only
+     * way to read this value is "override, or fall back to the global". A token that
+     * should be effectively unbounded is set to `1` (one unit of `dollarDecimals`) rather
+     * than to a magic constant.
+     * @dev This is a separate function from `setMinimumTokenValue` rather than an
+     * overload, so an operator typing a signature by hand cannot reach for the per-token
+     * setter and silently move the minimum for every token instead.
+     * @param token Token to configure
+     * @param minimumTokenValue Minimum value in USD, or `0` to clear the override
+     */
+    function setMinimumTokenValueOf(IERC20 token, uint minimumTokenValue) public onlyRole(Const.EDITOR_ROLE) {
+        require(address(token) != address(0), BridgeVerifierCanNotZeroValue("token"));
+        _minimumTokenValueOf[token] = minimumTokenValue;
+        emit MinimumTokenValueOfSet(address(token), minimumTokenValue);
+    }
+
+    /**
+     * @notice Sets token-specific minimum transfer values for multiple tokens
+     * @dev Validates input array lengths match, then reuses `setMinimumTokenValueOf` for
+     * each entry, which carries the `EDITOR_ROLE` check and the zero-address guard.
+     * @dev `onlyRole` is added here directly even though every non-empty call is already
+     * gated by the per-item check inside `setMinimumTokenValueOf`; this deliberately
+     * diverges from `setExFeeRateBatch`, which has no such direct check and lets an
+     * unauthorized empty-array call succeed as a no-op. That gap is left alone here on
+     * purpose (see below); adding it back to this batch closes it, which is a stricter,
+     * safe-direction difference rather than a bug.
+     * @dev The per-item role re-check inside `setMinimumTokenValueOf` is left as is rather
+     * than split into a role-less internal setter: this is an admin function called rarely,
+     * gas here is not the bottleneck, and splitting entrypoints is out of scope for this
+     * change.
+     * @param tokenList Array of token addresses
+     * @param minimumTokenValueList Array of minimum values in USD
+     */
+    function setMinimumTokenValueOfBatch(IERC20[] memory tokenList, uint[] memory minimumTokenValueList)
+        external
+        onlyRole(Const.EDITOR_ROLE)
+    {
+        require(tokenList.length == minimumTokenValueList.length, BridgeVerifierInvalidLength());
+        for (uint i = 0; i < tokenList.length; ++i) {
+            setMinimumTokenValueOf(tokenList[i], minimumTokenValueList[i]);
+        }
     }
 
     /**

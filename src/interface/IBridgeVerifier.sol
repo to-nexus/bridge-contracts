@@ -38,6 +38,7 @@ interface IBridgeVerifier {
         view
         returns (uint minimumValue, uint networkFee, uint exFeeRate);
     function getMinimumTokenValue() external view returns (uint);
+    function getMinimumTokenValueOf(IERC20 token) external view returns (uint);
     function getVerificationAmountThreshold() external view returns (uint);
     function getTimeWindow() external view returns (uint);
     function getPeriodTotalValueThreshold() external view returns (uint);

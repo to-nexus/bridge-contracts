@@ -9,6 +9,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+type IBridgeRegistryFinalizeArguments struct {
+	FromChainID *big.Int
+	Index       *big.Int
+	ToToken     common.Address
+	To          common.Address
+	Value       *big.Int
+	ExtraData   []byte
+}
+
+
 type IBaseBridgeBridgeTokenArguments struct {
 	ToChainID  *big.Int
 	FromToken  common.Address
@@ -21,23 +31,6 @@ type IBaseBridgeBridgeTokenArguments struct {
 }
 
 
-type IBridgeRegistryPendingData struct {
-	Args            IBridgeRegistryFinalizeArguments
-	Status          uint8
-	DelayExpiration *big.Int
-}
-
-
-type IBridgeRegistryFinalizeArguments struct {
-	FromChainID *big.Int
-	Index       *big.Int
-	ToToken     common.Address
-	To          common.Address
-	Value       *big.Int
-	ExtraData   []byte
-}
-
-
 type IBridgeRegistryTokenPair struct {
 	LocalToken    common.Address
 	RemoteToken   common.Address
@@ -46,6 +39,13 @@ type IBridgeRegistryTokenPair struct {
 	PendingAmount *big.Int
 	Deposited     *big.Int
 	Minted        *big.Int
+}
+
+
+type IBridgeRegistryPendingData struct {
+	Args            IBridgeRegistryFinalizeArguments
+	Status          uint8
+	DelayExpiration *big.Int
 }
 
 
