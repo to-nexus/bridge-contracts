@@ -255,6 +255,13 @@ contract BaseBridge is
 
     /**
      * @notice Bridges a token to a remote chain
+     * @dev For native tokens, `msg.value` only needs to cover `value + networkFee + exFee`;
+     * any surplus (e.g. from fee movement between quote and execution) is sent back to
+     * `_msgSender()` once the bridge itself has gone through, using the same fee values
+     * `_checkInitiateAmount` just validated. The two other payable entrypoints
+     * (`permitBridgeTokenBatch`, `bridgeTokenForwarded`) do not get this treatment -- a
+     * batch or an executor-driven call has no single caller to send a refund to, so both
+     * keep requiring exact native value instead.
      * @param toChainID Target chain ID
      * @param fromToken Token to bridge
      * @param to Recipient address
@@ -289,6 +296,15 @@ contract BaseBridge is
                 extraData: extraData
             })
         );
+
+        if (address(fromToken) == Const.NATIVE_TOKEN) {
+            uint surplus = msg.value - (value + networkFee + exFee);
+            if (surplus != 0) {
+                bool refunded = _safeCall(payable(_msgSender()), surplus, "");
+                require(refunded, BaseBridgeFailedCall());
+            }
+        }
+
         return true;
     }
 
@@ -351,6 +367,10 @@ contract BaseBridge is
 
     /**
      * @notice Processes multiple permit-based bridge operations
+     * @dev `msg.value` must be zero: every item here is permit-funded (ERC20), and a
+     * single `msg.value` checked per-item against `_initiateBridge`'s `>=` floor would
+     * otherwise let each native item in the batch re-use the same balance -- the batch has
+     * no per-item native funding and no refund target, so native is simply not accepted.
      * @param args Array of bridge operation details
      * @param permitArgs Array of permit parameters
      */
@@ -361,6 +381,7 @@ contract BaseBridge is
         nonReentrant
         onlyRole(Const.INITIATOR_ROLE)
     {
+        require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
         require(args.length == permitArgs.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < args.length; ++i) {
             _permitBridgeToken(
@@ -713,8 +734,13 @@ contract BaseBridge is
         _depositToken(remoteChainID, address(token), value);
 
         if (address(token) == Const.NATIVE_TOKEN) {
-            // Handling native token transfers (e.g., CROSS, ETH, BNB)
-            require(msg.value == value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
+            // Handling native token transfers (e.g., CROSS, ETH, BNB). `msg.value` only
+            // needs to cover `value + fee`, not match it exactly: a caller that quoted
+            // slightly ahead of fee movement should not have the whole transaction revert
+            // over it. Any surplus is this function's caller's problem to return -- it is
+            // not refunded here, since this helper also backs the batch and
+            // executor-forwarded entrypoints, where there is no single caller to refund.
+            require(msg.value >= value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
             if (fee != 0) {
                 bool success = _safeCall(_dev, fee, "");
                 require(success, BaseBridgeFailedCall());

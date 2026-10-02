@@ -254,6 +254,18 @@ contract CrossBridge is BaseBridge, ICrossBridge {
         (uint value_, uint exFee_) =
             _resolveForwardAmounts(ctxValue, value, currentNetworkFee, exFeeRate, bridgeVerifier.denominator());
 
+        // `_initiateBridge` only floors `msg.value` at `value_ + currentNetworkFee +
+        // exFee_` -- fine for a single user-funded call, but this call is funded by
+        // whatever `bridgeExecutor` forwards, and that forwarding is not itself trusted to
+        // be exact. Re-impose the strict equality here so a surplus can't ride along into
+        // the bridge's balance unaccounted for.
+        if (ctxToken == Const.NATIVE_TOKEN) {
+            require(
+                msg.value == value_ + currentNetworkFee + exFee_,
+                BaseBridgeInvalidValue(value_ + currentNetworkFee + exFee_, msg.value)
+            );
+        }
+
         // Re-derives the same fee configuration internally; the verifier remains the
         // final authority on whether `value_`/`currentNetworkFee`/`exFee_` are
         // acceptable (minimum value, minted ceiling, and the fee formula itself), so a
