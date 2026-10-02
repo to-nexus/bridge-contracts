@@ -153,7 +153,9 @@ interface IHyperMintableERC20 is ICrossMintableERC20 {
 
     /**
      * @notice Returns the HyperCore spot token index recorded via `setCoreTokenIndex`
-     * @return Recorded Core token index (meaningless if `isCoreTokenIndexSet()` is false)
+     * @dev Reverts with `HyperMintableERC20CoreTokenIndexNotSet` while no index is recorded
+     *      (index `0` is itself a valid linked value, so there is no sentinel to return instead)
+     * @return Recorded Core token index
      */
     function coreTokenIndex() external view returns (uint64);
 
