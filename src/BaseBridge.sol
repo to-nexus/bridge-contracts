@@ -408,7 +408,15 @@ contract BaseBridge is
         bool delay;
         uint remaining;
         {
-            (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, args.to, false);
+            // The value-limit whitelist exempts a signed recipient on the strength of that
+            // recipient actually receiving the value. With non-empty extraData, `to` is not
+            // that party once extraData resolves to a whitelisted executor target -- the
+            // tokens land wherever the target contract's own logic sends them, independent
+            // of `to`. Passing `address(0)` here (never whitelisted -- see
+            // `BridgeVerifier.validateBridgeTokenValue`'s NatSpec) keeps the exemption tied
+            // to the case it actually describes, without touching the verifier itself.
+            address exemptionRecipient = args.extraData.length == 0 ? args.to : address(0);
+            (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, exemptionRecipient, false);
             if (status == Const.FinalizeStatus.Success) {
                 (status, remaining) =
                     _finalizeBridge(args.fromChainID, args.index, args.toToken, args.to, args.value, args.extraData);
