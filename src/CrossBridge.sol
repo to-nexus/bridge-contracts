@@ -217,6 +217,7 @@ contract CrossBridge is BaseBridge, ICrossBridge {
         _validateToken(toChainID, ctxToken);
 
         require(to != address(0), BaseBridgeCanNotZeroAddress());
+        require(to != address(this), BaseBridgeInvalidRecipient());
         require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
 
         // Native-pass-through invariant: native tokens never mint/burn on any leg, so

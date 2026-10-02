@@ -58,6 +58,7 @@ contract BaseBridge is
     error BaseBridgeFailedRelease(Const.FinalizeStatus status);
     error BaseBridgeExtraDataTooLong();
     error BaseBridgeInvalidGasReserve();
+    error BaseBridgeInvalidRecipient();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -273,6 +274,7 @@ contract BaseBridge is
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
         require(to != address(0), BaseBridgeCanNotZeroAddress());
+        require(to != address(this), BaseBridgeInvalidRecipient());
         require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         _executeBridge(
@@ -313,6 +315,7 @@ contract BaseBridge is
         // preventing third parties from injecting unauthorized bridge parameters
         // (toChainID, value, extraData) using a stolen or front-run permit.
         require(to == permitArgs.account, BaseBridgeMismatchPermitAccount());
+        require(to != address(this), BaseBridgeInvalidRecipient());
         require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
 
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
@@ -784,6 +787,13 @@ contract BaseBridge is
      * @dev Handles different token types (native, mintable, regular)
      * - If extraData is provided and bridgeExecutor is set, delegates to BridgeExecutor
      * - On executor revert, entire transaction rolls back (tokens remain safe in bridge)
+     * - Rejects `to == address(this)` up front, parking `InvalidRecipient` rather than
+     *   settling: this is the one chokepoint every settlement path funnels through
+     *   (ordinary finalize, `releasePending`, and `manualReleasePendingWithRecipient`'s
+     *   replacement recipient), so checking it here covers all three at once. The
+     *   executor's own `mint(address(this), value)` staging step below is unaffected --
+     *   that mints to the bridge only to immediately approve and hand off to the
+     *   executor, it never settles to the bridge as a destination.
      * @param fromChainID Source chain ID
      * @param index Finalize operation index
      * @param toToken Destination token
@@ -801,6 +811,32 @@ contract BaseBridge is
         uint value,
         bytes memory extraData
     ) internal returns (Const.FinalizeStatus status, uint remaining) {
+        // The source side already locked or burned the matching value; settling it to the
+        // bridge itself would leave that credit stuck here with no withdrawal path. Parked
+        // instead of reverted, so the finalize index still advances for later items in the
+        // batch -- see `_setPendingArguments` / `releasePending` for how a parked record is
+        // recovered. Split into its own check ahead of `_finalizeBridgeSettle` (rather than
+        // as a leading statement in that function) because that function is already at the
+        // EVM stack budget's edge -- see the `ForwardOutcome` grouping inside it.
+        if (to == address(this)) return (Const.FinalizeStatus.InvalidRecipient, value);
+        return _finalizeBridgeSettle(fromChainID, index, toToken, to, value, extraData);
+    }
+
+    /**
+     * @notice Settlement body of `_finalizeBridge`, split out purely to keep that
+     * function's already-deep local stack within the EVM's 16-slot limit for this call
+     * frame once the `to == address(this)` guard was added ahead of it.
+     * @dev See `_finalizeBridge` for the full behavior; this covers everything after the
+     * guard.
+     */
+    function _finalizeBridgeSettle(
+        uint fromChainID,
+        uint index,
+        IERC20 toToken,
+        address to,
+        uint value,
+        bytes memory extraData
+    ) private returns (Const.FinalizeStatus status, uint remaining) {
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
         bool handledByExecutor;
 
