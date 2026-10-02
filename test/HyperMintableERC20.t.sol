@@ -358,8 +358,18 @@ contract HyperMintableERC20Test is Test {
         assertEq(token.coreSystemAddress(), address(uint160(0x20) << 152));
     }
 
-    /// Unset index makes both `coreSystemAddress` and `transferToCore` revert.
+    /// Unset index makes `coreSystemAddress`, `transferToCore`, and the raw
+    /// `coreTokenIndex()` getter itself all revert - there is no sentinel value
+    /// `coreTokenIndex()` could return instead, since index 0 is itself a valid linked
+    /// value (see `test_setCoreTokenIndex_zeroIsValidNotUnsetSentinel` above).
+    /// `isCoreTokenIndexSet()` is the one getter that never reverts across this
+    /// transition - it is the intended non-reverting probe for "is this linked at all".
     function test_coreSystemAddressAndTransferToCore_revertWhenIndexUnset() public {
+        assertFalse(token.isCoreTokenIndexSet());
+
+        vm.expectRevert(HyperMintableERC20.HyperMintableERC20CoreTokenIndexNotSet.selector);
+        token.coreTokenIndex();
+
         vm.expectRevert(HyperMintableERC20.HyperMintableERC20CoreTokenIndexNotSet.selector);
         token.coreSystemAddress();
 
