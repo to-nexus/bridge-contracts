@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 import {SwapBridgeRouter} from "../src/SwapBridgeRouter.sol";
 
@@ -44,8 +45,43 @@ contract MockUniswapV3Router is ISwapRouter {
     uint public swapRate = 1e18; // 1:1 default rate
     uint public partialConsumeRate = 1e18; // 100% consume by default (1e18 = 100%)
 
+    /// @dev exactInput sends the input to the first pool (as Uniswap does) rather than parking it on the router,
+    /// so a path revisiting its input token is not mistaken for intermediate residue
+    address public constant POOL = address(uint160(uint(keccak256("MockUniswapV3Router.POOL"))));
+
+    /// @notice When set, exact-output swaps with tokenIn WETH9 pay from the mock's own ETH instead of pulling WETH
+    bool public payWithOwnETH;
+
+    /// @notice Per-token amount a multi-hop exactInput leaves on the mock (a partial fill)
+    mapping(address => uint) public intermediateLeftover;
+
+    /// @notice Per-token amount of the mock's own balance a multi-hop exactInput moves out to the pools
+    mapping(address => uint) public intermediateDrain;
+
     constructor(address _weth9) {
         WETH9 = _weth9;
+    }
+
+    receive() external payable {}
+
+    function setPayWithOwnETH(bool _payWithOwnETH) external {
+        payWithOwnETH = _payWithOwnETH;
+    }
+
+    function setIntermediateLeftover(address token, uint amount) external {
+        intermediateLeftover[token] = amount;
+    }
+
+    function setIntermediateDrain(address token, uint amount) external {
+        intermediateDrain[token] = amount;
+    }
+
+    function _payIn(address tokenIn, uint amountIn) internal {
+        if (payWithOwnETH && tokenIn == WETH9 && address(this).balance >= amountIn) {
+            MockWETH9(payable(WETH9)).deposit{value: amountIn}();
+        } else {
+            IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        }
     }
 
     function setSwapRate(uint _rate) external {
@@ -88,8 +124,17 @@ contract MockUniswapV3Router is ISwapRouter {
         address tokenIn = address(bytes20(params.path[0:20]));
         address tokenOut = address(bytes20(params.path[params.path.length - 20:]));
 
-        // Transfer tokenIn from sender
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
+        // Transfer tokenIn from sender to the first pool
+        IERC20(tokenIn).transferFrom(msg.sender, POOL, params.amountIn);
+
+        uint hops = (params.path.length - 20) / 23;
+        for (uint i = 1; i < hops; ++i) {
+            address intermediate = address(bytes20(params.path[i * 23:i * 23 + 20]));
+            uint drain = intermediateDrain[intermediate];
+            if (drain > 0) IERC20(intermediate).transfer(POOL, drain);
+            uint leftover = intermediateLeftover[intermediate];
+            if (leftover > 0) TestToken(intermediate).mint(address(this), leftover);
+        }
 
         // Calculate output amount
         amountOut = params.amountIn * swapRate / 1e18;
@@ -110,7 +155,7 @@ contract MockUniswapV3Router is ISwapRouter {
         require(amountIn <= params.amountInMaximum, "Too much requested");
 
         // Transfer tokenIn from sender
-        IERC20(params.tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        _payIn(params.tokenIn, amountIn);
 
         // Transfer tokenOut to recipient
         IERC20(params.tokenOut).transfer(params.recipient, params.amountOut);
@@ -126,7 +171,7 @@ contract MockUniswapV3Router is ISwapRouter {
         require(amountIn <= params.amountInMaximum, "Too much requested");
 
         // Transfer tokenIn from sender
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        _payIn(tokenIn, amountIn);
 
         // Transfer tokenOut to recipient
         IERC20(tokenOut).transfer(params.recipient, params.amountOut);
@@ -2269,5 +2314,543 @@ contract SwapBridgeRouterTest is BridgeTest {
 
         vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRCircularPath.selector, address(cross)));
         swapBridgeRouterBSC.getAmountSwapBridgeInMultihop(CROSS_CHAIN_ID, circularIn, 500 * 1e18);
+    }
+
+    // ============ Exact-output refunds ============
+
+    enum PayMode {
+        Normal, // Uniswap pulls the input from the caller
+        OwnETH, // Uniswap pays the pool from its own ETH
+        Stranger // someone pre-funded the router with WETH, Uniswap pulls normally
+    }
+
+    struct Snap {
+        uint userWETH;
+        uint userETH;
+        uint routerWETH;
+        uint routerETH;
+    }
+
+    function _snap() internal view returns (Snap memory snap) {
+        snap.userWETH = mockWETHBSC.balanceOf(USER);
+        snap.userETH = USER.balance;
+        snap.routerWETH = mockWETHBSC.balanceOf(address(swapBridgeRouterBSC));
+        snap.routerETH = address(swapBridgeRouterBSC).balance;
+    }
+
+    function _prepPayMode(PayMode mode) internal {
+        if (mode == PayMode.OwnETH) {
+            mockSwapRouterBSC.setPayWithOwnETH(true);
+            vm.deal(address(mockSwapRouterBSC), 10_000 ether);
+        } else if (mode == PayMode.Stranger) {
+            TestToken(address(mockWETHBSC)).mint(address(swapBridgeRouterBSC), 250 ether);
+        }
+    }
+
+    function _swapBridgeEventAmountIn(Vm.Log[] memory logs) internal view returns (uint amountIn) {
+        for (uint i = 0; i < logs.length; i++) {
+            if (
+                logs[i].emitter == address(swapBridgeRouterBSC)
+                    && logs[i].topics[0] == ISwapBridgeRouter.SwapBridge.selector
+            ) {
+                (amountIn,,,,,,) = abi.decode(logs[i].data, (uint, uint, uint, uint, uint, uint, uint));
+                return amountIn;
+            }
+        }
+        revert("SwapBridge event not found");
+    }
+
+    function _assertExactOutputAccounting(
+        PayMode mode,
+        uint amountIn,
+        Snap memory before,
+        bool eth,
+        uint amountOut,
+        uint amountInMaximum
+    ) internal {
+        Snap memory afterSnap = _snap();
+
+        assertEq(afterSnap.routerWETH, before.routerWETH, "router tokenIn/WETH balance must be unchanged");
+        assertEq(afterSnap.routerETH, before.routerETH, "router ETH balance must be unchanged");
+
+        uint spent = eth ? before.userETH - afterSnap.userETH : before.userWETH - afterSnap.userWETH;
+        assertEq(spent, amountIn, "caller net spend must equal the returned amountIn");
+        assertEq(_swapBridgeEventAmountIn(vm.getRecordedLogs()), amountIn, "event amountIn must equal returned");
+        assertLe(amountIn, amountInMaximum, "amountIn never exceeds the maximum");
+
+        if (mode == PayMode.OwnETH) {
+            assertEq(amountIn, 0, "Uniswap pulled nothing from the caller, so nothing was taken");
+        } else {
+            (, uint networkFee, uint exFee) =
+                swapBridgeRouterBSC.calculateBridgeFees(CROSS_CHAIN_ID, IERC20(address(swapOutputTokenBSC)), amountOut);
+            assertEq(amountIn, amountOut + networkFee + exFee, "normal pull: amountIn equals Uniswap's amountIn");
+        }
+    }
+
+    function _runExactOutputSingle(PayMode mode) internal {
+        vm.selectFork(bscForkID);
+        uint amountOut = 100 * 1e18;
+        uint amountInMaximum = 1000 * 1e18;
+        _prepPayMode(mode);
+
+        vm.prank(USER);
+        mockWETHBSC.approve(address(swapBridgeRouterBSC), amountInMaximum);
+        Snap memory before = _snap();
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params =
+            ISwapBridgeRouter.SwapBridgeExactOutputSingleParams({
+                tokenIn: address(mockWETHBSC),
+                tokenOut: address(swapOutputTokenBSC),
+                fee: 3000,
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0,
+                bridgeParams: ISwapBridgeRouter.BridgeParams({
+                    toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""
+                })
+            });
+
+        vm.recordLogs();
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingle(params, block.timestamp + 1 hours);
+
+        _assertExactOutputAccounting(mode, amountIn, before, false, amountOut, amountInMaximum);
+    }
+
+    function _runExactOutput(PayMode mode) internal {
+        vm.selectFork(bscForkID);
+        uint amountOut = 100 * 1e18;
+        uint amountInMaximum = 1000 * 1e18;
+        _prepPayMode(mode);
+
+        vm.prank(USER);
+        mockWETHBSC.approve(address(swapBridgeRouterBSC), amountInMaximum);
+        Snap memory before = _snap();
+
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter.SwapBridgeExactOutputParams({
+            path: abi.encodePacked(address(swapOutputTokenBSC), uint24(3000), address(mockWETHBSC)),
+            amountOut: amountOut,
+            amountInMaximum: amountInMaximum,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        vm.recordLogs();
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutput(params, block.timestamp + 1 hours);
+
+        _assertExactOutputAccounting(mode, amountIn, before, false, amountOut, amountInMaximum);
+    }
+
+    function _runExactOutputSingleETH(PayMode mode) internal {
+        vm.selectFork(bscForkID);
+        uint amountOut = 0.5 ether;
+        uint amountInMaximum = 1 ether;
+        uint msgValue = amountInMaximum + 0.3 ether;
+        vm.deal(USER, 10 ether);
+        _prepPayMode(mode);
+        Snap memory before = _snap();
+
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory params =
+            ISwapBridgeRouter.SwapBridgeExactOutputSingleParams({
+                tokenIn: address(mockWETHBSC),
+                tokenOut: address(swapOutputTokenBSC),
+                fee: 3000,
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0,
+                bridgeParams: ISwapBridgeRouter.BridgeParams({
+                    toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""
+                })
+            });
+
+        vm.recordLogs();
+        vm.prank(USER);
+        uint amountIn =
+            swapBridgeRouterBSC.swapBridgeExactOutputSingleETH{value: msgValue}(params, block.timestamp + 1 hours);
+
+        _assertExactOutputAccounting(mode, amountIn, before, true, amountOut, amountInMaximum);
+    }
+
+    function _runExactOutputETH(PayMode mode) internal {
+        vm.selectFork(bscForkID);
+        uint amountOut = 0.5 ether;
+        uint amountInMaximum = 1 ether;
+        uint msgValue = amountInMaximum + 0.3 ether;
+        vm.deal(USER, 10 ether);
+        _prepPayMode(mode);
+        Snap memory before = _snap();
+
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory params = ISwapBridgeRouter.SwapBridgeExactOutputParams({
+            path: abi.encodePacked(address(swapOutputTokenBSC), uint24(3000), address(mockWETHBSC)),
+            amountOut: amountOut,
+            amountInMaximum: amountInMaximum,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+
+        vm.recordLogs();
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputETH{value: msgValue}(params, block.timestamp + 1 hours);
+
+        _assertExactOutputAccounting(mode, amountIn, before, true, amountOut, amountInMaximum);
+    }
+
+    function test_exactOutputSingle_deltaRefund_normalPull() public {
+        _runExactOutputSingle(PayMode.Normal);
+    }
+
+    function test_exactOutputSingle_deltaRefund_payWithOwnETH() public {
+        _runExactOutputSingle(PayMode.OwnETH);
+    }
+
+    function test_exactOutputSingle_deltaRefund_strangerPrefunded() public {
+        _runExactOutputSingle(PayMode.Stranger);
+    }
+
+    function test_exactOutput_deltaRefund_normalPull() public {
+        _runExactOutput(PayMode.Normal);
+    }
+
+    function test_exactOutput_deltaRefund_payWithOwnETH() public {
+        _runExactOutput(PayMode.OwnETH);
+    }
+
+    function test_exactOutput_deltaRefund_strangerPrefunded() public {
+        _runExactOutput(PayMode.Stranger);
+    }
+
+    function test_exactOutputSingleETH_deltaRefund_normalPull() public {
+        _runExactOutputSingleETH(PayMode.Normal);
+    }
+
+    function test_exactOutputSingleETH_deltaRefund_payWithOwnETH() public {
+        _runExactOutputSingleETH(PayMode.OwnETH);
+    }
+
+    function test_exactOutputSingleETH_deltaRefund_strangerPrefunded() public {
+        _runExactOutputSingleETH(PayMode.Stranger);
+    }
+
+    function test_exactOutputETH_deltaRefund_normalPull() public {
+        _runExactOutputETH(PayMode.Normal);
+    }
+
+    function test_exactOutputETH_deltaRefund_payWithOwnETH() public {
+        _runExactOutputETH(PayMode.OwnETH);
+    }
+
+    function test_exactOutputETH_deltaRefund_strangerPrefunded() public {
+        _runExactOutputETH(PayMode.Stranger);
+    }
+
+    // ============ Multi-hop partial fill ============
+
+    function _multihopParams(bytes memory path, uint amountIn)
+        internal
+        view
+        returns (ISwapBridgeRouter.SwapBridgeExactInputParams memory)
+    {
+        return ISwapBridgeRouter.SwapBridgeExactInputParams({
+            path: path,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+    }
+
+    /// A partially filled last pool leaves the intermediate on the Uniswap router and reverts
+    function test_swapBridgeExactInput_multihop_partialFill_reverts() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint amountIn = 1000 * 1e18;
+        uint leftover = 7 * 1e18;
+        mockSwapRouterBSC.setIntermediateLeftover(address(mid), leftover);
+
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+        bytes memory path =
+            abi.encodePacked(address(cross), uint24(3000), address(mid), uint24(3000), address(swapOutputTokenBSC));
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = _multihopParams(path, amountIn);
+
+        uint userBefore = cross.balanceOf(USER);
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRPartialFill.selector, address(mid), leftover));
+        swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
+
+        assertEq(cross.balanceOf(USER), userBefore, "caller keeps the original tokens");
+        assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), 0, "router holds nothing");
+        assertEq(mid.balanceOf(address(mockSwapRouterBSC)), 0, "revert unwinds the leftover");
+    }
+
+    function test_swapBridgeExactInputETH_multihop_partialFill_reverts() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint amountIn = 1 ether;
+        uint leftover = 3 * 1e17;
+        mockSwapRouterBSC.setIntermediateLeftover(address(mid), leftover);
+        vm.deal(USER, 10 ether);
+
+        bytes memory path = abi.encodePacked(
+            address(mockWETHBSC), uint24(3000), address(mid), uint24(3000), address(swapOutputTokenBSC)
+        );
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = _multihopParams(path, amountIn);
+
+        uint userBefore = USER.balance;
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRPartialFill.selector, address(mid), leftover));
+        swapBridgeRouterBSC.swapBridgeExactInputETH{value: amountIn}(params, block.timestamp + 1 hours);
+
+        assertEq(USER.balance, userBefore, "caller keeps the ETH");
+        assertEq(address(swapBridgeRouterBSC).balance, 0, "router holds no ETH");
+    }
+
+    /// A balance already on the Uniswap router (no new leftover) is not a partial fill
+    function test_swapBridgeExactInput_multihop_preExistingIntermediateBalance_succeeds() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint preExisting = 500 * 1e18;
+        mid.mint(address(mockSwapRouterBSC), preExisting);
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+        bytes memory path =
+            abi.encodePacked(address(cross), uint24(3000), address(mid), uint24(3000), address(swapOutputTokenBSC));
+
+        uint userBefore = cross.balanceOf(USER);
+        vm.prank(USER);
+        uint amountOut =
+            swapBridgeRouterBSC.swapBridgeExactInput(_multihopParams(path, amountIn), block.timestamp + 1 hours);
+
+        assertEq(amountOut, amountIn, "1:1 mock rate");
+        assertEq(cross.balanceOf(USER), userBefore - amountIn);
+        assertEq(mid.balanceOf(address(mockSwapRouterBSC)), preExisting, "pre-existing intermediate balance untouched");
+
+        vm.deal(USER, 10 ether);
+        bytes memory ethPath = abi.encodePacked(
+            address(mockWETHBSC), uint24(3000), address(mid), uint24(3000), address(swapOutputTokenBSC)
+        );
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactInputETH{value: 1 ether}(
+            _multihopParams(ethPath, 1 ether), block.timestamp + 1 hours
+        );
+        assertEq(mid.balanceOf(address(mockSwapRouterBSC)), preExisting, "pre-existing intermediate balance untouched");
+    }
+
+    /// An intermediate balance that decreased during the swap is not a partial fill
+    function test_swapBridgeExactInput_multihop_decreasedIntermediateBalance_succeeds() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        mid.mint(address(mockSwapRouterBSC), 500 * 1e18);
+        mockSwapRouterBSC.setIntermediateDrain(address(mid), 200 * 1e18);
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+        bytes memory path =
+            abi.encodePacked(address(cross), uint24(3000), address(mid), uint24(3000), address(swapOutputTokenBSC));
+
+        uint userBefore = cross.balanceOf(USER);
+        vm.prank(USER);
+        uint amountOut =
+            swapBridgeRouterBSC.swapBridgeExactInput(_multihopParams(path, amountIn), block.timestamp + 1 hours);
+
+        assertEq(amountOut, amountIn, "1:1 mock rate");
+        assertEq(cross.balanceOf(USER), userBefore - amountIn);
+        assertEq(mid.balanceOf(address(mockSwapRouterBSC)), 300 * 1e18, "drained part left the Uniswap router");
+        assertEq(cross.balanceOf(address(swapBridgeRouterBSC)), 0, "router holds nothing");
+    }
+
+    function test_swapBridgeExactInputETH_multihop_decreasedIntermediateBalance_succeeds() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        mid.mint(address(mockSwapRouterBSC), 500 * 1e18);
+        mockSwapRouterBSC.setIntermediateDrain(address(mid), 200 * 1e18);
+        vm.deal(USER, 10 ether);
+
+        bytes memory path = abi.encodePacked(
+            address(mockWETHBSC), uint24(3000), address(mid), uint24(3000), address(swapOutputTokenBSC)
+        );
+        uint userBefore = USER.balance;
+        vm.prank(USER);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInputETH{value: 1 ether}(
+            _multihopParams(path, 1 ether), block.timestamp + 1 hours
+        );
+
+        assertEq(amountOut, 1 ether, "1:1 mock rate");
+        assertEq(USER.balance, userBefore - 1 ether);
+        assertEq(mid.balanceOf(address(mockSwapRouterBSC)), 300 * 1e18, "drained part left the Uniswap router");
+        assertEq(address(swapBridgeRouterBSC).balance, 0, "router holds no ETH");
+    }
+
+    /// A drained intermediate does not mask a leftover on another one
+    function test_swapBridgeExactInput_threeHop_drainOnOneLeftoverOnOther_reverts() public {
+        vm.selectFork(bscForkID);
+        TestToken mid1 = new TestToken("Mid1", "M1", 18);
+        TestToken mid2 = new TestToken("Mid2", "M2", 18);
+        mid1.mint(address(mockSwapRouterBSC), 500 * 1e18);
+        mockSwapRouterBSC.setIntermediateDrain(address(mid1), 200 * 1e18);
+        mockSwapRouterBSC.setIntermediateLeftover(address(mid2), 9 * 1e18);
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+        bytes memory path = abi.encodePacked(
+            address(cross),
+            uint24(3000),
+            address(mid1),
+            uint24(3000),
+            address(mid2),
+            uint24(3000),
+            address(swapOutputTokenBSC)
+        );
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRPartialFill.selector, address(mid2), 9 * 1e18));
+        swapBridgeRouterBSC.swapBridgeExactInput(_multihopParams(path, amountIn), block.timestamp + 1 hours);
+    }
+
+    /// Leftover on either intermediate of a 3-hop path is detected and names the right token
+    function test_swapBridgeExactInput_threeHop_leftoverOnSecondIntermediate_reverts() public {
+        vm.selectFork(bscForkID);
+        TestToken mid1 = new TestToken("Mid1", "M1", 18);
+        TestToken mid2 = new TestToken("Mid2", "M2", 18);
+        mid1.mint(address(mockSwapRouterBSC), 100 * 1e18); // pre-existing, not a leftover
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(swapBridgeRouterBSC), amountIn);
+        bytes memory path = abi.encodePacked(
+            address(cross),
+            uint24(3000),
+            address(mid1),
+            uint24(3000),
+            address(mid2),
+            uint24(3000),
+            address(swapOutputTokenBSC)
+        );
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = _multihopParams(path, amountIn);
+
+        mockSwapRouterBSC.setIntermediateLeftover(address(mid2), 9 * 1e18);
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRPartialFill.selector, address(mid2), 9 * 1e18));
+        swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
+
+        mockSwapRouterBSC.setIntermediateLeftover(address(mid2), 0);
+        mockSwapRouterBSC.setIntermediateLeftover(address(mid1), 4 * 1e18);
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouter.SBRPartialFill.selector, address(mid1), 4 * 1e18));
+        swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
+    }
+
+    /// Path A -> B -> A -> C with pre-existing Uniswap router balances of A and B
+    function test_swapBridgeExactInput_repeatedTokenPath() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint preA = mockWETHBSC.balanceOf(address(mockSwapRouterBSC));
+        assertGt(preA, 0, "mock router already holds A");
+        mid.mint(address(mockSwapRouterBSC), 400 * 1e18);
+
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        mockWETHBSC.approve(address(swapBridgeRouterBSC), 2 * amountIn);
+        bytes memory path = abi.encodePacked(
+            address(mockWETHBSC),
+            uint24(3000),
+            address(mid),
+            uint24(3000),
+            address(mockWETHBSC),
+            uint24(3000),
+            address(swapOutputTokenBSC)
+        );
+        ISwapBridgeRouter.SwapBridgeExactInputParams memory params = _multihopParams(path, amountIn);
+
+        uint userBefore = mockWETHBSC.balanceOf(USER);
+        vm.prank(USER);
+        uint amountOut = swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
+        assertEq(amountOut, amountIn, "1:1 mock rate");
+        assertEq(mockWETHBSC.balanceOf(USER), userBefore - amountIn);
+        assertEq(mockWETHBSC.balanceOf(address(mockSwapRouterBSC)), preA, "A on the Uniswap router untouched");
+        assertEq(mid.balanceOf(address(mockSwapRouterBSC)), 400 * 1e18, "B on the Uniswap router untouched");
+
+        mockSwapRouterBSC.setIntermediateLeftover(address(mockWETHBSC), 5 * 1e18);
+        vm.prank(USER);
+        vm.expectRevert(
+            abi.encodeWithSelector(SwapBridgeRouter.SBRPartialFill.selector, address(mockWETHBSC), 5 * 1e18)
+        );
+        swapBridgeRouterBSC.swapBridgeExactInput(params, block.timestamp + 1 hours);
+    }
+
+    /// ETH forced onto the router neither changes behaviour nor is touched
+    function test_forcedETH_untouchedByETHEntryPoints() public {
+        vm.selectFork(bscForkID);
+        uint forced = 3 ether;
+        vm.deal(address(swapBridgeRouterBSC), forced);
+        vm.deal(USER, 100 ether);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+
+        ISwapBridgeRouter.SwapBridgeExactInputSingleParams memory singleParams =
+            ISwapBridgeRouter.SwapBridgeExactInputSingleParams({
+                tokenIn: address(mockWETHBSC),
+                tokenOut: address(swapOutputTokenBSC),
+                fee: 3000,
+                amountIn: 1 ether,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0,
+                bridgeParams: ISwapBridgeRouter.BridgeParams({
+                    toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""
+                })
+            });
+        uint userBefore = USER.balance;
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactInputSingleETH{value: 1 ether}(singleParams, block.timestamp + 1 hours);
+        assertEq(userBefore - USER.balance, 1 ether, "exact-input single ETH: caller pays exactly amountIn");
+        assertEq(address(swapBridgeRouterBSC).balance, forced, "forced ETH untouched (single exact-input)");
+
+        bytes memory path = abi.encodePacked(
+            address(mockWETHBSC), uint24(3000), address(mid), uint24(3000), address(swapOutputTokenBSC)
+        );
+        userBefore = USER.balance;
+        vm.prank(USER);
+        swapBridgeRouterBSC.swapBridgeExactInputETH{value: 1 ether}(
+            _multihopParams(path, 1 ether), block.timestamp + 1 hours
+        );
+        assertEq(userBefore - USER.balance, 1 ether, "exact-input multihop ETH: caller pays exactly amountIn");
+        assertEq(address(swapBridgeRouterBSC).balance, forced, "forced ETH untouched (multihop exact-input)");
+
+        uint amountOut = 0.5 ether;
+        uint amountInMaximum = 1 ether;
+        ISwapBridgeRouter.SwapBridgeExactOutputSingleParams memory outSingle =
+            ISwapBridgeRouter.SwapBridgeExactOutputSingleParams({
+                tokenIn: address(mockWETHBSC),
+                tokenOut: address(swapOutputTokenBSC),
+                fee: 3000,
+                amountOut: amountOut,
+                amountInMaximum: amountInMaximum,
+                sqrtPriceLimitX96: 0,
+                bridgeParams: ISwapBridgeRouter.BridgeParams({
+                    toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""
+                })
+            });
+        userBefore = USER.balance;
+        vm.prank(USER);
+        uint amountIn = swapBridgeRouterBSC.swapBridgeExactOutputSingleETH{value: amountInMaximum + 0.3 ether}(
+            outSingle, block.timestamp + 1 hours
+        );
+        assertEq(userBefore - USER.balance, amountIn, "exact-output single ETH: caller pays exactly amountIn");
+        assertEq(address(swapBridgeRouterBSC).balance, forced, "forced ETH untouched (single exact-output)");
+
+        ISwapBridgeRouter.SwapBridgeExactOutputParams memory outMulti = ISwapBridgeRouter.SwapBridgeExactOutputParams({
+            path: abi.encodePacked(address(swapOutputTokenBSC), uint24(3000), address(mockWETHBSC)),
+            amountOut: amountOut,
+            amountInMaximum: amountInMaximum,
+            bridgeParams: ISwapBridgeRouter.BridgeParams({toChainID: CROSS_CHAIN_ID, recipient: USER, extraData: ""})
+        });
+        userBefore = USER.balance;
+        vm.prank(USER);
+        amountIn = swapBridgeRouterBSC.swapBridgeExactOutputETH{value: amountInMaximum + 0.3 ether}(
+            outMulti, block.timestamp + 1 hours
+        );
+        assertEq(userBefore - USER.balance, amountIn, "exact-output multihop ETH: caller pays exactly amountIn");
+        assertEq(address(swapBridgeRouterBSC).balance, forced, "forced ETH untouched (multihop exact-output)");
     }
 }
