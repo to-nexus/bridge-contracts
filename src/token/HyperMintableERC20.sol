@@ -288,7 +288,10 @@ contract HyperMintableERC20 is CrossMintableERC20V2, IHyperMintableERC20 {
         sent = coreTransferableAmount(amount);
         require(sent != 0, CoreAmountBelowOneCoreWei());
 
-        _transfer(_msgSender(), coreRecipient, sent);
+        address caller = _msgSender();
+        _spendAllowance(caller, address(this), sent);
+
+        _transfer(caller, coreRecipient, sent);
         _transfer(coreRecipient, systemAddress, sent);
     }
 }

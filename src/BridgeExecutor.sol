@@ -26,6 +26,12 @@ import {Const} from "./lib/Const.sol";
  * - MAY revert - on revert, entire bridge finalization rolls back safely
  * - Target contracts must be whitelisted
  * - Optional method selector whitelisting per target
+ * - ERC20 invariant: a successful composed call reduces this contract's toToken balance by at most `value`;
+ *   otherwise it reverts with BEOverspent and the bridge falls back to a plain payout
+ *
+ * Target admission rule: only whitelist selectors funded by the per-call allowance or the attached native
+ * value; never selectors that spend the executor's own balance or change allowances; token targets need
+ * the method check enabled.
  */
 contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecutor {
     using SafeERC20 for IERC20;
@@ -65,6 +71,9 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
 
     /// @notice Thrown when target contract call fails
     error BETargetCallFailed();
+
+    /// @notice Thrown when an ERC20 composed call consumes more than the bridged value
+    error BEOverspent(uint consumed, uint value);
 
     /**
      * @notice Target whitelist configuration
@@ -143,6 +152,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
      *      - For ERC20: pulls tokens from msg.sender via transferFrom
      *      - For Native: receives value via msg.value
      *      - Returns consumed amount; sends remaining to user directly
+     *      - For ERC20, reverts with BEOverspent if the target spends more than `value`
      */
     function executeExtraCall(
         uint, /* fromChainID */
@@ -207,6 +217,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
             consumed = returned >= value ? 0 : value - returned;
         } else {
             consumed = balBefore > balAfter ? balBefore - balAfter : 0;
+            require(consumed <= value, BEOverspent(consumed, value));
         }
 
         // Send remaining to user directly
@@ -227,7 +238,8 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
 
     /**
      * @notice Add a target contract to the whitelist
-     * @dev Only callable by admin
+     * @dev Only callable by admin. Targets must satisfy the admission rule in the contract header; token targets
+     *      require the method check.
      * @param target Target contract address to whitelist
      */
     function addWhitelistTarget(address target) external onlyRole(Const.ADMIN_ROLE) {
@@ -262,7 +274,7 @@ contract BridgeExecutor is AccessControl, ReentrancyGuardTransient, IBridgeExecu
 
     /**
      * @notice Add multiple method selectors to the whitelist for a target
-     * @dev Only callable by admin
+     * @dev Only callable by admin. Never whitelist selectors that spend the executor's own balance or change allowances.
      * @param target Target contract address
      * @param methodIDs Array of function selectors to whitelist
      */

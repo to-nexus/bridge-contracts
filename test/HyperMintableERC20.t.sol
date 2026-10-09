@@ -986,6 +986,9 @@ contract HyperMintableERC20Test is Test {
         address coreRecipient = makeAddr("coreRecipient");
         uint balBefore = token.balanceOf(coreRecipient);
 
+        vm.prank(user);
+        token.approve(address(token), 5 ether);
+
         vm.expectEmit(true, true, false, true, address(token));
         emit Transfer(coreRecipient, systemAddr, 5 ether);
 
@@ -1008,6 +1011,9 @@ contract HyperMintableERC20Test is Test {
         token.mint(user, 10 ether);
 
         vm.prank(user);
+        token.approve(address(token), 10 ether);
+
+        vm.prank(user);
         vm.expectRevert(IHyperMintableERC20.CoreAmountBelowOneCoreWei.selector);
         token.transferToCoreFor(makeAddr("coreRecipient"), 1e10 - 1);
     }
@@ -1021,6 +1027,9 @@ contract HyperMintableERC20Test is Test {
 
         vm.prank(bridge);
         token.mint(user, 10 ether);
+
+        vm.prank(user);
+        token.approve(address(token), 10 ether);
 
         vm.prank(user);
         vm.expectRevert(IHyperMintableERC20.CoreRecipientZero.selector);
@@ -1355,6 +1364,9 @@ contract HyperMintableERC20Test is Test {
         uint callerBalBefore = token.balanceOf(user);
         uint coreRecipientBalBefore = token.balanceOf(coreRecipient);
 
+        vm.prank(user);
+        token.approve(address(token), amount);
+
         vm.expectEmit(true, true, false, true, address(token));
         emit Transfer(coreRecipient, systemAddr, expectedSent);
 
@@ -1390,11 +1402,207 @@ contract HyperMintableERC20Test is Test {
         uint userBalBefore = token.balanceOf(user);
 
         vm.prank(user);
+        token.approve(address(token), amount);
+
+        vm.prank(user);
         uint sent = token.transferToCoreFor(user, amount);
 
         assertEq(sent, expectedSent, "sent must be the coreUnit-rounded amount");
         assertEq(token.balanceOf(user), userBalBefore - expectedSent, "caller/coreRecipient is down by sent only");
         assertEq(token.balanceOf(systemAddr), expectedSent, "system address receives exactly sent");
+    }
+
+    // =====================================================================
+    // `transferToCoreFor` allowance
+    // =====================================================================
+
+    /// @dev `BridgeExecutor` whose EXECUTOR_ROLE holder mimics the bridge, with `target`'s `transferToCoreFor` whitelisted
+    function _executorWhitelisting(address executorCaller, address target) internal returns (BridgeExecutor executor) {
+        executor = new BridgeExecutor(factoryOwner, executorCaller);
+        vm.startPrank(factoryOwner);
+        executor.addWhitelistTarget(target);
+        executor.setMethodCheckEnabled(target, true);
+        bytes4[] memory methods = new bytes4[](1);
+        methods[0] = IHyperMintableERC20.transferToCoreFor.selector;
+        executor.addWhitelistMethods(target, methods);
+        vm.stopPrank();
+    }
+
+    function _linkToken(HyperMintableERC20 t, uint32 index) internal {
+        _mockValidCoreLink(address(t), index);
+        vm.prank(address(code));
+        t.setCoreTokenIndex(index);
+    }
+
+    /// A direct caller without an allowance to the token contract is rejected.
+    function test_transferToCoreFor_directCall_noAllowance_reverts() public {
+        _linkToken(token, 40);
+
+        vm.prank(bridge);
+        token.mint(user, 10 ether);
+
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(token), 0, 5 ether)
+        );
+        token.transferToCoreFor(makeAddr("coreRecipient40"), 5 ether);
+
+        vm.prank(user);
+        token.approve(makeAddr("otherSpender40"), 5 ether);
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(token), 0, 5 ether)
+        );
+        token.transferToCoreFor(makeAddr("coreRecipient40"), 5 ether);
+    }
+
+    /// With `approve(address(token), amount)` the call succeeds and consumes exactly `sent` of the allowance.
+    function test_transferToCoreFor_directCall_consumesAllowance() public {
+        _linkToken(token, 41); // coreUnit() == 1e10
+        address systemAddr = token.coreSystemAddress();
+
+        vm.prank(bridge);
+        token.mint(user, 10 ether);
+
+        address coreRecipient = makeAddr("coreRecipient41");
+        uint amount = 5 ether + 123; // rounds down to 5 ether
+        uint allowance = 8 ether;
+
+        vm.prank(user);
+        token.approve(address(token), allowance);
+
+        vm.prank(user);
+        uint sent = token.transferToCoreFor(coreRecipient, amount);
+
+        assertEq(sent, 5 ether);
+        assertEq(token.allowance(user, address(token)), allowance - sent, "allowance decreases by sent");
+        assertEq(token.balanceOf(coreRecipient), 0, "recipient nets to zero");
+        assertEq(token.balanceOf(systemAddr), sent);
+        assertEq(token.balanceOf(user), 10 ether - sent);
+    }
+
+    /// An infinite allowance is not decremented (OZ v5 `_spendAllowance`) and emits no `Approval`.
+    function test_transferToCoreFor_directCall_infiniteAllowanceUnchanged() public {
+        _linkToken(token, 42);
+
+        vm.prank(bridge);
+        token.mint(user, 10 ether);
+
+        vm.prank(user);
+        token.approve(address(token), type(uint).max);
+
+        vm.prank(user);
+        token.transferToCoreFor(makeAddr("coreRecipient42"), 5 ether);
+
+        assertEq(token.allowance(user, address(token)), type(uint).max);
+    }
+
+    /// Through the executor, asking for more than the bridged `value` exceeds the executor's allowance and reverts;
+    /// the executor-held residual stays intact and recoverable.
+    function test_transferToCoreFor_viaBridgeExecutor_sameAssetOverspend_reverts() public {
+        _linkToken(token, 43);
+        address systemAddr = token.coreSystemAddress();
+
+        address executorCaller = makeAddr("executorCaller43");
+        BridgeExecutor executor = _executorWhitelisting(executorCaller, address(token));
+
+        uint value = 1e10 * 7;
+        uint residual = 1e10 * 3;
+        vm.startPrank(bridge);
+        token.mint(address(executor), residual);
+        token.mint(executorCaller, value);
+        vm.stopPrank();
+        vm.prank(executorCaller);
+        token.approve(address(executor), value);
+
+        bytes memory extraData = abi.encodePacked(
+            address(token),
+            abi.encodeWithSelector(IHyperMintableERC20.transferToCoreFor.selector, user, value + residual)
+        );
+
+        vm.prank(executorCaller);
+        vm.expectRevert(BridgeExecutor.BETargetCallFailed.selector);
+        executor.executeExtraCall(0, 0, IERC20(address(token)), user, value, extraData);
+
+        assertEq(token.balanceOf(systemAddr), 0, "nothing reached the Core system address");
+        assertEq(token.balanceOf(address(executor)), residual, "executor keeps its residual");
+        assertEq(token.balanceOf(executorCaller), value, "bridge-side value is unwound");
+
+        vm.prank(factoryOwner);
+        executor.recoverToken(address(token), residual, factoryOwner);
+        assertEq(token.balanceOf(factoryOwner), residual, "admin recovers the residual");
+        assertEq(token.balanceOf(address(executor)), 0);
+
+        assertEq(token.allowance(address(executor), address(token)), 0);
+        assertEq(token.allowance(executorCaller, address(executor)), value, "pull never happened (unwound)");
+    }
+
+    /// Bridged token is A, call target is B and the executor holds B: the executor never approved B, so the call reverts.
+    function test_transferToCoreFor_viaBridgeExecutor_crossAsset_reverts() public {
+        HyperMintableERC20 tokenB;
+        vm.prank(bridge);
+        tokenB = HyperMintableERC20(code.createCrossMintableERC20(REMOTE_CHAIN_ID, address(0xB0B), "TB", DECIMALS));
+        _linkToken(token, 44);
+        _linkToken(tokenB, 45);
+        address systemAddrB = tokenB.coreSystemAddress();
+
+        address executorCaller = makeAddr("executorCaller44");
+        BridgeExecutor executor = _executorWhitelisting(executorCaller, address(tokenB));
+        address attacker = makeAddr("attacker44");
+
+        uint value = 1e10 * 7; // bridged token A
+        uint residual = 1e10 * 3; // executor-held token B
+        vm.startPrank(bridge);
+        token.mint(executorCaller, value);
+        tokenB.mint(address(executor), residual);
+        vm.stopPrank();
+        vm.prank(executorCaller);
+        token.approve(address(executor), value);
+
+        bytes memory extraData = abi.encodePacked(
+            address(tokenB), abi.encodeWithSelector(IHyperMintableERC20.transferToCoreFor.selector, attacker, residual)
+        );
+
+        vm.prank(executorCaller);
+        vm.expectRevert(BridgeExecutor.BETargetCallFailed.selector);
+        executor.executeExtraCall(0, 0, IERC20(address(token)), user, value, extraData);
+
+        assertEq(tokenB.balanceOf(address(executor)), residual, "B residual intact");
+        assertEq(tokenB.balanceOf(systemAddrB), 0, "nothing reached B's Core system address");
+        assertEq(token.balanceOf(executorCaller), value, "A is unwound to the bridge side");
+        assertEq(token.balanceOf(user), 0, "A is paid out by the bridge fallback, not by the executor");
+
+        assertEq(token.allowance(address(executor), address(tokenB)), 0);
+        assertEq(tokenB.allowance(address(executor), address(tokenB)), 0);
+    }
+
+    /// The documented flow works and leaves no allowance behind on either hop.
+    function test_transferToCoreFor_viaBridgeExecutor_leavesNoAllowance() public {
+        _linkToken(token, 46);
+        address systemAddr = token.coreSystemAddress();
+
+        address executorCaller = makeAddr("executorCaller46");
+        BridgeExecutor executor = _executorWhitelisting(executorCaller, address(token));
+
+        uint value = 1e10 * 7 + 42;
+        uint expectedSent = 1e10 * 7;
+
+        vm.prank(bridge);
+        token.mint(executorCaller, value);
+        vm.prank(executorCaller);
+        token.approve(address(executor), value);
+
+        bytes memory extraData = abi.encodePacked(
+            address(token), abi.encodeWithSelector(IHyperMintableERC20.transferToCoreFor.selector, user, value)
+        );
+
+        vm.prank(executorCaller);
+        (uint consumed,) = executor.executeExtraCall(0, 0, IERC20(address(token)), user, value, extraData);
+
+        assertEq(consumed, expectedSent);
+        assertEq(token.balanceOf(systemAddr), expectedSent);
+        assertEq(token.allowance(address(executor), address(token)), 0, "executor allowance to the target is cleared");
+        assertEq(token.allowance(executorCaller, address(executor)), 0, "bridge allowance to the executor is consumed");
     }
 
     // =====================================================================
