@@ -163,6 +163,23 @@ sequenceDiagram
     이를 `extraData` 결합 호출로 구성하면(`target` = 토큰, `selector` = `transferToCoreFor`, 인자 =
     `(finalRecipient, amount)`) 전송을 시작하는 단 한 번의 사용자 액션으로 BSC → CROSS → HyperEVM →
     HyperCore까지 토큰을 옮길 수 있습니다.
+  - **`transferToCoreFor`의 allowance 의미.** 호출자는 **토큰 컨트랙트 자신**(`spender == address(token)`)에
+    (내림된) 금액 이상을 approve해야 하며, 호출은 그 allowance를 소비합니다(없으면
+    `ERC20InsufficientAllowance`). 이것이 결합 `BridgeExecutor` 호출의 상한을 만듭니다: executor는 브리지된
+    토큰의 `value` 만큼만 호출 대상에게 approve하므로, 토큰이 대상일 때 사용 가능한 금액은 최대 `value`이고,
+    이 토큰을 *다른* 자산에 대해 대상으로 삼는 호출은 allowance가 없어 revert됩니다 — executor가 우연히
+    보유한 잔고를 빼낼 수 없습니다. 직접 호출자(EOA)는 먼저 `approve(address(token), amount)`를 해야 하며,
+    EOA는 보통 `transferToCore`를 사용합니다. 토큰은 executor에서 method check를 켠 상태로, 화이트리스트된
+    selector는 `transferToCoreFor` 하나만 두어야 합니다([4.3](#43-extradata--전송과-동시에-호출)의 등록 규칙 참고).
+  - **업그레이드 불변식.** beacon으로 배포하는 `HyperMintableERC20`의 모든 교체 구현은
+    `transferToCoreFor`에서 호출자의 토큰 컨트랙트 대상 allowance를 계속 소비해야 합니다. 이를 제거하면 결합
+    호출이 executor가 보유한 잔고를 사용할 수 있게 됩니다. beacon 업그레이드 전에 교체 구현은
+    `test/HyperMintableERC20.t.sol`, `test/BridgeExecutor.t.sol`, `test/CrossBridgeHyperEVMRoute.t.sol`의
+    `transferToCoreFor` allowance 및 executor overspend 테스트를 통과해야 합니다.
+  - **배포 선행 조건.** 운영 executor에서 `transferToCoreFor`를 화이트리스트하기 전에, **테스트넷**에서
+    HyperCore가 revert된 EVM 프레임에 대해 아무것도 크레딧하지 않음(실패한 결합 호출의 `Transfer` 로그가
+    되돌려짐)을 확인해야 합니다. revert된 프레임도 Core를 크레딧할 수 있다면 `transferToCoreFor`를
+    화이트리스트하지 마세요.
   - **업그레이더블 토큰 + 팩토리.** 토큰과 그 팩토리(`HyperMintableERC20Code`) 모두 프록시입니다: 한
     팩토리가 생성한 모든 토큰은 하나의 `UpgradeableBeacon`을 공유하는 `BeaconProxy`이고(업그레이드 한
     번으로 모든 토큰이 동시에 반영됩니다 — 이렇게 생기는 권한 집중은 멀티시그·타임락 beacon owner
@@ -284,6 +301,9 @@ extraData = target (20 bytes) || selector (4 bytes) || abi 인코딩된 인자
   selector만 허용할 수도 있으므로, `isMethodCheckEnabled(target)`으로 selector 검사 적용 여부를 먼저 확인한 뒤
   `isWhitelistedMethod(target, selector)`를 조회하세요.
 - 브리지된 수량이 대상 컨트랙트에 제공되며, 대상이 사용하지 않은 잔액은 `to`에게 전달됩니다.
+  ERC20 정산에서 대상이 사용할 수 있는 양은 **최대 `value`** 입니다: executor의 해당 토큰 잔고가 `value`보다
+  많이 줄어들면(예: executor가 이미 보유한 토큰을 쓰는 호출) executor가 revert되고 전송은 단순 지급으로
+  격하됩니다.
 - `extraData`는 서명 대상에 포함되므로 두 체인 사이에서 변경될 수 없습니다.
 
 폴백 동작:
@@ -293,10 +313,20 @@ extraData = target (20 bytes) || selector (4 bytes) || abi 인코딩된 인자
 | `extraData`가 24바이트 미만, executor 미설정, 대상이 화이트리스트에 없음, 또는 executor에 대한 사전 ERC20 approve 실패 | `to`에게 단순 지급. `ExtraCallExecuted` 이벤트는 발생하지 않습니다. |
 | 화이트리스트 대상, 호출 성공 | 대상이 필요한 만큼 사용하고 잔액은 `to`에게. `ExtraCallExecuted`(`success = true`) 발생. |
 | 화이트리스트 대상, 호출 실패 | 대신 `to`에게 단순 지급 시도. `ExtraCallExecuted`(`success = false`) 발생. |
+| 화이트리스트 대상, ERC20 호출이 `value`를 초과해 사용(executor가 `BEOverspent`로 revert) | 대신 `to`에게 단순 지급 시도. `ExtraCallExecuted`(`success = false`) 발생. |
 | 단순 지급이 인지된 전송·발행 실패를 보고 | 전송이 보류됩니다([4.5](#45-보류된-전송과-releasepending)). 예상치 못한 실패는 [4.4](#44-finalizebridgebatch--목적지-체인-정산)에서 설명한 대로 revert됩니다. |
 
 즉 결합 호출 실패는 자산 손실로 이어지지 않습니다. 단순 지급으로 격하되거나, 재시도 가능한 보류 상태가
 됩니다. 화이트리스트 등록은 `BridgeExecutor` 관리자가 수행하므로 연동 대상 등록은 해당 관리자에게 요청하세요.
+
+**대상 등록 규칙(`BridgeExecutor` 관리자용).** 호출 단위 ERC20 allowance 또는 첨부된 네이티브 value로만 executor
+자금을 움직이는 selector만 화이트리스트하세요. executor 자신의 잔고를 쓰는 selector(`transfer`,
+`transferToCore` 등)나 allowance를 바꾸는 selector(`approve`, `increaseAllowance`, `decreaseAllowance`,
+`permit`, 또는 executor가 approve를 부여하게 만드는 모든 것)는 절대 화이트리스트하지 마세요. 토큰
+컨트랙트는 method check를 켠 경우에만 대상으로 등록합니다. executor는 모든 ERC20 대상에 대해
+`consumed <= value` 상한을 코드로 강제하고, 제공되는 `transferToCoreFor` 연동은 추가로 토큰 단에서 교차 자산
+사용을 차단합니다. executor 자신의 잔고를 쓰는 임의의 대상은 코드가 아니라 이 규칙으로 배제됩니다 — 화이트리스트
+신뢰 모델의 일부입니다.
 
 ### 4.4 `finalizeBridgeBatch` — 목적지 체인 정산
 
@@ -516,6 +546,17 @@ params 구조체와 `deadline`을 받습니다.
 - 사용되지 않은 입력은 호출자에게 환불됩니다 — exact-output의 `amountInMaximum` 미사용분과 exact-input의
   잔여분이며, 입력 토큰으로 또는 ETH 변형에서는 네이티브 코인으로 반환됩니다. exact-output ETH 변형에서는
   `amountInMaximum`을 초과해 보낸 `msg.value`도 함께 환불됩니다.
+- 환불은 Uniswap이 보고한 금액이 아니라 라우터 자신의 **잔고 변화**로 계산됩니다. 따라서 exact-output
+  진입점이 반환·emit하는 `amountIn`은 호출자에게서 실제로 가져간 금액(`amountInMaximum` − 환불액)입니다 —
+  예를 들어 Uniswap이 자신의 ETH로 풀에 지급했다면 `0`입니다. 호출 전에 라우터가 보유하던 잔고(제3자가 보낸
+  것)는 호출자에게 환불되지 않습니다.
+- 멀티홉 exact-input 진입점은 스왑 중 Uniswap 라우터의 중간 경로 토큰 잔고가 증가하면
+  `SBRPartialFill(token, leftover)`로 revert됩니다(마지막 풀이 부분 체결되면 누구나 sweep할 수 있는 잔여분이
+  그곳에 남기 때문). quote 함수는 이런 경로를 감지하지 못하므로 quote된 경로도 실행 시 revert될 수 있으며,
+  이때 호출자는 원래 토큰을 그대로 보유합니다.
+- 표준 ERC20만 지원합니다(fee-on-transfer, rebasing 토큰 미지원). API 밖에서 라우터로 보낸 것 — 직접 ERC20
+  transfer이나 강제로 들어온 네이티브 코인 — 은 **회수할 수 없습니다**: 라우터는 immutable이며 admin이나 구제
+  경로가 없습니다. 어떤 진입점도 그 호출의 입력 일부를 라우터에 남긴 채 성공 종료하지 않습니다.
 - 브리지 수수료는 스왑 결과에서 차감됩니다. 목적지 체인에서 수령하는 금액은 `SwapBridge` 이벤트의
   `bridgeValue`이며, 같은 이벤트의 `initiateIndex`가 브리지 전송 인덱스이므로
   [4.6](#46-조회용-함수)과 같이 추적하면 됩니다.

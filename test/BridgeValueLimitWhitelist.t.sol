@@ -151,4 +151,136 @@ contract BridgeValueLimitWhitelistE2ETest is BridgeTest {
             "token finalize pause must still be enforced for whitelisted recipients"
         );
     }
+
+    /**
+     * @notice A whitelisted recipient does NOT bypass the single-transfer threshold
+     * when the finalize item carries non-empty extraData: with extraData driving a
+     * possible executor call, the signed `to` is not necessarily who ends up holding
+     * the value, so the exemption is withheld and the item parks exactly like a
+     * non-whitelisted one would (not a `TokenPaused`/`CrossSupplyLimitExceeded`-style
+     * reason - this is the threshold itself firing).
+     */
+    function test_finalize_whitelisted_nonEmptyExtraData_overThreshold_parksInsteadOfBypassing() public {
+        address wl = makeAddr("wl_nonempty_extradata");
+
+        vm.selectFork(crossForkID);
+        vm.prank(CrossOWNER);
+        bridgeVerifierCross.addValueLimitWhitelist(wl);
+
+        uint amount = 5 ether;
+
+        vm.selectFork(bscForkID);
+        (uint index,) = bscBridge(address(cross), USER, USER, amount, 0, 0);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        vm.recordLogs();
+        crossFinalize(index, address(NATIVE_TOKEN), wl, amount, threshold, bytes("nonempty"));
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        bytes32 bypassedTopic0 = keccak256("ValueLimitWhitelistBypassed(address,address,uint256)");
+        for (uint i = 0; i < logs.length; i++) {
+            assertFalse(logs[i].topics[0] == bypassedTopic0, "non-empty extraData must never bypass");
+        }
+
+        assertTrue(
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status
+                == Const.FinalizeStatus.VerificationAmountThresholdExceeded,
+            "whitelisted recipient must still hit the single-transfer threshold once extraData is non-empty"
+        );
+        assertEq(bridgeVerifierCross.getTokenCurrentScore(NATIVE_TOKEN), 0, "a parked item must not touch the accumulator");
+    }
+
+    /**
+     * @notice With both thresholds actually active and set high enough that the
+     * transfer clears them on its own merits, a whitelisted recipient with non-empty
+     * extraData settles immediately (as any ordinary transfer would) - but, unlike the
+     * empty-extraData case, through the verifier's normal accounting path: no bypass
+     * event, and the period accumulator records the score exactly as it would for a
+     * non-whitelisted recipient.
+     */
+    function test_finalize_whitelisted_nonEmptyExtraData_withinLimits_settlesWithoutBypass() public {
+        address wl = makeAddr("wl_nonempty_extradata_within_limits");
+
+        vm.selectFork(crossForkID);
+        vm.startPrank(CrossOWNER);
+        bridgeVerifierCross.addValueLimitWhitelist(wl);
+        // Raise both thresholds well above what this transfer can score, so a
+        // non-exempt evaluation still succeeds - isolating "non-empty extraData loses
+        // the bypass" from "the transfer happens to be too large".
+        bridgeVerifierCross.setVerificationAmountThreshold(type(uint192).max);
+        bridgeVerifierCross.setPeriodTotalValueThreshold(type(uint192).max);
+        vm.stopPrank();
+
+        uint amount = 5 ether;
+
+        vm.selectFork(bscForkID);
+        (uint index,) = bscBridge(address(cross), USER, USER, amount, 0, 0);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint scoreBefore = bridgeVerifierCross.getTokenCurrentScore(NATIVE_TOKEN);
+        uint recipientBalanceBefore = wl.balance;
+
+        vm.recordLogs();
+        crossFinalize(index, address(NATIVE_TOKEN), wl, amount, threshold, bytes("nonempty"));
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        bytes32 bypassedTopic0 = keccak256("ValueLimitWhitelistBypassed(address,address,uint256)");
+        for (uint i = 0; i < logs.length; i++) {
+            assertFalse(logs[i].topics[0] == bypassedTopic0, "non-empty extraData must never bypass");
+        }
+
+        assertEq(wl.balance, recipientBalanceBefore + amount, "the transfer must still settle on its own merits");
+        assertTrue(
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status == Const.FinalizeStatus.None,
+            "a within-limits transfer must not be pending"
+        );
+        assertGt(
+            bridgeVerifierCross.getTokenCurrentScore(NATIVE_TOKEN),
+            scoreBefore,
+            "a non-exempt settlement must record its score in the period accumulator"
+        );
+    }
+
+    /**
+     * @notice A record parked for a reason unrelated to the amount (here,
+     * `TokenPaused`) always has its `extraData` cleared once pending (the bridge never
+     * retains executor-routing data across a park/release cycle). So even though the
+     * ORIGINAL finalize attempt carried non-empty extraData and therefore evaluated
+     * without the whitelist exemption, `releasePending` re-validates against the
+     * recipient alone and the whitelist applies there - this transfer would otherwise
+     * still fail the single-transfer threshold on release.
+     */
+    function test_releasePending_whitelisted_originallyNonEmptyExtraData_exemptsOnRelease() public {
+        address wl = makeAddr("wl_release_after_nonempty_extradata");
+
+        vm.selectFork(crossForkID);
+        vm.startPrank(CrossOWNER);
+        bridgeVerifierCross.addValueLimitWhitelist(wl);
+        bridgeVerifierCross.setVerificationAmountThreshold(1); // trivially low: gates anyone not exempt
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, true);
+        vm.stopPrank();
+
+        uint amount = 5 ether;
+
+        vm.selectFork(bscForkID);
+        (uint index,) = bscBridge(address(cross), USER, USER, amount, 0, 0);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        crossFinalize(index, address(NATIVE_TOKEN), wl, amount, threshold, bytes("nonempty"));
+        assertTrue(
+            bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).status == Const.FinalizeStatus.TokenPaused,
+            "must park on the pause, independent of amount or extraData"
+        );
+        assertEq(bridgeCross.getPendingArguments(BSC_CHAIN_ID, index).args.extraData.length, 0, "extraData must be cleared once pending");
+
+        vm.prank(CrossOWNER);
+        bridgeCross.setTokenPause(BSC_CHAIN_ID, address(NATIVE_TOKEN), false, false);
+
+        uint recipientBalanceBefore = wl.balance;
+        bridgeCross.releasePending(BSC_CHAIN_ID, index);
+        assertEq(wl.balance, recipientBalanceBefore + amount, "release must settle via the whitelist exemption");
+    }
 }

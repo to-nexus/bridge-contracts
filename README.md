@@ -168,6 +168,23 @@ Consequences for users:
     it as an `extraData` call (`target` = the token, `selector` = `transferToCoreFor`, args =
     `(finalRecipient, amount)`) to move a token BSC → CROSS → HyperEVM → HyperCore in the single user action
     that starts the transfer.
+  - **Allowance semantics of `transferToCoreFor`.** The caller must have approved **the token contract itself**
+    (`spender == address(token)`) for at least the rounded amount, and the call consumes that allowance
+    (`ERC20InsufficientAllowance` otherwise). This is what bounds a composed `BridgeExecutor` call: the executor
+    only ever approves the call target for the bridged `value` of the bridged token, so with the token as target
+    the call can spend at most `value`, and a call that targets this token for some *other* asset finds no
+    allowance and reverts — it can never drain balances the executor happens to hold. A direct caller (an EOA)
+    must `approve(address(token), amount)` first; EOAs normally use `transferToCore` instead. The token must be
+    whitelisted on the executor with the method check enabled and `transferToCoreFor` as the only whitelisted
+    selector (see the admission rule in [4.3](#43-extradata--bridge-and-call-in-one-step)).
+  - **Upgrade invariant.** Any replacement `HyperMintableERC20` implementation shipped through the beacon must
+    keep consuming the caller's allowance to the token contract in `transferToCoreFor`. Dropping it would let a
+    composed call spend balances held by the executor. Before upgrading the beacon, the replacement must pass the
+    `transferToCoreFor` allowance and executor overspend tests in `test/HyperMintableERC20.t.sol`,
+    `test/BridgeExecutor.t.sol` and `test/CrossBridgeHyperEVMRoute.t.sol`.
+  - **Deployment prerequisite.** HyperCore must be confirmed on **testnet** to credit nothing for a reverted EVM
+    frame (a failed composed call unwinds its `Transfer` logs) before `transferToCoreFor` is whitelisted on a
+    production executor. If a reverted frame can still credit Core, do not whitelist it.
   - **Upgradeable token + factory.** Both the token and its factory (`HyperMintableERC20Code`) are proxies:
     every token created by one factory is a `BeaconProxy` sharing one `UpgradeableBeacon` (one upgrade fixes
     every token at once — the concentration this creates should sit behind a multisig/timelock beacon
@@ -291,6 +308,9 @@ extraData = target (20 bytes) || selector (4 bytes) || abi-encoded arguments
   restricted to specific function selectors; check `isMethodCheckEnabled(target)` to know whether selector
   filtering applies, then `isWhitelistedMethod(target, selector)`.
 - The bridged amount is made available to the target; whatever the target does not consume is sent to `to`.
+  For an ERC20 settlement the target may consume **at most `value`**: if the executor's balance of the bridged
+  token drops by more than `value` (for example a call that spends tokens already held by the executor), the
+  executor reverts and the transfer degrades to a plain payout.
 - `extraData` is part of the signed payload, so it cannot be altered between the two chains.
 
 Fallback behaviour:
@@ -300,11 +320,21 @@ Fallback behaviour:
 | `extraData` shorter than 24 bytes, no executor configured, target not whitelisted, or the pre-call ERC20 approval to the executor fails | Plain payout to `to`. No `ExtraCallExecuted` event is emitted. |
 | Whitelisted target, call succeeds | Target consumes what it needs, remainder goes to `to`. `ExtraCallExecuted` emitted with `success = true`. |
 | Whitelisted target, call fails | Plain payout to `to` is attempted instead. `ExtraCallExecuted` emitted with `success = false`. |
+| Whitelisted target, ERC20 call consumes more than `value` (executor reverts with `BEOverspent`) | Plain payout to `to` is attempted instead. `ExtraCallExecuted` emitted with `success = false`. |
 | Plain payout reports a recognized transfer or mint failure | The transfer is held for review ([4.5](#45-held-pending-transfers-and-releasepending)). Unexpected failures revert instead, as described in [4.4](#44-finalizebridgebatch--settlement-on-the-destination-chain). |
 
 A failed composed call therefore does not lose funds: the transfer degrades to a plain payout, or to a held
 transfer that can be retried. Whitelisting is performed by the `BridgeExecutor` administrators — contact them
 to have an integration target registered.
+
+**Target admission rule (for `BridgeExecutor` administrators).** Whitelist only selectors that move executor
+funds solely through the per-call ERC20 allowance or the attached native value. Never whitelist selectors that
+spend the executor's own balance (`transfer`, `transferToCore`, …) or that mutate allowances (`approve`,
+`increaseAllowance`, `decreaseAllowance`, `permit`, or anything that makes the executor grant approvals), and
+whitelist a token contract as a target only with the method check enabled. The executor enforces the
+`consumed <= value` bound for every ERC20 target; the shipped `transferToCoreFor` integration additionally
+closes cross-asset spending at the token. Arbitrary own-balance-spending targets are excluded by this rule, not
+by code — it is part of the whitelist trust model.
 
 ### 4.4 `finalizeBridgeBatch` — settlement on the destination chain
 
@@ -530,6 +560,18 @@ Common rules:
 - Unspent input is refunded to the caller — the unused part of `amountInMaximum` on exact-output, and any
   unspent remainder on exact-input — as the input token, or as native coin in the ETH variants. In the
   exact-output ETH variants any `msg.value` above `amountInMaximum` is refunded as well.
+- Refunds are computed from the router's own **balance change**, not from the amount Uniswap reports. The
+  returned and emitted `amountIn` of the exact-output entry points is therefore the amount actually taken from
+  the caller (`amountInMaximum` minus the refund) — for example `0` if Uniswap paid the pool from its own ETH.
+  Balances held by the router before the call (sent by someone else) are never refunded to the caller.
+- Multi-hop exact-input entry points revert with `SBRPartialFill(token, leftover)` if an intermediate path
+  token's balance on the Uniswap router increased during the swap (a partially filled last pool would leave it
+  there for anyone to sweep). The quote helpers do not detect such routes, so a quoted route can still revert
+  at execution; the caller then keeps the original tokens.
+- Only standard ERC20s are supported (no fee-on-transfer or rebasing tokens). Anything sent to the router
+  outside its API — a direct ERC20 transfer, or forced native coin — is **not recoverable**: the router is
+  immutable and has no admin or rescue path. No entry point finishes successfully leaving any part of that
+  call's input on the router.
 - Bridge fees are deducted from the swap output; the amount credited on the destination chain is `bridgeValue`
   in the `SwapBridge` event, which also carries `initiateIndex` — the bridge transfer index to track as in
   [4.6](#46-read-only-functions-for-tracking).

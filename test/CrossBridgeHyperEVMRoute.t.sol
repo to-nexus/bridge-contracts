@@ -12,6 +12,7 @@ import {Const} from "../src/lib/Const.sol";
 import {CrossMintableERC20V2Code} from "../src/token/CrossMintableERC20V2Code.sol";
 import {HyperMintableERC20} from "../src/token/HyperMintableERC20.sol";
 import {HyperMintableERC20Code} from "../src/token/HyperMintableERC20Code.sol";
+import {IHyperMintableERC20} from "../src/token/IHyperMintableERC20.sol";
 import {MockTargetContract} from "./BridgeExecutor.t.sol";
 import {CrossBridgeMultihopTest} from "./CrossBridgeMultihop.t.sol";
 
@@ -20,6 +21,7 @@ import {TestToken} from "./token/TestToken.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 /**
  * @title CrossBridgeHyperEVMRouteTest
@@ -376,5 +378,121 @@ contract CrossBridgeHyperEVMRouteTest is CrossBridgeMultihopTest {
         bytes32 raw = vm.load(tokenAddress, HyperMintableERC20(tokenAddress).HYPERCORE_DEPLOYER_SLOT());
         assertEq(raw, bytes32(uint(uint160(finalizer))));
         assertEq(HyperMintableERC20(tokenAddress).hyperCoreDeployer(), finalizer);
+    }
+
+    // =====================================================================
+    // `transferToCoreFor` through a real finalize
+    // =====================================================================
+
+    address internal constant CORE_TOKEN_INFO_PRECOMPILE = 0x000000000000000000000000000000000000080C;
+
+    /// @dev Links `token` to HyperCore index `index` (precompile mocked, factory is the link authority)
+    function _linkToCore(address token, uint32 index) internal {
+        IHyperMintableERC20.CoreTokenInfo memory info = IHyperMintableERC20.CoreTokenInfo({
+            name: "MOCK",
+            spots: new uint64[](0),
+            deployerTradingFeeShare: 0,
+            deployer: address(0),
+            evmContract: token,
+            szDecimals: 2,
+            weiDecimals: 8,
+            evmExtraWeiDecimals: 10
+        });
+        vm.mockCall(CORE_TOKEN_INFO_PRECOMPILE, abi.encode(index), abi.encode(info));
+        vm.prank(address(crossMintableERC20CodeHyper));
+        HyperMintableERC20(token).setCoreTokenIndex(index);
+    }
+
+    /// @dev Whitelists only `transferToCoreFor` on `target` at the HyperEVM executor
+    function _whitelistTransferToCoreFor(address target) internal {
+        vm.startPrank(hyperOwner);
+        bridgeExecutorHyper.addWhitelistTarget(target);
+        bridgeExecutorHyper.setMethodCheckEnabled(target, true);
+        bytes4[] memory methods = new bytes4[](1);
+        methods[0] = IHyperMintableERC20.transferToCoreFor.selector;
+        bridgeExecutorHyper.addWhitelistMethods(target, methods);
+        vm.stopPrank();
+    }
+
+    function _extraCallFailed(Vm.Log[] memory logs) internal pure returns (bool found, bool success) {
+        for (uint i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)"))
+            {
+                (, success,,) = abi.decode(logs[i].data, (bytes4, bool, uint, bytes));
+                return (true, success);
+            }
+        }
+    }
+
+    /// A call asking for more than the bridged value finalizes as a plain payout; the executor keeps its residual
+    function test_transferToCoreFor_finalize_sameAssetOverspend_fallsBackToPlainPayout() public {
+        (address tokenAddress,) = _createWrappedToken();
+        HyperMintableERC20 token = HyperMintableERC20(tokenAddress);
+        _linkToCore(tokenAddress, 60);
+        _whitelistTransferToCoreFor(tokenAddress);
+
+        address to = makeAddr("hyperevm-recipient");
+        address attacker = makeAddr("attacker");
+        uint value = 7 ether;
+        uint residual = 3 ether;
+        vm.prank(address(bridgeHyper));
+        token.mint(address(bridgeExecutorHyper), residual);
+
+        bytes memory extraData = abi.encodePacked(
+            tokenAddress,
+            abi.encodeWithSelector(IHyperMintableERC20.transferToCoreFor.selector, attacker, value + residual)
+        );
+        uint index = bridgeHyper.getNextFinalizeIndex(CROSS_CHAIN_ID);
+
+        vm.recordLogs();
+        assertTrue(_signAndFinalizeHyper(CROSS_CHAIN_ID, index, tokenAddress, to, value, extraData, 5));
+        (bool found, bool success) = _extraCallFailed(vm.getRecordedLogs());
+        assertTrue(found, "ExtraCallExecuted must be emitted");
+        assertFalse(success, "composed call must be reported as failed");
+
+        assertEq(token.balanceOf(to), value, "recipient receives the plain payout");
+        assertEq(token.balanceOf(address(bridgeExecutorHyper)), residual, "executor keeps its residual");
+        assertEq(token.balanceOf(token.coreSystemAddress()), 0, "nothing reached the Core system address");
+        assertEq(token.balanceOf(attacker), 0);
+        assertEq(token.allowance(address(bridgeExecutorHyper), tokenAddress), 0);
+        assertEq(token.allowance(address(bridgeHyper), address(bridgeExecutorHyper)), 0);
+    }
+
+    /// A call targeting another linked token that the executor holds finalizes as a plain payout
+    function test_transferToCoreFor_finalize_crossAsset_fallsBackToPlainPayout() public {
+        (address tokenA,) = _createWrappedToken();
+        vm.prank(hyperOwner);
+        address tokenB = bridgeHyper.createToken(CROSS_CHAIN_ID, makeAddr("hyperevm-wrapped-remote-b"), "TB", 18);
+        HyperMintableERC20 a = HyperMintableERC20(tokenA);
+        HyperMintableERC20 b = HyperMintableERC20(tokenB);
+        _linkToCore(tokenA, 61);
+        _linkToCore(tokenB, 62);
+        _whitelistTransferToCoreFor(tokenB);
+
+        address to = makeAddr("hyperevm-recipient");
+        address attacker = makeAddr("attacker");
+        uint value = 7 ether;
+        uint residual = 3 ether;
+        vm.prank(address(bridgeHyper));
+        b.mint(address(bridgeExecutorHyper), residual);
+
+        bytes memory extraData = abi.encodePacked(
+            tokenB, abi.encodeWithSelector(IHyperMintableERC20.transferToCoreFor.selector, attacker, residual)
+        );
+        uint index = bridgeHyper.getNextFinalizeIndex(CROSS_CHAIN_ID);
+
+        vm.recordLogs();
+        assertTrue(_signAndFinalizeHyper(CROSS_CHAIN_ID, index, tokenA, to, value, extraData, 5));
+        (bool found, bool success) = _extraCallFailed(vm.getRecordedLogs());
+        assertTrue(found, "ExtraCallExecuted must be emitted");
+        assertFalse(success, "composed call must be reported as failed");
+
+        assertEq(a.balanceOf(to), value, "recipient receives the plain payout");
+        assertEq(b.balanceOf(address(bridgeExecutorHyper)), residual, "executor keeps its residual of B");
+        assertEq(b.balanceOf(b.coreSystemAddress()), 0, "nothing reached B's Core system address");
+        assertEq(a.balanceOf(a.coreSystemAddress()), 0);
+        assertEq(a.allowance(address(bridgeExecutorHyper), tokenB), 0);
+        assertEq(b.allowance(address(bridgeExecutorHyper), tokenB), 0);
+        assertEq(a.allowance(address(bridgeHyper), address(bridgeExecutorHyper)), 0);
     }
 }

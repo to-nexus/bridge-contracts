@@ -234,6 +234,11 @@ contract HyperMintableERC20 is CrossMintableERC20V2, IHyperMintableERC20 {
 
     /// @inheritdoc IHyperMintableERC20
     function coreTokenIndex() external view returns (uint64) {
+        // Index 0 is a real, finalized HyperCore link (USDC), not a sentinel for "unset" --
+        // so returning the raw field whether or not `setCoreTokenIndex` ever ran would let
+        // an unlinked token silently read back as linked to USDC. Reverting before linking
+        // is what lets the two states be told apart at all.
+        require(_getHyperMintableERC20Storage().coreTokenIndexSet, HyperMintableERC20CoreTokenIndexNotSet());
         return _getHyperMintableERC20Storage().coreTokenIndex;
     }
 
@@ -283,7 +288,10 @@ contract HyperMintableERC20 is CrossMintableERC20V2, IHyperMintableERC20 {
         sent = coreTransferableAmount(amount);
         require(sent != 0, CoreAmountBelowOneCoreWei());
 
-        _transfer(_msgSender(), coreRecipient, sent);
+        address caller = _msgSender();
+        _spendAllowance(caller, address(this), sent);
+
+        _transfer(caller, coreRecipient, sent);
         _transfer(coreRecipient, systemAddress, sent);
     }
 }

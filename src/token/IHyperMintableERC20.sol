@@ -153,7 +153,9 @@ interface IHyperMintableERC20 is ICrossMintableERC20 {
 
     /**
      * @notice Returns the HyperCore spot token index recorded via `setCoreTokenIndex`
-     * @return Recorded Core token index (meaningless if `isCoreTokenIndexSet()` is false)
+     * @dev Reverts with `HyperMintableERC20CoreTokenIndexNotSet` while no index is recorded
+     *      (index `0` is itself a valid linked value, so there is no sentinel to return instead)
+     * @return Recorded Core token index
      */
     function coreTokenIndex() external view returns (uint64);
 
@@ -215,6 +217,10 @@ interface IHyperMintableERC20 is ICrossMintableERC20 {
      *      in the same transaction: `coreRecipient`'s EVM balance strictly nets to zero, so no
      *      role gate is needed — the only reachable effect is crediting someone else's Core
      *      balance from the caller's own tokens. The rounding remainder stays with the caller.
+     *      The caller must approve this token contract (`spender == address(this)`) for `sent`, which bounds
+     *      composed executor calls to the executor's per-call approval. EOAs normally use `transferToCore`.
+     *      Implementations must keep this allowance check; regression tests covering it must pass before a
+     *      beacon upgrade.
      * @param coreRecipient Address Core will credit (its EVM balance does not change)
      * @param amount Amount to move to Core, before rounding
      * @return sent The actually transferred (rounded-down) amount

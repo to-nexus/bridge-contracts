@@ -23,7 +23,8 @@ library Const {
         TokenCurrentVolumeOverflow,
         CrossSupplyLimitExceeded,
         TokenPriceUnavailable,
-        InsufficientLiquidity
+        InsufficientLiquidity,
+        InvalidRecipient
     }
 
     /**

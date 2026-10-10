@@ -22,7 +22,10 @@ interface IWETH9 is IERC20 {
 
 /// @title ISwapBridgeRouter
 /// @notice Interface for SwapBridgeRouter that combines Uniswap V3 swaps with bridge operations
-/// @dev Supports both exact input and exact output swap modes with single pool and multi-hop paths
+/// @dev Supports both exact input and exact output swap modes with single pool and multi-hop paths.
+/// Only standard (non fee-on-transfer, non rebasing) Uniswap V3 compatible ERC20 tokens are supported.
+/// Value sent to the router outside this API (a direct ERC20 transfer, forced ETH) is not recoverable:
+/// the router has no admin or rescue path.
 interface ISwapBridgeRouter {
     /**
      * @notice Status codes for bridge calculation results
@@ -127,7 +130,8 @@ interface ISwapBridgeRouter {
      * @param user Address of the user initiating the swap and bridge
      * @param tokenIn Address of the input token swapped
      * @param tokenOut Address of the output token bridged
-     * @param amountIn Amount of tokenIn spent in the swap
+     * @param amountIn Amount of tokenIn spent in the swap (exact-output: the amount actually taken from the caller,
+     *        i.e. `amountInMaximum` minus the refund)
      * @param amountOut Amount of tokenOut received from the swap
      * @param toChainID Target chain ID for the bridge
      * @param initiateIndex Index of the bridge initiation
@@ -162,6 +166,8 @@ interface ISwapBridgeRouter {
 
     /**
      * @notice Swap exact input multi-hop and bridge
+     * @dev Reverts with `SBRPartialFill` if an intermediate path token's balance on the Uniswap router increased
+     *      during the swap (a partially filled last pool), since anyone could sweep that residue
      * @param params The parameters for the swap and bridge
      * @param deadline Transaction deadline timestamp
      * @return amountOut The amount of output token received from swap
@@ -172,10 +178,11 @@ interface ISwapBridgeRouter {
 
     /**
      * @notice Swap to receive exact bridge output (single pool)
-     * @dev Calculates required swap output including bridge fees to achieve exact bridgeValue
+     * @dev Calculates required swap output including bridge fees to achieve exact bridgeValue.
+     *      Unspent input is refunded by this contract's balance change, not by Uniswap's reported amount
      * @param params The parameters for the swap and bridge
      * @param deadline Transaction deadline timestamp
-     * @return amountIn The amount of tokenIn spent
+     * @return amountIn The amount of tokenIn actually taken from the caller (`amountInMaximum` minus the refund)
      */
     function swapBridgeExactOutputSingle(SwapBridgeExactOutputSingleParams calldata params, uint deadline)
         external
@@ -183,10 +190,11 @@ interface ISwapBridgeRouter {
 
     /**
      * @notice Swap to receive exact bridge output (multi-hop)
-     * @dev Calculates required swap output including bridge fees to achieve exact bridgeValue
+     * @dev Calculates required swap output including bridge fees to achieve exact bridgeValue.
+     *      Unspent input is refunded by this contract's balance change, not by Uniswap's reported amount
      * @param params The parameters for the swap and bridge
      * @param deadline Transaction deadline timestamp
-     * @return amountIn The amount of input token spent
+     * @return amountIn The amount of input token actually taken from the caller (`amountInMaximum` minus the refund)
      */
     function swapBridgeExactOutput(SwapBridgeExactOutputParams calldata params, uint deadline)
         external
@@ -208,7 +216,8 @@ interface ISwapBridgeRouter {
 
     /**
      * @notice Swap exact ETH input multi-hop and bridge
-     * @dev msg.value should match params.amountIn
+     * @dev msg.value should match params.amountIn. Reverts with `SBRPartialFill` if an intermediate path token's
+     *      balance on the Uniswap router increased during the swap (a partially filled last pool)
      * @param params The parameters for the swap and bridge (path should start with WETH)
      * @param deadline Transaction deadline timestamp
      * @return amountOut The amount of output token received from swap
@@ -220,10 +229,11 @@ interface ISwapBridgeRouter {
 
     /**
      * @notice Swap ETH to receive exact bridge output (single pool)
-     * @dev msg.value should be >= params.amountInMaximum, excess is refunded
+     * @dev msg.value should be >= params.amountInMaximum, excess is refunded. Unspent WETH is unwrapped and
+     *      refunded by this contract's WETH balance change, not by Uniswap's reported amount
      * @param params The parameters for the swap and bridge
      * @param deadline Transaction deadline timestamp
-     * @return amountIn The amount of ETH spent (excess refunded)
+     * @return amountIn The amount of ETH actually taken from the caller (`amountInMaximum` minus the refund)
      */
     function swapBridgeExactOutputSingleETH(SwapBridgeExactOutputSingleParams calldata params, uint deadline)
         external
@@ -232,10 +242,11 @@ interface ISwapBridgeRouter {
 
     /**
      * @notice Swap ETH to receive exact bridge output (multi-hop)
-     * @dev msg.value should be >= params.amountInMaximum, excess is refunded
+     * @dev msg.value should be >= params.amountInMaximum, excess is refunded. Unspent WETH is unwrapped and
+     *      refunded by this contract's WETH balance change, not by Uniswap's reported amount
      * @param params The parameters for the swap and bridge
      * @param deadline Transaction deadline timestamp
-     * @return amountIn The amount of ETH spent (excess refunded)
+     * @return amountIn The amount of ETH actually taken from the caller (`amountInMaximum` minus the refund)
      */
     function swapBridgeExactOutputETH(SwapBridgeExactOutputParams calldata params, uint deadline)
         external

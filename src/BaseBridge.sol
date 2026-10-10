@@ -58,6 +58,7 @@ contract BaseBridge is
     error BaseBridgeFailedRelease(Const.FinalizeStatus status);
     error BaseBridgeExtraDataTooLong();
     error BaseBridgeInvalidGasReserve();
+    error BaseBridgeInvalidRecipient();
 
     /**
      * @notice Emitted when a bridge operation is initiated
@@ -254,6 +255,13 @@ contract BaseBridge is
 
     /**
      * @notice Bridges a token to a remote chain
+     * @dev For native tokens, `msg.value` only needs to cover `value + networkFee + exFee`;
+     * any surplus (e.g. from fee movement between quote and execution) is sent back to
+     * `_msgSender()` once the bridge itself has gone through, using the same fee values
+     * `_checkInitiateAmount` just validated. The two other payable entrypoints
+     * (`permitBridgeTokenBatch`, `bridgeTokenForwarded`) do not get this treatment -- a
+     * batch or an executor-driven call has no single caller to send a refund to, so both
+     * keep requiring exact native value instead.
      * @param toChainID Target chain ID
      * @param fromToken Token to bridge
      * @param to Recipient address
@@ -273,6 +281,7 @@ contract BaseBridge is
         bytes calldata extraData
     ) public payable whenNotPaused onlyValidToken(toChainID, address(fromToken)) nonReentrant returns (bool) {
         require(to != address(0), BaseBridgeCanNotZeroAddress());
+        require(to != address(this), BaseBridgeInvalidRecipient());
         require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
         _executeBridge(
@@ -287,6 +296,15 @@ contract BaseBridge is
                 extraData: extraData
             })
         );
+
+        if (address(fromToken) == Const.NATIVE_TOKEN) {
+            uint surplus = msg.value - (value + networkFee + exFee);
+            if (surplus != 0) {
+                bool refunded = _safeCall(payable(_msgSender()), surplus, "");
+                require(refunded, BaseBridgeFailedCall());
+            }
+        }
+
         return true;
     }
 
@@ -313,6 +331,7 @@ contract BaseBridge is
         // preventing third parties from injecting unauthorized bridge parameters
         // (toChainID, value, extraData) using a stolen or front-run permit.
         require(to == permitArgs.account, BaseBridgeMismatchPermitAccount());
+        require(to != address(this), BaseBridgeInvalidRecipient());
         require(_maxExtraDataLength == 0 || extraData.length <= _maxExtraDataLength, BaseBridgeExtraDataTooLong());
 
         (networkFee, exFee) = _checkInitiateAmount(toChainID, fromToken, value, networkFee, exFee);
@@ -348,6 +367,10 @@ contract BaseBridge is
 
     /**
      * @notice Processes multiple permit-based bridge operations
+     * @dev `msg.value` must be zero: every item here is permit-funded (ERC20), and a
+     * single `msg.value` checked per-item against `_initiateBridge`'s `>=` floor would
+     * otherwise let each native item in the batch re-use the same balance -- the batch has
+     * no per-item native funding and no refund target, so native is simply not accepted.
      * @param args Array of bridge operation details
      * @param permitArgs Array of permit parameters
      */
@@ -358,6 +381,7 @@ contract BaseBridge is
         nonReentrant
         onlyRole(Const.INITIATOR_ROLE)
     {
+        require(msg.value == 0, BaseBridgeInvalidValue(0, msg.value));
         require(args.length == permitArgs.length, BaseBridgeNotMatchLength());
         for (uint i = 0; i < args.length; ++i) {
             _permitBridgeToken(
@@ -408,7 +432,15 @@ contract BaseBridge is
         bool delay;
         uint remaining;
         {
-            (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, args.to, false);
+            // The value-limit whitelist exempts a signed recipient on the strength of that
+            // recipient actually receiving the value. With non-empty extraData, `to` is not
+            // that party once extraData resolves to a whitelisted executor target -- the
+            // tokens land wherever the target contract's own logic sends them, independent
+            // of `to`. Passing `address(0)` here (never whitelisted -- see
+            // `BridgeVerifier.validateBridgeTokenValue`'s NatSpec) keeps the exemption tied
+            // to the case it actually describes, without touching the verifier itself.
+            address exemptionRecipient = args.extraData.length == 0 ? args.to : address(0);
+            (status, delay) = _checkFinalizeAmount(args.fromChainID, args.toToken, args.value, exemptionRecipient, false);
             if (status == Const.FinalizeStatus.Success) {
                 (status, remaining) =
                     _finalizeBridge(args.fromChainID, args.index, args.toToken, args.to, args.value, args.extraData);
@@ -702,8 +734,13 @@ contract BaseBridge is
         _depositToken(remoteChainID, address(token), value);
 
         if (address(token) == Const.NATIVE_TOKEN) {
-            // Handling native token transfers (e.g., CROSS, ETH, BNB)
-            require(msg.value == value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
+            // Handling native token transfers (e.g., CROSS, ETH, BNB). `msg.value` only
+            // needs to cover `value + fee`, not match it exactly: a caller that quoted
+            // slightly ahead of fee movement should not have the whole transaction revert
+            // over it. Any surplus is this function's caller's problem to return -- it is
+            // not refunded here, since this helper also backs the batch and
+            // executor-forwarded entrypoints, where there is no single caller to refund.
+            require(msg.value >= value + fee, BaseBridgeInvalidValue(value + fee, msg.value));
             if (fee != 0) {
                 bool success = _safeCall(_dev, fee, "");
                 require(success, BaseBridgeFailedCall());
@@ -776,6 +813,13 @@ contract BaseBridge is
      * @dev Handles different token types (native, mintable, regular)
      * - If extraData is provided and bridgeExecutor is set, delegates to BridgeExecutor
      * - On executor revert, entire transaction rolls back (tokens remain safe in bridge)
+     * - Rejects `to == address(this)` up front, parking `InvalidRecipient` rather than
+     *   settling: this is the one chokepoint every settlement path funnels through
+     *   (ordinary finalize, `releasePending`, and `manualReleasePendingWithRecipient`'s
+     *   replacement recipient), so checking it here covers all three at once. The
+     *   executor's own `mint(address(this), value)` staging step below is unaffected --
+     *   that mints to the bridge only to immediately approve and hand off to the
+     *   executor, it never settles to the bridge as a destination.
      * @param fromChainID Source chain ID
      * @param index Finalize operation index
      * @param toToken Destination token
@@ -793,6 +837,32 @@ contract BaseBridge is
         uint value,
         bytes memory extraData
     ) internal returns (Const.FinalizeStatus status, uint remaining) {
+        // The source side already locked or burned the matching value; settling it to the
+        // bridge itself would leave that credit stuck here with no withdrawal path. Parked
+        // instead of reverted, so the finalize index still advances for later items in the
+        // batch -- see `_setPendingArguments` / `releasePending` for how a parked record is
+        // recovered. Split into its own check ahead of `_finalizeBridgeSettle` (rather than
+        // as a leading statement in that function) because that function is already at the
+        // EVM stack budget's edge -- see the `ForwardOutcome` grouping inside it.
+        if (to == address(this)) return (Const.FinalizeStatus.InvalidRecipient, value);
+        return _finalizeBridgeSettle(fromChainID, index, toToken, to, value, extraData);
+    }
+
+    /**
+     * @notice Settlement body of `_finalizeBridge`, split out purely to keep that
+     * function's already-deep local stack within the EVM's 16-slot limit for this call
+     * frame once the `to == address(this)` guard was added ahead of it.
+     * @dev See `_finalizeBridge` for the full behavior; this covers everything after the
+     * guard.
+     */
+    function _finalizeBridgeSettle(
+        uint fromChainID,
+        uint index,
+        IERC20 toToken,
+        address to,
+        uint value,
+        bytes memory extraData
+    ) private returns (Const.FinalizeStatus status, uint remaining) {
         bool isOrigin = _tokenPairs[fromChainID][address(toToken)].isOrigin;
         bool handledByExecutor;
 

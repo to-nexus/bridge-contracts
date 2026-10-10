@@ -53,6 +53,11 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     /// @notice Thrown when bridge calculation fails (includes failure reason)
     error SBRQuoteFailed(QuoteStatus status);
 
+    /// @notice Thrown when a multi-hop exact-input swap left an intermediate token on the Uniswap router
+    /// @param token Intermediate path token whose balance on the Uniswap router increased
+    /// @param leftover Amount by which that balance increased during the swap
+    error SBRPartialFill(address token, uint leftover);
+
     /// @notice Uniswap V3 SwapRouter address
     ISwapRouter public immutable swapRouter;
 
@@ -144,6 +149,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
         (address tokenIn, address tokenOut) = _decodePathTokens(params.path, false);
         uint preBalance = _prepareSwap(tokenIn, params.amountIn);
 
+        address[] memory intermediates = _intermediateTokens(params.path);
+        uint[] memory intermediateBefore = _snapshotBalances(intermediates, address(swapRouter));
+
         amountOut = swapRouter.exactInput(
             ISwapRouter.ExactInputParams({
                 path: params.path,
@@ -153,6 +161,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 amountOutMinimum: params.amountOutMinimum
             })
         );
+
+        _requireNoIntermediateResidue(intermediates, intermediateBefore);
 
         // Refund unspent tokens (safety measure for edge cases)
         _refundUnspent(tokenIn, preBalance);
@@ -192,9 +202,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         uint totalAmount = params.amountOut + networkFee + exFee;
 
-        _prepareSwap(params.tokenIn, params.amountInMaximum);
+        uint preBalance = _prepareSwap(params.tokenIn, params.amountInMaximum);
 
-        amountIn = swapRouter.exactOutputSingle(
+        swapRouter.exactOutputSingle(
             ISwapRouter.ExactOutputSingleParams({
                 tokenIn: params.tokenIn,
                 tokenOut: params.tokenOut,
@@ -207,7 +217,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        _refundExcess(params.tokenIn, params.amountInMaximum, amountIn);
+        amountIn = params.amountInMaximum - _refundUnspent(params.tokenIn, preBalance);
 
         // Bridge with pre-calculated values (no reverse calculation)
         uint initiateIndex = bridge.getNextInitiateIndex(params.bridgeParams.toChainID);
@@ -254,9 +264,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         uint totalAmount = params.amountOut + networkFee + exFee;
 
-        _prepareSwap(tokenIn, params.amountInMaximum);
+        uint preBalance = _prepareSwap(tokenIn, params.amountInMaximum);
 
-        amountIn = swapRouter.exactOutput(
+        swapRouter.exactOutput(
             ISwapRouter.ExactOutputParams({
                 path: params.path,
                 recipient: address(this),
@@ -266,7 +276,7 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        _refundExcess(tokenIn, params.amountInMaximum, amountIn);
+        amountIn = params.amountInMaximum - _refundUnspent(tokenIn, preBalance);
 
         // Bridge with pre-calculated values (no reverse calculation)
         uint initiateIndex = bridge.getNextInitiateIndex(params.bridgeParams.toChainID);
@@ -361,6 +371,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         uint preBalance = _prepareSwapETH(params.amountIn);
 
+        address[] memory intermediates = _intermediateTokens(params.path);
+        uint[] memory intermediateBefore = _snapshotBalances(intermediates, address(swapRouter));
+
         amountOut = swapRouter.exactInput(
             ISwapRouter.ExactInputParams({
                 path: params.path,
@@ -370,6 +383,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
                 amountOutMinimum: params.amountOutMinimum
             })
         );
+
+        _requireNoIntermediateResidue(intermediates, intermediateBefore);
 
         // Refund unspent WETH as ETH (safety measure for edge cases)
         _refundUnspentETH(preBalance);
@@ -412,9 +427,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         uint totalAmount = params.amountOut + networkFee + exFee;
 
-        _prepareSwapETH(params.amountInMaximum);
+        uint preBalance = _prepareSwapETH(params.amountInMaximum);
 
-        amountIn = swapRouter.exactOutputSingle(
+        swapRouter.exactOutputSingle(
             ISwapRouter.ExactOutputSingleParams({
                 tokenIn: params.tokenIn,
                 tokenOut: params.tokenOut,
@@ -427,7 +442,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        _refundExcessETH(params.amountInMaximum, amountIn);
+        amountIn = params.amountInMaximum - _refundUnspentETH(preBalance);
+        _refundExtraETH(params.amountInMaximum);
 
         // Bridge with pre-calculated values (no reverse calculation)
         uint initiateIndex = bridge.getNextInitiateIndex(params.bridgeParams.toChainID);
@@ -478,9 +494,9 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
 
         uint totalAmount = params.amountOut + networkFee + exFee;
 
-        _prepareSwapETH(params.amountInMaximum);
+        uint preBalance = _prepareSwapETH(params.amountInMaximum);
 
-        amountIn = swapRouter.exactOutput(
+        swapRouter.exactOutput(
             ISwapRouter.ExactOutputParams({
                 path: params.path,
                 recipient: address(this),
@@ -490,7 +506,8 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
             })
         );
 
-        _refundExcessETH(params.amountInMaximum, amountIn);
+        amountIn = params.amountInMaximum - _refundUnspentETH(preBalance);
+        _refundExtraETH(params.amountInMaximum);
 
         // Bridge with pre-calculated values (no reverse calculation)
         uint initiateIndex = bridge.getNextInitiateIndex(params.bridgeParams.toChainID);
@@ -698,30 +715,48 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /**
-     * @notice Refund excess ERC20 tokens after exactOutput swap
+     * @notice Refund unspent ERC20 input tokens after a swap
+     * @dev Refunds only the delta over `preBalance`, so balances held beforehand are never refunded. Covers
+     * early-terminated exact-input swaps and exact-output swaps where Uniswap may not pull the full amount.
      * @param tokenIn Input token address
-     * @param amountInMaximum Maximum amount that was approved
-     * @param amountIn Actual amount used
+     * @param preBalance Balance recorded by `_prepareSwap` before the transfer
+     * @return refunded Amount refunded to the caller
      */
-    function _refundExcess(address tokenIn, uint amountInMaximum, uint amountIn) internal {
+    function _refundUnspent(address tokenIn, uint preBalance) internal returns (uint refunded) {
+        // Clear allowance
         IERC20(tokenIn).forceApprove(address(swapRouter), 0);
-        if (amountIn < amountInMaximum) IERC20(tokenIn).safeTransfer(msg.sender, amountInMaximum - amountIn);
+        // Refund only this call's unspent input, not the contract's whole balance
+        uint currentBalance = IERC20(tokenIn).balanceOf(address(this));
+        if (currentBalance > preBalance) {
+            refunded = currentBalance - preBalance;
+            IERC20(tokenIn).safeTransfer(msg.sender, refunded);
+        }
     }
 
     /**
-     * @notice Refund excess ETH after exactOutput swap
-     * @param amountInMaximum Maximum amount that was wrapped
-     * @param amountIn Actual amount used
+     * @notice Refund unspent WETH as ETH after a swap
+     * @dev Mirrors `_refundUnspent` for the WETH balance
+     * @param preBalance WETH balance recorded by `_prepareSwapETH` before the deposit
+     * @return refunded Amount of WETH unwrapped and refunded to the caller as ETH
      */
-    function _refundExcessETH(uint amountInMaximum, uint amountIn) internal {
+    function _refundUnspentETH(uint preBalance) internal returns (uint refunded) {
+        // Clear allowance
         WETH9.approve(address(swapRouter), 0);
-        if (amountIn < amountInMaximum) {
-            uint refundAmount = amountInMaximum - amountIn;
-            WETH9.withdraw(refundAmount);
-            (bool success,) = msg.sender.call{value: refundAmount}("");
+        // Refund only this call's unspent input, not the contract's whole WETH balance
+        uint currentBalance = WETH9.balanceOf(address(this));
+        if (currentBalance > preBalance) {
+            refunded = currentBalance - preBalance;
+            WETH9.withdraw(refunded);
+            (bool success,) = msg.sender.call{value: refunded}("");
             require(success, SBRRefundFailed());
         }
-        // Refund any extra ETH sent beyond amountInMaximum
+    }
+
+    /**
+     * @notice Refund any ETH sent beyond `amountInMaximum` on an exact-output ETH entry point
+     * @param amountInMaximum Maximum amount that was wrapped
+     */
+    function _refundExtraETH(uint amountInMaximum) internal {
         if (msg.value > amountInMaximum) {
             (bool success,) = msg.sender.call{value: msg.value - amountInMaximum}("");
             require(success, SBRRefundFailed());
@@ -729,40 +764,44 @@ contract SwapBridgeRouter is ReentrancyGuardTransient, ISwapBridgeRouter {
     }
 
     /**
-     * @notice Refund unspent ERC20 tokens after exactInputSingle swap
-     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent
-     * tokens. Refunds only the delta above `preBalance` (this contract's balance
-     * immediately before the swap's transferFrom) rather than the full contract balance,
-     * so tokens someone else already holds in this contract are never swept into the
-     * caller's refund.
-     * @param tokenIn Input token address
-     * @param preBalance Balance recorded by `_prepareSwap` before the transfer
+     * @notice List the intermediate tokens of a multi-hop exact-input path
+     * @dev Path layout is `t0 | fee | t1 | fee | ... | tn`; returns t1..t(n-1)
+     * @param path The exact-input swap path (length already validated)
+     * @return tokens Intermediate token addresses (empty for a single hop)
      */
-    function _refundUnspent(address tokenIn, uint preBalance) internal {
-        // Clear allowance
-        IERC20(tokenIn).forceApprove(address(swapRouter), 0);
-        // Refund only this call's unspent input, not the contract's whole balance
-        uint currentBalance = IERC20(tokenIn).balanceOf(address(this));
-        if (currentBalance > preBalance) IERC20(tokenIn).safeTransfer(msg.sender, currentBalance - preBalance);
+    function _intermediateTokens(bytes calldata path) internal pure returns (address[] memory tokens) {
+        uint hops = (path.length - 20) / 23;
+        tokens = new address[](hops - 1);
+        for (uint i = 0; i < tokens.length; ++i) {
+            uint offset = (i + 1) * 23;
+            tokens[i] = address(bytes20(path[offset:offset + 20]));
+        }
     }
 
     /**
-     * @notice Refund unspent WETH as ETH after exactInputSingle swap
-     * @dev When sqrtPriceLimitX96 is non-zero, swap may terminate early leaving unspent
-     * WETH. Refunds only the delta above `preBalance` (this contract's WETH balance
-     * immediately before the swap's deposit), mirroring `_refundUnspent`.
-     * @param preBalance WETH balance recorded by `_prepareSwapETH` before the deposit
+     * @notice Record `holder`'s balance of each token
+     * @param tokens Tokens to snapshot
+     * @param holder Address whose balances are read
+     * @return balances Balances, index-aligned with `tokens`
      */
-    function _refundUnspentETH(uint preBalance) internal {
-        // Clear allowance
-        WETH9.approve(address(swapRouter), 0);
-        // Refund only this call's unspent input, not the contract's whole WETH balance
-        uint currentBalance = WETH9.balanceOf(address(this));
-        if (currentBalance > preBalance) {
-            uint remaining = currentBalance - preBalance;
-            WETH9.withdraw(remaining);
-            (bool success,) = msg.sender.call{value: remaining}("");
-            require(success, SBRRefundFailed());
+    function _snapshotBalances(address[] memory tokens, address holder) internal view returns (uint[] memory balances) {
+        balances = new uint[](tokens.length);
+        for (uint i = 0; i < tokens.length; ++i) {
+            balances[i] = IERC20(tokens[i]).balanceOf(holder);
+        }
+    }
+
+    /**
+     * @notice Revert if an intermediate token's balance on the Uniswap router increased since the snapshot
+     * @dev A partially filled last pool leaves intermediate tokens on the Uniswap router, where anyone can sweep
+     * them. Balances held before the swap are ignored.
+     * @param tokens Intermediate tokens from `_intermediateTokens`
+     * @param balancesBefore Snapshot of the Uniswap router's balances taken right before the swap
+     */
+    function _requireNoIntermediateResidue(address[] memory tokens, uint[] memory balancesBefore) internal view {
+        for (uint i = 0; i < tokens.length; ++i) {
+            uint balance = IERC20(tokens[i]).balanceOf(address(swapRouter));
+            if (balance > balancesBefore[i]) revert SBRPartialFill(tokens[i], balance - balancesBefore[i]);
         }
     }
 

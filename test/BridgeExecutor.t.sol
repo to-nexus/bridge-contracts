@@ -2775,4 +2775,114 @@ contract BridgeExecutorTest is BridgeTest {
             crossPairAfter.minted >= userBalanceAfter, "Minted should be sufficient for user to bridge back to BSC"
         );
     }
+
+    // ============ Overspend guard ============
+
+    /// @notice A composed call moving `value + residual` out of the executor reverts with `BEOverspent`; the bridge
+    ///         falls back to a plain payout and the executor-held residual is untouched
+    function test_executor_overspend_fallsBackToPlainPayout() public {
+        uint amount = 1000 * 1e18;
+        uint residual = 77 * 1e18;
+        address attacker = makeAddr("attacker");
+
+        vm.selectFork(bscForkID);
+        vm.prank(OWNER);
+        testTokenBSC.transfer(USER, amount);
+        vm.prank(USER);
+        testTokenBSC.approve(address(bridgeBSC), amount);
+        (uint value, uint gas, uint service) = bscCalcFee(testTokenBSC, amount);
+
+        // `transfer` on a token target violates the admission rule on purpose
+        vm.selectFork(crossForkID);
+        vm.startPrank(CrossOWNER);
+        bridgeExecutorCross.addWhitelistTarget(address(testTokenCross));
+        bridgeExecutorCross.setMethodCheckEnabled(address(testTokenCross), true);
+        bytes4[] memory methods = new bytes4[](1);
+        methods[0] = IERC20.transfer.selector;
+        bridgeExecutorCross.addWhitelistMethods(address(testTokenCross), methods);
+        vm.stopPrank();
+
+        vm.prank(address(bridgeCross));
+        ICrossMintableERC20(address(testTokenCross)).mint(address(bridgeExecutorCross), residual);
+
+        bytes memory extraData = abi.encodePacked(
+            address(testTokenCross), abi.encodeWithSelector(IERC20.transfer.selector, attacker, value + residual)
+        );
+
+        (uint index,) = bscBridge(address(testTokenBSC), USER, USER, value, gas, service, extraData);
+        bscIncrementIndex();
+
+        vm.selectFork(crossForkID);
+        uint userBefore = testTokenCross.balanceOf(USER);
+        assertTrue(crossFinalize(index, address(testTokenCross), USER, value, 5, extraData), "finalize must succeed");
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool foundEvent = false;
+        for (uint i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("ExtraCallExecuted(uint256,uint256,address,bytes4,bool,uint256,bytes)"))
+            {
+                foundEvent = true;
+                (, bool success, uint consumed, bytes memory returnData) =
+                    abi.decode(logs[i].data, (bytes4, bool, uint, bytes));
+                assertFalse(success, "composed call must be reported as failed");
+                assertEq(consumed, 0, "consumed must be 0 on fallback");
+                assertEq(
+                    returnData,
+                    abi.encodeWithSelector(BridgeExecutor.BEOverspent.selector, value + residual, value),
+                    "revert data must be BEOverspent(consumed, value)"
+                );
+                break;
+            }
+        }
+        assertTrue(foundEvent, "ExtraCallExecuted event should be emitted");
+
+        assertEq(testTokenCross.balanceOf(USER), userBefore + value, "`to` receives the plain payout");
+        assertEq(testTokenCross.balanceOf(address(bridgeExecutorCross)), residual, "executor residual untouched");
+        assertEq(testTokenCross.balanceOf(attacker), 0, "attacker receives nothing");
+
+        assertEq(
+            testTokenCross.allowance(address(bridgeExecutorCross), address(testTokenCross)),
+            0,
+            "executor must not leave an allowance to the target"
+        );
+        assertEq(
+            testTokenCross.allowance(address(bridgeCross), address(bridgeExecutorCross)),
+            0,
+            "bridge must not leave an allowance to the executor"
+        );
+    }
+
+    /// @notice Direct `executeExtraCall` with an overspending target reverts with `BEOverspent`
+    function test_executor_executeExtraCall_overspend_reverts() public {
+        vm.selectFork(crossForkID);
+
+        TestToken token = new TestToken("Overspend", "OVS", 18);
+        BridgeExecutor executor = new BridgeExecutor(CrossOWNER, address(this));
+        address attacker = makeAddr("attacker");
+
+        vm.startPrank(CrossOWNER);
+        executor.addWhitelistTarget(address(token));
+        executor.setMethodCheckEnabled(address(token), true);
+        bytes4[] memory methods = new bytes4[](1);
+        methods[0] = IERC20.transfer.selector;
+        executor.addWhitelistMethods(address(token), methods);
+        vm.stopPrank();
+
+        uint value = 100 * 1e18;
+        uint residual = 40 * 1e18;
+        token.mint(address(executor), residual);
+        token.mint(address(this), value);
+        token.approve(address(executor), value);
+
+        bytes memory extraData = abi.encodePacked(
+            address(token), abi.encodeWithSelector(IERC20.transfer.selector, attacker, value + residual)
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(BridgeExecutor.BEOverspent.selector, value + residual, value));
+        executor.executeExtraCall(0, 0, IERC20(address(token)), USER, value, extraData);
+
+        assertEq(token.balanceOf(address(executor)), residual, "executor residual untouched");
+        assertEq(token.balanceOf(address(this)), value, "caller keeps the pulled value");
+        assertEq(token.balanceOf(attacker), 0, "attacker receives nothing");
+    }
 }
