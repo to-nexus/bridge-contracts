@@ -2,9 +2,9 @@
 # [DEV2TF-382 · 383 · 384 · 435 STEP 1·2] HyperEVM 999 구축을 tx 파일 «하나»로 — 서명 1회
 #
 #   ./09-hype-setup.sh --check                                      # 사전 점검만 (조회)
-#   ./09-hype-setup.sh --mode all --name "<이름>" --symbol "<심볼>"  # 9·10·11 + 435(토큰·999 페어) — 16건
-#   ./09-hype-setup.sh --mode infra                                 # 9·10·11 만 — 14건
-#   ./09-hype-setup.sh --verify --bridge 0x… [--token 0x…]          # 전송 후 온체인 재검증 (조회)
+#   ./09-hype-setup.sh --mode all --name "<이름>" --symbol "<심볼>"  # 9·10·11 + 435(토큰·가격·999 페어) — 18건
+#   ./09-hype-setup.sh --mode infra                                 # 9·10·11 만 — 15건
+#   ./09-hype-setup.sh --verify --bridge 0x… [--token 0x… --name "<이름>" --symbol "<심볼>"]   # 전송 후 재검증 (조회)
 #
 # 내용은 HypeSetup.s.sol 에 있다. gorge script 가 forge 시뮬레이션(브로드캐스트 없음)으로 tx 를 모으고,
 # 시뮬레이션 끝의 require(역할·설정·주소·링크 가능 상태·바이트코드)가 하나라도 틀리면 파일이 «안 만들어진다».
@@ -56,19 +56,67 @@ DEV_BSC="$(cast call "$BSC_BRIDGE" 'dev()(address)' --rpc-url "$BSC_RPC_READ" 2>
   || die "ONE dev($DEV_ONE) 와 BSC dev($DEV_BSC) 가 다르거나 조회 실패 — 999 dev 를 정할 수 없다."
 export HYPE_DEV="$DEV_ONE" SENDER
 
+# ── BSC 메인넷(56) 기준값 — 999 는 BSC 와 같은 설정으로 맞춘다 ──────────────────
+#   HypeSetup 이 자기 상수와 이 값이 같은지 require 한다. 하나라도 다르면 tx 파일이 만들어지지 않는다.
+bq(){ cast call "$@" --rpc-url "$BSC_RPC_READ" 2>/dev/null | head -1 | awk '{print $1}'; }
+bslot(){ cast to-dec "$(cast storage "$1" "$2" --rpc-url "$BSC_RPC_READ" 2>/dev/null)" 2>/dev/null; }
+BV="$(bq "$BSC_BRIDGE" 'bridgeVerifier()(address)')"; BPF="$(bq "$BV" 'priceFeed()(address)')"
+BONE="$(cast call "$BSC_BRIDGE" 'allTokenPairs(uint256)((address,address,bool,bool,uint256,uint256,uint256)[])' 612055 \
+        --rpc-url "$BSC_RPC_READ" 2>/dev/null | python3 -c "
+import sys,re
+for l,r in re.findall(r'\(\s*(0x[0-9a-fA-F]{40}),\s*(0x[0-9a-fA-F]{40})', sys.stdin.read()):
+    if int(r,16)==1: print(l)")"
+[ -n "$BV" ] && [ -n "$BPF" ] && [ -n "$BONE" ] || die "BSC 기준값 조회 실패 (verifier=$BV priceFeed=$BPF ONE토큰=$BONE)"
+export HYPE_REF_FINALIZE_GAS="$(bslot "$BV" 2)"
+export HYPE_REF_DEFAULT_EX_FEE_RATE="$(bslot "$BV" 3)"
+export HYPE_REF_DEFAULT_TOKEN_PRICE="$(bslot "$BV" 4)"
+export HYPE_REF_MIN_TOKEN_VALUE="$(bslot "$BV" 5)"
+export HYPE_REF_VERIFICATION_AMOUNT_THRESHOLD="$(bslot "$BV" 6)"
+export HYPE_REF_PERIOD_TOTAL_VALUE_THRESHOLD="$(bslot "$BV" 7)"
+export HYPE_REF_TIME_WINDOW="$(bslot "$BV" 8)"
+export HYPE_REF_GAS_PRICE_HUB="$(bq "$BV" 'getGasPrice(uint256)(uint256)' 612055)"
+export HYPE_REF_TOKEN_EX_FEE="$(bslot "$BV" "$(cast index address "$BONE" 9)")"
+export HYPE_REF_DOLLAR_DECIMALS="$(bq "$BPF" 'dollarDecimals()(uint8)')"
+export HYPE_REF_TOKEN_PRICE="$(cast call "$BPF" 'getTokenPriceInDollars(address)(bool,uint256,uint256)' "$BONE" --rpc-url "$BSC_RPC_READ" 2>/dev/null | sed -n 2p | awk '{print $1}')"
+export HYPE_REF_HUB_NATIVE_PRICE="$(cast call "$BPF" 'getNativeTokenPrice(uint256)(bool,uint256,uint256)' 612055 --rpc-url "$BSC_RPC_READ" 2>/dev/null | sed -n 2p | awk '{print $1}')"
+export HYPE_REF_MIN_VALUE_AT_PRICE="$(bq "$BV" 'getTokenConfig(uint256,address)(uint256,uint256,uint256)' 612055 "$BONE")"
+export HYPE_REF_VERIFICATION_DELAY="$(bslot "$BSC_BRIDGE" 1)"
+export HYPE_REF_MAX_EXTRA="$(bq "$BSC_BRIDGE" 'maxExtraDataLength()(uint256)')"
+export HYPE_REF_POST_CALL_GAS_RESERVE="$(bslot "$BSC_BRIDGE" 54)"
+export HYPE_REF_THRESHOLD="$(bq "$BSC_BRIDGE" 'threshold()(uint8)')"
+for k in FINALIZE_GAS DEFAULT_EX_FEE_RATE DEFAULT_TOKEN_PRICE MIN_TOKEN_VALUE VERIFICATION_AMOUNT_THRESHOLD \
+         PERIOD_TOTAL_VALUE_THRESHOLD TIME_WINDOW GAS_PRICE_HUB TOKEN_EX_FEE DOLLAR_DECIMALS TOKEN_PRICE \
+         HUB_NATIVE_PRICE MIN_VALUE_AT_PRICE VERIFICATION_DELAY MAX_EXTRA POST_CALL_GAS_RESERVE THRESHOLD; do
+  eval "v=\${HYPE_REF_$k:-}"
+  printf '%s' "$v" | grep -Eq '^[0-9]+$' || die "BSC 기준값 HYPE_REF_$k 조회 실패 ('$v')"
+done
+
 # ── 검증 (전송 후) ───────────────────────────────────────────────────────
 if [ "$ACTION" = "verify" ]; then
   [ -n "$VBRIDGE" ] || die "--bridge <999 브릿지 프록시> 를 지정해라."
+  [ -z "$VTOKEN" ] || { [ -n "$NAME" ] && [ -n "$SYMBOL" ]; } || die "--token 을 주면 --name 과 --symbol 도 줘야 한다 (생성 시 값과 대조)."
   hdr "$CH_NAME — 전송 후 온체인 재검증 (조회만 · tx 없음)"
-  out="$(forge script "$SCRIPT" --sig "verify(address,address)" "$VBRIDGE" "${VTOKEN:-0x0000000000000000000000000000000000000000}" \
+  out="$(forge script "$SCRIPT" --sig "verify(address,address,string,string)" "$VBRIDGE" \
+        "${VTOKEN:-0x0000000000000000000000000000000000000000}" "$NAME" "$SYMBOL" \
         --rpc-url "$R_READ" 2>&1)"; rc=$?
   printf '%s\n' "$out" | sed -n '/== Logs ==/,$p' | sed 's/^/    /'
   if [ $rc -ne 0 ] || ! printf '%s\n' "$out" | grep -q "VERIFY OK"; then
     printf '%s\n' "$out" | grep -E "Error|revert|Revert" | tail -5 | sed 's/^/      /'
     die "검증 실패 — 위 메시지의 항목을 먼저 확인할 것."
   fi
-  ok "역할 · 설정 · 연결 · 링크 가능 상태 · 런타임 바이트코드 전부 일치"
+  ok "역할(executor 는 선언 주소만) · 설정 · 연결 · 링크 가능 상태 · 런타임 바이트코드 — 이 빌드와 일치"
   pick(){ printf '%s\n' "$out" | grep -E "^[[:space:]]+$1[[:space:]]+=" | head -1 | awk '{print $NF}'; }
+
+  # ── 9번 STEP 5 «런타임 해시 ONE·BSC 와 동일» — BridgeVerifier 는 immutable 이 없어 체인 간 그대로 같아야 한다
+  V999="$(pick 'BridgeVerifier \(V999\)')"
+  VONE="$(cast call "$ONE_BRIDGE" 'bridgeVerifier()(address)' --rpc-url "$ONE_RPC_READ" 2>/dev/null)"
+  VBSC="$(cast call "$BSC_BRIDGE" 'bridgeVerifier()(address)' --rpc-url "$BSC_RPC_READ" 2>/dev/null)"
+  h999="$(cast keccak "$(cast code "$V999" --rpc-url "$R_READ")")"
+  hone="$(cast keccak "$(cast code "$VONE" --rpc-url "$ONE_RPC_READ")")"
+  hbsc="$(cast keccak "$(cast code "$VBSC" --rpc-url "$BSC_RPC_READ")")"
+  [ -n "$VONE" ] && [ -n "$VBSC" ] && [ "$h999" = "$hone" ] && [ "$h999" = "$hbsc" ] \
+    && ok "BridgeVerifier 런타임 해시 999 = ONE = BSC ($h999)" \
+    || die "BridgeVerifier 런타임 해시 불일치 — 999 $h999 / ONE $hone ($VONE) / BSC $hbsc ($VBSC)"
   state_put HYPE_NEW_VERIFIER "$(pick 'BridgeVerifier \(V999\)')"
   state_put HYPE_NEW_EXECUTOR "$(pick 'BridgeExecutor \(E999\)')"
   [ -n "$VTOKEN" ] && state_put HYPE_TOKEN999 "$VTOKEN"
@@ -89,6 +137,11 @@ hdr "$CH_NAME — 사전 점검"
 [ "$(lc "$SENDER")" = "$(lc "$HYPE_BROLE_DEFAULT_ADMIN")" ] \
   || die "SENDER($SENDER) 가 HYPE_BROLE_DEFAULT_ADMIN($HYPE_BROLE_DEFAULT_ADMIN) 이 아니다 — 운영 키 A 로 실행해라."
 ok "SENDER = 운영 키 A · dev = $HYPE_DEV (ONE · BSC 와 동일)"
+info "BSC 기준값 — verifier $BV · priceFeed $BPF · ONE 토큰 $BONE"
+info "  finalizeGas $HYPE_REF_FINALIZE_GAS · defaultTokenPrice $HYPE_REF_DEFAULT_TOKEN_PRICE · defaultExFee $HYPE_REF_DEFAULT_EX_FEE_RATE · minValue $HYPE_REF_MIN_TOKEN_VALUE · 한도 $HYPE_REF_VERIFICATION_AMOUNT_THRESHOLD/$HYPE_REF_PERIOD_TOTAL_VALUE_THRESHOLD · timeWindow $HYPE_REF_TIME_WINDOW"
+info "  수수료① gasPrice[612055] $HYPE_REF_GAS_PRICE_HUB · 수수료② exFeeRate[ONE] $HYPE_REF_TOKEN_EX_FEE · 최소전송 $HYPE_REF_MIN_VALUE_AT_PRICE"
+info "  가격 ONE 토큰 $HYPE_REF_TOKEN_PRICE · 612055 네이티브 $HYPE_REF_HUB_NATIVE_PRICE (dollarDecimals $HYPE_REF_DOLLAR_DECIMALS)"
+info "  브릿지 verificationDelay $HYPE_REF_VERIFICATION_DELAY · maxExtra $HYPE_REF_MAX_EXTRA · postCallGasReserve $HYPE_REF_POST_CALL_GAS_RESERVE · threshold $HYPE_REF_THRESHOLD"
 cid="$(cast chain-id --rpc-url "$R_SEND" 2>/dev/null)"
 [ "$cid" = "999" ] && ok "chainId 999" || die "chainId 가 999 가 아니다 ($cid) — RPC 확인 (사무실/DevOps IP 전용)"
 
@@ -122,13 +175,20 @@ ch="$(cast keccak "$(cast code "$HYPE_BIMPL" --rpc-url "$R_SEND")")"
 # ── 빌드 ────────────────────────────────────────────────────────────────
 case "$MODE" in
   all)   [ -n "$NAME" ] && [ -n "$SYMBOL" ] || die "--mode all 은 --name 과 --symbol 이 필요하다."
-         SIG="all(string,string)"; ARGS=("$NAME" "$SYMBOL"); EXPECT=16 ;;
-  infra) SIG="infra()"; ARGS=(); EXPECT=14 ;;
+         SIG="all(string,string)"; ARGS=("$NAME" "$SYMBOL"); EXPECT=18 ;;
+  infra) SIG="infra()"; ARGS=(); EXPECT=15 ;;
   *)     die "--mode all|infra 를 지정해라." ;;
 esac
 
+hdr "10번 배포 전 게이트 — HyperMintableERC20 테스트 (DEV2TF-383 §1-1)"
+forge test --match-path test/HyperMintableERC20.t.sol \
+  || die "test/HyperMintableERC20.t.sol 실패 — 토큰 구현을 비콘에 올리기 전에 해결해야 한다."
+ok "HyperMintableERC20 테스트 통과 (FOUNDRY_PROFILE=$FOUNDRY_PROFILE)"
+
 hdr "$CH_NAME — gorge script ($SIG)"
 [ "$MODE" = "all" ] && info "토큰 이름 «$NAME» · 심볼 «$SYMBOL» · decimals 18 · minter = 브릿지  (생성 후 바꿀 수 없다)"
+# 시뮬레이션 시작 nonce 를 고정한다 — HypeSetup 이 vm.getNonce(SENDER) 와 같지 않으면 실패한다
+export HYPE_EXPECT_NONCE="$nl"
 F="$WORK/tx-$PFX-S.json"; rm -f "$F"
 gorge_run script $(gc_opt) --rpc-url "$R_SEND" --sender "$SENDER" --profile deploy --out "$F" \
   "$SCRIPT" "$SIG" ${ARGS[@]+"${ARGS[@]}"} \
@@ -159,5 +219,5 @@ cat <<EOF
 
   ★ 서명 화면에서 tx 마다 «Confirm signing» 을 묻는다 — 위 표와 대조하며 y.
   ★ 전송 뒤 (같은 출력의 P999 · TOKEN999 주소로):
-      $0 --verify --bridge <P999>$( [ "$MODE" = "all" ] && printf ' --token <TOKEN999>' )
+      $0 --verify --bridge <P999>$( [ "$MODE" = "all" ] && printf ' --token <TOKEN999> --name "%s" --symbol "%s"' "$NAME" "$SYMBOL" )
 EOF

@@ -13,8 +13,10 @@ import {HyperMintableERC20} from "../../src/token/HyperMintableERC20.sol";
 import {HyperMintableERC20Code} from "../../src/token/HyperMintableERC20Code.sol";
 import {ICrossMintableERC20Code} from "../../src/token/ICrossMintableERC20Code.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Script, console} from "forge-std/Script.sol";
 
 /**
@@ -58,6 +60,14 @@ contract HypeSetup is Script {
     uint internal constant MAX_EXTRA = 1024;
     uint internal constant MAX_RETURN_DATA = 1024;
     uint8 internal constant TOKEN_DECIMALS = 18;
+    // ── BSC 메인넷(56) 과 같은 값으로 맞춘다 — 빌드 때 BSC 실측값(HYPE_REF_*)과 같은지 강제한다 ──
+    uint internal constant GAS_PRICE_HUB = 0; // 수수료① networkFee — 999→612055 (BSC→612055 와 같음)
+    uint internal constant TOKEN_EX_FEE = 0; // 수수료② exFee — 래핑 ONE 토큰별 exFeeRate (BSC ONE 토큰과 같음)
+    uint internal constant TOKEN_PRICE = 1000000; // PriceFeed — 래핑 ONE 토큰 가격 1.00 USD (BSC ONE 토큰과 같음)
+    uint internal constant HUB_NATIVE_PRICE = 1000000; // PriceFeed — 612055 네이티브 가격 1.00 USD (BSC 와 같음)
+    uint internal constant VERIFICATION_DELAY = 86400; // 브릿지 _verificationDelay (slot 1) — initialize 기본값
+    uint internal constant POST_CALL_GAS_RESERVE = 0; // 브릿지 _postCallGasReserve (slot 54) — 0 = 기본 150000
+    uint internal constant MIN_VALUE_AT_PRICE = 5 ether; // getTokenConfig(612055, ONE).minimumValue — BSC 실측 5e18
 
     bytes32 internal constant IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 internal constant BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
@@ -99,8 +109,9 @@ contract HypeSetup is Script {
 
     function infra() external returns (Infra memory d) {
         Cfg memory c = _cfg();
+        _requireNonce(c);
         d = _infra(c);
-        _verify(c, d.bridge, address(0)); // 브로드캐스트 밖 — 전송 후 검증과 «같은 코드» 로 확인
+        _verify(c, d.bridge, address(0), "", ""); // 브로드캐스트 밖 — 전송 후 검증과 «같은 코드» 로 확인
     }
 
     function token(address bridge, address factory, string memory name_, string memory symbol_)
@@ -108,16 +119,18 @@ contract HypeSetup is Script {
         returns (address tok)
     {
         Cfg memory c = _cfg();
+        _requireNonce(c);
         tok = _token(c, bridge, factory, name_, symbol_);
-        _checkToken(c, bridge, factory, tok);
+        _checkToken(c, bridge, factory, tok, name_, symbol_);
         console.log("TOKEN999                =", tok);
     }
 
     function all(string memory name_, string memory symbol_) external returns (Infra memory d, address tok) {
         Cfg memory c = _cfg();
+        _requireNonce(c);
         d = _infra(c);
         tok = _token(c, d.bridge, d.factory, name_, symbol_);
-        _verify(c, d.bridge, tok);
+        _verify(c, d.bridge, tok, name_, symbol_);
     }
 
     /**
@@ -125,10 +138,17 @@ contract HypeSetup is Script {
      * @dev 브릿지 주소 하나에서 나머지를 따라가 찾는다. 역할 · 설정 · 연결 + 런타임 바이트코드 대조.
      *      바이트코드는 같은 빌드로 시뮬레이션 안에서 새로 만든 사본과 비교한다. UUPS __self immutable
      *      (PriceFeed · HyperMintableERC20Code) 은 사본 주소를 온체인 주소로 치환한 뒤 비교한다.
-     * @param tok 0 이면 토큰 확인을 건너뛴다 (infra 만 보낸 경우)
+     *      ★ executor 는 AccessControl(열거 불가)이라 «선언한 주소의 hasRole» 만 본다 — 추가 보유자는 못 찾는다.
+     * @param tok 0 이면 infra 만 보낸 경우다 — 이때는 페어가 «하나도 없어야» 한다
      */
-    function verify(address bridge, address tok) external {
-        _verify(_cfg(), bridge, tok);
+    function verify(address bridge, address tok, string memory name_, string memory symbol_) external {
+        _verify(_cfg(), bridge, tok, name_, symbol_);
+    }
+
+    /// @dev forge 가 시뮬레이션한 nonce == 사전 조회한 체인 nonce. gorge 는 nonce 만 다시 매기고
+    ///      CREATE 주소가 박힌 calldata 는 고치지 않으므로, 둘이 다르면 주소 참조가 어긋난다.
+    function _requireNonce(Cfg memory c) internal view {
+        require(vm.getNonce(c.owner) == vm.envUint("HYPE_EXPECT_NONCE"), "simulated nonce != HYPE_EXPECT_NONCE");
     }
 
     // =====================================================================
@@ -167,14 +187,51 @@ contract HypeSetup is Script {
         _eqSet(vm.envAddress("HYPE_EROLE_ADMIN", ","), _one(c.owner), "env HYPE_EROLE_ADMIN != [SENDER]");
         //    이 묶음의 setter(setBridgeVerifier 등)는 owner 의 ADMIN 으로 보낸다
         require(_has(c.brAdmin, c.owner), "env HYPE_BROLE_ADMIN must include SENDER");
+        //    registerToken 은 EDITOR, 가격 투입은 PriceFeed PRICER 로 보낸다
+        require(_has(c.brEditor, c.owner), "env HYPE_BROLE_EDITOR must include SENDER");
+        require(_has(c.pPricer, c.owner), "env HYPE_PROLE_PRICER must include SENDER");
         //    INITIATOR 는 두지 않는다 (DEV2TF-381 결정 5) — 변수는 «있되 비어» 있어야 한다
         require(bytes(vm.envString("HYPE_BROLE_INITIATOR")).length == 0, "env HYPE_BROLE_INITIATOR must be empty");
         //    서명 정족수 — 운영 키 금지 · threshold 이상
         require(!_has(c.brValidator, c.owner), "SENDER must not be VALIDATOR");
         require(c.brValidator.length >= THRESHOLD, "VALIDATOR count < threshold");
-        _noDup(c.brValidator, "duplicate VALIDATOR");
+        //    목표 목록에 중복이 있으면 집합 비교가 «예상 밖 보유자» 를 숨길 수 있다
+        _noDup(c.brAdmin, "duplicate in HYPE_BROLE_ADMIN");
+        _noDup(c.brValidator, "duplicate in HYPE_BROLE_VALIDATOR");
+        _noDup(c.brEditor, "duplicate in HYPE_BROLE_EDITOR");
+        _noDup(c.brOperator, "duplicate in HYPE_BROLE_OPERATOR");
+        _noDup(c.brVerifier, "duplicate in HYPE_BROLE_VERIFIER");
+        _noDup(c.vAdmin, "duplicate in HYPE_VROLE_ADMIN");
+        _noDup(c.vEditor, "duplicate in HYPE_VROLE_EDITOR");
+        _noDup(c.vPricer, "duplicate in HYPE_VROLE_PRICER");
+        _noDup(c.pAdmin, "duplicate in HYPE_PROLE_ADMIN");
+        _noDup(c.pPricer, "duplicate in HYPE_PROLE_PRICER");
         require(c.dev != address(0), "HYPE_DEV zero");
         require(c.bimpl.codehash == c.bimplCodehash, "BIMPL codehash != audited (DEV2TF-657)");
+
+        // ── BSC 메인넷 실측값(09-hype-setup.sh 가 빌드 직전에 읽어 넘긴다)과 이 파일의 상수가 같은가 ──
+        //    다르면 «BSC 에 맞춘다» 는 결정과 어긋난 것이다 — 상수를 고칠지 사람이 정해야 한다
+        _ref("HYPE_REF_FINALIZE_GAS", FINALIZE_GAS);
+        _ref("HYPE_REF_DEFAULT_EX_FEE_RATE", DEFAULT_EX_FEE_RATE);
+        _ref("HYPE_REF_DEFAULT_TOKEN_PRICE", DEFAULT_TOKEN_PRICE);
+        _ref("HYPE_REF_MIN_TOKEN_VALUE", MIN_TOKEN_VALUE);
+        _ref("HYPE_REF_VERIFICATION_AMOUNT_THRESHOLD", 0);
+        _ref("HYPE_REF_PERIOD_TOTAL_VALUE_THRESHOLD", 0);
+        _ref("HYPE_REF_TIME_WINDOW", TIME_WINDOW);
+        _ref("HYPE_REF_GAS_PRICE_HUB", GAS_PRICE_HUB);
+        _ref("HYPE_REF_TOKEN_EX_FEE", TOKEN_EX_FEE);
+        _ref("HYPE_REF_DOLLAR_DECIMALS", DOLLAR_DECIMALS);
+        _ref("HYPE_REF_TOKEN_PRICE", TOKEN_PRICE);
+        _ref("HYPE_REF_HUB_NATIVE_PRICE", HUB_NATIVE_PRICE);
+        _ref("HYPE_REF_MIN_VALUE_AT_PRICE", MIN_VALUE_AT_PRICE);
+        _ref("HYPE_REF_VERIFICATION_DELAY", VERIFICATION_DELAY);
+        _ref("HYPE_REF_MAX_EXTRA", MAX_EXTRA);
+        _ref("HYPE_REF_POST_CALL_GAS_RESERVE", POST_CALL_GAS_RESERVE);
+        _ref("HYPE_REF_THRESHOLD", THRESHOLD);
+    }
+
+    function _ref(string memory key, uint mine) internal view {
+        require(vm.envUint(key) == mine, string.concat("BSC mainnet ", key, " != HypeSetup constant"));
     }
 
     // =====================================================================
@@ -190,6 +247,9 @@ contract HypeSetup is Script {
         d.priceFeed =
             address(new ERC1967Proxy(d.priceFeedImpl, abi.encodeCall(PriceFeed.initialize, (c.owner, DOLLAR_DECIMALS))));
         _grant(d.priceFeed, Const.ADMIN_ROLE, c.pAdmin, Const.PRICER_ROLE, c.pPricer);
+        //    612055 네이티브 가격 — BSC PriceFeed 와 같은 1.00 USD. owner 는 바로 위에서 PRICER 를 받았다.
+        //    pricesAt 0 = 블록 시각 (PriceFeed._updateNativeTokenPrice)
+        PriceFeed(d.priceFeed).updateNativeTokenPrice(_u(HUB), _u(HUB_NATIVE_PRICE), _u(0));
 
         // ── 9 STEP 4 — 브릿지 프록시 (구현 = 0번 BIMPL · owner · dev · threshold 2) ─
         d.bridge =
@@ -290,6 +350,13 @@ contract HypeSetup is Script {
         require(t.totalSupply() == 0, "totalSupply != 0");
         _checkTokenLinkReady(c, bridge, factory, tok);
 
+        // ── 토큰 가격 — BSC PriceFeed 의 ONE 토큰과 같은 1.00 USD. 없으면 최소금액이 defaultTokenPrice 기준 500 ONE 이 된다.
+        //    페어 등록(개방) «전» 에 넣는다.
+        address pf = address(BridgeVerifier(address(BaseBridge(payable(bridge)).bridgeVerifier())).priceFeed());
+        vm.startBroadcast(c.owner);
+        PriceFeed(pf).updatePrice(_a(tok), _u(TOKEN_PRICE), _u(0));
+        vm.stopBroadcast();
+
         // ── STEP 2 — 999 쪽 페어 (EDITOR). isOrigin 은 «두 번째» · 999 는 false (ONE 쪽은 12번에서 true)
         vm.startBroadcast(c.owner);
         BaseBridge(payable(bridge)).registerToken(HUB, false, tok, NATIVE);
@@ -298,9 +365,26 @@ contract HypeSetup is Script {
         _checkPair(bridge, tok);
     }
 
-    function _checkToken(Cfg memory c, address bridge, address factory, address tok) internal {
+    function _checkToken(
+        Cfg memory c,
+        address bridge,
+        address factory,
+        address tok,
+        string memory name_,
+        string memory symbol_
+    ) internal {
+        require(bytes(name_).length != 0 && bytes(symbol_).length != 0, "verify: name/symbol required with token");
+        require(keccak256(bytes(HyperMintableERC20(tok).name())) == keccak256(bytes(name_)), "token name");
+        require(keccak256(bytes(HyperMintableERC20(tok).symbol())) == keccak256(bytes(symbol_)), "token symbol");
         _checkTokenLinkReady(c, bridge, factory, tok);
         _checkPair(bridge, tok);
+        // ── BSC 와 같은 가격 · 수수료 — 토큰 단위 ──
+        BridgeVerifier v = BridgeVerifier(address(BaseBridge(payable(bridge)).bridgeVerifier()));
+        (bool ex, uint price,) = PriceFeed(address(v.priceFeed())).getTokenPriceInDollars(tok);
+        require(ex && price == TOKEN_PRICE, "PF token price != BSC (1.00 USD)");
+        require(uint(vm.load(address(v), keccak256(abi.encode(tok, uint(9))))) == TOKEN_EX_FEE, "V exFeeRate[token]");
+        (uint minV, uint netFee, uint exFee) = v.getTokenConfig(HUB, IERC20(tok));
+        require(minV == MIN_VALUE_AT_PRICE && netFee == 0 && exFee == 0, "V getTokenConfig(612055, token) != BSC");
         // 이 팩토리 비콘을 가리키는 정품 BeaconProxy 여야 한다 (_beacon immutable 까지 같아야 일치)
         _sameCode(tok, address(new BeaconProxy(HyperMintableERC20Code(factory).beacon(), "")), "token proxy code");
     }
@@ -344,7 +428,7 @@ contract HypeSetup is Script {
     // 검증 (시뮬레이션 끝 · 전송 후 verify 공용)
     // =====================================================================
 
-    function _verify(Cfg memory c, address bridge, address tok) internal {
+    function _verify(Cfg memory c, address bridge, address tok, string memory name_, string memory symbol_) internal {
         BaseBridge br = BaseBridge(payable(bridge));
         Infra memory d;
         d.bridge = bridge;
@@ -371,7 +455,15 @@ contract HypeSetup is Script {
         _sameCode(d.factory, address(new ERC1967Proxy(anyImpl, "")), "factory proxy code");
         _sameCode(d.beacon, address(new UpgradeableBeacon(anyImpl, c.owner)), "beacon code");
 
-        if (tok != address(0)) _checkToken(c, bridge, d.factory, tok);
+        if (tok != address(0)) {
+            _checkToken(c, bridge, d.factory, tok, name_, symbol_);
+        } else {
+            // infra 만 보낸 상태 — 페어 · 체인 등록이 «하나도» 없어야 한다 (11번 최종 점검)
+            require(br.allChainIDs().length == 0, "infra-only: allChainIDs must be empty");
+            require(
+                HyperMintableERC20Code(d.factory).tokenForPair(HUB, NATIVE) == address(0), "infra-only: token exists"
+            );
+        }
         _report(d);
         if (tok != address(0)) console.log("TOKEN999                =", tok);
         console.log("VERIFY OK");
@@ -381,6 +473,8 @@ contract HypeSetup is Script {
         // ── PriceFeed ──
         PriceFeed pf = PriceFeed(d.priceFeed);
         require(pf.dollarDecimals() == DOLLAR_DECIMALS, "PF dollarDecimals");
+        (bool nex, uint nprice,) = pf.getNativeTokenPrice(HUB);
+        require(nex && nprice == HUB_NATIVE_PRICE, "PF native price[612055] != BSC (1.00 USD)");
         _eqSet(pf.getRoleMembers(bytes32(0)), _one(c.owner), "PF DEFAULT_ADMIN");
         _eqSet(pf.getRoleMembers(Const.ADMIN_ROLE), c.pAdmin, "PF ADMIN");
         _eqSet(pf.getRoleMembers(Const.PRICER_ROLE), c.pPricer, "PF PRICER");
@@ -394,6 +488,10 @@ contract HypeSetup is Script {
         require(br.dev() == c.dev, "bridge dev");
         require(br.threshold() == THRESHOLD, "bridge threshold");
         require(br.maxExtraDataLength() == MAX_EXTRA, "bridge maxExtraDataLength");
+        require(uint(vm.load(d.bridge, bytes32(uint(1)))) == VERIFICATION_DELAY, "bridge verificationDelay (slot 1)");
+        require(
+            uint(vm.load(d.bridge, bytes32(uint(54)))) == POST_CALL_GAS_RESERVE, "bridge postCallGasReserve (slot 54)"
+        );
         require(!br.paused(), "bridge paused");
         require(address(br.bridgeVerifier()) == d.verifier, "bridge verifier");
         require(address(br.bridgeExecutor()) == d.executor, "bridge executor");
@@ -418,7 +516,8 @@ contract HypeSetup is Script {
         require(uint(vm.load(d.verifier, bytes32(uint(6)))) == 0, "V verificationAmountThreshold");
         require(uint(vm.load(d.verifier, bytes32(uint(7)))) == 0, "V periodTotalValueThreshold");
         require(uint(vm.load(d.verifier, bytes32(uint(8)))) == TIME_WINDOW, "V timeWindow");
-        require(v.getGasPrice(HUB) == 0, "V gasPrice[612055] != 0");
+        require(v.getGasPrice(HUB) == GAS_PRICE_HUB, "V gasPrice[612055] != BSC");
+        require(v.getValueLimitWhitelistLength() == 0, "V valueLimitWhitelist not empty");
         _eqSet(v.getRoleMembers(bytes32(0)), _one(c.owner), "V DEFAULT_ADMIN");
         _eqSet(v.getRoleMembers(Const.ADMIN_ROLE), c.vAdmin, "V ADMIN");
         _eqSet(v.getRoleMembers(Const.EDITOR_ROLE), c.vEditor, "V EDITOR");
@@ -533,6 +632,15 @@ contract HypeSetup is Script {
                 require(xs[i] != xs[j], what);
             }
         }
+    }
+
+    function _u(uint x) internal pure returns (uint[] memory r) {
+        r = new uint[](1);
+        r[0] = x;
+    }
+
+    function _a(address x) internal pure returns (address[] memory r) {
+        return _one(x);
     }
 
     function _one(address x) internal pure returns (address[] memory r) {
