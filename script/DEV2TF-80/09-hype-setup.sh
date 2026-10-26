@@ -2,9 +2,9 @@
 # [DEV2TF-382 · 383 · 384 · 435 STEP 1·2] HyperEVM 999 구축을 tx 파일 «하나»로 — 서명 1회
 #
 #   ./09-hype-setup.sh --check                                      # 사전 점검만 (조회)
-#   ./09-hype-setup.sh --mode all --name "<이름>" --symbol "<심볼>"  # 9·10·11 + 435(토큰·가격·999 페어) — 18건
+#   ./09-hype-setup.sh --mode all                                   # 9·10·11 + 435(토큰 ONEchain/ONE·가격·999 페어) — 18건
 #   ./09-hype-setup.sh --mode infra                                 # 9·10·11 만 — 15건
-#   ./09-hype-setup.sh --verify --bridge 0x… [--token 0x… --name "<이름>" --symbol "<심볼>"]   # 전송 후 재검증 (조회)
+#   ./09-hype-setup.sh --verify --bridge 0x… [--token 0x…]          # 전송 후 온체인 재검증 (조회)
 #
 # 내용은 HypeSetup.s.sol 에 있다. gorge script 가 forge 시뮬레이션(브로드캐스트 없음)으로 tx 를 모으고,
 # 시뮬레이션 끝의 require(역할·설정·주소·링크 가능 상태·바이트코드)가 하나라도 틀리면 파일이 «안 만들어진다».
@@ -15,12 +15,10 @@
 set -uo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/../gorge/mainnet/_lib.sh"   # 운영 주소·RPC 는 레포 밖(DEV2TF-80 첨부)에 둔다
 
-MODE=""; NAME=""; SYMBOL=""; ACTION="build"; VBRIDGE=""; VTOKEN=""
+MODE=""; ACTION="build"; VBRIDGE=""; VTOKEN=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --mode)   MODE="$2"; shift 2 ;;
-    --name)   NAME="$2"; shift 2 ;;
-    --symbol) SYMBOL="$2"; shift 2 ;;
     --check)  ACTION="check"; shift ;;
     --verify) ACTION="verify"; shift ;;
     --bridge) VBRIDGE="$2"; shift 2 ;;
@@ -58,6 +56,8 @@ export HYPE_DEV="$DEV_ONE" SENDER
 
 # ── BSC 메인넷(56) 기준값 — 999 는 BSC 와 같은 설정으로 맞춘다 ──────────────────
 #   HypeSetup 이 자기 상수와 이 값이 같은지 require 한다. 하나라도 다르면 tx 파일이 만들어지지 않는다.
+[ "$(cast chain-id --rpc-url "$BSC_RPC_READ" 2>/dev/null)" = "56" ] || die "BSC RPC 가 chainId 56 이 아니다 ($BSC_RPC_READ)"
+[ "$(cast chain-id --rpc-url "$ONE_RPC_READ" 2>/dev/null)" = "612055" ] || die "ONE RPC 가 chainId 612055 가 아니다 ($ONE_RPC_READ)"
 bq(){ cast call "$@" --rpc-url "$BSC_RPC_READ" 2>/dev/null | head -1 | awk '{print $1}'; }
 bslot(){ cast to-dec "$(cast storage "$1" "$2" --rpc-url "$BSC_RPC_READ" 2>/dev/null)" 2>/dev/null; }
 BV="$(bq "$BSC_BRIDGE" 'bridgeVerifier()(address)')"; BPF="$(bq "$BV" 'priceFeed()(address)')"
@@ -84,9 +84,11 @@ export HYPE_REF_VERIFICATION_DELAY="$(bslot "$BSC_BRIDGE" 1)"
 export HYPE_REF_MAX_EXTRA="$(bq "$BSC_BRIDGE" 'maxExtraDataLength()(uint256)')"
 export HYPE_REF_POST_CALL_GAS_RESERVE="$(bslot "$BSC_BRIDGE" 54)"
 export HYPE_REF_THRESHOLD="$(bq "$BSC_BRIDGE" 'threshold()(uint8)')"
+export HYPE_REF_VALUE_LIMIT_WHITELIST_LEN="$(bq "$BV" 'getValueLimitWhitelistLength()(uint256)')"
 for k in FINALIZE_GAS DEFAULT_EX_FEE_RATE DEFAULT_TOKEN_PRICE MIN_TOKEN_VALUE VERIFICATION_AMOUNT_THRESHOLD \
          PERIOD_TOTAL_VALUE_THRESHOLD TIME_WINDOW GAS_PRICE_HUB TOKEN_EX_FEE DOLLAR_DECIMALS TOKEN_PRICE \
-         HUB_NATIVE_PRICE MIN_VALUE_AT_PRICE VERIFICATION_DELAY MAX_EXTRA POST_CALL_GAS_RESERVE THRESHOLD; do
+         HUB_NATIVE_PRICE MIN_VALUE_AT_PRICE VERIFICATION_DELAY MAX_EXTRA POST_CALL_GAS_RESERVE THRESHOLD \
+         VALUE_LIMIT_WHITELIST_LEN; do
   eval "v=\${HYPE_REF_$k:-}"
   printf '%s' "$v" | grep -Eq '^[0-9]+$' || die "BSC 기준값 HYPE_REF_$k 조회 실패 ('$v')"
 done
@@ -94,10 +96,9 @@ done
 # ── 검증 (전송 후) ───────────────────────────────────────────────────────
 if [ "$ACTION" = "verify" ]; then
   [ -n "$VBRIDGE" ] || die "--bridge <999 브릿지 프록시> 를 지정해라."
-  [ -z "$VTOKEN" ] || { [ -n "$NAME" ] && [ -n "$SYMBOL" ]; } || die "--token 을 주면 --name 과 --symbol 도 줘야 한다 (생성 시 값과 대조)."
   hdr "$CH_NAME — 전송 후 온체인 재검증 (조회만 · tx 없음)"
-  out="$(forge script "$SCRIPT" --sig "verify(address,address,string,string)" "$VBRIDGE" \
-        "${VTOKEN:-0x0000000000000000000000000000000000000000}" "$NAME" "$SYMBOL" \
+  out="$(forge script "$SCRIPT" --sig "verify(address,address)" "$VBRIDGE" \
+        "${VTOKEN:-0x0000000000000000000000000000000000000000}" \
         --rpc-url "$R_READ" 2>&1)"; rc=$?
   printf '%s\n' "$out" | sed -n '/== Logs ==/,$p' | sed 's/^/    /'
   if [ $rc -ne 0 ] || ! printf '%s\n' "$out" | grep -q "VERIFY OK"; then
@@ -111,10 +112,13 @@ if [ "$ACTION" = "verify" ]; then
   V999="$(pick 'BridgeVerifier \(V999\)')"
   VONE="$(cast call "$ONE_BRIDGE" 'bridgeVerifier()(address)' --rpc-url "$ONE_RPC_READ" 2>/dev/null)"
   VBSC="$(cast call "$BSC_BRIDGE" 'bridgeVerifier()(address)' --rpc-url "$BSC_RPC_READ" 2>/dev/null)"
-  h999="$(cast keccak "$(cast code "$V999" --rpc-url "$R_READ")")"
-  hone="$(cast keccak "$(cast code "$VONE" --rpc-url "$ONE_RPC_READ")")"
-  hbsc="$(cast keccak "$(cast code "$VBSC" --rpc-url "$BSC_RPC_READ")")"
-  [ -n "$VONE" ] && [ -n "$VBSC" ] && [ "$h999" = "$hone" ] && [ "$h999" = "$hbsc" ] \
+  # 조회 실패를 «빈 코드끼리 같다» 로 통과시키지 않는다 — 코드가 비면 그 자리에서 멈춘다
+  codehash(){ local c; c="$(cast code "$1" --rpc-url "$2" 2>/dev/null)" || die "cast code 실패: $1 ($2)"
+              [ -n "$c" ] && [ "$c" != "0x" ] || die "코드가 없다: $1 ($2)"; cast keccak "$c"; }
+  isaddr(){ printf '%s' "$1" | grep -Eq '^0x[0-9a-fA-F]{40}$'; }
+  isaddr "$V999" && isaddr "$VONE" && isaddr "$VBSC" || die "verifier 주소 조회 실패 — 999 '$V999' / ONE '$VONE' / BSC '$VBSC'"
+  h999="$(codehash "$V999" "$R_READ")"; hone="$(codehash "$VONE" "$ONE_RPC_READ")"; hbsc="$(codehash "$VBSC" "$BSC_RPC_READ")"
+  [ "$h999" = "$hone" ] && [ "$h999" = "$hbsc" ] \
     && ok "BridgeVerifier 런타임 해시 999 = ONE = BSC ($h999)" \
     || die "BridgeVerifier 런타임 해시 불일치 — 999 $h999 / ONE $hone ($VONE) / BSC $hbsc ($VBSC)"
   state_put HYPE_NEW_VERIFIER "$(pick 'BridgeVerifier \(V999\)')"
@@ -174,8 +178,7 @@ ch="$(cast keccak "$(cast code "$HYPE_BIMPL" --rpc-url "$R_SEND")")"
 
 # ── 빌드 ────────────────────────────────────────────────────────────────
 case "$MODE" in
-  all)   [ -n "$NAME" ] && [ -n "$SYMBOL" ] || die "--mode all 은 --name 과 --symbol 이 필요하다."
-         SIG="all(string,string)"; ARGS=("$NAME" "$SYMBOL"); EXPECT=18 ;;
+  all)   SIG="all()"; ARGS=(); EXPECT=18 ;;
   infra) SIG="infra()"; ARGS=(); EXPECT=15 ;;
   *)     die "--mode all|infra 를 지정해라." ;;
 esac
@@ -186,7 +189,7 @@ forge test --match-path test/HyperMintableERC20.t.sol \
 ok "HyperMintableERC20 테스트 통과 (FOUNDRY_PROFILE=$FOUNDRY_PROFILE)"
 
 hdr "$CH_NAME — gorge script ($SIG)"
-[ "$MODE" = "all" ] && info "토큰 이름 «$NAME» · 심볼 «$SYMBOL» · decimals 18 · minter = 브릿지  (생성 후 바꿀 수 없다)"
+[ "$MODE" = "all" ] && info "토큰 이름 «ONEchain» · 심볼 «ONE» · decimals 18 · minter = 브릿지 (HypeSetup 상수 · 생성 후 바꿀 수 없다)"
 # 시뮬레이션 시작 nonce 를 고정한다 — HypeSetup 이 vm.getNonce(SENDER) 와 같지 않으면 실패한다
 export HYPE_EXPECT_NONCE="$nl"
 F="$WORK/tx-$PFX-S.json"; rm -f "$F"
@@ -219,5 +222,5 @@ cat <<EOF
 
   ★ 서명 화면에서 tx 마다 «Confirm signing» 을 묻는다 — 위 표와 대조하며 y.
   ★ 전송 뒤 (같은 출력의 P999 · TOKEN999 주소로):
-      $0 --verify --bridge <P999>$( [ "$MODE" = "all" ] && printf ' --token <TOKEN999> --name "%s" --symbol "%s"' "$NAME" "$SYMBOL" )
+      $0 --verify --bridge <P999>$( [ "$MODE" = "all" ] && printf ' --token <TOKEN999>' )
 EOF

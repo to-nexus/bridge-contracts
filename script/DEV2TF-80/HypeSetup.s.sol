@@ -25,8 +25,8 @@ import {Script, console} from "forge-std/Script.sol";
  *         09-hype-setup.sh 가 환경을 채워 부른다. 직접 부르지 않는다.
  *
  *   infra()                   9·10·11 — PriceFeed · 브릿지 프록시 · 역할 · BridgeVerifier · 팩토리 · 비콘 · executor
- *   token(bridge,factory,n,s) 435     — 토큰 생성 → «링크 가능 상태» 확인 → 999 쪽 페어 등록
- *   all(n,s)                  위 둘을 한 파일로
+ *   token(bridge,factory)     435     — 토큰 생성(ONEchain / ONE) → 가격 → «링크 가능 상태» 확인 → 999 쪽 페어 등록
+ *   all()                     위 둘을 한 파일로
  *   verify(bridge,token)      전송 «후» 온체인 재검증 (조회만 — tx 없음)
  *
  * ★ 운영 주소는 이 파일에 없다 (퍼블릭 레포). 전부 환경변수로 받는다 — 정본은 레포 밖 chains.env:
@@ -60,6 +60,9 @@ contract HypeSetup is Script {
     uint internal constant MAX_EXTRA = 1024;
     uint internal constant MAX_RETURN_DATA = 1024;
     uint8 internal constant TOKEN_DECIMALS = 18;
+    // ★ 생성 후 바꿀 수 없다 — 토큰 주소(CREATE2 initcode)에도 들어간다 (2026-10-26 확정)
+    string internal constant TOKEN_NAME = "ONEchain";
+    string internal constant TOKEN_SYMBOL = "ONE";
     // ── BSC 메인넷(56) 과 같은 값으로 맞춘다 — 빌드 때 BSC 실측값(HYPE_REF_*)과 같은지 강제한다 ──
     uint internal constant GAS_PRICE_HUB = 0; // 수수료① networkFee — 999→612055 (BSC→612055 와 같음)
     uint internal constant TOKEN_EX_FEE = 0; // 수수료② exFee — 래핑 ONE 토큰별 exFeeRate (BSC ONE 토큰과 같음)
@@ -114,23 +117,20 @@ contract HypeSetup is Script {
         _verify(c, d.bridge, address(0), "", ""); // 브로드캐스트 밖 — 전송 후 검증과 «같은 코드» 로 확인
     }
 
-    function token(address bridge, address factory, string memory name_, string memory symbol_)
-        external
-        returns (address tok)
-    {
+    function token(address bridge, address factory) external returns (address tok) {
         Cfg memory c = _cfg();
         _requireNonce(c);
-        tok = _token(c, bridge, factory, name_, symbol_);
-        _checkToken(c, bridge, factory, tok, name_, symbol_);
+        tok = _token(c, bridge, factory, TOKEN_NAME, TOKEN_SYMBOL);
+        _checkToken(c, bridge, factory, tok, TOKEN_NAME, TOKEN_SYMBOL);
         console.log("TOKEN999                =", tok);
     }
 
-    function all(string memory name_, string memory symbol_) external returns (Infra memory d, address tok) {
+    function all() external returns (Infra memory d, address tok) {
         Cfg memory c = _cfg();
         _requireNonce(c);
         d = _infra(c);
-        tok = _token(c, d.bridge, d.factory, name_, symbol_);
-        _verify(c, d.bridge, tok, name_, symbol_);
+        tok = _token(c, d.bridge, d.factory, TOKEN_NAME, TOKEN_SYMBOL);
+        _verify(c, d.bridge, tok, TOKEN_NAME, TOKEN_SYMBOL);
     }
 
     /**
@@ -141,8 +141,8 @@ contract HypeSetup is Script {
      *      ★ executor 는 AccessControl(열거 불가)이라 «선언한 주소의 hasRole» 만 본다 — 추가 보유자는 못 찾는다.
      * @param tok 0 이면 infra 만 보낸 경우다 — 이때는 페어가 «하나도 없어야» 한다
      */
-    function verify(address bridge, address tok, string memory name_, string memory symbol_) external {
-        _verify(_cfg(), bridge, tok, name_, symbol_);
+    function verify(address bridge, address tok) external {
+        _verify(_cfg(), bridge, tok, TOKEN_NAME, TOKEN_SYMBOL);
     }
 
     /// @dev forge 가 시뮬레이션한 nonce == 사전 조회한 체인 nonce. gorge 는 nonce 만 다시 매기고
@@ -228,6 +228,7 @@ contract HypeSetup is Script {
         _ref("HYPE_REF_MAX_EXTRA", MAX_EXTRA);
         _ref("HYPE_REF_POST_CALL_GAS_RESERVE", POST_CALL_GAS_RESERVE);
         _ref("HYPE_REF_THRESHOLD", THRESHOLD);
+        _ref("HYPE_REF_VALUE_LIMIT_WHITELIST_LEN", 0);
     }
 
     function _ref(string memory key, uint mine) internal view {
