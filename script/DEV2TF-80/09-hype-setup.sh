@@ -140,7 +140,8 @@ fi
 hdr "$CH_NAME — 사전 점검"
 [ "$(lc "$SENDER")" = "$(lc "$HYPE_BROLE_DEFAULT_ADMIN")" ] \
   || die "SENDER($SENDER) 가 HYPE_BROLE_DEFAULT_ADMIN($HYPE_BROLE_DEFAULT_ADMIN) 이 아니다 — 운영 키 A 로 실행해라."
-ok "SENDER = 운영 키 A · dev = $HYPE_DEV (ONE · BSC 와 동일)"
+ok "발신자(SENDER) = $SENDER — 운영 키 A (모든 tx 의 from)"
+ok "수수료 수취(dev) = $HYPE_DEV — tx 를 보내지 않는다. 999 브릿지 initialize 의 dev 인자 (ONE · BSC 브릿지 dev() 와 동일)"
 info "BSC 기준값 — verifier $BV · priceFeed $BPF · ONE 토큰 $BONE"
 info "  finalizeGas $HYPE_REF_FINALIZE_GAS · defaultTokenPrice $HYPE_REF_DEFAULT_TOKEN_PRICE · defaultExFee $HYPE_REF_DEFAULT_EX_FEE_RATE · minValue $HYPE_REF_MIN_TOKEN_VALUE · 한도 $HYPE_REF_VERIFICATION_AMOUNT_THRESHOLD/$HYPE_REF_PERIOD_TOTAL_VALUE_THRESHOLD · timeWindow $HYPE_REF_TIME_WINDOW"
 info "  수수료① gasPrice[612055] $HYPE_REF_GAS_PRICE_HUB · 수수료② exFeeRate[ONE] $HYPE_REF_TOKEN_EX_FEE · 최소전송 $HYPE_REF_MIN_VALUE_AT_PRICE"
