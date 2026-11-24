@@ -28,6 +28,21 @@ contract MockCLRouter is ICLSwapRouter {
     address public reenterTarget;
     bytes public reenterData;
 
+    /// @dev exactInput sends the input to the first pool (as the real router does) rather than parking it on the router
+    address public constant POOL = address(uint160(uint(keccak256("MockCLRouter.POOL"))));
+    /// @notice Per-token amount a multi-hop exactInput leaves on the router (a partially filled last pool)
+    mapping(address => uint) public intermediateLeftover;
+    /// @notice Per-token amount of the router's own balance a multi-hop exactInput moves out to the pools
+    mapping(address => uint) public intermediateDrain;
+
+    function setIntermediateLeftover(address token, uint amount) external {
+        intermediateLeftover[token] = amount;
+    }
+
+    function setIntermediateDrain(address token, uint amount) external {
+        intermediateDrain[token] = amount;
+    }
+
     constructor(address _weth9) {
         WETH9 = _weth9;
     }
@@ -76,7 +91,15 @@ contract MockCLRouter is ICLSwapRouter {
         lastPath = p.path;
         address tokenIn = address(bytes20(p.path[0:20]));
         address tokenOut = address(bytes20(p.path[p.path.length - 20:]));
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), p.amountIn);
+        IERC20(tokenIn).transferFrom(msg.sender, POOL, p.amountIn);
+        uint hops = (p.path.length - 20) / 23;
+        for (uint i = 1; i < hops; ++i) {
+            address intermediate = address(bytes20(p.path[i * 23:i * 23 + 20]));
+            uint drain = intermediateDrain[intermediate];
+            if (drain > 0) IERC20(intermediate).transfer(POOL, drain);
+            uint leftover = intermediateLeftover[intermediate];
+            if (leftover > 0) TestToken(intermediate).mint(address(this), leftover);
+        }
         amountOut = p.amountIn * swapRate / 1e18;
         require(amountOut >= p.amountOutMinimum, "Too little received");
         IERC20(tokenOut).transfer(p.recipient, amountOut);
@@ -541,5 +564,208 @@ contract SwapBridgeRouterCLTest is BridgeTest {
     function test_cl_v3WrapperUnchanged() public pure {
         assertEq(SwapBridgeRouter.swapBridgeExactInputSingle.selector, bytes4(0x80413d2f));
         assertEq(SwapBridgeRouter.getAmountSwapBridgeOut.selector, bytes4(0x86f64142));
+    }
+
+    // ---------------------------------------------------------------- multi-hop partial fill (CBU-08 port) and multi-hop variants
+
+    function _mh(bytes memory path, uint amountIn)
+        internal
+        view
+        returns (ISwapBridgeRouterCL.SwapBridgeExactInputParams memory)
+    {
+        return ISwapBridgeRouterCL.SwapBridgeExactInputParams({
+            path: path,
+            amountIn: amountIn,
+            amountOutMinimum: 0,
+            bridgeParams: _bp()
+        });
+    }
+
+    function _mhOut(bytes memory path, uint amountOut, uint maxIn)
+        internal
+        view
+        returns (ISwapBridgeRouterCL.SwapBridgeExactOutputParams memory)
+    {
+        return ISwapBridgeRouterCL.SwapBridgeExactOutputParams({
+            path: path,
+            amountOut: amountOut,
+            amountInMaximum: maxIn,
+            bridgeParams: _bp()
+        });
+    }
+
+    /// A partially filled last pool leaves the intermediate on the CL router and reverts
+    function test_cl_multihop_partialFill_reverts() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint amountIn = 1000 * 1e18;
+        uint leftover = 7 * 1e18;
+        clRouter.setIntermediateLeftover(address(mid), leftover);
+        vm.prank(USER);
+        cross.approve(address(sbr), amountIn);
+        bytes memory path = abi.encodePacked(address(cross), int24(-200), address(mid), int24(200), address(outToken));
+        uint userBefore = cross.balanceOf(USER);
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouterCL.SBRPartialFill.selector, address(mid), leftover));
+        sbr.swapBridgeExactInput(_mh(path, amountIn), block.timestamp + 1 hours);
+        assertEq(cross.balanceOf(USER), userBefore, "caller keeps the original tokens");
+        assertEq(cross.balanceOf(address(sbr)), 0);
+        assertEq(mid.balanceOf(address(clRouter)), 0, "revert unwinds the leftover");
+    }
+
+    function test_cl_multihopETH_partialFill_reverts() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint leftover = 3 * 1e17;
+        clRouter.setIntermediateLeftover(address(mid), leftover);
+        bytes memory path = abi.encodePacked(address(mweth), int24(2000), address(mid), int24(-1), address(outToken));
+        uint userBefore = USER.balance;
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouterCL.SBRPartialFill.selector, address(mid), leftover));
+        sbr.swapBridgeExactInputETH{value: 1 ether}(_mh(path, 1 ether), block.timestamp + 1 hours);
+        assertEq(USER.balance, userBefore, "caller keeps the ETH");
+        assertEq(address(sbr).balance, 0);
+    }
+
+    /// A balance already on the CL router (no new leftover) is not a partial fill
+    function test_cl_multihop_preExistingIntermediateBalance_succeeds() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        mid.mint(address(clRouter), 500 * 1e18);
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(sbr), amountIn);
+        bytes memory path = abi.encodePacked(address(cross), int24(200), address(mid), int24(200), address(outToken));
+        vm.prank(USER);
+        uint out = sbr.swapBridgeExactInput(_mh(path, amountIn), block.timestamp + 1 hours);
+        assertEq(out, amountIn);
+        assertEq(mid.balanceOf(address(clRouter)), 500 * 1e18, "pre-existing intermediate balance untouched");
+    }
+
+    /// An intermediate balance that decreased during the swap is not a partial fill
+    function test_cl_multihop_decreasedIntermediateBalance_succeeds() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        mid.mint(address(clRouter), 500 * 1e18);
+        clRouter.setIntermediateDrain(address(mid), 200 * 1e18);
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(sbr), amountIn);
+        bytes memory path = abi.encodePacked(address(cross), int24(200), address(mid), int24(200), address(outToken));
+        vm.prank(USER);
+        uint out = sbr.swapBridgeExactInput(_mh(path, amountIn), block.timestamp + 1 hours);
+        assertEq(out, amountIn);
+        assertEq(mid.balanceOf(address(clRouter)), 300 * 1e18);
+        assertEq(cross.balanceOf(address(sbr)), 0);
+    }
+
+    /// Three hops: a drained intermediate does not mask a leftover on another; each leftover names its token
+    function test_cl_threeHop_leftover_reverts() public {
+        vm.selectFork(bscForkID);
+        TestToken mid1 = new TestToken("Mid1", "M1", 18);
+        TestToken mid2 = new TestToken("Mid2", "M2", 18);
+        mid1.mint(address(clRouter), 500 * 1e18);
+        clRouter.setIntermediateDrain(address(mid1), 200 * 1e18);
+        clRouter.setIntermediateLeftover(address(mid2), 9 * 1e18);
+        uint amountIn = 1000 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(sbr), amountIn);
+        bytes memory path = abi.encodePacked(
+            address(cross), int24(50), address(mid1), int24(-100), address(mid2), int24(2000), address(outToken)
+        );
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouterCL.SBRPartialFill.selector, address(mid2), 9 * 1e18));
+        sbr.swapBridgeExactInput(_mh(path, amountIn), block.timestamp + 1 hours);
+
+        clRouter.setIntermediateDrain(address(mid1), 0);
+        clRouter.setIntermediateLeftover(address(mid2), 0);
+        clRouter.setIntermediateLeftover(address(mid1), 4 * 1e18);
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouterCL.SBRPartialFill.selector, address(mid1), 4 * 1e18));
+        sbr.swapBridgeExactInput(_mh(path, amountIn), block.timestamp + 1 hours);
+    }
+
+    /// Native-token multi-hop exact input with a negative int24 segment
+    function test_cl_multihopETH_exactInput_negativeSegment() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        bytes memory path = abi.encodePacked(address(mweth), int24(-200), address(mid), int24(100), address(outToken));
+        uint before = USER.balance;
+        vm.prank(USER);
+        uint out = sbr.swapBridgeExactInputETH{value: 2 ether}(_mh(path, 2 ether), block.timestamp + 1 hours);
+        assertEq(out, 2 ether);
+        assertEq(before - USER.balance, 2 ether);
+        assertEq(clRouter.lastPath(), path, "path (incl. 0xffff38 = -200) forwarded unchanged");
+        assertEq(mweth.balanceOf(address(sbr)), 0);
+        assertEq(address(sbr).balance, 0);
+        vm.prank(USER);
+        vm.expectRevert(SwapBridgeRouterCL.SBRInvalidValue.selector);
+        sbr.swapBridgeExactInputETH{value: 1 ether}(_mh(path, 2 ether), block.timestamp + 1 hours);
+    }
+
+    /// ERC20 multi-hop exact output (reversed path) with a negative segment: pays the bridge fees, refunds unspent input
+    function test_cl_multihop_exactOutput_negativeSegment() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint bridgeValue = 100 * 1e18;
+        (, uint nf, uint ef) = sbr.calculateBridgeFees(CROSS_CHAIN_ID, outToken, bridgeValue);
+        // exactOutput path: tokenOut -> ... -> tokenIn
+        bytes memory path = abi.encodePacked(address(outToken), int24(-50), address(mid), int24(200), address(cross));
+        uint maxIn = 300 * 1e18;
+        vm.prank(USER);
+        cross.approve(address(sbr), maxIn);
+        uint before = cross.balanceOf(USER);
+        uint idx = bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID);
+        vm.prank(USER);
+        uint spent = sbr.swapBridgeExactOutput(_mhOut(path, bridgeValue, maxIn), block.timestamp + 1 hours);
+        assertEq(spent, bridgeValue + nf + ef, "1:1 mock rate");
+        assertEq(before - cross.balanceOf(USER), spent, "unspent input refunded");
+        assertEq(clRouter.lastPath(), path);
+        assertEq(bridgeBSC.getNextInitiateIndex(CROSS_CHAIN_ID), idx + 1);
+        assertEq(cross.balanceOf(address(sbr)), 0);
+        assertEq(outToken.balanceOf(address(sbr)), 0);
+        // slippage: amountInMaximum below the required input
+        vm.prank(USER);
+        cross.approve(address(sbr), type(uint).max);
+        vm.prank(USER);
+        vm.expectRevert("Too much requested");
+        sbr.swapBridgeExactOutput(_mhOut(path, bridgeValue, bridgeValue + nf + ef - 1), block.timestamp + 1 hours);
+        // circular path is refused
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(SwapBridgeRouterCL.SBRCircularPath.selector, address(cross)));
+        sbr.swapBridgeExactOutput(
+            _mhOut(abi.encodePacked(address(cross), int24(-50), address(mid), int24(200), address(cross)), 1e18, maxIn),
+            block.timestamp + 1 hours
+        );
+    }
+
+    /// Native-token multi-hop exact output: excess msg.value and unspent WETH are refunded as ETH
+    function test_cl_multihopETH_exactOutput_refunds() public {
+        vm.selectFork(bscForkID);
+        TestToken mid = new TestToken("Mid", "MID", 18);
+        uint bridgeValue = 100 * 1e18;
+        (, uint nf, uint ef) = sbr.calculateBridgeFees(CROSS_CHAIN_ID, outToken, bridgeValue);
+        bytes memory path = abi.encodePacked(address(outToken), int24(200), address(mid), int24(-2000), address(mweth));
+        uint before = USER.balance;
+        vm.prank(USER);
+        uint spent = sbr.swapBridgeExactOutputETH{value: 250 ether}(
+            _mhOut(path, bridgeValue, 200 ether), block.timestamp + 1 hours
+        );
+        assertEq(spent, bridgeValue + nf + ef);
+        assertEq(before - USER.balance, spent, "excess value and unspent WETH refunded");
+        assertEq(clRouter.lastPath(), path);
+        assertEq(mweth.balanceOf(address(sbr)), 0);
+        assertEq(address(sbr).balance, 0);
+        // path must end in WETH9
+        vm.prank(USER);
+        vm.expectRevert(SwapBridgeRouterCL.SBRInvalidAddress.selector);
+        sbr.swapBridgeExactOutputETH{value: 200 ether}(
+            _mhOut(
+                abi.encodePacked(address(outToken), int24(200), address(mid), int24(-2000), address(cross)),
+                bridgeValue,
+                200 ether
+            ),
+            block.timestamp + 1 hours
+        );
     }
 }
