@@ -28,13 +28,14 @@ type IBridgeRegistryPendingData struct {
 }
 
 
-type IBridgeRegistryFinalizeArguments struct {
-	FromChainID *big.Int
-	Index       *big.Int
-	ToToken     common.Address
-	To          common.Address
-	Value       *big.Int
-	ExtraData   []byte
+type IBaseBridgePermitArguments struct {
+	Token    common.Address
+	Account  common.Address
+	Value    *big.Int
+	Deadline *big.Int
+	V        uint8
+	R        [32]byte
+	S        [32]byte
 }
 
 
@@ -49,14 +50,13 @@ type IBridgeRegistryTokenPair struct {
 }
 
 
-type IBaseBridgePermitArguments struct {
-	Token    common.Address
-	Account  common.Address
-	Value    *big.Int
-	Deadline *big.Int
-	V        uint8
-	R        [32]byte
-	S        [32]byte
+type IBridgeRegistryFinalizeArguments struct {
+	FromChainID *big.Int
+	Index       *big.Int
+	ToToken     common.Address
+	To          common.Address
+	Value       *big.Int
+	ExtraData   []byte
 }
 
 
