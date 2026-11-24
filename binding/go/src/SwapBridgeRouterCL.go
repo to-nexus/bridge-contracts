@@ -1,0 +1,947 @@
+// Code generated - DO NOT EDIT.
+// This file is a generated binding and any manual changes will be lost.
+
+package binding
+
+import (
+	"context"
+	"errors"
+	"math/big"
+	"strings"
+	"time"
+
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
+)
+
+// Reference imports to suppress errors if they are not otherwise used.
+var (
+	_ = errors.New
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = ethereum.NotFound
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
+	_ = abi.ConvertType
+	_ = time.Tick
+	_ = context.Background
+)
+
+// ISwapBridgeRouterCLBridgeParams is an auto generated low-level Go binding around an user-defined struct.
+type ISwapBridgeRouterCLBridgeParams struct {
+	ToChainID *big.Int
+	Recipient common.Address
+	ExtraData []byte
+}
+
+// ISwapBridgeRouterCLSwapBridgeExactInputParams is an auto generated low-level Go binding around an user-defined struct.
+type ISwapBridgeRouterCLSwapBridgeExactInputParams struct {
+	Path             []byte
+	AmountIn         *big.Int
+	AmountOutMinimum *big.Int
+	BridgeParams     ISwapBridgeRouterCLBridgeParams
+}
+
+// ISwapBridgeRouterCLSwapBridgeExactInputSingleParams is an auto generated low-level Go binding around an user-defined struct.
+type ISwapBridgeRouterCLSwapBridgeExactInputSingleParams struct {
+	TokenIn           common.Address
+	TokenOut          common.Address
+	TickSpacing       *big.Int
+	AmountIn          *big.Int
+	AmountOutMinimum  *big.Int
+	SqrtPriceLimitX96 *big.Int
+	BridgeParams      ISwapBridgeRouterCLBridgeParams
+}
+
+// ISwapBridgeRouterCLSwapBridgeExactOutputParams is an auto generated low-level Go binding around an user-defined struct.
+type ISwapBridgeRouterCLSwapBridgeExactOutputParams struct {
+	Path            []byte
+	AmountOut       *big.Int
+	AmountInMaximum *big.Int
+	BridgeParams    ISwapBridgeRouterCLBridgeParams
+}
+
+// ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams is an auto generated low-level Go binding around an user-defined struct.
+type ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams struct {
+	TokenIn           common.Address
+	TokenOut          common.Address
+	TickSpacing       *big.Int
+	AmountOut         *big.Int
+	AmountInMaximum   *big.Int
+	SqrtPriceLimitX96 *big.Int
+	BridgeParams      ISwapBridgeRouterCLBridgeParams
+}
+
+// SwapBridgeRouterCLMetaData contains all meta data concerning the SwapBridgeRouterCL contract.
+var SwapBridgeRouterCLMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_swapRouter\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_quoter\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_bridge\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"},{\"inputs\":[],\"name\":\"WETH9\",\"outputs\":[{\"internalType\":\"contractIWETH9\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bridge\",\"outputs\":[{\"internalType\":\"contractIBaseBridge\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"calculateBridgeFees\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"minimumValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"networkFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"tokenIn\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenOut\",\"type\":\"address\"},{\"internalType\":\"int24\",\"name\":\"tickSpacing\",\"type\":\"int24\"},{\"internalType\":\"uint256\",\"name\":\"bridgeValue\",\"type\":\"uint256\"}],\"name\":\"getAmountSwapBridgeIn\",\"outputs\":[{\"internalType\":\"enumISwapBridgeRouterCL.QuoteStatus\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"swapAmountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"networkFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"path\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"bridgeValue\",\"type\":\"uint256\"}],\"name\":\"getAmountSwapBridgeInMultihop\",\"outputs\":[{\"internalType\":\"enumISwapBridgeRouterCL.QuoteStatus\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"swapAmountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"networkFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"tokenIn\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenOut\",\"type\":\"address\"},{\"internalType\":\"int24\",\"name\":\"tickSpacing\",\"type\":\"int24\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"}],\"name\":\"getAmountSwapBridgeOut\",\"outputs\":[{\"internalType\":\"enumISwapBridgeRouterCL.QuoteStatus\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"swapAmountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bridgeValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"networkFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"path\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"}],\"name\":\"getAmountSwapBridgeOutMultihop\",\"outputs\":[{\"internalType\":\"enumISwapBridgeRouterCL.QuoteStatus\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"swapAmountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bridgeValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"networkFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"totalAmount\",\"type\":\"uint256\"}],\"name\":\"getExpectedBridgeAmount\",\"outputs\":[{\"internalType\":\"enumISwapBridgeRouterCL.QuoteStatus\",\"name\":\"status\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"bridgeValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"networkFee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"quoter\",\"outputs\":[{\"internalType\":\"contractICLQuoterV2\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"path\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMinimum\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactInputParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactInput\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"path\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMinimum\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactInputParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactInputETH\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"tokenIn\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenOut\",\"type\":\"address\"},{\"internalType\":\"int24\",\"name\":\"tickSpacing\",\"type\":\"int24\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMinimum\",\"type\":\"uint256\"},{\"internalType\":\"uint160\",\"name\":\"sqrtPriceLimitX96\",\"type\":\"uint160\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactInputSingleParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactInputSingle\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"tokenIn\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenOut\",\"type\":\"address\"},{\"internalType\":\"int24\",\"name\":\"tickSpacing\",\"type\":\"int24\"},{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountOutMinimum\",\"type\":\"uint256\"},{\"internalType\":\"uint160\",\"name\":\"sqrtPriceLimitX96\",\"type\":\"uint160\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactInputSingleParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactInputSingleETH\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"path\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountInMaximum\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactOutputParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactOutput\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes\",\"name\":\"path\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountInMaximum\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactOutputParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactOutputETH\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"tokenIn\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenOut\",\"type\":\"address\"},{\"internalType\":\"int24\",\"name\":\"tickSpacing\",\"type\":\"int24\"},{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountInMaximum\",\"type\":\"uint256\"},{\"internalType\":\"uint160\",\"name\":\"sqrtPriceLimitX96\",\"type\":\"uint160\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactOutputSingleParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactOutputSingle\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"tokenIn\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenOut\",\"type\":\"address\"},{\"internalType\":\"int24\",\"name\":\"tickSpacing\",\"type\":\"int24\"},{\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amountInMaximum\",\"type\":\"uint256\"},{\"internalType\":\"uint160\",\"name\":\"sqrtPriceLimitX96\",\"type\":\"uint160\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"extraData\",\"type\":\"bytes\"}],\"internalType\":\"structISwapBridgeRouterCL.BridgeParams\",\"name\":\"bridgeParams\",\"type\":\"tuple\"}],\"internalType\":\"structISwapBridgeRouterCL.SwapBridgeExactOutputSingleParams\",\"name\":\"params\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swapBridgeExactOutputSingleETH\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"swapRouter\",\"outputs\":[{\"internalType\":\"contractICLSwapRouter\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenIn\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenOut\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountIn\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountOut\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"toChainID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"initiateIndex\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"bridgeValue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"networkFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"exFee\",\"type\":\"uint256\"}],\"name\":\"SwapBridge\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SBRCircularPath\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SBRDeadlineExpired\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SBRInvalidAddress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SBRInvalidPath\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SBRInvalidValue\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"leftover\",\"type\":\"uint256\"}],\"name\":\"SBRPartialFill\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"enumISwapBridgeRouterCL.QuoteStatus\",\"name\":\"status\",\"type\":\"uint8\"}],\"name\":\"SBRQuoteFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SBRRefundFailed\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"}]",
+	Sigs: map[string]string{
+		"4aa4a4fc": "WETH9()",
+		"e78cea92": "bridge()",
+		"d71ced23": "calculateBridgeFees(uint256,address,uint256)",
+		"b0c9576c": "getAmountSwapBridgeIn(uint256,address,address,int24,uint256)",
+		"499221de": "getAmountSwapBridgeInMultihop(uint256,bytes,uint256)",
+		"df7da91c": "getAmountSwapBridgeOut(uint256,address,address,int24,uint256)",
+		"a3fbff4f": "getAmountSwapBridgeOutMultihop(uint256,bytes,uint256)",
+		"ce9f6b3e": "getExpectedBridgeAmount(uint256,address,uint256)",
+		"c6bbd5a7": "quoter()",
+		"c6d7f581": "swapBridgeExactInput((bytes,uint256,uint256,(uint256,address,bytes)),uint256)",
+		"0ae48a1e": "swapBridgeExactInputETH((bytes,uint256,uint256,(uint256,address,bytes)),uint256)",
+		"49d9a7f7": "swapBridgeExactInputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)),uint256)",
+		"a26337a6": "swapBridgeExactInputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)),uint256)",
+		"40fd6ef2": "swapBridgeExactOutput((bytes,uint256,uint256,(uint256,address,bytes)),uint256)",
+		"c297a882": "swapBridgeExactOutputETH((bytes,uint256,uint256,(uint256,address,bytes)),uint256)",
+		"9f1c7899": "swapBridgeExactOutputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)),uint256)",
+		"11017717": "swapBridgeExactOutputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)),uint256)",
+		"c31c9c07": "swapRouter()",
+	},
+	Bin: "0x61010080604052346101fc5760608161387480380380916100208285610246565b8339810103126101fc576100338161027d565b9061004c60406100456020840161027d565b920161027d565b916001600160a01b031680151580610234575b80610222575b156102135760808190526001600160a01b0391821660a052911660c0526040516312a9293f60e21b815290602090829060049082905afa908115610208575f916101ca575b506001600160a01b031660e0526040516135e29081610292823960805181818161021f015281816105ee01528181610a0501528181610e910152818161116e0152818161129a0152818161153a015281816116c5015281816117900152818161282201528181612a9501528181612c3d0152818161304401526130a7015260a05181818161170901528181612082015281816121dc01528181612440015261258b015260c051818181610473015281816108cc015281816110180152818161141b015281816118d6015281816119ed01528181611f6a015281816122ef01528181612dcb0152613243015260e0518181816101d40152818161041001528181610f9c015281816113e4015281816125f1015281816127860152612c0d0152f35b90506020813d602011610200575b816101e560209383610246565b810103126101fc576101f69061027d565b5f6100aa565b5f80fd5b3d91506101d8565b6040513d5f823e3d90fd5b639eb43e5160e01b5f5260045ffd5b506001600160a01b0383161515610065565b506001600160a01b038216151561005f565b601f909101601f19168101906001600160401b0382119082101761026957604052565b634e487b7160e01b5f52604160045260245ffd5b51906001600160a01b03821682036101fc5756fe60806040526004361015610022575b3615610018575f80fd5b6100206125eb565b005b5f3560e01c80630ae48a1e14610141578063110177171461013c57806340fd6ef214610137578063499221de1461013257806349d9a7f71461012d5780634aa4a4fc146101285780639f1c789914610123578063a26337a61461011e578063a3fbff4f14610119578063b0c9576c14610114578063c297a8821461010f578063c31c9c071461010a578063c6bbd5a714610105578063c6d7f58114610100578063ce9f6b3e146100fb578063d71ced23146100f6578063df7da91c146100f15763e78cea920361000e576119d8565b6119bb565b6118b2565b61187a565b611738565b6116f4565b6116b0565b611395565b611378565b611305565b611231565b610fcb565b610f87565b610d8f565b610d65565b610880565b6103d2565b61017c565b6040600319820112610178576004356001600160401b0381116101785760809060040180920312610178579060243590565b5f80fd5b5f61018636610146565b9061018f61261f565b61019b82421115611a1c565b6020810135906101ac823414611a32565b6101bf6101b98280611a48565b906126b4565b926001600160a01b039182169290916101fb907f0000000000000000000000000000000000000000000000000000000000000000168414611a7a565b61020482612777565b6102176102118380611a48565b90612914565b9560206102b07f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316610251818b6129f1565b9361025c8780611a48565b9161027660408a01359261026e610c48565b943691610c84565b835261028430878501611a90565b604083015288606083015260808201526040519b8c8094819363c04b8d5960e01b835260048301611ad2565b03925af196871561039b57610349985f9861034d575b50916102e46102e9925f5160206135965f395f51905f529594612a93565b612bf3565b50606081019461032e6103146103096103028986611b27565b8a85612d60565b93919a909296611b27565b359860405195869560018060a01b03169a8c339a88611b3c565b0390a4610339612654565b6040519081529081906020820190565b0390f35b5f5160206135965f395f51905f5294939198506102e9926103886102e49260203d602011610394575b6103808183610c25565b810190611a9f565b999294955092506102c6565b503d610376565b611b1c565b6040600319820112610178576004356001600160401b0381116101785760e09060040180920312610178579060243590565b6103db366103a0565b906103e461261f565b6103f082421115611a1c565b60808101359061040282341015611a32565b61044261040e82611b6a565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03908116911614611a7a565b61044b81611b6a565b90610463602082019261045d84611b6a565b90612ec0565b604051637838174760e11b8152937f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316602086600481845afa92831561039b576104ff965f9461084f575b5060c081019160606104c88484611b27565b356104da6104d589611b6a565b610f7b565b96828501359788926040519c8d94859384936337dba1f760e21b855260048501611ba7565b03916001600160a01b03165afa801561039b575f5f995f92610812575b509061052d6105e992881015611bc8565b6105408161053b8c8a611c38565b611c38565b95602061054c8b612777565b916105cf61055988611b6a565b916105638d611b6a565b906105a88a61059e61058360a061057c60408501611c45565b9301611b6a565b9461059661058f610c59565b9889611a90565b888801611a90565b60020b6040860152565b6105b53060608601611a90565b60808401528a60a08401528d60c084015260e08301611a90565b604051809581926318e29d0760e31b835260048301611c4f565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af192831561039b576106396106459261063f92610671966107f5575b50612bf3565b8b611cb6565b99612ee8565b60206106518686611b27565b6040516315cd127f60e31b81529035600482015292839081906024820190565b0381865afa92831561039b57888b87898b965f986107a9575b50836107168787956106f66106ec878f9e9f9a60206106e083829f8f9d6106d38f915f9f926106ce6104d5946106da966106c96104d56106e69d611b6a565b612f0e565b611b27565b359c611b6a565b9c611b27565b01611b6a565b9a611b27565b6040810190611a48565b9290916040519c8d9a8b998a98632fe9316f60e11b8a5260048a01611ce4565b03925af1998a1561039b576107595f5160206135965f395f51905f529661032e946103499d61077c575b5061075361074d87611b6a565b9b611b6a565b95611b27565b359760405195869560018060a01b03169a60018060a01b03169933998d88611b3c565b61079d9060203d6020116107a2575b6107958183610c25565b810190611cd0565b610740565b503d61078b565b89809950878795859894869584999e978f9660203d6020116107ee575b6107d08183610c25565b81016107db91611a9f565b9e5050509450959794505050939861068a565b503d6107c6565b61080d9060203d602011610394576103808183610c25565b610633565b61052d9a506105e9925061083e915060603d606011610848575b6108368183610c25565b810190611b8c565b9a909a925061051c565b503d61082c565b61087291945060203d602011610879575b61086a8183610c25565b810190611b77565b925f6104b6565b503d610860565b346101785761088e36610146565b9061089761261f565b6108a382421115611a1c565b6108b66108b08280611a48565b906126fc565b604051637838174760e11b8152919391929091907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690602085600481855afa92831561039b57610959955f94610bd0575b50606082019660606109228985611b27565b6040516337dba1f760e21b8152986001600160a01b03909816976020860135978a92909183918291908b908d903560048501611ba7565b03916001600160a01b03165afa93841561039b575f5f985f96610ba3575b5061098490871015611bc8565b6109928561053b8a89611c38565b94610a00604086013560206109c76109aa8388612fd2565b976109b58a80611a48565b92906109bf610c48565b933691610c84565b82526109d530848401611a90565b604082015289606082015282608082015260405180948192631e51809360e31b835260048301611ad2565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af1801561039b57610a8096610a5393610a4d92610b86575b5086613091565b90611cb6565b986020610a608c88611b27565b6040516315cd127f60e31b81529035600482015295869081906024820190565b0381865afa94851561039b5788938a8d89935f99610b5c575b50905f8392610aac8d6020979685612f0e565b610af5610ad56106ec610abf8489611b27565b3593610acf8a6106e0838c611b27565b98611b27565b908a8a6040519d8e9a8b998a98632fe9316f60e11b8a5260048a01611ce4565b03925af1801561039b576103499b5f5160206135965f395f51905f529761032e95610b2593610b3f575b50611b27565b359760405195869560018060a01b03169933998d88611b3c565b610b579060203d6020116107a2576107958183610c25565b610b1f565b6020949392919950610b7b5f91863d8811610394576103808183610c25565b999192939450610a99565b610b9e9060203d602011610394576103808183610c25565b610a46565b9050610bc4919850610984955060603d606011610848576108368183610c25565b98919590989590610977565b610bea91945060203d6020116108795761086a8183610c25565b925f610910565b634e487b7160e01b5f52604160045260245ffd5b60e081019081106001600160401b03821117610c2057604052565b610bf1565b601f909101601f19168101906001600160401b03821190821017610c2057604052565b60405190610c5760a083610c25565b565b60405190610c5761010083610c25565b6001600160401b038111610c2057601f01601f191660200190565b929192610c9082610c69565b91610c9e6040519384610c25565b829481845281830111610178578281602093845f960137010152565b9060606003198301126101785760043591602435906001600160401b038211610178578060238301121561017857816024610cfa93600401359101610c84565b9060443590565b60061115610d0b57565b634e487b7160e01b5f52602160045260245ffd5b6006811015610d0b57600452565b906006821015610d0b5752565b91926080939695949196610d528460a0810199610d2d565b6020840152604083015260608201520152565b3461017857610349610d7f610d7936610cba565b91611f30565b9160409593955195869586610d3a565b3461017857610e8c610da0366103a0565b90610da961261f565b610db582421115611a1c565b610dbe81611b6a565b90610dd0602082019261045d84611b6a565b610dd981611b6a565b6020610dea60608401358093612fd2565b94610e72610df785611b6a565b91610e0187611b6a565b90610e0e60408801611c45565b90610e4c608089013592610e42610e2760a08c01611b6a565b95610e3a610e33610c59565b998a611a90565b898901611a90565b60020b6040870152565b610e593060608701611a90565b60808501528560a085015260c084015260e08301611a90565b604051809781926350131c1f60e11b835260048301611c4f565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af193841561039b57610349955f95610f4c575b50610ee090610edb84611b6a565b613091565b505f5160206135965f395f51905f52610f29610efb85611b6a565b9361032e610f1860c083019689610f128986611b27565b91612d60565b929590919861075361074d87611b6a565b359760405195869560018060a01b03169a60018060a01b0316998c339a88611b3c565b610ee0919550610f6a9060203d602011610394576103808183610c25565b9490610ecd565b5f91031261017857565b6001600160a01b031690565b34610178575f366003190112610178576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b3461017857610fd9366103a0565b90610fe261261f565b610fee82421115611a1c565b610ff781611b6a565b611008602083019161045d83611b6a565b604051637838174760e11b8152927f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169290602085600481875afa91821561039b576110a1955f93611210575b5060c0810190606061106f8383611b27565b3561107c6104d588611b6a565b95828401359687926040519b8c94859384936337dba1f760e21b855260048501611ba7565b03916001600160a01b03165afa95861561039b575f5f985f986111e3575b506110cc90861015611bc8565b6110da8761053b8a88611c38565b936111696110e784611b6a565b60206110f860808701358093612fd2565b9361114f61110588611b6a565b9161110f8d611b6a565b906111288a61059e61058360a061057c60408501611c45565b6111353060608601611a90565b60808401528a60a08401528460c084015260e08301611a90565b604051809481926318e29d0760e31b835260048301611c4f565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af1801561039b57610671936111b993610a4d926111c6575b50610edb87611b6a565b9760206106518686611b27565b6111de9060203d602011610394576103808183610c25565b6111af565b90506112049198506110cc975060603d606011610848576108368183610c25565b989197909897906110bf565b61122a91935060203d6020116108795761086a8183610c25565b915f61105d565b61129561123d366103a0565b9061124661261f565b61125282421115611a1c565b606081013590611263823414611a32565b61126f61040e82611b6a565b61127881611b6a565b9161128a602083019361045d85611b6a565b6020610dea82612777565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af193841561039b57610349955f956112e0575b50610ee090612bf3565b610ee09195506112fe9060203d602011610394576103808183610c25565b94906112d6565b3461017857610349610d7f61131936610cba565b91612190565b6001600160a01b0381160361017857565b8060020b0361017857565b60a090600319011261017857600435906024356113578161131f565b906044356113648161131f565b9060643561137181611330565b9060843590565b3461017857610349610d7f61138c3661133b565b939290926122d3565b61139e36610146565b6113a661261f565b6113b281421115611a1c565b6040820135906113c482341015611a32565b6113d16108b08480611a48565b916001600160a01b039182169161140b907f0000000000000000000000000000000000000000000000000000000000000000168314611a7a565b604051637838174760e11b8152947f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316602087600481845afa96871561039b575f9761168f575b506114a66060830197606061146f8a86611b27565b6040516337dba1f760e21b81526001600160a01b03909916989360208701359385929091839182919087908e903560048501611ba7565b03916001600160a01b03165afa801561039b57611535925f5f915f93611666575b506114d490841015611bc8565b6114e28261053b8386611c38565b9660206114fc6114f18d612777565b926109b58a80611a48565b825261150a30848401611a90565b60408201528960608201528c608082015260405180978192631e51809360e31b835260048301611ad2565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af194851561039b576115846115909261158a926115bc986107f55750612bf3565b8c611cb6565b9a612ee8565b602061159c8c88611b27565b6040516315cd127f60e31b81529035600482015294859081906024820190565b0381885afa93841561039b578b958a88925f9761163c575b5090815f8798996115e98d8560209897612f0e565b6115fc610ad56106ec610abf8489611b27565b03925af1801561039b576103499b5f5160206135965f395f51905f529761032e9561162b93610b3f5750611b27565b359360405195869533998d88611b3c565b869750905f61165b6020959493863d8811610394576103808183610c25565b9850509091926115d4565b90506114d49250611686915060603d606011610848576108368183610c25565b929091906114c7565b6116a991975060203d6020116108795761086a8183610c25565b955f61145a565b34610178575f366003190112610178576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b34610178575f366003190112610178576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b34610178575f61174736610146565b9061175061261f565b61175c82421115611a1c565b6117696101b98280611a48565b909160208101359061177b8285612fd2565b6117886102118380611a48565b9560206117c27f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316610251818b6129f1565b03925af196871561039b57610349985f98611820575b50916117f66117fc925f5160206135965f395f51905f529594612a93565b86613091565b50606081019361032e610f296118156103028886611b27565b939199909296611b27565b5f5160206135965f395f51905f5294939198506117fc926118526117f69260203d602011610394576103808183610c25565b999294955092506117d8565b60609060031901126101785760043590602435610cfa8161131f565b3461017857608061189361188d3661185e565b9161322c565b916118a16040518095610d2d565b602084015260408301526060820152f35b34610178576118c03661185e565b604051637838174760e11b8152916020836004817f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165afa90811561039b57611933946060945f9361199a575b506040516337dba1f760e21b81529586948593849360048501611ba7565b03916001600160a01b03165afa801561039b575f905f925f91611973575b5061034990604051938493846040919493926060820195825260208201520152565b90506103499250611993915060603d606011610848576108368183610c25565b9092611951565b6119b491935060203d6020116108795761086a8183610c25565b915f611915565b3461017857610349610d7f6119cf3661133b565b93929092612523565b34610178575f366003190112610178576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b15611a2357565b63d0a10ce360e01b5f5260045ffd5b15611a3957565b630eaf01fb60e01b5f5260045ffd5b903590601e198136030182121561017857018035906001600160401b0382116101785760200191813603831361017857565b15611a8157565b639eb43e5160e01b5f5260045ffd5b6001600160a01b039091169052565b90816020910312610178575190565b805180835260209291819084018484015e5f828201840152601f01601f1916010190565b6020815260a06080611aef845183602086015260c0850190611aae565b93600180841b03602082015116604085015260408101516060850152606081015182850152015191015290565b6040513d5f823e3d90fd5b903590605e1981360301821215610178570190565b93909796959260c0959260e08601998652602086015260408501526060840152608083015260a08201520152565b35611b748161131f565b90565b908160209103126101785751611b748161131f565b90816060910312610178578051916040602083015192015190565b9081526001600160a01b039091166020820152604081019190915260600190565b15611bcf57565b63a45ece2160e01b5f52611be36004610d1f565b60245ffd5b15611bf05750565b63a45ece2160e01b5f52611be390610d1f565b634e487b7160e01b5f52601160045260245ffd5b9060018201809211611c2557565b611c03565b9060148201809211611c2557565b91908201809211611c2557565b35611b7481611330565b81516001600160a01b03908116825260208084015182169083015260408084015160020b908301526060808401518216908301526080808401519083015260a0808401519083015260c0808401519083015260e09283015116918101919091526101000190565b91908203918211611c2557565b5190811515820361017857565b9081602091031261017857611b7490611cc3565b9693909288969392610100999693895260018060a01b0316602089015260018060a01b031660408801526060870152608086015260a085015260e060c08501528160e0850152848401375f828201840152601f01601f1916010190565b908160e09103126101785760c060405191611d5b83610c05565b8051611d668161131f565b83526020810151611d768161131f565b6020840152611d8760408201611cc3565b6040840152611d9860608201611cc3565b60608401526080810151608084015260a081015160a0840152015160c082015290565b9081526001600160a01b03909116602082015260400190565b6001600160401b038111610c205760051b60200190565b519063ffffffff8216820361017857565b9080601f83011215610178578151611e1381611dd4565b92611e216040519485610c25565b81845260208085019260051b82010192831161017857602001905b828210611e495750505090565b60208091611e5684611deb565b815201910190611e3c565b60808183031261017857805160208201519093906001600160401b03811161017857820183601f8201121561017857805190611e9c82611dd4565b91611eaa6040519384610c25565b80835260208084019160051b8301019186831161017857602001905b828210611efa5750505060408301519093906001600160401b03811161017857606091611ef4918501611dfc565b92015190565b602080918351611f098161131f565b815201910190611ec6565b929190611f2b602091604086526040860190611aae565b930152565b91611f3f602b83511015611a7a565b611f48826131f5565b92611f5b84611f568561320a565b612ec0565b60405163814914b560e01b81527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169060e08180611fa5898760048401611dbb565b0381855afa801561039b57611fc2915f91612161575b5051610f7b565b6001600160a01b03958616951685900361214f57602060049160405192838092637838174760e11b82525afa801561039b576120229560609385935f9361212e575b506040516337dba1f760e21b81529788948593849360048501611ba7565b03916001600160a01b03165afa90811561039b575f915f945f91612108575b508094809383106120f75750505f6120608561053b8561207d95611c38565b80946040519384928392632f80bb1d60e01b845260048401611f14565b0381837f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af15f91816120d0575b506120ca57505050506005905f905f905f905f90565b92600194565b6120ed9192503d805f833e6120e58183610c25565b810190611e61565b505050905f6120b4565b6004965f9650869550909350909150565b91945050612125915060603d606011610848576108368183610c25565b9390935f612041565b61214891935060203d6020116108795761086a8183610c25565b915f612004565b50505050506002905f905f905f905f90565b612183915060e03d60e011612189575b61217b8183610c25565b810190611d41565b5f611fbb565b503d612171565b91905f6121d7926121a5602b84511015611a7a565b6121ae8361320a565b926121bc84611f56836131f5565b60405163cdca175360e01b8152948592839260048401611f14565b0381837f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af15f9281612242575b50612223575050506005905f905f905f905f90565b909161223c9183916001600160a01b039091169061322c565b90919294565b6122579193503d805f833e6120e58183610c25565b505050915f61220e565b919082608091031261017857815191602081015161227e8161131f565b916060611ef460408401611deb565b81516001600160a01b0390811682526020808401518216908301526040808401519083015260608084015160020b90830152608092830151169181019190915260a00190565b9391926122e08483612ec0565b60405163814914b560e01b81527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316959060e0818061232b898660048401611dbb565b03818a5afa801561039b57612347915f91612161575051610f7b565b6001600160a01b0386811697911687900361250f57602060049160405192838092637838174760e11b82525afa801561039b576123a89760609387935f936124ee575b506040516337dba1f760e21b8152998a948593849360048501611ba7565b03916001600160a01b03165afa92831561039b575f935f965f916124c5575b508096809583106124b15750509161241c60809261240b6123ef8961053b8961243b99611c38565b976124026123fb610c48565b9586611a90565b60208501611a90565b6040830187905260020b6060830152565b5f8282015260405180938192631f4d5f2160e31b83526004830161228d565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af15f918161248757506120ca57505050506005905f905f905f905f90565b6120ed91925060803d6080116124aa575b6124a28183610c25565b810190612261565b503d612498565b9550969550505050506004925f925f929190565b919450506124e391955060603d606011610848576108368183610c25565b95919390955f6123c7565b61250891935060203d6020116108795761086a8183610c25565b915f61238a565b505050505050506002905f905f905f905f90565b9390612567612586946080936125398685612ec0565b61254b612544610c48565b9485611a90565b6125588660208601611a90565b604084015260020b6060830152565b5f8282015260405180948192634f3ef7f360e11b83526004830161228d565b03815f7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165af15f92816125d15750612223575050506005905f905f905f905f90565b61225791935060803d6080116124aa576124a28183610c25565b610c57337f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031614611a7a565b5f5160206135b65f395f51905f525c6126455760015f5160206135b65f395f51905f525d565b633ee5aeb560e01b5f5260045ffd5b5f5f5160206135b65f395f51905f525d565b90939293848311610178578411610178578101920390565b356001600160601b0319811692919060148210612699575050565b6001600160601b031960149290920360031b82901b16169150565b91906126bf81613434565b8060141161017857823560601c92601319820191808311611c25576126ee92816126e893612666565b9061267e565b60601c90610c578284612ec0565b909161270783613434565b826014116101785761271a60148361267e565b60601c928392601319820190828211611c25578261273f92610c57946126e893612666565b60601c9384612ec0565b6001600160a01b03909116815260200190565b6001600160a01b039091168152602081019190915260400190565b6040516370a0823160e01b81527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316929190602081806127c23060048301612749565b0381875afa90811561039b575f91612899575b5092803b1561017857604051630d0e30db60e41b8152905f8260048186855af190811561039b575f936020936128539361287f575b5060405163095ea7b360e01b815294859384928391907f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166004840161275c565b03925af1801561039b576128645750565b61287c9060203d6020116107a2576107958183610c25565b50565b8061288d8761289393610c25565b80610f71565b5f61280a565b6128b2915060203d602011610394576103808183610c25565b5f6127d5565b81156128c2570490565b634e487b7160e01b5f52601260045260245ffd5b90601782029180830460171490151715611c2557565b80518210156129005760209160051b010190565b634e487b7160e01b5f52603260045260245ffd5b9091906013198301838111611c255760179004925f198401938411611c255761293c84611dd4565b9361294a6040519586610c25565b808552612959601f1991611dd4565b01366020860137835f5b85518110156129b857806129b26129a361299d6126e861298c612987600197611c17565b6128d6565b61299581611c2a565b90898b612666565b60601c90565b6129ad838a6128ec565b611a90565b01612963565b5093505050565b906129c982611dd4565b6129d66040519182610c25565b82815280926129e7601f1991611dd4565b0190602036910137565b91906129fd83516129bf565b925f5b8151811015612a8e57612a296104d56104d5612a1c84866128ec565b516001600160a01b031690565b90602060405180936370a0823160e01b82528180612a4a8960048301612749565b03915afa801561039b576001925f91612a70575b50612a6982886128ec565b5201612a00565b612a88915060203d8111610394576103808183610c25565b5f612a5e565b505050565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03165f5b8251811015612b8f57612adb6104d56104d5612a1c84876128ec565b602060405180926370a0823160e01b82528180612afb8860048301612749565b03915afa90811561039b575f91612b71575b50612b1882866128ec565b518111612b285750600101612abf565b612b4e8591612b4784612b41612a1c612b6e978a6128ec565b946128ec565b5190611cb6565b631c85726f60e11b5f526001600160a01b03909116600452602452604490565b5ffd5b612b89915060203d8111610394576103808183610c25565b5f612b0d565b50505050565b6001600160a01b0390911681525f602082015260400190565b3d15612bd8573d90612bbf82610c69565b91612bcd6040519384610c25565b82523d5f602084013e565b606090565b15612be457565b63e2fe07f960e01b5f5260045ffd5b60405163095ea7b360e01b81525f92916001600160a01b037f00000000000000000000000000000000000000000000000000000000000000008116929060209082908190612c66907f00000000000000000000000000000000000000000000000000000000000000001660048301612b95565b03815f875af1801561039b57612d43575b506040516370a0823160e01b815260208180612c963060048301612749565b0381865afa90811561039b575f91612d24575b50818111612cb657505050565b612cc1929450611cb6565b91803b1561017857604051632e1a7d4d60e01b815260048101849052905f908290602490829084905af1801561039b57612d10575b50610c575f80808086335af1612d0a612bae565b50612bdd565b8061288d5f612d1e93610c25565b5f612cf6565b612d3d915060203d602011610394576103808183610c25565b5f612ca9565b612d5b9060203d6020116107a2576107958183610c25565b612c77565b91926001600160a01b0390921691833590612d7c83858461322c565b97929691959088958197612d9d819a612d9481610d01565b60018114611be8565b612dab8b61053b8584611c38565b6040516315cd127f60e31b81526004810184905290966001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016939091602081602481885afa90811561039b575f91612ea1575b509c612e1289868a612f0e565b612e1e60208401611b6a565b9260408101612e2c91611a48565b916040519788968796632fe9316f60e11b88528c6004890197612e4e98611ce4565b03815a6020945f91f1801561039b57612e84575b50828111612e6f57505050565b610c5792612e7c91611cb6565b903390613466565b612e9c9060203d6020116107a2576107958183610c25565b612e62565b612eba915060203d602011610394576103808183610c25565b5f612e05565b6001600160a01b0390811691168114612ed65750565b630edc567960e01b5f5260045260245ffd5b803411612ef25750565b3403348111611c25575f808080610c5794335af1612d0a612bae565b91909160205f60405193612f4585612f378582019363095ea7b360e01b8552896024840161275c565b03601f198101875286610c25565b84519082855af15f51903d81612fa6575b501590505b612f6457505050565b612fa1612f8d612f9b610c579560405192839163095ea7b360e01b602084015260248301612b95565b03601f198101835282610c25565b8261349b565b61349b565b15159050612fc65750612f5b6001600160a01b0382163b15155b5f612f56565b6001612f5b9114612fc0565b6040516370a0823160e01b81523060048201526001600160a01b039091169291602082602481875afa801561039b57610c57925f91613072575b50936130426040516323b872dd60e01b602082015233602482015230604482015283606482015260648152612f9b608482610c25565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031690612f0e565b61308b915060203d602011610394576103808183610c25565b5f61300c565b91905f9260018060a01b03169060018060a01b037f00000000000000000000000000000000000000000000000000000000000000001660405160205f81830163095ea7b360e01b81526130fa846130ec84886024840161275c565b03601f198101865285610c25565b83519082885af15f51903d816131c9575b501590505b61318d575b50506040516370a0823160e01b8152602081806131353060048301612749565b0381865afa90811561039b575f9161316e575b5081811161315557505050565b610c579294509061316591611cb6565b80933390613466565b613187915060203d602011610394576103808183610c25565b5f613148565b6131bc612f8d6131b66131c29460405192839163095ea7b360e01b602084015260248301612b95565b8561349b565b8361349b565b5f80613115565b151590506131e957506131106001600160a01b0385163b15155b5f61310b565b600161311091146131e3565b6020906132028151613434565b015160601c90565b6132148151613434565b805180601319810111611c255701600c015160601c90565b60405163814914b560e01b81526001600160a01b037f00000000000000000000000000000000000000000000000000000000000000008116919084169060e0818061327b858860048401611dbb565b0381865afa90811561039b575f91613415575b50516001600160a01b03906132a290610f7b565b160361340657602060049160405192838092637838174760e11b82525afa92831561039b576132ff936060925f916133e7575b50604051633199576360e11b8152946001600160a01b039190911693859283929160048401611dbb565b0381845afa92831561039b575f915f935f956133bf575b5083808311156133af57506020600491604051928380926396ce079560e01b82525afa90811561039b576133739285915f93613384575b5061336c9161335b91611cb6565b826133668882611c38565b916134f3565b94856134f3565b90831061337f57600193565b600493565b61335b919350916133a661336c9360203d602011610394576103808183610c25565b9391509161334d565b9450505050506003915f91905f90565b91935093506133dd915060603d606011610848576108368183610c25565b929092935f613316565b613400915060203d6020116108795761086a8183610c25565b5f6132d5565b505050506002905f905f905f90565b61342e915060e03d60e0116121895761217b8183610c25565b5f61328e565b613441602b821015611a7a565b6013198101908111611c25576017900661345757565b6320b845f360e01b5f5260045ffd5b612fa1610c57939261348d60405194859263a9059cbb60e01b60208501526024840161275c565b03601f198101845283610c25565b905f602091828151910182855af115611b1c575f513d6134ea57506001600160a01b0381163b155b6134ca5750565b635274afe760e01b5f9081526001600160a01b0391909116600452602490fd5b600114156134c3565b91818302915f1981850993838086109503948086039514613578578483111561356b5790829109815f0382168092046002816003021880820260020302808202600203028082026002030280820260020302808202600203028091026002030293600183805f03040190848311900302920304170290565b6011600384150218613585565b505090611b7492506128b8565b634e487b715f526020526024601cfdfe3094901d3684b9dca13f7221aa2b7084ae31eb4d05822317d8ad507ec613726c9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00a164736f6c634300081c000a",
+}
+
+// SwapBridgeRouterCLABI is the input ABI used to generate the binding from.
+// Deprecated: Use SwapBridgeRouterCLMetaData.ABI instead.
+var SwapBridgeRouterCLABI = SwapBridgeRouterCLMetaData.ABI
+
+// Deprecated: Use SwapBridgeRouterCLMetaData.Sigs instead.
+// SwapBridgeRouterCLFuncSigs maps the 4-byte function signature to its string representation.
+var SwapBridgeRouterCLFuncSigs = SwapBridgeRouterCLMetaData.Sigs
+
+// SwapBridgeRouterCLBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use SwapBridgeRouterCLMetaData.Bin instead.
+var SwapBridgeRouterCLBin = SwapBridgeRouterCLMetaData.Bin
+
+// DeploySwapBridgeRouterCL deploys a new Ethereum contract, binding an instance of SwapBridgeRouterCL to it.
+func DeploySwapBridgeRouterCL(auth *bind.TransactOpts, backend bind.ContractBackend, _swapRouter common.Address, _quoter common.Address, _bridge common.Address) (common.Address, *types.Transaction, *SwapBridgeRouterCL, error) {
+	parsed, err := SwapBridgeRouterCLMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(SwapBridgeRouterCLBin), backend, _swapRouter, _quoter, _bridge)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &SwapBridgeRouterCL{SwapBridgeRouterCLCaller: SwapBridgeRouterCLCaller{contract: contract}, SwapBridgeRouterCLTransactor: SwapBridgeRouterCLTransactor{contract: contract}, SwapBridgeRouterCLFilterer: SwapBridgeRouterCLFilterer{contract: contract}}, nil
+}
+
+// SwapBridgeRouterCL is an auto generated Go binding around an Ethereum contract.
+type SwapBridgeRouterCL struct {
+	SwapBridgeRouterCLCaller     // Read-only binding to the contract
+	SwapBridgeRouterCLTransactor // Write-only binding to the contract
+	SwapBridgeRouterCLFilterer   // Log filterer for contract events
+}
+
+// SwapBridgeRouterCLCaller is an auto generated read-only Go binding around an Ethereum contract.
+type SwapBridgeRouterCLCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// SwapBridgeRouterCLTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type SwapBridgeRouterCLTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// SwapBridgeRouterCLFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type SwapBridgeRouterCLFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// SwapBridgeRouterCLSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type SwapBridgeRouterCLSession struct {
+	Contract     *SwapBridgeRouterCL // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts       // Call options to use throughout this session
+	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
+}
+
+// SwapBridgeRouterCLCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type SwapBridgeRouterCLCallerSession struct {
+	Contract *SwapBridgeRouterCLCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts             // Call options to use throughout this session
+}
+
+// SwapBridgeRouterCLTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type SwapBridgeRouterCLTransactorSession struct {
+	Contract     *SwapBridgeRouterCLTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts             // Transaction auth options to use throughout this session
+}
+
+// SwapBridgeRouterCLRaw is an auto generated low-level Go binding around an Ethereum contract.
+type SwapBridgeRouterCLRaw struct {
+	Contract *SwapBridgeRouterCL // Generic contract binding to access the raw methods on
+}
+
+// SwapBridgeRouterCLCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type SwapBridgeRouterCLCallerRaw struct {
+	Contract *SwapBridgeRouterCLCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// SwapBridgeRouterCLTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type SwapBridgeRouterCLTransactorRaw struct {
+	Contract *SwapBridgeRouterCLTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewSwapBridgeRouterCL creates a new instance of SwapBridgeRouterCL, bound to a specific deployed contract.
+func NewSwapBridgeRouterCL(address common.Address, backend bind.ContractBackend) (*SwapBridgeRouterCL, error) {
+	contract, err := bindSwapBridgeRouterCL(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &SwapBridgeRouterCL{SwapBridgeRouterCLCaller: SwapBridgeRouterCLCaller{contract: contract}, SwapBridgeRouterCLTransactor: SwapBridgeRouterCLTransactor{contract: contract}, SwapBridgeRouterCLFilterer: SwapBridgeRouterCLFilterer{contract: contract}}, nil
+}
+
+// NewSwapBridgeRouterCLCaller creates a new read-only instance of SwapBridgeRouterCL, bound to a specific deployed contract.
+func NewSwapBridgeRouterCLCaller(address common.Address, caller bind.ContractCaller) (*SwapBridgeRouterCLCaller, error) {
+	contract, err := bindSwapBridgeRouterCL(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &SwapBridgeRouterCLCaller{contract: contract}, nil
+}
+
+// NewSwapBridgeRouterCLTransactor creates a new write-only instance of SwapBridgeRouterCL, bound to a specific deployed contract.
+func NewSwapBridgeRouterCLTransactor(address common.Address, transactor bind.ContractTransactor) (*SwapBridgeRouterCLTransactor, error) {
+	contract, err := bindSwapBridgeRouterCL(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &SwapBridgeRouterCLTransactor{contract: contract}, nil
+}
+
+// NewSwapBridgeRouterCLFilterer creates a new log filterer instance of SwapBridgeRouterCL, bound to a specific deployed contract.
+func NewSwapBridgeRouterCLFilterer(address common.Address, filterer bind.ContractFilterer) (*SwapBridgeRouterCLFilterer, error) {
+	contract, err := bindSwapBridgeRouterCL(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &SwapBridgeRouterCLFilterer{contract: contract}, nil
+}
+
+// bindSwapBridgeRouterCL binds a generic wrapper to an already deployed contract.
+func bindSwapBridgeRouterCL(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := SwapBridgeRouterCLMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeRouterCLCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeRouterCLTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeRouterCLTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _SwapBridgeRouterCL.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.contract.Transact(opts, method, params...)
+}
+
+// WETH9 is a free data retrieval call binding the contract method 0x4aa4a4fc.
+//
+// Solidity: function WETH9() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCaller) WETH9(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _SwapBridgeRouterCL.contract.Call(opts, &out, "WETH9")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// WETH9 is a free data retrieval call binding the contract method 0x4aa4a4fc.
+//
+// Solidity: function WETH9() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) WETH9() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.WETH9(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// WETH9 is a free data retrieval call binding the contract method 0x4aa4a4fc.
+//
+// Solidity: function WETH9() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCallerSession) WETH9() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.WETH9(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// Bridge is a free data retrieval call binding the contract method 0xe78cea92.
+//
+// Solidity: function bridge() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCaller) Bridge(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _SwapBridgeRouterCL.contract.Call(opts, &out, "bridge")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Bridge is a free data retrieval call binding the contract method 0xe78cea92.
+//
+// Solidity: function bridge() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) Bridge() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.Bridge(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// Bridge is a free data retrieval call binding the contract method 0xe78cea92.
+//
+// Solidity: function bridge() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCallerSession) Bridge() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.Bridge(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// CalculateBridgeFees is a free data retrieval call binding the contract method 0xd71ced23.
+//
+// Solidity: function calculateBridgeFees(uint256 toChainID, address token, uint256 value) view returns(uint256 minimumValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCaller) CalculateBridgeFees(opts *bind.CallOpts, toChainID *big.Int, token common.Address, value *big.Int) (struct {
+	MinimumValue *big.Int
+	NetworkFee   *big.Int
+	ExFee        *big.Int
+}, error) {
+	var out []interface{}
+	err := _SwapBridgeRouterCL.contract.Call(opts, &out, "calculateBridgeFees", toChainID, token, value)
+
+	outstruct := new(struct {
+		MinimumValue *big.Int
+		NetworkFee   *big.Int
+		ExFee        *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.MinimumValue = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.NetworkFee = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.ExFee = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// CalculateBridgeFees is a free data retrieval call binding the contract method 0xd71ced23.
+//
+// Solidity: function calculateBridgeFees(uint256 toChainID, address token, uint256 value) view returns(uint256 minimumValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) CalculateBridgeFees(toChainID *big.Int, token common.Address, value *big.Int) (struct {
+	MinimumValue *big.Int
+	NetworkFee   *big.Int
+	ExFee        *big.Int
+}, error) {
+	return _SwapBridgeRouterCL.Contract.CalculateBridgeFees(&_SwapBridgeRouterCL.CallOpts, toChainID, token, value)
+}
+
+// CalculateBridgeFees is a free data retrieval call binding the contract method 0xd71ced23.
+//
+// Solidity: function calculateBridgeFees(uint256 toChainID, address token, uint256 value) view returns(uint256 minimumValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCallerSession) CalculateBridgeFees(toChainID *big.Int, token common.Address, value *big.Int) (struct {
+	MinimumValue *big.Int
+	NetworkFee   *big.Int
+	ExFee        *big.Int
+}, error) {
+	return _SwapBridgeRouterCL.Contract.CalculateBridgeFees(&_SwapBridgeRouterCL.CallOpts, toChainID, token, value)
+}
+
+// GetExpectedBridgeAmount is a free data retrieval call binding the contract method 0xce9f6b3e.
+//
+// Solidity: function getExpectedBridgeAmount(uint256 toChainID, address token, uint256 totalAmount) view returns(uint8 status, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCaller) GetExpectedBridgeAmount(opts *bind.CallOpts, toChainID *big.Int, token common.Address, totalAmount *big.Int) (struct {
+	Status      uint8
+	BridgeValue *big.Int
+	NetworkFee  *big.Int
+	ExFee       *big.Int
+}, error) {
+	var out []interface{}
+	err := _SwapBridgeRouterCL.contract.Call(opts, &out, "getExpectedBridgeAmount", toChainID, token, totalAmount)
+
+	outstruct := new(struct {
+		Status      uint8
+		BridgeValue *big.Int
+		NetworkFee  *big.Int
+		ExFee       *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Status = *abi.ConvertType(out[0], new(uint8)).(*uint8)
+	outstruct.BridgeValue = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.NetworkFee = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	outstruct.ExFee = *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// GetExpectedBridgeAmount is a free data retrieval call binding the contract method 0xce9f6b3e.
+//
+// Solidity: function getExpectedBridgeAmount(uint256 toChainID, address token, uint256 totalAmount) view returns(uint8 status, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) GetExpectedBridgeAmount(toChainID *big.Int, token common.Address, totalAmount *big.Int) (struct {
+	Status      uint8
+	BridgeValue *big.Int
+	NetworkFee  *big.Int
+	ExFee       *big.Int
+}, error) {
+	return _SwapBridgeRouterCL.Contract.GetExpectedBridgeAmount(&_SwapBridgeRouterCL.CallOpts, toChainID, token, totalAmount)
+}
+
+// GetExpectedBridgeAmount is a free data retrieval call binding the contract method 0xce9f6b3e.
+//
+// Solidity: function getExpectedBridgeAmount(uint256 toChainID, address token, uint256 totalAmount) view returns(uint8 status, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCallerSession) GetExpectedBridgeAmount(toChainID *big.Int, token common.Address, totalAmount *big.Int) (struct {
+	Status      uint8
+	BridgeValue *big.Int
+	NetworkFee  *big.Int
+	ExFee       *big.Int
+}, error) {
+	return _SwapBridgeRouterCL.Contract.GetExpectedBridgeAmount(&_SwapBridgeRouterCL.CallOpts, toChainID, token, totalAmount)
+}
+
+// Quoter is a free data retrieval call binding the contract method 0xc6bbd5a7.
+//
+// Solidity: function quoter() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCaller) Quoter(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _SwapBridgeRouterCL.contract.Call(opts, &out, "quoter")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Quoter is a free data retrieval call binding the contract method 0xc6bbd5a7.
+//
+// Solidity: function quoter() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) Quoter() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.Quoter(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// Quoter is a free data retrieval call binding the contract method 0xc6bbd5a7.
+//
+// Solidity: function quoter() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCallerSession) Quoter() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.Quoter(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// SwapRouter is a free data retrieval call binding the contract method 0xc31c9c07.
+//
+// Solidity: function swapRouter() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCaller) SwapRouter(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _SwapBridgeRouterCL.contract.Call(opts, &out, "swapRouter")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// SwapRouter is a free data retrieval call binding the contract method 0xc31c9c07.
+//
+// Solidity: function swapRouter() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapRouter() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.SwapRouter(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// SwapRouter is a free data retrieval call binding the contract method 0xc31c9c07.
+//
+// Solidity: function swapRouter() view returns(address)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLCallerSession) SwapRouter() (common.Address, error) {
+	return _SwapBridgeRouterCL.Contract.SwapRouter(&_SwapBridgeRouterCL.CallOpts)
+}
+
+// GetAmountSwapBridgeIn is a paid mutator transaction binding the contract method 0xb0c9576c.
+//
+// Solidity: function getAmountSwapBridgeIn(uint256 toChainID, address tokenIn, address tokenOut, int24 tickSpacing, uint256 bridgeValue) returns(uint8 status, uint256 amountIn, uint256 swapAmountOut, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) GetAmountSwapBridgeIn(opts *bind.TransactOpts, toChainID *big.Int, tokenIn common.Address, tokenOut common.Address, tickSpacing *big.Int, bridgeValue *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "getAmountSwapBridgeIn", toChainID, tokenIn, tokenOut, tickSpacing, bridgeValue)
+}
+
+// GetAmountSwapBridgeIn is a paid mutator transaction binding the contract method 0xb0c9576c.
+//
+// Solidity: function getAmountSwapBridgeIn(uint256 toChainID, address tokenIn, address tokenOut, int24 tickSpacing, uint256 bridgeValue) returns(uint8 status, uint256 amountIn, uint256 swapAmountOut, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) GetAmountSwapBridgeIn(toChainID *big.Int, tokenIn common.Address, tokenOut common.Address, tickSpacing *big.Int, bridgeValue *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeIn(&_SwapBridgeRouterCL.TransactOpts, toChainID, tokenIn, tokenOut, tickSpacing, bridgeValue)
+}
+
+// GetAmountSwapBridgeIn is a paid mutator transaction binding the contract method 0xb0c9576c.
+//
+// Solidity: function getAmountSwapBridgeIn(uint256 toChainID, address tokenIn, address tokenOut, int24 tickSpacing, uint256 bridgeValue) returns(uint8 status, uint256 amountIn, uint256 swapAmountOut, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) GetAmountSwapBridgeIn(toChainID *big.Int, tokenIn common.Address, tokenOut common.Address, tickSpacing *big.Int, bridgeValue *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeIn(&_SwapBridgeRouterCL.TransactOpts, toChainID, tokenIn, tokenOut, tickSpacing, bridgeValue)
+}
+
+// GetAmountSwapBridgeInMultihop is a paid mutator transaction binding the contract method 0x499221de.
+//
+// Solidity: function getAmountSwapBridgeInMultihop(uint256 toChainID, bytes path, uint256 bridgeValue) returns(uint8 status, uint256 amountIn, uint256 swapAmountOut, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) GetAmountSwapBridgeInMultihop(opts *bind.TransactOpts, toChainID *big.Int, path []byte, bridgeValue *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "getAmountSwapBridgeInMultihop", toChainID, path, bridgeValue)
+}
+
+// GetAmountSwapBridgeInMultihop is a paid mutator transaction binding the contract method 0x499221de.
+//
+// Solidity: function getAmountSwapBridgeInMultihop(uint256 toChainID, bytes path, uint256 bridgeValue) returns(uint8 status, uint256 amountIn, uint256 swapAmountOut, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) GetAmountSwapBridgeInMultihop(toChainID *big.Int, path []byte, bridgeValue *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeInMultihop(&_SwapBridgeRouterCL.TransactOpts, toChainID, path, bridgeValue)
+}
+
+// GetAmountSwapBridgeInMultihop is a paid mutator transaction binding the contract method 0x499221de.
+//
+// Solidity: function getAmountSwapBridgeInMultihop(uint256 toChainID, bytes path, uint256 bridgeValue) returns(uint8 status, uint256 amountIn, uint256 swapAmountOut, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) GetAmountSwapBridgeInMultihop(toChainID *big.Int, path []byte, bridgeValue *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeInMultihop(&_SwapBridgeRouterCL.TransactOpts, toChainID, path, bridgeValue)
+}
+
+// GetAmountSwapBridgeOut is a paid mutator transaction binding the contract method 0xdf7da91c.
+//
+// Solidity: function getAmountSwapBridgeOut(uint256 toChainID, address tokenIn, address tokenOut, int24 tickSpacing, uint256 amountIn) returns(uint8 status, uint256 swapAmountOut, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) GetAmountSwapBridgeOut(opts *bind.TransactOpts, toChainID *big.Int, tokenIn common.Address, tokenOut common.Address, tickSpacing *big.Int, amountIn *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "getAmountSwapBridgeOut", toChainID, tokenIn, tokenOut, tickSpacing, amountIn)
+}
+
+// GetAmountSwapBridgeOut is a paid mutator transaction binding the contract method 0xdf7da91c.
+//
+// Solidity: function getAmountSwapBridgeOut(uint256 toChainID, address tokenIn, address tokenOut, int24 tickSpacing, uint256 amountIn) returns(uint8 status, uint256 swapAmountOut, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) GetAmountSwapBridgeOut(toChainID *big.Int, tokenIn common.Address, tokenOut common.Address, tickSpacing *big.Int, amountIn *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeOut(&_SwapBridgeRouterCL.TransactOpts, toChainID, tokenIn, tokenOut, tickSpacing, amountIn)
+}
+
+// GetAmountSwapBridgeOut is a paid mutator transaction binding the contract method 0xdf7da91c.
+//
+// Solidity: function getAmountSwapBridgeOut(uint256 toChainID, address tokenIn, address tokenOut, int24 tickSpacing, uint256 amountIn) returns(uint8 status, uint256 swapAmountOut, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) GetAmountSwapBridgeOut(toChainID *big.Int, tokenIn common.Address, tokenOut common.Address, tickSpacing *big.Int, amountIn *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeOut(&_SwapBridgeRouterCL.TransactOpts, toChainID, tokenIn, tokenOut, tickSpacing, amountIn)
+}
+
+// GetAmountSwapBridgeOutMultihop is a paid mutator transaction binding the contract method 0xa3fbff4f.
+//
+// Solidity: function getAmountSwapBridgeOutMultihop(uint256 toChainID, bytes path, uint256 amountIn) returns(uint8 status, uint256 swapAmountOut, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) GetAmountSwapBridgeOutMultihop(opts *bind.TransactOpts, toChainID *big.Int, path []byte, amountIn *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "getAmountSwapBridgeOutMultihop", toChainID, path, amountIn)
+}
+
+// GetAmountSwapBridgeOutMultihop is a paid mutator transaction binding the contract method 0xa3fbff4f.
+//
+// Solidity: function getAmountSwapBridgeOutMultihop(uint256 toChainID, bytes path, uint256 amountIn) returns(uint8 status, uint256 swapAmountOut, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) GetAmountSwapBridgeOutMultihop(toChainID *big.Int, path []byte, amountIn *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeOutMultihop(&_SwapBridgeRouterCL.TransactOpts, toChainID, path, amountIn)
+}
+
+// GetAmountSwapBridgeOutMultihop is a paid mutator transaction binding the contract method 0xa3fbff4f.
+//
+// Solidity: function getAmountSwapBridgeOutMultihop(uint256 toChainID, bytes path, uint256 amountIn) returns(uint8 status, uint256 swapAmountOut, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) GetAmountSwapBridgeOutMultihop(toChainID *big.Int, path []byte, amountIn *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.GetAmountSwapBridgeOutMultihop(&_SwapBridgeRouterCL.TransactOpts, toChainID, path, amountIn)
+}
+
+// SwapBridgeExactInput is a paid mutator transaction binding the contract method 0xc6d7f581.
+//
+// Solidity: function swapBridgeExactInput((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactInput(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactInputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactInput", params, deadline)
+}
+
+// SwapBridgeExactInput is a paid mutator transaction binding the contract method 0xc6d7f581.
+//
+// Solidity: function swapBridgeExactInput((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactInput(params ISwapBridgeRouterCLSwapBridgeExactInputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInput(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactInput is a paid mutator transaction binding the contract method 0xc6d7f581.
+//
+// Solidity: function swapBridgeExactInput((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactInput(params ISwapBridgeRouterCLSwapBridgeExactInputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInput(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactInputETH is a paid mutator transaction binding the contract method 0x0ae48a1e.
+//
+// Solidity: function swapBridgeExactInputETH((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactInputETH(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactInputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactInputETH", params, deadline)
+}
+
+// SwapBridgeExactInputETH is a paid mutator transaction binding the contract method 0x0ae48a1e.
+//
+// Solidity: function swapBridgeExactInputETH((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactInputETH(params ISwapBridgeRouterCLSwapBridgeExactInputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInputETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactInputETH is a paid mutator transaction binding the contract method 0x0ae48a1e.
+//
+// Solidity: function swapBridgeExactInputETH((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactInputETH(params ISwapBridgeRouterCLSwapBridgeExactInputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInputETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactInputSingle is a paid mutator transaction binding the contract method 0x49d9a7f7.
+//
+// Solidity: function swapBridgeExactInputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactInputSingle(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactInputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactInputSingle", params, deadline)
+}
+
+// SwapBridgeExactInputSingle is a paid mutator transaction binding the contract method 0x49d9a7f7.
+//
+// Solidity: function swapBridgeExactInputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactInputSingle(params ISwapBridgeRouterCLSwapBridgeExactInputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInputSingle(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactInputSingle is a paid mutator transaction binding the contract method 0x49d9a7f7.
+//
+// Solidity: function swapBridgeExactInputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactInputSingle(params ISwapBridgeRouterCLSwapBridgeExactInputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInputSingle(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactInputSingleETH is a paid mutator transaction binding the contract method 0xa26337a6.
+//
+// Solidity: function swapBridgeExactInputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactInputSingleETH(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactInputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactInputSingleETH", params, deadline)
+}
+
+// SwapBridgeExactInputSingleETH is a paid mutator transaction binding the contract method 0xa26337a6.
+//
+// Solidity: function swapBridgeExactInputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactInputSingleETH(params ISwapBridgeRouterCLSwapBridgeExactInputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInputSingleETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactInputSingleETH is a paid mutator transaction binding the contract method 0xa26337a6.
+//
+// Solidity: function swapBridgeExactInputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountOut)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactInputSingleETH(params ISwapBridgeRouterCLSwapBridgeExactInputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactInputSingleETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutput is a paid mutator transaction binding the contract method 0x40fd6ef2.
+//
+// Solidity: function swapBridgeExactOutput((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactOutput(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactOutputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactOutput", params, deadline)
+}
+
+// SwapBridgeExactOutput is a paid mutator transaction binding the contract method 0x40fd6ef2.
+//
+// Solidity: function swapBridgeExactOutput((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactOutput(params ISwapBridgeRouterCLSwapBridgeExactOutputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutput(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutput is a paid mutator transaction binding the contract method 0x40fd6ef2.
+//
+// Solidity: function swapBridgeExactOutput((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactOutput(params ISwapBridgeRouterCLSwapBridgeExactOutputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutput(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutputETH is a paid mutator transaction binding the contract method 0xc297a882.
+//
+// Solidity: function swapBridgeExactOutputETH((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactOutputETH(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactOutputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactOutputETH", params, deadline)
+}
+
+// SwapBridgeExactOutputETH is a paid mutator transaction binding the contract method 0xc297a882.
+//
+// Solidity: function swapBridgeExactOutputETH((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactOutputETH(params ISwapBridgeRouterCLSwapBridgeExactOutputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutputETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutputETH is a paid mutator transaction binding the contract method 0xc297a882.
+//
+// Solidity: function swapBridgeExactOutputETH((bytes,uint256,uint256,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactOutputETH(params ISwapBridgeRouterCLSwapBridgeExactOutputParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutputETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutputSingle is a paid mutator transaction binding the contract method 0x9f1c7899.
+//
+// Solidity: function swapBridgeExactOutputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactOutputSingle(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactOutputSingle", params, deadline)
+}
+
+// SwapBridgeExactOutputSingle is a paid mutator transaction binding the contract method 0x9f1c7899.
+//
+// Solidity: function swapBridgeExactOutputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactOutputSingle(params ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutputSingle(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutputSingle is a paid mutator transaction binding the contract method 0x9f1c7899.
+//
+// Solidity: function swapBridgeExactOutputSingle((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactOutputSingle(params ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutputSingle(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutputSingleETH is a paid mutator transaction binding the contract method 0x11017717.
+//
+// Solidity: function swapBridgeExactOutputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) SwapBridgeExactOutputSingleETH(opts *bind.TransactOpts, params ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.Transact(opts, "swapBridgeExactOutputSingleETH", params, deadline)
+}
+
+// SwapBridgeExactOutputSingleETH is a paid mutator transaction binding the contract method 0x11017717.
+//
+// Solidity: function swapBridgeExactOutputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) SwapBridgeExactOutputSingleETH(params ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutputSingleETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// SwapBridgeExactOutputSingleETH is a paid mutator transaction binding the contract method 0x11017717.
+//
+// Solidity: function swapBridgeExactOutputSingleETH((address,address,int24,uint256,uint256,uint160,(uint256,address,bytes)) params, uint256 deadline) payable returns(uint256 amountIn)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) SwapBridgeExactOutputSingleETH(params ISwapBridgeRouterCLSwapBridgeExactOutputSingleParams, deadline *big.Int) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.SwapBridgeExactOutputSingleETH(&_SwapBridgeRouterCL.TransactOpts, params, deadline)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLSession) Receive() (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.Receive(&_SwapBridgeRouterCL.TransactOpts)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLTransactorSession) Receive() (*types.Transaction, error) {
+	return _SwapBridgeRouterCL.Contract.Receive(&_SwapBridgeRouterCL.TransactOpts)
+}
+
+// SwapBridgeRouterCLSwapBridgeIterator is returned from FilterSwapBridge and is used to iterate over the raw logs and unpacked data for SwapBridge events raised by the SwapBridgeRouterCL contract.
+type SwapBridgeRouterCLSwapBridgeIterator struct {
+	Event *SwapBridgeRouterCLSwapBridge // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *SwapBridgeRouterCLSwapBridgeIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(SwapBridgeRouterCLSwapBridge)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(SwapBridgeRouterCLSwapBridge)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *SwapBridgeRouterCLSwapBridgeIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *SwapBridgeRouterCLSwapBridgeIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// SwapBridgeRouterCLSwapBridge represents a SwapBridge event raised by the SwapBridgeRouterCL contract.
+type SwapBridgeRouterCLSwapBridge struct {
+	User          common.Address
+	TokenIn       common.Address
+	TokenOut      common.Address
+	AmountIn      *big.Int
+	AmountOut     *big.Int
+	ToChainID     *big.Int
+	InitiateIndex *big.Int
+	BridgeValue   *big.Int
+	NetworkFee    *big.Int
+	ExFee         *big.Int
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterSwapBridge is a free log retrieval operation binding the contract event 0x3094901d3684b9dca13f7221aa2b7084ae31eb4d05822317d8ad507ec613726c.
+//
+// Solidity: event SwapBridge(address indexed user, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut, uint256 toChainID, uint256 initiateIndex, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLFilterer) FilterSwapBridge(opts *bind.FilterOpts, user []common.Address, tokenIn []common.Address, tokenOut []common.Address) (*SwapBridgeRouterCLSwapBridgeIterator, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
+	var tokenInRule []interface{}
+	for _, tokenInItem := range tokenIn {
+		tokenInRule = append(tokenInRule, tokenInItem)
+	}
+	var tokenOutRule []interface{}
+	for _, tokenOutItem := range tokenOut {
+		tokenOutRule = append(tokenOutRule, tokenOutItem)
+	}
+
+	logs, sub, err := _SwapBridgeRouterCL.contract.FilterLogs(opts, "SwapBridge", userRule, tokenInRule, tokenOutRule)
+	if err != nil {
+		return nil, err
+	}
+	return &SwapBridgeRouterCLSwapBridgeIterator{contract: _SwapBridgeRouterCL.contract, event: "SwapBridge", logs: logs, sub: sub}, nil
+}
+
+// WatchSwapBridge is a free log subscription operation binding the contract event 0x3094901d3684b9dca13f7221aa2b7084ae31eb4d05822317d8ad507ec613726c.
+//
+// Solidity: event SwapBridge(address indexed user, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut, uint256 toChainID, uint256 initiateIndex, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLFilterer) WatchSwapBridge(opts *bind.WatchOpts, sink chan<- *SwapBridgeRouterCLSwapBridge, user []common.Address, tokenIn []common.Address, tokenOut []common.Address) (event.Subscription, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
+	var tokenInRule []interface{}
+	for _, tokenInItem := range tokenIn {
+		tokenInRule = append(tokenInRule, tokenInItem)
+	}
+	var tokenOutRule []interface{}
+	for _, tokenOutItem := range tokenOut {
+		tokenOutRule = append(tokenOutRule, tokenOutItem)
+	}
+
+	logs, sub, err := _SwapBridgeRouterCL.contract.WatchLogs(opts, "SwapBridge", userRule, tokenInRule, tokenOutRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(SwapBridgeRouterCLSwapBridge)
+				if err := _SwapBridgeRouterCL.contract.UnpackLog(event, "SwapBridge", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSwapBridge is a log parse operation binding the contract event 0x3094901d3684b9dca13f7221aa2b7084ae31eb4d05822317d8ad507ec613726c.
+//
+// Solidity: event SwapBridge(address indexed user, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut, uint256 toChainID, uint256 initiateIndex, uint256 bridgeValue, uint256 networkFee, uint256 exFee)
+func (_SwapBridgeRouterCL *SwapBridgeRouterCLFilterer) ParseSwapBridge(log types.Log) (*SwapBridgeRouterCLSwapBridge, error) {
+	event := new(SwapBridgeRouterCLSwapBridge)
+	if err := _SwapBridgeRouterCL.contract.UnpackLog(event, "SwapBridge", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
